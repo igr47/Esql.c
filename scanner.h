@@ -2,7 +2,7 @@
 #define SCANNER_H
 #include <string>
 #include <unordered_map>
-#include <Vector>
+#include <vector>
 
 class Token{
 	public:
@@ -38,7 +38,7 @@ class Lexer{
 		void initializeKeyWords();
 		void skipWhitespace();
 		Token readIdentifierOrKeyword(size_t tokenline,size_t tokencolumn);
-		TOken recordNumber(size_t tokenline,size_t tokencolumn);
+		Token recordNumber(size_t tokenline,size_t tokencolumn);
 		Token readString(size_t tokenline,size_t tokencolumn);
 		Token readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn);
 };
