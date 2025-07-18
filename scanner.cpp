@@ -6,54 +6,58 @@
 #include <stdexcept>
 
 
-Token::Token(Type type,std::string& lexeme,size_t line,size_t column):type(type),lexeme(lexeme),line(line),column(column);
- explicit Lexer::Lexer(const std::string& input) : input(input),position(0),line(1),column(1){
+Token::Token(Type type,const std::string& lexeme,size_t line,size_t column):type(type),lexeme(lexeme),line(line),column(column){}
+Lexer::Lexer(const std::string& input) : input(input),position(0),line(1),column(1){
 	 initializeKeyWords();
 }
 Token Lexer::nextToken(){
 	skipWhitespace();
 	if(position>=input.length()){
-		return Token(TOKEN::END_OF_INPUT,"",line,column);
+		return Token(Token::Type::END_OF_INPUT,"",line,column);
 	}
 	char current=input[position];
 	size_t start=position;
 	size_t tokenline=line;
 	size_t tokencolumn=column;
 	//Handle identifiers and keywords
-	if(isalpha(current) || current=="_"){
+	if(isalpha(current) || current=='_'){
 		return readIdentifierOrKeyword(tokenline,tokencolumn);
 	}else if(isdigit(current)){
 		return readNumber(tokenline,tokencolumn);
-	}else if(current=='\""){
+	}else if(current=='\"'){
 		return readString(tokenline,tokencolumn);
 	}else{
-		return readOperatororPanctuation(tokenline,tokencolumn);
+		return readOperatorOrPanctuation(tokenline,tokencolumn);
 	}
 }
 void Lexer::initializeKeyWords(){
 	keywords={
-		{"SELECT",Token::SELECT},
-		{"FROM",Token::FROM},
-		{"WHERE",Token::WHERE},
-		{"AND",Token::AND},
-		{"OR",Token::OR},
-		{"NOT",Token::NOT},
-		{"UPDATE",Token::UPDATE},
-		{"SET",Token::SET},
-		{"DELETE",Token::DELETE},
-		{"TABLE",Token::TABLE},
-		{"DROP",Token::DROP},
-		{"INSERT",Token::INSERT},
-		("INTO",Token::INTO}
+		{"SELECT",Token::Type::SELECT},
+		{"FROM",Token::Type::FROM},
+		{"WHERE",Token::Type::WHERE},
+		{"AND",Token::Type::AND},
+		{"OR",Token::Type::OR},
+		{"NOT",Token::Type::NOT},
+		{"UPDATE",Token::Type::UPDATE},
+		{"SET",Token::Type::SET},
+		{"DELETE",Token::Type::DELETE},
+		{"TABLE",Token::Type::TABLE},
+		{"DROP",Token::Type::DROP},
+		{"INSERT",Token::Type::INSERT},
+		{"INTO",Token::Type::INTO},
+		{"CREATE",Token::Type::CREATE},
+		{"ALTER",Token::Type::ALTER}
+
 	};
 }
 
 void Lexer::skipWhitespace(){
 	while(position<input.length()){
-		if(current=="" || current=="\t"){
+	        char current=input[position];
+		if(current==' ' || current=='\t'){
 			position ++;
 			column ++;
-		}else if(current=="\n"){
+		}else if(current=='\n'){
 			position ++;
 			line ++;
 			column=1;
@@ -65,13 +69,13 @@ void Lexer::skipWhitespace(){
 
 Token Lexer::readIdentifierOrKeyword(size_t tokenline,size_t tokencolumn){
 	size_t start=position;
-	while(position<input.length() && (isalnum(input[position]) || input[position]=="_")){
+	while(position<input.length() && (isalnum(input[position]) || input[position]=='_')){
 		position ++;
 		column ++;
 	}
 	std::string lexeme=input.substr(start,position-start);
 	auto it=keywords.find(lexeme);
-	Token::Type type=(it!=keywords.end()) ? it->second : Token::Identifier;
+	Token::Type type=(it!=keywords.end()) ? it->second : Token::Type::IDENTIFIER;
 	return Token(type,lexeme,tokenline,tokencolumn);
 }
 Token Lexer::readNumber(size_t tokenline,size_t tokencolumn){
@@ -82,8 +86,8 @@ Token Lexer::readNumber(size_t tokenline,size_t tokencolumn){
 		if(isdigit(current)){
 			position ++;
 			column ++;
-		}else if(current=="." && !hasDecimal){
-			hasDecimal==true;
+		}else if(current=='.' && !hasDecimal){
+			hasDecimal=true;
 			position ++;
 			column ++;
 		}else{
@@ -91,76 +95,76 @@ Token Lexer::readNumber(size_t tokenline,size_t tokencolumn){
 		}
 	}
 	std::string lexeme=input.substr(start,position-start);
-	return Token(Token::NUMBER_LITERAL,lexeme,tokenline,tokencolumn);
+	return Token(Token::Type::NUMBER_LITERAL,lexeme,tokenline,tokencolumn);
 }
 
 Token Lexer::readString(size_t tokenline,size_t tokencolumn){
 	position ++;
 	column ++;
 	size_t start=position;
-	while(position<input.length() && input[position]!='\"){
-		if(input[position]=="\n"){
-			line ++;
+	while(position<input.length() && input[position]!='\''){
+		if(input[position]=='\n'){
+			line++;
 			column=1;
 		}
-		position ++;
-		column ++;
+		position++;
+		column++;
 	}
 	if(position>=input.length()){
-		return Token(Token::ERROR,"'Unterminated string",tokenline,tokencolumn);
+		return Token(Token::Type::ERROR,"'Unterminated string",tokenline,tokencolumn);
 	}
 	std::string lexeme=input.substr(start,position-start);
-	position ++;
-	column ++;
-	return Token(Token::STRING_LITERALlexeme,tokenline,tokencolumn);
+	position++;
+	column++;
+	return Token(Token::Type::STRING_LITERAL,lexeme,tokenline,tokencolumn);
 }
 
-Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_ttokencolumn){
+Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
 	char current=input[position];
-	char next=(position+1<input.length() ? input[position] : "\n");
+	char next=(position+1<input.length() ? input[position] : '\n');
 	//Handle multi charachter operators
 	switch(current){
-		case "=":
+		case '=':
 			position++; column++;
-			return Token(Token::EQUAL,"=",tokenline,tokencolumn);
-		case "<":
-			if(next=="="){
+			return Token(Token::Type::EQUAL,"=",tokenline,tokencolumn);
+		case '<':
+			if(next=='='){
 				position+=2; column+=2;
-				return Token(Token::LESS_EQUAL,"<=",tokenline,tokencolumn);
+				return Token(Token::Type::LESS_EQUAL,"<=",tokenline,tokencolumn);
 			}
 			position ++; column++;
-			return Token(Token::LESS,"<",tokenline,tokencolumn);
-		case ">":
-			if(next=="=="){
+			return Token(Token::Type::LESS,"<",tokenline,tokencolumn);
+		case '>':
+			if(next=='='){
 				position+=2; column+=2;
-				return Token(Token::GREATER_EQUAL,">=",tokenline,tokencolumn);
+				return Token(Token::Type::GREATER_EQUAL,">=",tokenline,tokencolumn);
 			}
-			position ++; column ++;
-			return Token(Token::GREATER,">",tokenline,tokencolumn);
-		case "!":
-			if(next=="="){
+			position++; column++;
+			return Token(Token::Type::GREATER,">",tokenline,tokencolumn);
+		case '!':
+			if(next=='='){
 				position+=2; column+=2;
-				return Token(Token::NOT_EQUAL,"!=",tokenline,tokencolumn);
+				return Token(Token::Type::NOT_EQUAL,"!=",tokenline,tokencolumn);
 			}
 			break;
-		case ".":
-			position ++; column ++;
-			return Token(Token::DOT,".",tokenline,tokencolumn);
-		case ",":
-			position ++; column ++;
-			return Token(Token::COMMA,",",tokenline,tokencolumn);
-		case "(":
-			position ++; column ++;                                                                   
-			return Token(Token::L_PAREN,"(",tokenline,tokencolumn);
-		case ")";
-			position ++; column ++;                                                                   
-			return Token(Token::R_PAREN,")",tokenline,tokencolumn);
-		case ";":
-			position ++; column ++; 
-			return Token(Token::SEMICOLON,";",tokenline,tokencolumn);
+		case '.':
+			position++; column++;
+			return Token(Token::Type::DOT,".",tokenline,tokencolumn);
+		case ',':
+			position++; column++;
+			return Token(Token::Type::COMMA,",",tokenline,tokencolumn);
+		case '(':
+			position++; column++;                                                                   
+			return Token(Token::Type::L_PAREN,"(",tokenline,tokencolumn);
+		case ')':
+			position++; column++;                                                                   
+			return Token(Token::Type::R_PAREN,")",tokenline,tokencolumn);
+		case ';':
+			position++; column++; 
+			return Token(Token::Type::SEMICOLON,";",tokenline,tokencolumn);
 	}
 
-	position ++; column ++;
-	return Token(Token::ERROR,td::string(1,current),tokenline,tokencolumn);
+	position++; column++;
+	return Token(Token::Type::ERROR,std::string(1,current),tokenline,tokencolumn);
 }
 
