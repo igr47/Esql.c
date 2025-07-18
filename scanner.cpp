@@ -37,7 +37,14 @@ void Lexer::initializeKeyWords(){
 		{"WHERE",Token::WHERE},
 		{"AND",Token::AND},
 		{"OR",Token::OR},
-		{"NOT",Token::NOT}
+		{"NOT",Token::NOT},
+		{"UPDATE",Token::UPDATE},
+		{"SET",Token::SET},
+		{"DELETE",Token::DELETE},
+		{"TABLE",Token::TABLE},
+		{"DROP",Token::DROP},
+		{"INSERT",Token::INSERT},
+		("INTO",Token::INTO}
 	};
 }
 

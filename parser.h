@@ -41,13 +41,41 @@ namesapce AST{
 			std::vector<Std::unique_ptr<Expression> colums;
 			std::unique_ptr<Expression> from;
 			std::unique_ptr<Expression> where;
-	}
+	};
+	class UpdateStatement:public Node{
+		public:
+			std::unique_ptr<Expression> table;
+			struct Assignment{
+				std::unique_ptr<Identifier> column;
+				std::unique_ptr<Expression> value;
+			};
+
+			std::vector<Assignment> assignments;
+			std::unique_ptr<Expression> where;
+
+	};
+	//class to hanle delete statements
+	class DeleteStatement:public Node{
+		public:
+			std::unique_ptr<Expression> table;
+			std::unique_ptr<Expression> where;
+	};
+	class DropStatement:public Node{
+		public:
+			std::string tablename;
+	};
+	class InsertStatement:public Node{
+		public:
+			std::unique_ptr<Expression> table;
+			std::vector<std::unique_ptr<Identifier>> columns;
+			std::vector<std::unique_ptr<Expression>> values;
+	};
 };
 
 class Parse{
 	public:
 		explicit Parser(Lexer& lexer);
-		std::unique_ptr<AST::SelectStatement> parse();
+		std::unique_ptr<AST::Node> parse();
 	private:
 		Lexer& lexer;
 		Token currentToken;
@@ -56,6 +84,10 @@ class Parse{
 		bool match(Token::Type type) const;
 		bool matchAny(const std::vector<Token::Type>& types) const;
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
+		std::unique_ptr<AST::UpdateStatement> parseUpdateStatement();
+		std::unique_ptr<AST::DeleteStatement> parseDeleteStatement();
+		std::unique_ptr<AST::DropStatement> parseDropStatement();
+		std::unique_ptr<AST::InsertStatement> parseInsertStatement();
 		std::vector<std::unique_ptr<AST::Expression>> parseColumnList();
 		std::unique_ptr<AST::Expression> parseFromClause();
 		std::unique_ptr<AST::Expression> parseExpression();

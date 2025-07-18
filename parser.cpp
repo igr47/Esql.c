@@ -13,8 +13,20 @@ Parse::Parse(Lexer& lexer) : lexer(lexer){
 	currentToken=lexer.nextToken();
 }
 
-std::unique_ptr<AST::SelectStatement> Parse::parse(){
-	return  parseSelectStatement();
+std::unique_ptr<AST::Node> Parse::parse(){
+	if(match(Token::SELECT)){
+	        return  parseSelectStatement();
+	}else if(match(Token::UPDATE)){
+		return parseUpdateStatement();
+	}else if(match(Token::DELETE)){
+		return parseDeleteStatement();
+	}else if(match(Token::DROP)){
+		return parseDropStatement();
+	}else if(match(Token::INSERT)){
+		return parseInsertStatement();
+	}else{
+		throw std::runtime_error("unexpected token at start of statement");
+	}
 }
 
 void Parse::consume(Token::Type expected){
@@ -51,7 +63,68 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	}
 	return stmt;
 }
-
+std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement(){
+	auto stmt=std::make_unique<AST::UpdateStatement>();
+	//parse update clause
+	consume(Token::UPDATE);
+	stmt->table=parseIdentifier();
+	//parse SET clause
+	consume(Token::SET);
+	do{
+		auto column=parseIdentifier();
+		consume(Token::EQUAL);
+		auto value=parseExpression();
+		stmt->assignments.push_back({std::unique_ptr<AST::Identifier>(static_cast<AST::Identifier*>(column.release())),std::move(value)});
+		if(match(Token::COMMA)){
+			consume(Token::COMMA);
+		}else{
+			break;
+		}
+	}while(true);
+	if(match(Token::WHERE)){
+		consume(Token::WHERE);
+		stmt->where=parseExpression();
+	}
+	return stmt;
+}
+//parser method for delete
+std::unique_ptr<AST::DeleteStatement> Parse::parseDeleteStatement(){
+	auto stmt=std::make_unique<AST::DeleteStatement>();
+	//parse the DELETE clause
+	consume(Token::DELETE);
+	consume(Token::FROM);
+	stmt->table=parseIdentifier();
+	//parse the WHERE clause
+	consume(Token::WHERE);
+	stmt->where=parseExpression();
+	return stmt;
+}
+//parse method for drop statement
+std::unique_ptr<AST::DropStatement> Parse::parseDropStatement(){
+	auto stmt=std::make_unique<AST::DropStatement>();
+	//parse the Drop clause
+	consume(Token::DROP);
+	consume(Token::TABLE);
+	stmt->tablename=parseIdentifier();
+	return stmt;
+}
+//parse the insert statement
+std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
+	auto stmt=std::make_shared<AST::InsertStatement>();
+	//parse the INSERT statement
+	consume(Token::INSERT);
+	consume(Token::INTO);
+	stmt->table=parseIdentifier();
+	consume(Token::L_PAREN);
+	stmt->columns=parseColumnList();
+	consume(Token::R_PAREN);
+	//parse the values clause
+	consume(Token::VALUES);
+	consume(Token::L_PAREN);
+	stmt->values=parseColumnList();
+	consume(Token::R_PAREN);
+	return stmt;
+}
 std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
 	std::vector<std::unique_ptr<AST::Expression>> columns;
 	do{

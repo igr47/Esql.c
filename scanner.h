@@ -8,7 +8,7 @@ class Token{
 	public:
 		enum class Type{
 			//Keywords
-			SELECT,FROM,WHERE,AND,OR,NOT,
+			SELECT,FROM,WHERE,AND,OR,NOT,UPDATE,SET,DROP,TABLE,DELETE,INSERT,INTO,
 			//Identifier & Literals
 			IDENTIFIER,STRING_LITERAL,NUMBER_LITERAL,
 			//OPERATORS
