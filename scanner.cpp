@@ -46,7 +46,10 @@ void Lexer::initializeKeyWords(){
 		{"INSERT",Token::Type::INSERT},
 		{"INTO",Token::Type::INTO},
 		{"CREATE",Token::Type::CREATE},
-		{"ALTER",Token::Type::ALTER}
+		{"ALTER",Token::Type::ALTER},
+		{"ADD",Token::Type::ADD},
+		{"RENAME",Token::Type::RENAME},
+		{"VALUES",Token::Type::VALUES}
 
 	};
 }

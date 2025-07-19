@@ -5,14 +5,13 @@
 #include <vector>
 
 namespace AST{
+	Literal::Literal(const Token& token):token(token){}
 	Identifier::Identifier(const Token& token):token(token){}
 
 	BinaryOp::BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right): op(op),left(std::move(left)),right(std::move(right)){}
 };
 
-Parse::Parse(Lexer& lexer) : lexer(lexer){
-	currentToken=lexer.nextToken();
-}
+Parse::Parse(Lexer& lexer) : lexer(lexer),currentToken(lexer.nextToken()){}
 
 std::unique_ptr<AST::Node> Parse::parse(){
 	if(match(Token::Type::SELECT)){
@@ -41,8 +40,11 @@ void Parse::consume(Token::Type expected){
 		throw std::runtime_error("Unexpected token at line "+ std::to_string(currentToken.line) +",column ," +std::to_string(currentToken.column));
 	}
 }
+void Parse::advance() {
+    currentToken = lexer.nextToken();
+}
 
-bool match(Token::Type type) const{
+bool Parse::match(Token::Type type) const{
 	return currentToken.type==type;
 }
 
@@ -115,7 +117,7 @@ std::unique_ptr<AST::DropStatement> Parse::parseDropStatement(){
 }
 //parse the insert statement
 std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
-	auto stmt=std::make_shared<AST::InsertStatement>();
+	auto stmt=std::make_unique<AST::InsertStatement>();
 	//parse the INSERT statement
 	consume(Token::Type::INSERT);
 	consume(Token::Type::INTO);
@@ -132,7 +134,7 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 }
 //parse the create  statement
 std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement(){
-	auto stmt=std::make_unique<CreateTableStatement>();
+	auto stmt=std::make_unique<AST::CreateTableStatement>();
 	//parse the CREATE clause
 	consume(Token::Type::CREATE);
 	consume(Token::Type::TABLE);
@@ -140,29 +142,29 @@ std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement(){
 	//parse the table describtions
 	consume(Token::Type::L_PAREN);
 	do{
-		CreateTableStatement::ColumnDef col;
+		AST::CreateTableStatement::ColumnDef col;
 		col.name=parseIdentifier();
 		col.type=parseIdentifier();
 		stmt->columns.push_back(std::move(col));
-	}while(match(Tokem::Type::COMMA));
+	}while(match(Token::Type::COMMA));
 	consume(Token::Type::R_PAREN);
 	return stmt;
 }
-std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableExpression(){
-	auto stmt=stmt::amke_unique<AST::AlterTableStatement>();
+std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement(){
+	auto stmt=std::make_unique<AST::AlterTableStatement>();
 	//parse Alter caluse
 	consume(Token::Type::ALTER);
 	consume(Token::Type::TABLE);
 	stmt->tablename=parseIdentifier();
 	if(match(Token::Type::ADD)){
-		stmt->action=AlterTableStatement::ADD;
+		stmt->action=AST::AlterTableStatement::ADD;
 		stmt->columnName=parseIdentifier();
 		stmt->type=parseIdentifier();
 	}else if(match(Token::Type::DROP)){
-		stmt->action=AlterTableStatement::DROP;
+		stmt->action=AST::AlterTableStatement::DROP;
 		stmt->columnName=parseIdentifier();
-	}else(match(Token::Type::RENAME)){
-		stmt->action=AlterTableStatement::RENAME;
+	}else if(match(Token::Type::RENAME)){
+		stmt->action=AST::AlterTableStatement::RENAME;
 		stmt->columnName=parseIdentifier();
 	}
 	return stmt;
@@ -174,7 +176,7 @@ std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
 			consume(Token::Type::COMMA);
 		}
 		columns.push_back(parseExpression());
-	}while(match(Tokem::Type::COMMA));
+	}while(match(Token::Type::COMMA));
 	return columns;
 }
 
@@ -195,12 +197,12 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 		if(precedence<minPrecedence){
 			break;
 		}
-		if(!isBinareOperator(op.type)){
+		if(!isBinaryOperator(op.type)){
 			break;
 		}
 		advance();
-		auto right=parseBinareExpression(precedence+1);
-		left=std::make_unique<AST::BinaryOp>(op,,std::move(left),std::move(right));
+		auto right=parseBinaryExpression(precedence+1);
+		left=std::make_unique<AST::BinaryOp>(op,std::move(left),std::move(right));
 	}
 	return left;
 }
@@ -216,7 +218,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		consume(Token::Type::R_PAREN);
 		return expr;
 	}else{
-		throw std::runtime("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
+		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
 	}
 }
 
@@ -226,17 +228,18 @@ std::unique_ptr<AST::Expression> Parse::parseIdentifier(){
 	return identifier;
 }
 std::unique_ptr<AST::Expression> Parse::parseLiteral(){
-	auto literal=std::male_unique<AST::Literal>(currentToken);
+	auto literal=std::make_unique<AST::Literal>(currentToken);
 	if(match(Token::Type::NUMBER_LITERAL)){
 		consume(Token::Type::NUMBER_LITERAL);
 	}else{
 		consume(Token::Type::STRING_LITERAL);
 	}
+	return literal;
 }
 
 int Parse::getPrecedence(Token::Type type){
 	switch(type){
-		case TOKEN::Type::OR: return 1;
+		case Token::Type::OR: return 1;
 		case Token::Type::AND: return 2;
 		case Token::Type::EQUAL:
 		case Token::Type::NOT_EQUAL:

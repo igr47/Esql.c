@@ -62,20 +62,20 @@ namespace AST{
 	};
 	class DropStatement:public Node{
 		public:
-			std::string tablename;
+			std::unique_ptr<Expression> tablename;
 	};
 	class InsertStatement:public Node{
 		public:
 			std::unique_ptr<Expression> table;
-			std::vector<std::unique_ptr<Identifier>> columns;
+			std::vector<std::unique_ptr<Expression>> columns;
 			std::vector<std::unique_ptr<Expression>> values;
 	};
 	class CreateTableStatement:public Node{
 		public:
 			std::unique_ptr<Expression> tablename;
 			struct ColumnDef{
-				std::string name;
-				std::string type;
+				std::unique_ptr<Expression> name;
+				std::unique_ptr<Expression> type;
 			};
 			std::vector<ColumnDef> columns;
 	};
@@ -98,6 +98,7 @@ class Parse{
 		Token currentToken;
 
 		void consume(Token::Type expected);
+		void advance();
 		bool match(Token::Type type) const;
 		bool matchAny(const std::vector<Token::Type>& types) const;
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
