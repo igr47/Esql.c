@@ -1,10 +1,13 @@
 #include <iostream>
 #include "parser.h"
 #include "scanner.h"
+#include <string>
 
 
 int main() {
-    std::string query = "SELECT id, name, age FROM users WHERE age > 18 AND status = 'active'";
+    std::string query;
+    std::cout<<">> ";
+    std::getline(std::cin,query);
 
     try {
         Lexer lexer(query);
