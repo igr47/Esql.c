@@ -1,5 +1,6 @@
 #ifndef ANALYZER_H
 #define ANALYZER_H
+#include "parser.h"
 #include <unordered_map>
 #include <vector>
 #include <string>
@@ -8,7 +9,7 @@ class DatabaseSchema{
 	public:
 		struct Column{
 			std::string name;
-			enum Type{INTEGER,FLOAT,STRING,BOOLEAN,TEXT}type;
+			enum  Type{INTEGER,FLOAT,STRING,BOOLEAN,TEXT}type;
 			bool isNullable=true;
 			bool hasDefault=false;
 			std::string defaultvalue;
@@ -16,12 +17,12 @@ class DatabaseSchema{
 		struct Table{
 			std::string name;
 			std::vector<Column> columns;
-			std::string primarykey;
+			std::string primaryKey;
 		};
 		void addTable(const Table& table);
 		void createTable(const std::string& name,const std::vector<Column>& columns,const std::string& primarykey="");
 		void dropTable(const std::string& name);
-		const Table* getTable(const std::string& name) const;
+		const DatabaseSchema::Table* getTable(const std::string& name) const;
 		bool tableExists(const std::string& name) const;
 		static Column::Type parseType(const std::string& typeStr);
 	private:
@@ -40,11 +41,11 @@ class SematicAnalyzer{
 		//child methode of analyzeselect
 		void validateFromClause(AST::SelectStatement& selectStmt);
 		void validateSelectColumns(AST::SelectStatement& selectStmt);
-		void validateColumnReference(AST::Expression& expr);
+		//void validateColumnReference(AST::Expression& expr);
 		void validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table);
 		void validateBinaryOperation(AST::BinaryOp&,const DatabaseSchema::Table* table);
 		bool columnExists(const std::string& columnName) const;
-		bool isValidOperation(Token::Type op,const AST::Expression& left,const Ast::Expression& right);
+		bool isValidOperation(Token::Type op,const AST::Expression& left,const AST::Expression& right);
 		//end of the child methods
 		//metod to analyze insert statement analysis
 		void analyzeInsert(AST::InsertStatement& insertStmt);
@@ -56,4 +57,10 @@ class SematicAnalyzer{
 		void analyzeDrop(AST::DropStatement& dropStmt);
 		void analyzeUpdate(AST::UpdateStatement& updateStmt);
 		void analyzeAlter(AST::AlterTableStatement& alterStmt);
+};
+class SematicError : public std::runtime_error {
+public:
+    explicit SematicError(const std::string& msg) : std::runtime_error(msg) {}
+};
 
+#endif
