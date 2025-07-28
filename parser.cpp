@@ -12,8 +12,10 @@ namespace AST{
 };
 
 Parse::Parse(Lexer& lexer) : lexer(lexer),currentToken(lexer.nextToken()){}
-
-std::unique_ptr<AST::Node> Parse::parse(){
+std::unique_ptr<AST::Statement> Parse::parse(){
+	return parseStatement();
+}
+std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	if(match(Token::Type::SELECT)){
 	        return  parseSelectStatement();
 	}else if(match(Token::Type::UPDATE)){
@@ -74,20 +76,20 @@ std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement(){
 	auto stmt=std::make_unique<AST::UpdateStatement>();
 	//parse update clause
 	consume(Token::Type::UPDATE);
-	stmt->table=parseIdentifier();
+	stmt->table=currentToken.lexeme;
+	consume(Token::Type::IDENTIFIER);
 	//parse SET clause
 	consume(Token::Type::SET);
 	do{
-		auto column=parseIdentifier();
-		consume(Token::Type::EQUAL);
-		auto value=parseExpression();
-		stmt->assignments.push_back({std::unique_ptr<AST::Identifier>(static_cast<AST::Identifier*>(column.release())),std::move(value)});
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
-		}else{
-			break;
 		}
-	}while(true);
+		auto column=currentToken.lexeme;
+		consume(Token::Type::IDENTIFIER);
+		consume(Token::Type::EQUAL);
+		auto value=parseExpression();
+		stmt->setClauses.emplace_back(column,parseExpression());
+	}while(match(Token::Type::COMMA));
 	if(match(Token::Type::WHERE)){
 		consume(Token::Type::WHERE);
 		stmt->where=parseExpression();
@@ -100,10 +102,13 @@ std::unique_ptr<AST::DeleteStatement> Parse::parseDeleteStatement(){
 	//parse the DELETE clause
 	consume(Token::Type::DELETE);
 	consume(Token::Type::FROM);
-	stmt->table=parseIdentifier();
+	stmt->table=currentToken.lexeme;
+	consume(Token::Type::IDENTIFIER);
 	//parse the WHERE clause
-	consume(Token::Type::WHERE);
-	stmt->where=parseExpression();
+	if(match(Token::Type::WHERE)){
+	        consume(Token::Type::WHERE);
+	        stmt->where=parseExpression();
+	}
 	return stmt;
 }
 //parse method for drop statement
@@ -112,7 +117,8 @@ std::unique_ptr<AST::DropStatement> Parse::parseDropStatement(){
 	//parse the Drop clause
 	consume(Token::Type::DROP);
 	consume(Token::Type::TABLE);
-	stmt->tablename=parseIdentifier();
+	stmt->tablename=currentToken.lexeme;
+	consume(Token::Type::IDENTIFIER);
 	return stmt;
 }
 //parse the insert statement
@@ -121,14 +127,28 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 	//parse the INSERT statement
 	consume(Token::Type::INSERT);
 	consume(Token::Type::INTO);
-	stmt->table=parseIdentifier();
-	consume(Token::Type::L_PAREN);
-	stmt->columns=parseColumnList();
-	consume(Token::Type::R_PAREN);
+	stmt->table=currentToken.lexeme;
+	consume(Token::Type::IDENTIFIER);
+	if(match(Token::Type::L_PAREN)){
+	        consume(Token::Type::L_PAREN);
+	        do{
+		        if(match(Token::Type::COMMA)){
+			        consume(Token::Type::COMMA);
+		        }
+	                stmt->columns.push_back(currentToken.lexeme);
+		        consume(Token::Type::IDENTIFIER);
+	        }while(match(Token::Type::COMMA));
+	         consume(Token::Type::R_PAREN);
+	}
 	//parse the values clause
 	consume(Token::Type::VALUES);
 	consume(Token::Type::L_PAREN);
-	stmt->values=parseColumnList();
+	do{
+		if(match(Token::Type::COMMA)){
+			consume(Token::Type::COMMA);
+		}
+	        stmt->values.push_back(parseExpression());
+	}while(match(Token::Type::COMMA));
 	consume(Token::Type::R_PAREN);
 	return stmt;
 }
@@ -138,13 +158,31 @@ std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement(){
 	//parse the CREATE clause
 	consume(Token::Type::CREATE);
 	consume(Token::Type::TABLE);
-	stmt->tablename=parseIdentifier();
+	if(match(Token::Type::IDENTIFIER)){
+		stmt->tablename=currentToken.lexeme;
+		consume(Token::Type::IDENTIFIER);
+	}
 	//parse the table describtions
 	consume(Token::Type::L_PAREN);
 	do{
-		AST::CreateTableStatement::ColumnDef col;
-		col.name=parseIdentifier();
-		col.type=parseIdentifier();
+		if(match(Token::Type::COMMA)){
+			consume(Token::Type::COMMA);
+		}
+		AST::ColumnDefination col;
+		col.name=currentToken.lexeme;
+		consume(Token::Type::IDENTIFIER);
+		consume(Token::Type::COLON);
+		col.type=currentToken.lexeme;
+		if(match(Token::Type::INT) || match(Token::Type::TEXT) || match(Token::Type::BOOL) || match(Token::Type::FLOAT)){
+			consume(currentToken.type);
+		}else{
+			throw std::runtime_error("expected column type");
+		}
+		//parse constraints if any
+		while(match(Token::Type::IDENTIFIER)){
+			col.constraints.push_back(currentToken.lexeme);
+			consume(Token::Type::IDENTIFIER);
+		}
 		stmt->columns.push_back(std::move(col));
 	}while(match(Token::Type::COMMA));
 	consume(Token::Type::R_PAREN);
@@ -155,17 +193,22 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement(){
 	//parse Alter caluse
 	consume(Token::Type::ALTER);
 	consume(Token::Type::TABLE);
-	stmt->tablename=parseIdentifier();
+	stmt->tablename=currentToken.lexeme;
+	consume(Token::Type::IDENTIFIER);
 	if(match(Token::Type::ADD)){
 		stmt->action=AST::AlterTableStatement::ADD;
-		stmt->columnName=parseIdentifier();
-		stmt->type=parseIdentifier();
+		stmt->columnName=currentToken.lexeme;
+		consume(Token::Type::IDENTIFIER);
+		stmt->type=currentToken.lexeme;
+		consume(Token::Type::IDENTIFIER);
 	}else if(match(Token::Type::DROP)){
 		stmt->action=AST::AlterTableStatement::DROP;
-		stmt->columnName=parseIdentifier();
+		stmt->columnName=currentToken.lexeme;
+		consume(Token::Type::IDENTIFIER);
 	}else if(match(Token::Type::RENAME)){
 		stmt->action=AST::AlterTableStatement::RENAME;
-		stmt->columnName=parseIdentifier();
+		stmt->columnName=currentToken.lexeme;
+		consume(Token::Type::IDENTIFIER);
 	}
 	return stmt;
 }

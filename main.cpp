@@ -1,28 +1,17 @@
+#include "database.h"
 #include <iostream>
-#include "parser.h"
-#include "scanner.h"
-#include <string>
-
 
 int main() {
-    std::string query;
-    std::cout<<">> ";
-    std::getline(std::cin,query);
-
-    try {
-        Lexer lexer(query);
-        Parse parser(lexer);
-        auto selectStmt = parser.parse();
-
-        // At this point you have the parsed AST
-        std::cout << "Query parsed successfully!" << std::endl;
-
-        // You would typically pass the AST to an executor or analyzer here
-
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-
+    Database db;
+    
+    // Example usage
+    db.execute("CREATE TABLE users(name:TEXT, age:INT)");
+    db.execute("INSERT INTO users VALUES ('Alice', 25)");
+    db.execute("INSERT INTO users VALUES ('Bob', 30)");
+    db.execute("SELECT name, age FROM users WHERE age > 20");
+    
+    // Start interactive shell
+    db.startInteractive();
+    
     return 0;
 }

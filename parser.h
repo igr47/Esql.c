@@ -10,7 +10,10 @@ namespace AST{
 		public:
 			virtual ~Node()=default;
 	};
-
+	class Statement:public Node{
+		public:
+			virtual ~Statement()=default;
+	};
 	class Expression:public Node{
 		public:
 			virtual ~Expression()=default;
@@ -36,55 +39,54 @@ namespace AST{
 
 			BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right);
 	};
-	class SelectStatement:public Node{
+	class ColumnDefination:public Node{
+		public:
+		        std::string name;
+		        std::string type;
+		        std::vector<std::string> constraints;
+	};
+	class SelectStatement:public Statement{
 		public:
 			std::vector<std::unique_ptr<Expression>> columns;
 			std::unique_ptr<Expression> from;
 			std::unique_ptr<Expression> where;
 	};
-	class UpdateStatement:public Node{
+	class UpdateStatement:public Statement{
 		public:
-			std::unique_ptr<Expression> table;
-			struct Assignment{
-				std::unique_ptr<Identifier> column;
-				std::unique_ptr<Expression> value;
-			};
-
-			std::vector<Assignment> assignments;
+			std::string table;
+			std::vector<std::pair<std::string,std::unique_ptr<Expression>>> setClauses;
 			std::unique_ptr<Expression> where;
 
 	};
 	//class to hanle delete statements
-	class DeleteStatement:public Node{
+	class DeleteStatement:public Statement{
 		public:
-			std::unique_ptr<Expression> table;
+			std::string table;
 			std::unique_ptr<Expression> where;
 	};
-	class DropStatement:public Node{
+	class DropStatement:public Statement{
 		public:
-			std::unique_ptr<Expression> tablename;
+			std::string tablename;
+			bool ifNotExists=false;
 	};
-	class InsertStatement:public Node{
+	class InsertStatement:public Statement{
 		public:
-			std::unique_ptr<Expression> table;
-			std::vector<std::unique_ptr<Expression>> columns;
+			std::string table;
+			std::vector<std::string> columns;
 			std::vector<std::unique_ptr<Expression>> values;
 	};
-	class CreateTableStatement:public Node{
+	class CreateTableStatement:public Statement{
 		public:
-			std::unique_ptr<Expression> tablename;
-			struct ColumnDef{
-				std::unique_ptr<Expression> name;
-				std::unique_ptr<Expression> type;
-			};
-			std::vector<ColumnDef> columns;
+			std::string tablename;
+			std::vector<ColumnDefination> columns;
+			bool ifNotExists=false;
 	};
-	class AlterTableStatement:public Node{
+	class AlterTableStatement:public Statement{
 		public:
-			std::unique_ptr<Expression> tablename;
+			std::string tablename;
 			enum Action{ADD,DROP,RENAME}action;
-			std::unique_ptr<Expression> columnName;
-			std::unique_ptr<Expression> type;
+			std::string columnName;
+			std::string type;
 	};
 
 };
@@ -92,7 +94,7 @@ namespace AST{
 class Parse{
 	public:
 		explicit Parse(Lexer& lexer);
-		std::unique_ptr<AST::Node> parse();
+		std::unique_ptr<AST::Statement> parse();
 	private:
 		Lexer& lexer;
 		Token currentToken;
@@ -101,6 +103,7 @@ class Parse{
 		void advance();
 		bool match(Token::Type type) const;
 		bool matchAny(const std::vector<Token::Type>& types) const;
+		std::unique_ptr<AST::Statement> parseStatement();
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
 		std::unique_ptr<AST::UpdateStatement> parseUpdateStatement();
 		std::unique_ptr<AST::DeleteStatement> parseDeleteStatement();

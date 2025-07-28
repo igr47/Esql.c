@@ -49,7 +49,14 @@ void Lexer::initializeKeyWords(){
 		{"ALTER",Token::Type::ALTER},
 		{"ADD",Token::Type::ADD},
 		{"RENAME",Token::Type::RENAME},
-		{"VALUES",Token::Type::VALUES}
+		{"VALUES",Token::Type::VALUES},
+		{"INT",Token::Type::INT},
+		{"BOOL",Token::Type::BOOL},
+		{"TEXT",Token::Type::TEXT},
+		{"FLOAT",Token::Type::FLOAT},
+		{"COLON",Token::Type::COLON},
+		{"TRUE",Token::Type::TRUE},
+		{"FALSE",Token::Type::FALSE}
 
 	};
 }
