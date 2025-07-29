@@ -32,13 +32,13 @@ void Database::execute(const std::string& query) {
 
 void Database::startInteractive() {
     std::string input;
-    std::cout << "SQL> ";
+    std::cout << "ESQL> ";
     while (std::getline(std::cin, input)) {
         if (input == "exit" || input == "quit") break;
         if (!input.empty()) {
             execute(input);
         }
-        std::cout << "SQL> ";
+        std::cout << "ESQL> ";
     }
 }
 
