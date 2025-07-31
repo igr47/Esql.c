@@ -27,7 +27,21 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	}else if(match(Token::Type::INSERT)){
 		return parseInsertStatement();
 	}else if(match(Token::Type::CREATE)){
-		return parseCreateTableStatement();
+		advance();
+		if(match(Token::Type::TABLE)){
+		        return parseCreateTableStatement();
+		}else if(match(Token::Type::DATABASE)){
+			return parseCreateDatabaseStatement();
+		}
+	}else if(match(Token::Type::USE)){
+		return parseUseStatement();
+	}else if(match(Token::Type::SHOW)){
+		advance();
+		if(match(Token::Type::DATABASES)){
+			return parseShowDatabaseStatement();
+		}else if(match(Token::Type::TABLES)){
+			return parseShowTableStatement();
+		}
 	}else if(match(Token::Type::ALTER)){
 		return parseAlterTableStatement();
 	}else{
@@ -56,7 +70,34 @@ bool Parse::matchAny(const std::vector<Token::Type>& types) const{
 	}
 	return false;
 }
-
+std::unique_ptr<AST::CreateDatabaseStatement> Parse::parseCreateDatabaseStatement(){
+	auto stmt=std::make_unique<AST::CreateDatabaseStatement>();
+	consume(Token::Type::CREATE);
+	consume(Token::Type::DATABASE);
+	stmt->dbName=currentToken.lexeme;
+	consume(Token::Type::IDENTIFIER);
+	return stmt;
+}
+std::unique_ptr<AST::UseDatabaseStatement> Parse::parseUseStatement(){
+	auto stmt=std::make_unique<AST::UseDatabaseStatement>();
+	consume(Token::Type::USE);
+	consume(Token::Type::DATABASE);
+	stmt->dbName=currentToken.lexeme;
+	consume(Token::Type::IDENTIFIER);
+	return stmt;
+}
+std::unique_ptr<AST::ShowDatabaseStatement> Parse::parseShowDatabaseStatement(){
+	auto stmt=std::make_unique<AST::ShowDatabaseStatement>();
+	consume(Token::Type::SHOW);
+	consume(Token::Type::DATABASES);
+	return stmt;
+}
+std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement(){
+	auto stmt=std::make_unique<AST::ShowTableStatement>();
+	consume(Token::Type::SHOW);
+	consume(Token::Type::TABLES);
+	return stmt;
+}
 std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	auto stmt=std::make_unique<AST::SelectStatement>();
 	//parse select clause

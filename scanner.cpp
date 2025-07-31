@@ -56,7 +56,12 @@ void Lexer::initializeKeyWords(){
 		{"FLOAT",Token::Type::FLOAT},
 		{"COLON",Token::Type::COLON},
 		{"TRUE",Token::Type::TRUE},
-		{"FALSE",Token::Type::FALSE}
+		{"FALSE",Token::Type::FALSE},
+		{"DATABASE",Token::Type::DATABASE},
+		{"DATABASES",Token::Type::DATABASES},
+		{"SHOW",Token::Type::SHOW},
+		{"USE",Token::Type::USE},
+		{"TABLES",Token::Type::TABLES}
 
 	};
 }

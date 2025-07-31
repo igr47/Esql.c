@@ -45,6 +45,20 @@ namespace AST{
 		        std::string type;
 		        std::vector<std::string> constraints;
 	};
+	class CreateDatabaseStatement:public Statement{
+		public:
+			std::string dbName;
+	};
+	class UseDatabaseStatement:public Statement{
+		public:
+			std::string dbName;
+	};
+	class ShowDatabaseStatement:public Statement{
+		public:
+	};
+	class ShowTableStatement:public Statement{
+		public:
+	};
 	class SelectStatement:public Statement{
 		public:
 			std::vector<std::unique_ptr<Expression>> columns;
@@ -104,6 +118,10 @@ class Parse{
 		bool match(Token::Type type) const;
 		bool matchAny(const std::vector<Token::Type>& types) const;
 		std::unique_ptr<AST::Statement> parseStatement();
+		std::unique_ptr<AST::CreateDatabaseStatement> parseCreateDatabaseStatement();
+		std::unique_ptr<AST::UseDatabaseStatement> parseUseStatement();
+		std::unique_ptr<AST::ShowDatabaseStatement> parseShowDatabaseStatement();
+		std::unique_ptr<AST::ShowTableStatement> parseShowTableStatement();
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
 		std::unique_ptr<AST::UpdateStatement> parseUpdateStatement();
 		std::unique_ptr<AST::DeleteStatement> parseDeleteStatement();
