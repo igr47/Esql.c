@@ -7,7 +7,11 @@
 class StorageManager {
 public:
     virtual ~StorageManager() = default;
-    
+
+    virtual void createDatabase(const std::string& dbName)=0;
+    virtual void useDatabase(const std::string& dbName)=0;
+    std::vector<std::string> listDatabases() const=0;
+    bool databaseExists(const std::string& dbName) const=0;
     virtual void createTable(const std::string& name, 
                            const std::vector<DatabaseSchema::Column>& columns) = 0;
     virtual void dropTable(const std::string& name) = 0;
