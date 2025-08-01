@@ -1,6 +1,8 @@
 #ifndef ANALYZER_H
 #define ANALYZER_H
 #include "parser.h"
+#include "diskstorage.h"
+#include "database.h"
 #include <unordered_map>
 #include <vector>
 #include <string>
@@ -31,11 +33,20 @@ class DatabaseSchema{
 
 class SematicAnalyzer{
 	public:
-		SematicAnalyzer(DatabaseSchema& schema);
+		SematicAnalyzer(Database& db,DiskStorage& storage);//was DatabseSchema& schema
 		void analyze(std::unique_ptr<AST::Statement>& stmt);
 	private:
 		DatabaseSchema schema;
+		Database& db;
+		DiskStorage& storage;
 		const DatabaseSchema::Table* currentTable=nullptr;
+		//method for DATABASE management
+		void analyzeCreateDatabase(AST::CreateDatabaseStatement& createdbstmt);
+		//method for show database
+		void analyzeUse(AST::UseDatabaseStatement& useStmt);
+		//method for show
+		void analyzeShow(AST::ShowDtatbaseStatement& showStmt);
+		void ensureDatabaseSelected() const;
 		//method for select analysis
 		void analyzeSelect(AST::SelectStatement& selectStmt);
 		//child methode of analyzeselect

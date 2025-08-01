@@ -14,11 +14,15 @@ public:
     
     void execute(const std::string& query);
     void startInteractive();
+    bool hasDatabaseSelected() const;
+    const std::string& currentDatabase() const;
 
 private:
     DatabaseSchema schema;
-    std::unique_ptr<StorageManager> storage;
-    ExecutionEngine engine;
+    std::unique_ptr<DiskStorage> storage;//was StorageManager
+    //ExecutionEngine engine;
+    std::string current_db;
+    void ensureDatabaseSelected() const;
     
     std::unique_ptr<AST::Statement> parseQuery(const std::string& query);
 };

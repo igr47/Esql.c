@@ -4,13 +4,14 @@
 #include "parser.h"
 #include "analyzer.h"
 #include "storage.h"
+#include "database.h"
 #include <memory>
 #include <vector>
 #include <unordered_map>
 
 class ExecutionEngine {
 public:
-    explicit ExecutionEngine(DatabaseSchema& schema, StorageManager& storage);
+    explicit ExecutionEngine(Database& db,DiskStorage& storage);
     
     struct ResultSet {
         std::vector<std::string> columns;
@@ -20,9 +21,14 @@ public:
     ResultSet execute(std::unique_ptr<AST::Statement> stmt);
 
 private:
-    DatabaseSchema& schema;
-    StorageManager& storage;
+    //DatabaseSchema& schema;
+    //StorageManager& storage;
+    Database& db;
+    DiskStorage& storage;
     
+    ResultSet executeCreateDatabase(AST::CreateDatabaseStatement& stmt);
+    ResultSet executeUse(AST::UseDatabaseStatement& stmt);
+    ResultSet executeShow(AST::ShowDatabaseStatement& stmt);
     ResultSet executeCreateTable(AST::CreateTableStatement& stmt);
     ResultSet executeDropTable(AST::DropStatement& stmt);
     ResultSet executeSelect(AST::SelectStatement& stmt);
