@@ -3,14 +3,16 @@
 
 Database::Database(const std::string& filename) 
     : storage(std::make_unique<DiskStorage>(filename)), engine(schema, *storage) {}
-
+bool Database::hasDatabaseSelected() const{return !current_db.empty();}
+const std::string& Database::currentDatabase() const{return current_db;}
 void Database::execute(const std::string& query) {
     try {
         auto stmt = parseQuery(query);
         
-        SematicAnalyzer analyzer(schema);
+        SematicAnalyzer analyzer(*this,*storage);//had schema instead
         analyzer.analyze(stmt);
-        
+	ExecutionEngine engine(*this,*storage);
+        analyzer.analyze(stmt);
         auto result = engine.execute(std::move(stmt));
         
         // Print results
@@ -47,3 +49,8 @@ std::unique_ptr<AST::Statement> Database::parseQuery(const std::string& query) {
     Parse parser(lexer);
     return parser.parse();
 }	
+void Database::ensureDatabaseSelected() const{
+	if(!hasDatabaseSelected()){
+		throw std::runtime_error("No database selected. Use CREATE DATABASE or CREATE DATABASE first");
+	}
+}

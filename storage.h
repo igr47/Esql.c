@@ -1,28 +1,33 @@
 #pragma once
+#ifndef STORAGE_H
+#define STORAGE_H
 #include "analyzer.h"
 #include <vector>
 #include <unordered_map>
 #include <string>
 
+class DatabaseSchema::Column;
 class StorageManager {
 public:
     virtual ~StorageManager() = default;
 
     virtual void createDatabase(const std::string& dbName)=0;
     virtual void useDatabase(const std::string& dbName)=0;
-    std::vector<std::string> listDatabases() const=0;
-    bool databaseExists(const std::string& dbName) const=0;
-    virtual void createTable(const std::string& name, 
+    virtual std::vector<std::string> listDatabases() const=0;
+    virtual bool databaseExists(const std::string& dbName) const=0;
+    virtual void createTable(const std::string& dbName,const std::string& name, 
                            const std::vector<DatabaseSchema::Column>& columns) = 0;
-    virtual void dropTable(const std::string& name) = 0;
-    virtual void insertRow(const std::string& tableName, 
+    virtual void dropTable(const std::string& dbName,const std::string& name) = 0;
+    virtual void insertRow(const std::string& dbName,const std::string& tableName, 
                          const std::unordered_map<std::string, std::string>& row) = 0;
     virtual std::vector<std::unordered_map<std::string, std::string>> 
-        getTableData(const std::string& tableName) = 0;
-    virtual void updateTableData(const std::string& tableName,
+        getTableData(const std::string& dbName,const std::string& tableName) = 0;
+    virtual void updateTableData(const std::string& dbName,const std::string& tableName,
                               const std::vector<std::unordered_map<std::string, std::string>>& data) = 0;
-};
+    virtual const DatabaseSchema::Table* getTable(const std::string& dbName,const std::string& tableName) const=0;
 
+};
+/*
 class MemoryStorage : public StorageManager {
 public:
     void createTable(const std::string& name, 
@@ -43,3 +48,5 @@ private:
     
     std::unordered_map<std::string, TableData> tables;
 };
+*/
+#endif

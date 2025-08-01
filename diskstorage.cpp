@@ -93,6 +93,18 @@ void DiskStorage::insertRow(const std::string& dbName,const std::string& tableNa
     static uint32_t next_row_id = 1;
     table_it->second->insert(next_row_id++,buffer);
 }
+const DatabaseSchema::Table* DiskStorage::getTable(const std::string& dbName,const std::string& tableName) const{
+	ensureDatabaseSelected();
+	auto& db=getCurrentDatabase(dbName);
+	auto shema_it=db.table_schemas.find(tableName);
+	if(schema_it==db.table_schemas.end()){
+		return nullptr;
+	}
+	static DatabaseSchema::Table tableInfo;
+	tableInfo.name=tableName;
+	tableInfo.columns=schema_it->second;
+	return& tableInfo;
+}
 
 std::vector<std::unordered_map<std::string, std::string>> 
 DiskStorage::getTableData(const std::string& dbName,const std::string& tableName) {

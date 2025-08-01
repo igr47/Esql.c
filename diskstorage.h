@@ -3,9 +3,12 @@
 #define DISK_STORAGE_H
 #include "storage.h"
 #include "storagemanager.h"
+#include "analyzer.h"
 #include <vector>
 #include <unordered_map>
 
+class DatabaseSchema;
+class Database;
 class DiskStorage : public StorageManager {
 public:
     explicit DiskStorage(const std::string& filename);
@@ -19,20 +22,18 @@ public:
     //Table operations begin here
     //
     //
-    void createTable(const std::string& dbName,const std::string& name, 
-                   const std::vector<DatabaseSchema::Column>& columns) override;
+    void createTable(const std::string& dbName,const std::string& name, const std::vector<DatabaseSchema::Column>& columns) override;
     void dropTable(const std::string& dbName,const std::string& name) override;
-    void insertRow(const std::string& dbName,const std::string& tableName, 
-                 const std::unordered_map<std::string, std::string>& row) override;
-    std::vector<std::unordered_map<std::string, std::string>> 
-        getTableData(const std::string& dbName,const std::string& tableName) override;
-    void updateTableData(const std::string& tableName,
-                       const std::vector<std::unordered_map<std::string, std::string>>& data) override;
+    void insertRow(const std::string& dbName,const std::string& tableName,const std::unordered_map<std::string, std::string>& row) override;
+    std::vector<std::unordered_map<std::string, std::string>> getTableData(const std::string& dbName,const std::string& tableName) override;
+    void updateTableData(const std::string& dbName,const std::string& tableName,const std::vector<std::unordered_map<std::string, std::string>>& data) override;
+    const DatabaseSchema::Table* getTable(const std::string& dbName,const std::string& tableName) const override;
 
 private:
-    struct Datatbase{
-	    std::unorderd_map<std::string,std::unique_ptr<BPlusTree>> tables;
-	    std::unorderd_map<std::string,std::vector<DatabaseSchema::Column>> table_schemas;
+    DatabaseSchema schema;
+    struct Database{
+	    std::unordered_map<std::string,std::unique_ptr<BPlusTree>> tables;
+	    std::unordered_map<std::string,std::vector<DatabaseSchema::Column>> table_schemas;
 	};
 
     Pager pager;
