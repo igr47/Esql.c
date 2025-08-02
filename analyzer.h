@@ -1,12 +1,12 @@
 #ifndef ANALYZER_H
 #define ANALYZER_H
 #include "parser.h"
+#include "database_schema.h"
 #include "diskstorage.h"
-#include "database.h"
 #include <unordered_map>
 #include <vector>
 #include <string>
-
+/*
 class DatabaseSchema{
 	public:
 		struct Column{
@@ -30,7 +30,9 @@ class DatabaseSchema{
 	private:
 		std::unordered_map<std::string, Table> tables;
 };
-
+*/
+class Database;
+class DiskStorage;
 class SematicAnalyzer{
 	public:
 		SematicAnalyzer(Database& db,DiskStorage& storage);//was DatabseSchema& schema
@@ -45,7 +47,7 @@ class SematicAnalyzer{
 		//method for show database
 		void analyzeUse(AST::UseDatabaseStatement& useStmt);
 		//method for show
-		void analyzeShow(AST::ShowDtatbaseStatement& showStmt);
+		void analyzeShow(AST::ShowDatabaseStatement& showStmt);
 		void ensureDatabaseSelected() const;
 		//method for select analysis
 		void analyzeSelect(AST::SelectStatement& selectStmt);

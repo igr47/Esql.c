@@ -1,9 +1,10 @@
 #include "analyzer.h"
 #include "parser.h"
+#include "database.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
-
+/*
 void DatabaseSchema::addTable(const Table& table){
 	tables[table.name]=table;
 }
@@ -37,7 +38,7 @@ DatabaseSchema::Column::Type DatabaseSchema::parseType(const std::string& typeSt
 	if(typeStr=="BOOLEAN" || typeStr=="BOOL") return Column::BOOLEAN;
 	throw std::runtime_error("Unknown column type: "+ typeStr);
 }
-
+*/
 SematicAnalyzer::SematicAnalyzer(Database& db,DiskStorage& storage):db(db),storage(storage){}
 //This is the entry point for the sematic analysis
 void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
@@ -68,18 +69,18 @@ void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
 }
 //parse method for create database
 void SematicAnalyzer::analyzeCreateDatabase(AST::CreateDatabaseStatement& createdbstmt){
-	if(storage.databaseExists(stmt.dbName)){
-		throw SematicError("Database "+stmt.dbName +"already exists");
+	if(storage.databaseExists(createdbstmt.dbName)){
+		throw SematicError("Database "+createdbstmt.dbName +"already exists");
 	}
 }
 //analyzer method for use statement
 void SematicAnalyzer::analyzeUse(AST::UseDatabaseStatement& useStmt){
-	if(!storage.databaseExists(stmt.dbName)){
-		throw SematicError("Database "+stmt.dbName +"does not exist");
+	if(!storage.databaseExists(useStmt.dbName)){
+		throw SematicError("Database "+useStmt.dbName +"does not exist");
 	}
 }
 //For SHOW DATABASES does not require any analysis
-void SematicAnalyzer::analyzeShow(AST::ShowDtatbaseStatement& showStmt){
+void SematicAnalyzer::analyzeShow(AST::ShowDatabaseStatement& showStmt){
 }
 void SematicAnalyzer::ensureDatabaseSelected() const{
 	if(!db.hasDatabaseSelected()){
@@ -103,7 +104,7 @@ void SematicAnalyzer::validateFromClause(AST::SelectStatement& selectStmt){
 	if(!fromIdent){
 		throw SematicError("From clause must be a table identifier");
 	}
-	auto currentTable=storage.getTable(db.currentDatabase,fromIdent->token.lexeme);
+	auto currentTable=storage.getTable(db.currentDatabase(),fromIdent->token.lexeme);
 	if(!currentTable){
 		throw SematicError("Unknown table: "+ fromIdent->token.lexeme);
 	}
@@ -111,18 +112,21 @@ void SematicAnalyzer::validateFromClause(AST::SelectStatement& selectStmt){
 
 //method to validate SelectColumns.Checks if the columns in the querry are there
 void SematicAnalyzer::validateSelectColumns(AST::SelectStatement& selectStmt){
+	auto* fromIdent=dynamic_cast<AST::Identifier*>(selectStmt.from.get());
+	auto currenTable=storage.getTable(db.currentDatabase(),fromIdent->token.lexeme);
 	if(selectStmt.columns.empty()){
 		//SELECT* case---all columns are valid
 		return;
 	}
 	for(auto& column: selectStmt.columns){
 		if(auto* ident=dynamic_cast<AST::Identifier*>(column.get())){
-			if(!columnExists(ident->token.lexeme){
-				for(const auto& tableCol : table->columns){
+			if(!columnExists(ident->token.lexeme)){
+				for(const auto& tableCol : currentTable->columns){
 				        throw SematicError("Column" +ident->token.lexeme+ "does not exist");
 				}
 		}
 	}
+    }
 					 
 }
 
@@ -196,7 +200,7 @@ bool SematicAnalyzer::isValidOperation(Token::Type op,const AST::Expression& lef
 }
 //Method to analyze insert statement
 void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt){
-	currentTable=storage.getTable(db.currentDatabase,insertStmt.table);//Have to check tableName
+	currentTable=storage.getTable(db.currentDatabase(),insertStmt.table);//Have to check tableName
 	if(!currentTable){
 		throw SematicError("Tablename does not exist: "+ insertStmt.table);
 	}
@@ -221,7 +225,7 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt){
 }
 
 void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt){
-	if(storage.tableExists(db.currentDatabase,createStmt.tablename)
+	if(storage.tableExists(db.currentDatabase(),createStmt.tablename)){
 		if(createStmt.ifNotExists){
 			return;
 		}
@@ -234,7 +238,7 @@ void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt){
 		DatabaseSchema::Column column;
 		column.name=colDef.name;
 		try{
-		        column.type=DatabaseSchema::parseType(colDef.type);
+		        column.type=DatabaseSchema::Column::parseType(colDef.type);
 		}catch(const std::runtime_error& e){
 		        throw SematicError(e.what());
 		}
@@ -312,7 +316,7 @@ void SematicAnalyzer::analyzeDrop(AST::DropStatement& dropStmt){
 }
 //method to analyze UPDATE statement
 void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt){
-	currentTable=storage.getTable(db.currentDatabase,updateStmt.table);
+	currentTable=storage.getTable(db.currentDatabase(),updateStmt.table);
 	if(!currentTable){
 		throw SematicError("Table does not exist: "+ updateStmt.table);
 	}
@@ -350,7 +354,7 @@ void SematicAnalyzer::analyzeAlter(AST::AlterTableStatement& alterStmt){
 				throw SematicError("Column does not exist: "+ alterStmt.columnName);
 			}
 			if(columnExists(alterStmt.columnName)){
-				throw SematicError("Column "+ alterStmt +"already exists");
+				throw SematicError("Column "+ alterStmt.columnName +"already exists");
 			}
 			break;
 		case AST::AlterTableStatement::ADD:
@@ -359,7 +363,7 @@ void SematicAnalyzer::analyzeAlter(AST::AlterTableStatement& alterStmt){
 			}
 			//validate column type
 			try{
-				DatabaseSchema::parseType(alterStmt.type);
+				DatabaseSchema::Column::parseType(alterStmt.type);
 			}catch(const std::runtime_error&){
 				throw SematicError("Invalid column type: "+ alterStmt.type);
 			}

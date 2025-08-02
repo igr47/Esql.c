@@ -7,13 +7,13 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
     if (auto create = dynamic_cast<AST::CreateTableStatement*>(stmt.get())) {
         return executeCreateTable(*create);
     }
-    else if(createDb = dynamic_cast<AST::CreateDatabaseStatement*>(stmt.get())){
+    else if(auto createDb = dynamic_cast<AST::CreateDatabaseStatement*>(stmt.get())){
 	    return executeCreateDatabase(*createDb);
     }
-    else if(useDb = dynamic_cast<AST::UseDatatabaseStatement*>(stmt.get())){
+    else if(auto useDb = dynamic_cast<AST::UseDatabaseStatement*>(stmt.get())){
 	    return executeUse(*useDb);
     }
-    else if(showDb = dynamic_cast<AST::ShowDatabaseStatement*>(stmt.get())){
+    else if(auto showDb = dynamic_cast<AST::ShowDatabaseStatement*>(stmt.get())){
 	    return executeShow(*showDb);
     }
     else if (auto drop = dynamic_cast<AST::DropStatement*>(stmt.get())) {
@@ -35,30 +35,30 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
     throw std::runtime_error("Unsupported statement type");
 }
 //execute database queries
-ResultSet ExecutionEngine::executeCreateDatabase(AST::CreateDatabaseStatement& stmt){
+ExecutionEngine::ResultSet ExecutionEngine::executeCreateDatabase(AST::CreateDatabaseStatement& stmt){
 	storage.createDatabase(stmt.dbName);
 	return {{"Status"},{{"Database "+ stmt.dbName +"created"}}};
 }
-ResultSet ExecutionEngine::executeUse(AST::UseDatabaseStatement& stmt){
-	storage.useDtabase(stmt.dbName);
-	return {{"Status"},{{"Using database"+ stmt.dbNmae +""}}};
+ExecutionEngine::ResultSet ExecutionEngine::executeUse(AST::UseDatabaseStatement& stmt){
+	storage.useDatabase(stmt.dbName);
+	return {{"Status"},{{"Using database"+ stmt.dbName +""}}};
 }
-ResultSet ExecutionEngine::executeShow(AST::ShowDatabaseStatement& stmt){
-	auto databases=storage.listDtabases();
+ExecutionEngine::ResultSet ExecutionEngine::executeShow(AST::ShowDatabaseStatement& stmt){
+	auto databases=storage.listDatabases();
 	ResultSet result{{"Database"}};
 	for(const auto& name : databases){
-		result.row.push_back({name});
+		result.rows.push_back({name});
 	}
 	return result;
 }
 ExecutionEngine::ResultSet ExecutionEngine::executeCreateTable(AST::CreateTableStatement& stmt) {
-    /*std::vector<DatabaseSchema::Column> columns;
+    std::vector<DatabaseSchema::Column> columns;
     std::string primaryKey;
     
     for (auto& colDef : stmt.columns) {
         DatabaseSchema::Column column;
         column.name = colDef.name;
-        column.type = DatabaseSchema::parseType(colDef.type);
+        column.type = DatabaseSchema::Column::parseType(colDef.type);
         
         for (auto& constraint : colDef.constraints) {
             if (constraint == "PRIMARY KEY") {
@@ -72,8 +72,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeCreateTable(AST::CreateTableS
         columns.push_back(column);
     }
     
-    schema.createTable(stmt.tablename, columns, primaryKey);*/
-    storage.createTable(db.currentDatabase(),stmt.tablename, stmt.columns);
+    //schema.createTable(stmt.tablename, columns, primaryKey);
+    storage.createTable(db.currentDatabase(),stmt.tablename, columns);
     
     return {{"status"}, {{"Table created"}}};
 }
@@ -85,14 +85,14 @@ ExecutionEngine::ResultSet ExecutionEngine::executeDropTable(AST::DropStatement&
 }
 
 ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
-    auto tableName=dynamic_cast<AST::Identifier>(stmt.from.get())->token.lexeme;
+    auto tableName=dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
     auto data=storage.getTableData(db.currentDatabase(),tableName);
     ResultSet result;
     //auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
     //auto table = schema.getTable(tableName);
     if(stmt.columns.empty()){
 	    //select all columns
-	    auto table=storage.getTable(db.currenetDatatbase(),tableName);
+	    auto table=storage.getTable(db.currentDatabase(),tableName);
 	    for(const auto& col : table->columns){
 		    result.columns.push_back(col.name);
 		}
@@ -106,9 +106,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
     }
     //filter rows based on where clause
     for(const auto& row : data){
-	    bool inlude=true;
+	    bool include=true;
 	    if(stmt.where){
-		    include=evaluateWhereClause(*stmt.where,row);
+		    include=evaluateWhereClause(stmt.where.get(),row);
 	    }
 	    if(include){
 		    std::vector<std::string> resultRow;
@@ -185,17 +185,18 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 */
 ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     //auto table = schema.getTable(stmt.tiable);
-    auto data=storage.getTableDta(db.currentDatabase(),stmt.table);
+    auto data=storage.getTableData(db.currentDatabase(),stmt.table);
+    std::vector<std::unordered_map<std::string,std::string>> newData;
     for(auto& row : data){
-	    if(!stmt.where || evaluateWhereClause(*stmt.where,row)){
+	    if(!stmt.where || evaluateWhereClause(stmt.where.get(),row)){
 		    //apply where
 		    for(const auto& [col,expr] :stmt.setClauses){
-			    row[col]=expr->to_string();
+			    row[col]=expr->toString();
 		    }
 	    }
 	    newData.push_back(row);
     }
-    storage.updateTableData(db.currentDatabase(),stmt.table,newDta);
+    storage.updateTableData(db.currentDatabase(),stmt.table,newData);
     return {{"Status"},{{std::to_string(newData.size()) +"rows updated"}}};
 }
     /*if (!table) {
@@ -224,17 +225,17 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
 ExecutionEngine::ResultSet ExecutionEngine::executeDelete(AST::DeleteStatement& stmt) {
     //auto table = schema.getTable(stmt.table);
     auto data=storage.getTableData(db.currentDatabase(),stmt.table);
-    std::vector<std::unorderd_map<std::string,std::string>> newData;
+    std::vector<std::unordered_map<std::string,std::string>> newData;
     int deleted=0;
     for(const auto& row : data){
-	    if(stmt.where && evaluateWhereClause(*stmt.where,row)){
+	    if(stmt.where && evaluateWhereClause(stmt.where.get(),row)){
 		    deleted ++;
 	    }else{
 		    newData.push_back(row);
 	    }
     }
     storage.updateTableData(db.currentDatabase(),stmt.table,newData);
-    return {{"status"}, {{std::to_string(affectedRows) + " rows deleted"}}};
+    return {{"status"}, {{std::to_string(deleted) + " rows deleted"}}};
 }
     /*if (!table) {
         throw std::runtime_error("Table not found: " + stmt.table);

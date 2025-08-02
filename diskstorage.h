@@ -3,7 +3,7 @@
 #define DISK_STORAGE_H
 #include "storage.h"
 #include "storagemanager.h"
-#include "analyzer.h"
+#include "database_schema.h"
 #include <vector>
 #include <unordered_map>
 
@@ -18,6 +18,7 @@ public:
     void createDatabase(const std::string& dbName) override;
     void useDatabase(const std::string& dbName) override;
     std::vector<std::string> listDatabases() const override;
+    bool tableExists(const std::string& dbName,const std::string& tableName) const override;
     bool databaseExists(const std::string& dbName) const override;
     //Table operations begin here
     //
@@ -51,8 +52,9 @@ private:
         const std::vector<uint8_t>& data,
         const std::vector<DatabaseSchema::Column>& columns);
     //Helper methods
-    void ensureDatatbaseSelected() const;
-    Datatbase& getCurrentDatabase();
+    void ensureDatabaseSelected() const;
+    void ensureDatabaseExists(const std::string& dbName) const;
+    Database& getCurrentDatabase();
     const Database& getCurrentDatabase() const;
 
     
