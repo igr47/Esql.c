@@ -2,7 +2,7 @@
 #include <iostream>
 
 Database::Database(const std::string& filename) 
-    : storage(std::make_unique<DiskStorage>(filename)), engine(schema, *storage) {}
+    : storage(std::make_unique<DiskStorage>(filename))/*, engine(schema, *storage)*/ {}
 bool Database::hasDatabaseSelected() const{return !current_db.empty();}
 const std::string& Database::currentDatabase() const{return current_db;}
 void Database::execute(const std::string& query) {
@@ -34,7 +34,9 @@ void Database::execute(const std::string& query) {
 
 void Database::startInteractive() {
     std::string input;
-    std::cout << "ESQL> ";
+    std::cout<<"ELVIS QUERY LANGUAGE:"
+	    <<"\n\tVERSION 0.1:";
+    std::cout << "\nESQL> ";
     while (std::getline(std::cin, input)) {
         if (input == "exit" || input == "quit") break;
         if (!input.empty()) {

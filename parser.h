@@ -17,18 +17,25 @@ namespace AST{
 	class Expression:public Node{
 		public:
 			virtual ~Expression()=default;
+			virtual std::string toString() const=0;
 	};
 
 	class Literal:public Expression{
 		public:
 			Token token;
 			explicit Literal(const Token& token);
+			std::string toString() const override{
+				return token.lexeme;
+			}
 	};
 
 	class Identifier:public Expression{
 		public:
 			Token token;
 			explicit Identifier(const Token& token);
+			std::string toString() const override{
+				return token.lexeme;
+			}
 	};
 
 	class BinaryOp:public Expression{
@@ -38,6 +45,9 @@ namespace AST{
 			std::unique_ptr<Expression> right;
 
 			BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right);
+			std::string toString() const override{
+				return left->toString()+" "+op.lexeme+" "+right->toString();
+			}
 	};
 	class ColumnDefination:public Node{
 		public:

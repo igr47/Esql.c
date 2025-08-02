@@ -41,6 +41,11 @@ std::vector<std::string> DiskStorage::listDatabases() const{
 bool DiskStorage::databaseExists(const std::string& dbName) const{
 	return databases.find(dbName) != databases.end();
 }
+bool DiskStorage::tableExists(const std::string& dbName,const std::string& tableName) const {
+	ensureDatabaseExists(dbName);
+	const auto& db=getCurrentDatabase();
+	return db.table_schemas.find(tableName)!=db.table_schemas.end();
+}
 //Table operations
 //
 void DiskStorage::createTable(const std::string& dbName,const std::string& name, 
@@ -95,8 +100,8 @@ void DiskStorage::insertRow(const std::string& dbName,const std::string& tableNa
 }
 const DatabaseSchema::Table* DiskStorage::getTable(const std::string& dbName,const std::string& tableName) const{
 	ensureDatabaseSelected();
-	auto& db=getCurrentDatabase(dbName);
-	auto shema_it=db.table_schemas.find(tableName);
+	auto& db=getCurrentDatabase();
+	auto schema_it=db.table_schemas.find(tableName);
 	if(schema_it==db.table_schemas.end()){
 		return nullptr;
 	}
@@ -138,7 +143,7 @@ DiskStorage::getTableData(const std::string& dbName,const std::string& tableName
 void DiskStorage::updateTableData(const std::string& dbName,const std::string& tableName,
                                 const std::vector<std::unordered_map<std::string, std::string>>& data) {
     ensureDatabaseSelected();
-    auto&  db=getCurrentDatabse();
+    auto&  db=getCurrentDatabase();
     auto schema_it = db.table_schemas.find(tableName);
     if (schema_it == db.table_schemas.end()) {
         throw std::runtime_error("Table not found");
@@ -213,18 +218,22 @@ DiskStorage::deserializeRow(const std::vector<uint8_t>& data,
     return row;
 }
 
-void DiskStorage::ensureDatatbaseSelected() const{
+void DiskStorage::ensureDatabaseSelected() const{
 	if(current_db.empty()){
 		throw std::runtime_error("No database selected");
 	}
 }
-
-DiskStorage::Database DiskStorage::getCurrentDatabase(){
+void DiskStorage::ensureDatabaseExists(const std::string& dbName) const{
+	if(!databaseExists(dbName)){
+		throw std::runtime_error("Database "+ dbName +"does not exist");
+	}
+}
+DiskStorage::Database& DiskStorage::getCurrentDatabase(){
 	ensureDatabaseSelected();
 	return databases.at(current_db);
 }
 
-const DiskStorage::Database DiskStorage::getCurrentDatabase() const{
+const DiskStorage::Database& DiskStorage::getCurrentDatabase() const{
 	ensureDatabaseSelected();
 	return databases.at(current_db);
 }
