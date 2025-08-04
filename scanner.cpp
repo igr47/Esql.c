@@ -61,7 +61,8 @@ void Lexer::initializeKeyWords(){
 		{"DATABASES",Token::Type::DATABASES},
 		{"SHOW",Token::Type::SHOW},
 		{"USE",Token::Type::USE},
-		{"TABLES",Token::Type::TABLES}
+		{"TABLES",Token::Type::TABLES},
+		{"COMMA",Token::Type::COMMA}
 
 	};
 }
@@ -177,6 +178,9 @@ Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
 		case ';':
 			position++; column++; 
 			return Token(Token::Type::SEMICOLON,";",tokenline,tokencolumn);
+		case ':':
+			position++; column++;
+			return Token(Token::Type::COLON,":",tokenline,tokencolumn);
 	}
 
 	position++; column++;

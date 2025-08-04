@@ -138,6 +138,7 @@ class Parse{
 		std::unique_ptr<AST::DropStatement> parseDropStatement();
 		std::unique_ptr<AST::InsertStatement> parseInsertStatement();
 		std::unique_ptr<AST::CreateTableStatement> parseCreateTableStatement();
+		void parseColumnDefinition(AST::CreateTableStatement& stmt);
 		std::unique_ptr<AST::AlterTableStatement> parseAlterTableStatement();
 		std::vector<std::unique_ptr<AST::Expression>> parseColumnList();
 		std::unique_ptr<AST::Expression> parseFromClause();

@@ -29,8 +29,10 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	}else if(match(Token::Type::CREATE)){
 		advance();
 		if(match(Token::Type::TABLE)){
+			advance();
 		        return parseCreateTableStatement();
 		}else if(match(Token::Type::DATABASE)){
+			advance();
 			return parseCreateDatabaseStatement();
 		}
 	}else if(match(Token::Type::USE)){
@@ -40,6 +42,7 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 		if(match(Token::Type::DATABASES)){
 			return parseShowDatabaseStatement();
 		}else if(match(Token::Type::TABLES)){
+			advance();
 			return parseShowTableStatement();
 		}
 	}else if(match(Token::Type::ALTER)){
@@ -72,8 +75,8 @@ bool Parse::matchAny(const std::vector<Token::Type>& types) const{
 }
 std::unique_ptr<AST::CreateDatabaseStatement> Parse::parseCreateDatabaseStatement(){
 	auto stmt=std::make_unique<AST::CreateDatabaseStatement>();
-	consume(Token::Type::CREATE);
-	consume(Token::Type::DATABASE);
+	//consume(Token::Type::CREATE);
+	//consume(Token::Type::DATABASE);
 	stmt->dbName=currentToken.lexeme;
 	consume(Token::Type::IDENTIFIER);
 	return stmt;
@@ -88,8 +91,8 @@ std::unique_ptr<AST::UseDatabaseStatement> Parse::parseUseStatement(){
 }
 std::unique_ptr<AST::ShowDatabaseStatement> Parse::parseShowDatabaseStatement(){
 	auto stmt=std::make_unique<AST::ShowDatabaseStatement>();
-	consume(Token::Type::SHOW);
-	consume(Token::Type::DATABASES);
+	//consume(Token::Type::SHOW);
+	//consume(Token::Type::DATABASES);
 	return stmt;
 }
 std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement(){
@@ -194,11 +197,11 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 	return stmt;
 }
 //parse the create  statement
-std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement(){
+/*std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement(){
 	auto stmt=std::make_unique<AST::CreateTableStatement>();
 	//parse the CREATE clause
-	consume(Token::Type::CREATE);
-	consume(Token::Type::TABLE);
+	//consume(Token::Type::CREATE);
+	//consume(Token::Type::TABLE);
 	if(match(Token::Type::IDENTIFIER)){
 		stmt->tablename=currentToken.lexeme;
 		consume(Token::Type::IDENTIFIER);
@@ -228,6 +231,66 @@ std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement(){
 	}while(match(Token::Type::COMMA));
 	consume(Token::Type::R_PAREN);
 	return stmt;
+}*/
+std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement() {
+    auto stmt = std::make_unique<AST::CreateTableStatement>();
+
+    // Get table name
+    if (!match(Token::Type::IDENTIFIER)) {
+        throw std::runtime_error("Expected table name after CREATE TABLE");
+    }
+    stmt->tablename = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    // Parse column definitions
+    consume(Token::Type::L_PAREN);
+
+    // Parse first column
+    parseColumnDefinition(*stmt);
+
+    // Parse additional columns
+    do{
+        consume(Token::Type::COMMA);
+        parseColumnDefinition(*stmt);
+    }while (match(Token::Type::COMMA));
+
+    consume(Token::Type::R_PAREN);
+
+    // Optional semicolon
+    if (match(Token::Type::SEMICOLON)) {
+        consume(Token::Type::SEMICOLON);
+    }
+
+    return stmt;
+}
+
+void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
+    AST::ColumnDefination col;
+
+    // Column name
+    if (!match(Token::Type::IDENTIFIER)) {
+        throw std::runtime_error("Expected column name");
+    }
+    col.name = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    // Colon separator
+    consume(Token::Type::COLON);
+
+    // Column type
+    if (!matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT})) {
+        throw std::runtime_error("Expected column type (INT, TEXT, BOOL, or FLOAT)");
+    }
+    col.type = currentToken.lexeme;
+    consume(currentToken.type);
+
+    // Column constraints
+    while (match(Token::Type::IDENTIFIER)) {
+        col.constraints.push_back(currentToken.lexeme);
+        consume(Token::Type::IDENTIFIER);
+    }
+
+    stmt.columns.push_back(std::move(col));
 }
 std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement(){
 	auto stmt=std::make_unique<AST::AlterTableStatement>();
