@@ -47,9 +47,8 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 		}
 	}else if(match(Token::Type::ALTER)){
 		return parseAlterTableStatement();
-	}else{
-		throw std::runtime_error("unexpected token at start of statement");
 	}
+	throw std::runtime_error("unexpected token at start of statement");
 }
 
 void Parse::consume(Token::Type expected){
