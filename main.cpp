@@ -1,17 +1,16 @@
-#include "database.h"
 #include <iostream>
+#include "database.h"
 
 int main() {
-    Database db;
-    
-    // Example usage
-    //db.execute("CREATE TABLE users(name:TEXT, age:INT)");
-    //db.execute("INSERT INTO users VALUES ('Alice', 25)");
-    //db.execute("INSERT INTO users VALUES ('Bob', 30)");
-    //db.execute("SELECT name, age FROM users WHERE age > 20");
-    
-    // Start interactive shell
-    db.startInteractive();
-    
+    try {
+        std::cout << "Starting database system...\n";
+        Database db("mydb");
+        std::cout << "Database initialized successfully\n";
+        std::cout << "Starting interactive shell...\n";
+        db.startInteractive();
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << "\n";
+        return 1;
+    }
     return 0;
 }

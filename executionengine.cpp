@@ -41,6 +41,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeCreateDatabase(AST::CreateDat
 }
 ExecutionEngine::ResultSet ExecutionEngine::executeUse(AST::UseDatabaseStatement& stmt){
 	storage.useDatabase(stmt.dbName);
+	db.setCurrentDatabase(stmt.dbName);
 	return {{"Status"},{{"Using database"+ stmt.dbName +""}}};
 }
 ExecutionEngine::ResultSet ExecutionEngine::executeShow(AST::ShowDatabaseStatement& stmt){
@@ -154,35 +155,21 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 			row[table->columns[i].name]=evaluateExpression(stmt.values[i].get(),row);
 		}
 	}else{
+		/*for (size_t i = 0; i < stmt.columns.size(); i++) {
+                        std::string value = evaluateExpression(stmt.values[i].get(), row);
+                        if (value.empty() && !row[table->columns[i]].isNullable) {
+                                        throw std::runtime_error("Non-nullable column '" + stmt.columns[i] + "' cannot be empty");
+                        }
+                        row[stmt.columns[i]] = value;
+                }*/
 		//insert specified columns
 		for(size_t i=0;i<stmt.columns.size();i++){
-			row[stmt.columns[1]]=evaluateExpression(stmt.values[i].get(),row);
+			row[stmt.columns[i]]=evaluateExpression(stmt.values[i].get(),row);
 		}
 	}
 	storage.insertRow(db.currentDatabase(),stmt.table,row);
 	return {{"status"}, {{"1 row inserted"}}};
 }
-   /* if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
-    }
-    
-    std::unordered_map<std::string, std::string> row;
-    
-    // If columns are specified, use them, otherwise use all columns in order
-    if (stmt.columns.empty()) {
-        for (size_t i = 0; i < stmt.values.size() && i < table->columns.size(); ++i) {
-            row[table->columns[i].name] = evaluateExpression(stmt.values[i].get(), row);
-        }
-    } else {
-        for (size_t i = 0; i < stmt.columns.size() && i < stmt.values.size(); ++i) {
-            row[stmt.columns[i]] = evaluateExpression(stmt.values[i].get(), row);
-        }
-    }
-    
-    storage.insertRow(stmt.table, row);
-    return {{"status"}, {{"1 row inserted"}}};
-}
-*/
 ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     //auto table = schema.getTable(stmt.tiable);
     auto data=storage.getTableData(db.currentDatabase(),stmt.table);

@@ -40,6 +40,7 @@ class SematicAnalyzer{
 	private:
 		DatabaseSchema schema;
 		Database& db;
+		//DiskStorage& storage;
 		DiskStorage& storage;
 		const DatabaseSchema::Table* currentTable=nullptr;
 		//method for DATABASE management

@@ -4,41 +4,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-/*
-void DatabaseSchema::addTable(const Table& table){
-	tables[table.name]=table;
-}
 
-void DatabaseSchema::createTable(const std::string& name,const std::vector<Column>& columns,const std::string& primaryKey){
-	Table newTable;
-	newTable.name=name;
-	newTable.columns=columns;
-	newTable.primaryKey=primaryKey;
-	tables[name]=newTable;
-}
 
-void DatabaseSchema::dropTable(const std::string& name){
-	tables.erase(name);
-}
-
-const DatabaseSchema::Table* DatabaseSchema::getTable(const std::string& name) const{
-	auto it=tables.find(name);
-	return it!=tables.end() ? &it->second : nullptr;
-}
-
-bool DatabaseSchema::tableExists(const std::string& name) const{
-	return tables.find(name)!=tables.end();
-}
-
-DatabaseSchema::Column::Type DatabaseSchema::parseType(const std::string& typeStr){
-	if(typeStr=="INT" || typeStr=="INTEGER") return Column::INTEGER;
-	if(typeStr=="FLOAT" || typeStr=="REAL") return Column::FLOAT;
-	if(typeStr=="STRING" ||typeStr=="VARCHAR") return Column::STRING;
-	if(typeStr=="TEXT") return Column::TEXT;
-	if(typeStr=="BOOLEAN" || typeStr=="BOOL") return Column::BOOLEAN;
-	throw std::runtime_error("Unknown column type: "+ typeStr);
-}
-*/
 SematicAnalyzer::SematicAnalyzer(Database& db,DiskStorage& storage):db(db),storage(storage){}
 //This is the entry point for the sematic analysis
 void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
@@ -131,21 +98,7 @@ void SematicAnalyzer::validateSelectColumns(AST::SelectStatement& selectStmt){
 }
 
 
-/*void SematicAnalyzer::validateColumnReference(AST::Expression& expr){
-	if(auto* ident=dynamic_cast<AST::Identifier*>(expr.get())){
-		if(!columnExists(ident->token.lexeme)){
-			throw SematicError("Unknown column: "+ ident->token.lexeme);
-		}
-	}else if(auto* literal=dynamic_cast<AST::Literal*>(expr)){
-		//literals are always valid
-		return;
-	}else if(auto* binaryOp=dynamic_cast<AST::BinaryOp*>(&expr)){
-		validateExpression(expr,currentTable);
-	}else{
-		throw SematicError("Invalid Column expression");
-	}
-}
-*/	
+	
 void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table){
 	if(auto* binaryOp=dynamic_cast<AST::BinaryOp*>(&expr)){
 		validateBinaryOperation(*binaryOp,table);
