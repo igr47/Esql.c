@@ -11,7 +11,7 @@ namespace AST{
 	BinaryOp::BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right): op(op),left(std::move(left)),right(std::move(right)){}
 };
 
-Parse::Parse(Lexer& lexer) : lexer(lexer),currentToken(lexer.nextToken()){}
+Parse::Parse(Lexer& lexer) : lexer(lexer),currentToken(lexer.nextToken()),previousToken_(Token(Token::Type::ERROR,"",0,0)){}
 std::unique_ptr<AST::Statement> Parse::parse(){
 	return parseStatement();
 }
@@ -51,6 +51,37 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	throw std::runtime_error("unexpected token at start of statement");
 }
 
+std::unique_ptr<AST::Expression> Parse::parseValue() {
+    if (match(Token::Type::STRING_LITERAL) ||
+        match(Token::Type::DOUBLE_QUOTED_STRING)) {
+        auto literal = std::make_unique<AST::Literal>(currentToken);
+        advance();
+        return literal;
+    }
+    else if (match(Token::Type::NUMBER_LITERAL)) {
+        auto literal = std::make_unique<AST::Literal>(currentToken);
+        advance();
+        return literal;
+    }
+    else if (match(Token::Type::TRUE) || match(Token::Type::FALSE)) {
+        auto literal = std::make_unique<AST::Literal>(currentToken);
+        advance();
+        return literal;
+    }
+    else if (inValueContext && match(Token::Type::IDENTIFIER)) {
+        throw ParseError(
+            currentToken.line,
+            currentToken.column,
+            "String value must be quoted. Did you mean '" + 
+            currentToken.lexeme + "'?"
+        );
+    }
+    throw ParseError(
+        currentToken.line,
+        currentToken.column,
+        "Unexpected token in value position. Expected quoted string or number"
+    );
+}
 void Parse::consume(Token::Type expected){
 	if(currentToken.type==expected){
 		advance();
@@ -58,8 +89,14 @@ void Parse::consume(Token::Type expected){
 		throw std::runtime_error("Unexpected token at line "+ std::to_string(currentToken.line) +",column ," +std::to_string(currentToken.column));
 	}
 }
+const Token& Parse::previousToken() const{
+	return previousToken_;
+}
 void Parse::advance() {
-    currentToken = lexer.nextToken();
+    previousToken_=currentToken;
+    if(currentToken.type!=Token::Type::END_OF_INPUT){
+	    currentToken = lexer.nextToken();
+    }
 }
 
 bool Parse::match(Token::Type type) const{
@@ -115,29 +152,42 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	}
 	return stmt;
 }
-std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement(){
-	auto stmt=std::make_unique<AST::UpdateStatement>();
-	//parse update clause
-	consume(Token::Type::UPDATE);
-	stmt->table=currentToken.lexeme;
-	consume(Token::Type::IDENTIFIER);
-	//parse SET clause
-	consume(Token::Type::SET);
-	do{
-		if(match(Token::Type::COMMA)){
-			consume(Token::Type::COMMA);
-		}
-		auto column=currentToken.lexeme;
-		consume(Token::Type::IDENTIFIER);
-		consume(Token::Type::EQUAL);
-		auto value=parseExpression();
-		stmt->setClauses.emplace_back(column,parseExpression());
-	}while(match(Token::Type::COMMA));
-	if(match(Token::Type::WHERE)){
-		consume(Token::Type::WHERE);
-		stmt->where=parseExpression();
-	}
-	return stmt;
+std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement() {
+    auto stmt = std::make_unique<AST::UpdateStatement>();
+
+    // Parse UPDATE clause
+    consume(Token::Type::UPDATE);
+    stmt->table = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    // Parse SET clause
+    consume(Token::Type::SET);
+
+    //bool wasInValueContext = inValueContext;
+    //inValueContext = true;  // We're now parsing values
+
+    do {
+        if (match(Token::Type::COMMA)) {
+            consume(Token::Type::COMMA);
+        }
+
+        auto column = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+        consume(Token::Type::EQUAL);
+
+        // Use parseExpression() for strict value parsing
+        stmt->setClauses.emplace_back(column, parseExpression);
+    } while (match(Token::Type::COMMA));
+
+    //inValueContext = wasInValueContext;  // Restore context
+
+    // Parse WHERE clause
+    if (match(Token::Type::WHERE)) {
+        consume(Token::Type::WHERE);
+        stmt->where = parseExpression();
+    }
+
+    return stmt;
 }
 //parser method for delete
 std::unique_ptr<AST::DeleteStatement> Parse::parseDeleteStatement(){
@@ -186,12 +236,16 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 	//parse the values clause
 	consume(Token::Type::VALUES);
 	consume(Token::Type::L_PAREN);
+	//set value context flag
+	bool wasInValueContext=inValueContext;
+	inValueContext=true;
 	do{
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
-	        stmt->values.push_back(parseExpression());
+	        stmt->values.push_back(parseValue());
 	}while(match(Token::Type::COMMA));
+	inValueContext=wasInValueContext;
 	consume(Token::Type::R_PAREN);
 	return stmt;
 }
@@ -356,7 +410,7 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 	if(match(Token::Type::IDENTIFIER)){
 		return parseIdentifier();
-	}else if(match(Token::Type::NUMBER_LITERAL) || match(Token::Type::STRING_LITERAL)){
+	}else if(match(Token::Type::NUMBER_LITERAL) || match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING) || match(Token::Type::FALSE) || match(Token::Type::TRUE)){
 		return parseLiteral();
 	}else if(match(Token::Type::L_PAREN)){
 		consume(Token::Type::L_PAREN);
@@ -373,14 +427,26 @@ std::unique_ptr<AST::Expression> Parse::parseIdentifier(){
 	consume(Token::Type::IDENTIFIER);
 	return identifier;
 }
-std::unique_ptr<AST::Expression> Parse::parseLiteral(){
-	auto literal=std::make_unique<AST::Literal>(currentToken);
-	if(match(Token::Type::NUMBER_LITERAL)){
-		consume(Token::Type::NUMBER_LITERAL);
-	}else{
-		consume(Token::Type::STRING_LITERAL);
-	}
-	return literal;
+std::unique_ptr<AST::Expression> Parse::parseLiteral() {
+    auto literal = std::make_unique<AST::Literal>(currentToken);
+    if (match(Token::Type::NUMBER_LITERAL)) {
+        advance();
+    }
+    else if (match(Token::Type::STRING_LITERAL) || 
+             match(Token::Type::DOUBLE_QUOTED_STRING)) {
+        advance();
+    }
+    else if (match(Token::Type::TRUE) || match(Token::Type::FALSE)) {
+        advance();
+    }
+    else {
+        throw ParseError(
+            currentToken.line,
+            currentToken.column,
+            "Expected literal value"
+        );
+    }
+    return literal;
 }
 
 int Parse::getPrecedence(Token::Type type){

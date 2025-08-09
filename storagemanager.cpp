@@ -406,7 +406,23 @@ void BPlusTree::insert(uint32_t key, const std::vector<uint8_t>& value) {
         throw std::runtime_error("Failed to insert into BPlusTree: " + std::string(e.what()));
     }
 }
-
+std::vector<uint32_t> BPlusTree::getAllKeys() const{
+	std::vector<uint32_t> keys;
+	collectKeys(root_page_id,keys);
+	return keys;
+}
+void BPlusTree::collectKeys(uint32_t page_id,std::vector<uint32_t>& keys) const{
+	auto page=buffer_pool.fetch_page(page_id);
+	Node node;
+	deserialize_node(page->data,node);
+	if(node.is_leaf){
+		keys.insert(keys.end(),node.keys.begin(),node.keys.begin()+node.num_keys);
+	}else{
+		for(uint32_t i=0;i<=node.num_keys;i++){
+			collectKeys(node.children[i],keys);
+		}
+	}
+}
 std::vector<uint8_t> BPlusTree::search(uint32_t key) {
     try {
         if (root_page_id >= pager.get_next_page_id()) {

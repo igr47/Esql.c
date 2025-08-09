@@ -24,7 +24,7 @@ Token Lexer::nextToken(){
 		return readIdentifierOrKeyword(tokenline,tokencolumn);
 	}else if(isdigit(current)){
 		return readNumber(tokenline,tokencolumn);
-	}else if(current=='\"'){
+	}else if(current=='\"' || current=='"'){
 		return readString(tokenline,tokencolumn);
 	}else{
 		return readOperatorOrPanctuation(tokenline,tokencolumn);
@@ -114,25 +114,60 @@ Token Lexer::readNumber(size_t tokenline,size_t tokencolumn){
 	return Token(Token::Type::NUMBER_LITERAL,lexeme,tokenline,tokencolumn);
 }
 
-Token Lexer::readString(size_t tokenline,size_t tokencolumn){
-	position ++;
-	column ++;
-	size_t start=position;
-	while(position<input.length() && input[position]!='\''){
-		if(input[position]=='\n'){
-			line++;
-			column=1;
-		}
-		position++;
-		column++;
-	}
-	if(position>=input.length()){
-		return Token(Token::Type::ERROR,"'Unterminated string",tokenline,tokencolumn);
-	}
-	std::string lexeme=input.substr(start,position-start);
-	position++;
-	column++;
-	return Token(Token::Type::STRING_LITERAL,lexeme,tokenline,tokencolumn);
+Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
+    char quote_char = input[position];
+    position++;
+    column++;
+    
+    std::string value;
+    bool escape_next = false;
+    
+    while (position < input.length()) {
+        char current = input[position];
+        
+        if (!escape_next && current == quote_char) {
+            // Found closing quote
+            position++;
+            column++;
+            Token::Type type = (quote_char == '\'') ? 
+                Token::Type::STRING_LITERAL : 
+                Token::Type::DOUBLE_QUOTED_STRING;
+            return Token(type, value, tokenline, tokencolumn);
+        }
+        
+        if (escape_next) {
+            switch (current) {
+                case 'n': value += '\n'; break;
+                case 't': value += '\t'; break;
+                case 'r': value += '\r'; break;
+                case '\\': value += '\\'; break;
+                case '\'': value += '\''; break;
+                case '"': value += '"'; break;
+                default:
+                    value += '\\';
+                    value += current;
+                    break;
+            }
+            escape_next = false;
+        } 
+        else if (current == '\\') {
+            escape_next = true;
+        } 
+        else {
+            value += current;
+        }
+        
+        position++;
+        if (current == '\n') {
+            line++;
+            column = 1;
+        } else {
+            column++;
+        }
+    }
+    
+    // If we get here, the string was unterminated
+    return Token(Token::Type::ERROR, "Unterminated string", tokenline, tokencolumn);
 }
 
 Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){

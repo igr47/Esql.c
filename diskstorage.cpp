@@ -131,10 +131,13 @@ std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableD
     }
 
     std::vector<std::unordered_map<std::string, std::string>> result;
-    for (uint32_t i = 1; ; i++) {
-        auto data = table_it->second->search(i);
-        if (data.empty()) break;
-        result.push_back(deserializeRow(data, schema_it->second));
+    std::vector<uint32_t> row_ids=table_it->second->getAllKeys();
+    //process each row
+    for (uint32_t row_id : row_ids) {
+        auto data = table_it->second->search(row_id);
+        if (!data.empty()){
+                result.push_back(deserializeRow(data, schema_it->second));
+	}
     }
     return result;
 }
@@ -224,7 +227,7 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         if (remaining < length) {
             throw std::runtime_error("Corrupted data: invalid length for column " + column.name);
         }
-        row[column.name] = std::string(ptr, ptr + length);
+        row[column.name] = std::string(reinterpret_cast<const char*>(ptr),/* ptr +*/ length);
         ptr += length;
         remaining -= length;
     }

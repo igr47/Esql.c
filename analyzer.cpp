@@ -71,7 +71,7 @@ void SematicAnalyzer::validateFromClause(AST::SelectStatement& selectStmt){
 	if(!fromIdent){
 		throw SematicError("From clause must be a table identifier");
 	}
-	auto currentTable=storage.getTable(db.currentDatabase(),fromIdent->token.lexeme);
+	currentTable=storage.getTable(db.currentDatabase(),fromIdent->token.lexeme);
 	if(!currentTable){
 		throw SematicError("Unknown table: "+ fromIdent->token.lexeme);
 	}
@@ -152,29 +152,45 @@ bool SematicAnalyzer::isValidOperation(Token::Type op,const AST::Expression& lef
 	}
 }
 //Method to analyze insert statement
-void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt){
-	currentTable=storage.getTable(db.currentDatabase(),insertStmt.table);//Have to check tableName
-	if(!currentTable){
-		throw SematicError("Tablename does not exist: "+ insertStmt.table);
-	}
-	//validate column count matches value count
-	if(!insertStmt.columns.empty() && insertStmt.columns.size()!=insertStmt.values.size()){
-		throw SematicError("Column count does not match value count");
-	}
-	//validate each column exists and types match
-	for(size_t i=0;i<insertStmt.columns.size();++i){
-		const std::string& colName=insertStmt.columns.empty() ? currentTable->columns[i].name : insertStmt.columns[i];
-		auto *column=findColumn(colName);
-		if(!column){
-			throw SematicError("Unknown column: "+ colName);
-		}
-		//validate valueType
-		auto& value=insertStmt.values[i];
-		DatabaseSchema::Column::Type valueType=getValueType(*value);
-		if(!isTypeCompatible(column->type,valueType)){
-			throw SematicError("Type mismatch for column: "+ colName);
-		}
-	}
+void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
+    currentTable = storage.getTable(db.currentDatabase(), insertStmt.table);
+    if (!currentTable) {
+        throw SematicError("Tablename does not exist: " + insertStmt.table);
+    }
+
+    // Validate column count matches value count
+    if (!insertStmt.columns.empty() && insertStmt.columns.size() != insertStmt.values.size()) {
+        throw SematicError("Column count does not match value count");
+    }
+
+    for (size_t i = 0; i < insertStmt.columns.size(); ++i) {
+        const std::string& colName = insertStmt.columns.empty() ? 
+                                    currentTable->columns[i].name : 
+                                    insertStmt.columns[i];
+        auto* column = findColumn(colName);
+        if (!column) {
+            throw SematicError("Unknown column: " + colName);
+        }
+
+        // Special handling for TEXT columns
+        if (column->type == DatabaseSchema::Column::TEXT) {
+            if (auto* literal = dynamic_cast<AST::Literal*>(insertStmt.values[i].get())) {
+                if (literal->token.type != Token::Type::STRING_LITERAL && 
+                    literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
+                    throw SematicError("String values must be quoted for TEXT column: " + colName);
+                }
+                // Valid string literal - continue to type checking
+            } else {
+                throw SematicError("Invalid value for TEXT column: " + colName);
+            }
+        }
+
+        // General type checking
+        DatabaseSchema::Column::Type valueType = getValueType(*insertStmt.values[i]);
+        if (!isTypeCompatible(column->type, valueType)) {
+            throw SematicError("Type mismatch for column: " + colName);
+        }
+    }
 }
 
 void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt){
@@ -268,26 +284,39 @@ void SematicAnalyzer::analyzeDrop(AST::DropStatement& dropStmt){
 	//schema.dropTable(dropStmt.tablename);
 }
 //method to analyze UPDATE statement
-void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt){
-	currentTable=storage.getTable(db.currentDatabase(),updateStmt.table);
-	if(!currentTable){
-		throw SematicError("Table does not exist: "+ updateStmt.table);
-	}
-	//validate set assignment
-	for(auto& [colName,expr] : updateStmt.setClauses){
-		auto* column=findColumn(colName);
-		if(!column){
-			throw SematicError("Unknown column: "+ colName);
-		}
-		DatabaseSchema::Column::Type valueType=getValueType(*expr);
-		if(!isTypeCompatible(column->type,valueType)){
-			throw SematicError("Type mismatch for column: "+ colName);
-		}
-	}
-	//validate WHERE clause
-	if(updateStmt.where){
-		validateExpression(*updateStmt.where,currentTable);
-	}
+void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt) {
+    currentTable = storage.getTable(db.currentDatabase(), updateStmt.table);
+    if (!currentTable) {
+        throw SematicError("Table does not exist: " + updateStmt.table);
+    }
+
+    // Validate SET assignments
+    for (auto& [colName, expr] : updateStmt.setClauses) {
+        auto* column = findColumn(colName);
+        if (!column) {
+            throw SematicError("Unknown column: " + colName);
+        }
+
+        // Special handling for TEXT columns
+        if (column->type == DatabaseSchema::Column::TEXT) {
+            if (auto* literal = dynamic_cast<AST::Literal*>(expr.get())) {
+                if (literal->token.type != Token::Type::STRING_LITERAL &&
+                    literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
+                    throw SematicError("String values must be quoted for TEXT column: " + colName);
+                }
+            }
+        }
+
+        DatabaseSchema::Column::Type valueType = getValueType(*expr);
+        if (!isTypeCompatible(column->type, valueType)) {
+            throw SematicError("Type mismatch for column: " + colName);
+        }
+    }
+
+    // Validate WHERE clause if present
+    if (updateStmt.where) {
+        validateExpression(*updateStmt.where, currentTable);
+    }
 }
 //method to analyze ALTER TABLE statement
 void SematicAnalyzer::analyzeAlter(AST::AlterTableStatement& alterStmt){
