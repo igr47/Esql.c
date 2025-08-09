@@ -37,7 +37,7 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
 //execute database queries
 ExecutionEngine::ResultSet ExecutionEngine::executeCreateDatabase(AST::CreateDatabaseStatement& stmt){
 	storage.createDatabase(stmt.dbName);
-	return {{"Status"},{{"Database "+ stmt.dbName +"created"}}};
+	return {{"Status"},{{"Database "+ stmt.dbName +" created"}}};
 }
 ExecutionEngine::ResultSet ExecutionEngine::executeUse(AST::UseDatabaseStatement& stmt){
 	storage.useDatabase(stmt.dbName);
@@ -152,7 +152,12 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 		//insert all columns
 		auto table=storage.getTable(db.currentDatabase(),stmt.table);
 		for(size_t i=0;i<stmt.values.size() && i<table->columns.size();i++){
-			row[table->columns[i].name]=evaluateExpression(stmt.values[i].get(),row);
+			if(auto* literal=dynamic_cast<AST::Literal*>(stmt.values[i].get())){
+				//directly use literal values
+				row[table->columns[i].name]=literal->token.lexeme;
+			}else{
+			        row[table->columns[i].name]=evaluateExpression(stmt.values[i].get(),row);
+			}
 		}
 	}else{
 		/*for (size_t i = 0; i < stmt.columns.size(); i++) {
@@ -164,7 +169,11 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                 }*/
 		//insert specified columns
 		for(size_t i=0;i<stmt.columns.size();i++){
-			row[stmt.columns[i]]=evaluateExpression(stmt.values[i].get(),row);
+			if(auto* literal=dynamic_cast<AST::Literal*>(stmt.values[i].get())){
+				row[stmt.columns[i]]=literal->token.lexeme;
+			}else{
+			        row[stmt.columns[i]]=evaluateExpression(stmt.values[i].get(),row);
+			}
 		}
 	}
 	storage.insertRow(db.currentDatabase(),stmt.table,row);

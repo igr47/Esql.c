@@ -141,10 +141,12 @@ public:
     BPlusTree& operator=(const BPlusTree&) = delete;
 
     void insert(uint32_t key, const std::vector<uint8_t>& value);
+    std::vector<uint32_t> getAllKeys() const;
     std::vector<uint8_t> search(uint32_t key);
     uint32_t get_root_page_id() const { return root_page_id; }
 
 private:
+    void collectKeys(uint32_t page_id,std::vector<uint32_t>& keys) const;
     void insert_non_full(Node& node, uint32_t key, const std::vector<uint8_t>& value);
     void split_child(Node& parent, uint32_t index, Node& child);
     void serialize_node(const Node& node, std::array<uint8_t, DB_PAGE_SIZE>& buffer) const;

@@ -23,6 +23,7 @@ namespace AST{
 	class Literal:public Expression{
 		public:
 			Token token;
+			//Literal()=default;
 			explicit Literal(const Token& token);
 			std::string toString() const override{
 				return token.lexeme;
@@ -115,6 +116,20 @@ namespace AST{
 
 };
 
+class ParseError : public std::runtime_error {
+public:
+    size_t line;
+    size_t column;
+    
+    ParseError(size_t line, size_t column, const std::string& message)
+        : std::runtime_error(message), line(line), column(column) {}
+    
+    // Helper function to format the error message
+    std::string fullMessage() const {
+        return "Parse error at line " + std::to_string(line) + 
+               ", column " + std::to_string(column) + ": " + what();
+    }
+};
 class Parse{
 	public:
 		explicit Parse(Lexer& lexer);
@@ -122,7 +137,11 @@ class Parse{
 	private:
 		Lexer& lexer;
 		Token currentToken;
-
+		Token previousToken_;
+		bool inValueContext=false;
+		
+		const Token& previousToken() const;
+		std::unique_ptr<AST::Expression> parseValue();
 		void consume(Token::Type expected);
 		void advance();
 		bool match(Token::Type type) const;
