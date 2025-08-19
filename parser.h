@@ -112,6 +112,7 @@ namespace AST{
 			enum Action{ADD,DROP,RENAME}action;
 			std::string columnName;
 			std::string type;
+			std::string newColumnName;
 	};
 
 };

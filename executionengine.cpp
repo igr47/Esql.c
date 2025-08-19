@@ -1,4 +1,5 @@
 #include "executionengine.h"
+#include <iostream>
 #include <stdexcept>
 
 ExecutionEngine::ExecutionEngine(/*DatabaseSchema& schema, StorageManager& storage*/Database& db,DiskStorage& storage): db(db), storage(storage) {}
@@ -30,6 +31,8 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
     }
     else if (auto del = dynamic_cast<AST::DeleteStatement*>(stmt.get())) {
         return executeDelete(*del);
+    }else if (auto alt = dynamic_cast<AST::AlterTableStatement*>(stmt.get())) {
+	return executeAlterTable(*alt);
     }
     
     throw std::runtime_error("Unsupported statement type");
@@ -179,7 +182,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 	storage.insertRow(db.currentDatabase(),stmt.table,row);
 	return {{"status"}, {{"1 row inserted"}}};
 }
-ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
+/*ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     //auto table = schema.getTable(stmt.tiable);
     auto data=storage.getTableData(db.currentDatabase(),stmt.table);
     std::vector<std::unordered_map<std::string,std::string>> newData;
@@ -194,44 +197,145 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
     }
     storage.updateTableData(db.currentDatabase(),stmt.table,newData);
     return {{"Status"},{{std::to_string(newData.size()) +"rows updated"}}};
-}
-    /*if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
-    }
-    
-    int affectedRows = 0;
-    auto rows = storage.getTableData(stmt.table);
-    
-    for (auto& row : rows) {
+}*/
+ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
+    auto data = storage.getTableData(db.currentDatabase(), stmt.table);
+    int updated_rows = 0;
+
+    for (uint32_t row_id = 0; row_id < data.size(); row_id++) {
+        auto& row = data[row_id];
         if (!stmt.where || evaluateWhereClause(stmt.where.get(), row)) {
-            affectedRows++;
-            for (auto& [col, expr] : stmt.setClauses) {
-                row[col] = evaluateExpression(expr.get(), row);
+            std::unordered_map<std::string, std::string> updates;
+            for (const auto& [col, expr] : stmt.setClauses) {
+                updates[col] = expr->toString();
+            }
+            storage.updateTableData(db.currentDatabase(), stmt.table, row_id + 1, updates);
+            updated_rows++;
+        }
+    }
+
+    return {{"Status"}, {{std::to_string(updated_rows) + " rows updated"}}};
+}
+//≠==========ALTER TABLE STATEMENT PARENT METHOD====
+//
+ExecutionEngine::ResultSet ExecutionEngine::executeAlterTable(AST::AlterTableStatement& stmt) {
+    try {
+        // Begin transaction
+        //storage.beginTransaction();
+        
+        // Get current database context
+        std::string dbName = db.currentDatabase();
+        if (dbName.empty()) {
+            throw std::runtime_error("No database selected");
+        }
+
+        // Execute based on action type
+        switch (stmt.action) {
+            case AST::AlterTableStatement::ADD:
+                handleAlterAdd(&stmt);
+                break;
+            case AST::AlterTableStatement::DROP:
+                handleAlterDrop(&stmt);
+                break;
+            case AST::AlterTableStatement::RENAME:
+                handleAlterRename(&stmt);
+                break;
+            default:
+                throw std::runtime_error("Unsupported ALTER TABLE operation");
+        }
+
+        // Commit transaction
+        //storage.commitTransaction();
+        
+        // Output success message
+        std::cout << "ALTER TABLE successful\n";
+    } catch (const std::exception& e) {
+        //storage.rollbackTransaction();
+        throw std::runtime_error("ALTER TABLE failed: " + std::string(e.what()));
+    }
+    throw std::runtime_error("Operation failed");
+}
+//Helper methids for ALTER TABLE STATEMENT
+//
+ExecutionEngine::ResultSet ExecutionEngine::handleAlterAdd(AST::AlterTableStatement* stmt) {
+    // Validate type syntax
+    try {
+        DatabaseSchema::Column::parseType(stmt->type);
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Invalid column type: " + stmt->type);
+    }
+
+    // Execute the alteration
+    storage.alterTable(
+        db.currentDatabase(),
+        stmt->tablename,
+        "",  // oldColumn not used for ADD
+        stmt->columnName,
+        stmt->type,
+        AST::AlterTableStatement::ADD
+    );
+    return {{"Status"}, {{"Column"+ stmt->columnName +"added"}}}; 
+}
+
+ExecutionEngine::ResultSet ExecutionEngine::handleAlterDrop(AST::AlterTableStatement* stmt) {
+    // Execute the alteration
+    storage.alterTable(
+        db.currentDatabase(),
+        stmt->tablename,
+        stmt->columnName,
+        "",  // newColumn not used for DROP
+        "",  // type not used for DROP
+        AST::AlterTableStatement::DROP
+    );
+    return {{"Status"}, {{"Column"+ stmt->columnName +"droped"}}};
+}
+
+ExecutionEngine::ResultSet ExecutionEngine::handleAlterRename(AST::AlterTableStatement* stmt) {
+    // Execute the alteration
+    storage.alterTable(
+        db.currentDatabase(),
+        stmt->tablename,
+        stmt->columnName,
+        stmt->newColumnName,
+        "",  // type not used for RENAME
+        AST::AlterTableStatement::RENAME
+    );
+    return {{"Status"}, {{"Column"+ stmt->columnName +"renamed"}}};
+}
+ExecutionEngine::ResultSet ExecutionEngine::executeDelete(AST::DeleteStatement& stmt) {
+    // Get all row IDs that match the WHERE clause
+    std::vector<uint32_t> rows_to_delete;
+    auto table_data = storage.getTableData(db.currentDatabase(), stmt.table);
+    
+    // Identify rows to delete
+    for (const auto& row : table_data) {
+        if (stmt.where && evaluateWhereClause(stmt.where.get(), row)) {
+            try {
+                uint32_t row_id = std::stoul(row.at("_rowid")); // Assuming _rowid exists
+                rows_to_delete.push_back(row_id);
+            } catch (...) {
+                // Handle error if _rowid missing or invalid
+                continue;
             }
         }
     }
-    
-    if (affectedRows > 0) {
-        storage.updateTableData(stmt.table, rows);
+
+    // Delete rows using the new B+Tree delete functionality
+    int deleted = 0;
+    for (uint32_t row_id : rows_to_delete) {
+        try {
+            storage.deleteRow(db.currentDatabase(), stmt.table, row_id);
+            deleted++;
+        } catch (const std::exception& e) {
+            // Log error but continue with next row
+            std::cerr << "Error deleting row " << row_id << ": " << e.what() << "\n";
+        }
     }
-    
-    return {{"status"}, {{std::to_string(affectedRows) + " rows updated"}}};
-}
-*/
-ExecutionEngine::ResultSet ExecutionEngine::executeDelete(AST::DeleteStatement& stmt) {
-    //auto table = schema.getTable(stmt.table);
-    auto data=storage.getTableData(db.currentDatabase(),stmt.table);
-    std::vector<std::unordered_map<std::string,std::string>> newData;
-    int deleted=0;
-    for(const auto& row : data){
-	    if(stmt.where && evaluateWhereClause(stmt.where.get(),row)){
-		    deleted ++;
-	    }else{
-		    newData.push_back(row);
-	    }
-    }
-    storage.updateTableData(db.currentDatabase(),stmt.table,newData);
-    return {{"status"}, {{std::to_string(deleted) + " rows deleted"}}};
+
+    return {
+        {"status"}, 
+        {{std::to_string(deleted) + " rows deleted"}}
+    };
 }
     /*if (!table) {
         throw std::runtime_error("Table not found: " + stmt.table);

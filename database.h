@@ -9,8 +9,18 @@
 #include <memory>
 #include <string>
 
+
+
+
 class Database {
 public:
+    /*struct QueryResult {
+        std::vector<std::string> columns;
+        std::vector<std::vector<std::string>> rows;
+    
+        bool empty() const { return rows.empty(); }
+    };*/
+
     explicit Database(const std::string& filename);
     void execute(const std::string& query);
     void startInteractive();

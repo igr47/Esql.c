@@ -29,12 +29,14 @@ public:
     void dropTable(const std::string& dbName, const std::string& name) override;
     void insertRow(const std::string& dbName, const std::string& tableName,
                    const std::unordered_map<std::string, std::string>& row) override;
+    void deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) override;
     std::vector<std::unordered_map<std::string, std::string>> getTableData(
         const std::string& dbName, const std::string& tableName) override;
-    void updateTableData(const std::string& dbName, const std::string& tableName,
-                         const std::vector<std::unordered_map<std::string, std::string>>& data) override;
+    void updateTableData(const std::string& dbName, const std::string& tableName,uint32_t row_id,const std::unordered_map<std::string, std::string>& new_values) override;
     const DatabaseSchema::Table* getTable(const std::string& dbName,
                                          const std::string& tableName) const override;
+    // Alter table statements
+    void alterTable(const std::string& dbName, const std::string& tableName,const std::string& oldColumn, const std::string& newColumn,const std::string& newType, AST::AlterTableStatement::Action action) override;
 
 private:
     DatabaseSchema schema;
@@ -57,6 +59,7 @@ private:
     std::unordered_map<std::string, std::string> deserializeRow(
         const std::vector<uint8_t>& data,
         const std::vector<DatabaseSchema::Column>& columns);
+    void rebuildTableWithNewSchema(const std::string& dbName,const std::string& tableName,const std::vector<DatabaseSchema::Column>& newSchema);
 
     // Helper methods
     void ensureDatabaseSelected() const;

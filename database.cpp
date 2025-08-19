@@ -1,4 +1,5 @@
 #include "database.h"
+#include "shell.h"
 #include <iostream>
 #include <cctype>
 
@@ -63,10 +64,27 @@ void Database::execute(const std::string& query) {
         }
     }
 }
+/*Database::QueryResult Database::execute(const std::string& query) {
+    QueryResult result;
+    try {
+        auto stmt = parseQuery(query);
+        SematicAnalyzer analyzer(*this, *storage);
+        analyzer.analyze(stmt);
+        ExecutionEngine engine(*this, *storage);
+        result = engine.execute(std::move(stmt));
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        if (std::string(e.what()) == "No database selected. Use CREATE DATABASE or USE DATABASE first") {
+            std::cerr << "Hint: Use 'CREATE DATABASE <name>;' or 'USE <name>;' to select a database.\n";
+        }
+        // Return empty result on error
+    }
+    return result;
+}*/
 
 void Database::startInteractive() {
     // Reset terminal state
-    std::cout << std::unitbuf;  // Enable automatic flushing
+    /*std::cout << std::unitbuf;  // Enable automatic flushing
     std::ios_base::sync_with_stdio(true);
     
     std::cout << "\nELVIS QUERY LANGUAGE - Version 0.1\n";
@@ -97,8 +115,13 @@ void Database::startInteractive() {
             execute(input);
         } catch (const std::exception& e) {
             std::cerr << "Error: " << e.what() << "\n";
-        }
-    }
+        }*/
+	ESQLShell shell(*this);
+	if(hasDatabaseSelected()){
+		shell.setCurrentDatabase(currentDatabase());
+	}
+	shell.run();
+    
 }
 
 std::unique_ptr<AST::Statement> Database::parseQuery(const std::string& query) {

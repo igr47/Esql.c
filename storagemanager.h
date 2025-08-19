@@ -54,6 +54,8 @@ private:
 
     void ensure_file_open();
     bool safe_seek(uint32_t page_id) noexcept;
+    private:
+    std::vector<uint32_t> free_pages; // Track freed pages
 
 public:
     explicit Pager(const std::string& db_file);
@@ -66,6 +68,7 @@ public:
     uint32_t allocate_page();
     void mark_dirty(uint32_t page_id);
     void flush_all() noexcept;
+    void free_page(uint32_t page_id);
     bool read_page_from_disk(uint32_t page_id, std::array<uint8_t, DB_PAGE_SIZE>& buffer) noexcept;
     bool write_page_to_disk(uint32_t page_id, const std::array<uint8_t, DB_PAGE_SIZE>& buffer) noexcept;
     void load_metadata();
@@ -95,6 +98,8 @@ public:
 
 class WriteAheadLog {
 private:
+    BufferPool& buffer_pool;
+    Pager& pager;
     std::string log_file_path;
     std::fstream log_file;
     std::mutex mutex;
@@ -102,13 +107,14 @@ private:
     void ensure_file_open();
 
 public:
-    explicit WriteAheadLog(const std::string& path);
+    WriteAheadLog(const std::string& path,BufferPool& buffer_pool,Pager& pager);
     ~WriteAheadLog() noexcept;
 
     WriteAheadLog(const WriteAheadLog&) = delete;
     WriteAheadLog& operator=(const WriteAheadLog&) = delete;
 
     void log_transaction_begin(uint64_t tx_id);
+    void reset_log();
     void log_page_write(uint64_t tx_id, uint32_t page_id,
                         const std::array<uint8_t, DB_PAGE_SIZE>& old_data,
                         const std::array<uint8_t, DB_PAGE_SIZE>& new_data);
@@ -123,6 +129,7 @@ private:
     BufferPool& buffer_pool;
     uint32_t root_page_id;
     const uint32_t order;
+    std::mutex tree_mutex;
 
     struct Node {
         bool is_leaf;
@@ -141,7 +148,11 @@ public:
     BPlusTree& operator=(const BPlusTree&) = delete;
 
     void insert(uint32_t key, const std::vector<uint8_t>& value);
+    void handle_underflow(Node& parent, uint32_t child_idx);
+    void remove_from_node(Node& node, uint32_t key);
     std::vector<uint32_t> getAllKeys() const;
+    void remove(uint32_t key);
+    void update(uint32_t old_key,uint32_t new_key, const std::vector<uint8_t>& value);
     std::vector<uint8_t> search(uint32_t key);
     uint32_t get_root_page_id() const { return root_page_id; }
 

@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <system_error>
 
 // Page Implementation
@@ -34,6 +35,29 @@ bool Pager::safe_seek(uint32_t page_id) noexcept {
     } catch (...) {
         return false;
     }
+}
+void Pager::free_page(uint32_t page_id) {
+    std::lock_guard<std::mutex> lock(cache_mutex);
+    
+    // 1. Validate page_id
+    if (page_id == 0 || page_id >= next_page_id) {
+        throw std::runtime_error("Attempt to free invalid page ID: " + 
+                               std::to_string(page_id));
+    }
+
+    // 2. Remove from cache if present
+    page_cache.erase(page_id);
+
+    // 3. Add to free list for reuse
+    free_pages.push_back(page_id);
+
+    // 4. Optionally zero out the page on disk to prevent data leakage
+    std::array<uint8_t, DB_PAGE_SIZE> empty_page;
+    empty_page.fill(0);
+    write_page_to_disk(page_id, empty_page);
+
+    // 5. Update metadata if needed (e.g., tracking free pages)
+    save_metadata();
 }
 
 Pager::Pager(const std::string& db_file) : filename(db_file) {
@@ -225,7 +249,7 @@ void WriteAheadLog::ensure_file_open() {
     }
 }
 
-WriteAheadLog::WriteAheadLog(const std::string& path) : log_file_path(path) {
+WriteAheadLog::WriteAheadLog(const std::string& path,BufferPool& buffer_pool,Pager& pager) : log_file_path(path),buffer_pool(buffer_pool),pager(pager) {
     ensure_file_open();
 }
 
@@ -281,33 +305,71 @@ void WriteAheadLog::log_check_point() {
         throw FileIOException("Failed to write checkpoint to WAL");
     }
 }
-
+void WriteAheadLog::reset_log(){
+    log_file.close();
+    log_file.open(log_file_path, std::ios::binary | std::ios::trunc | std::ios::out);
+    log_file.close();
+    log_file.open(log_file_path, std::ios::binary | std::ios::app | std::ios::in | std::ios::out);
+}
 void WriteAheadLog::recover() {
     std::lock_guard<std::mutex> lock(mutex);
-    try{
+    try {
         ensure_file_open();
         log_file.seekg(0);
-	//skip recovery if log is empty
-	if(log_file.peek()==std::ifstream::traits_type::eof()){
-		return;
-	}
-        std::string line;
-        while (std::getline(log_file, line)) {
-		std::cerr<<"Processing WAL entry:" <<line.substr(0,20)<<"------\n";
-        // Simplified recovery; parse and apply changes as needed
+        
+        if (log_file.peek() == std::ifstream::traits_type::eof()) {
+            return;
         }
-    }catch(...){
-	    std::cerr<<"WAL recovery encountered an error\n";
-    }
-    //reset after recovery
-    try{
-        log_file.close();
-        log_file.open(log_file_path, std::ios::binary | std::ios::trunc | std::ios::out);
-        log_file.close();
-        log_file.open(log_file_path, std::ios::binary | std::ios::app | std::ios::in | std::ios::out);
-        log_check_point();
-    }catch(...){
-	    std::cerr<<"Failed to reset WAL\n";
+        
+        std::unordered_map<uint64_t, std::vector<std::function<void()>>> tx_ops;
+        std::string line;
+        
+        while (std::getline(log_file, line)) {
+            std::istringstream iss(line);
+            std::string cmd;
+            getline(iss, cmd, ',');
+            
+            if (cmd == "BEGIN") {
+                uint64_t tx_id;
+                iss >> tx_id;
+                tx_ops[tx_id] = {};
+            } 
+            else if (cmd == "UPDATE") {
+                uint64_t tx_id;
+                uint32_t page_id;
+                iss >> tx_id >> page_id;
+                
+                // Read old and new data
+                std::array<uint8_t, DB_PAGE_SIZE> old_data, new_data;
+                log_file.read(reinterpret_cast<char*>(old_data.data()), DB_PAGE_SIZE);
+                log_file.read(reinterpret_cast<char*>(new_data.data()), DB_PAGE_SIZE);
+                
+                tx_ops[tx_id].push_back([this, page_id, new_data]() {
+                    // Reapply the update
+                    auto page = buffer_pool.fetch_page(page_id);
+                    if (page) {
+                        std::copy(new_data.begin(), new_data.end(), page->data.begin());
+                        pager.mark_dirty(page_id);
+                    }
+                });
+            }
+            else if (cmd == "COMMIT") {
+                uint64_t tx_id;
+                iss >> tx_id;
+                
+                // Apply all operations for this transaction
+                for (auto& op : tx_ops[tx_id]) {
+                    op();
+                }
+                tx_ops.erase(tx_id);
+            }
+        }
+        
+        // Clear the log after recovery
+        reset_log();
+        
+    } catch (...) {
+        std::cerr << "WAL recovery failed\n";
     }
 }
 
@@ -330,31 +392,66 @@ void BPlusTree::validate_node(const Node& node) const {
 BPlusTree::BPlusTree(Pager& pager, BufferPool& buffer_pool, uint32_t order)
     : pager(pager), buffer_pool(buffer_pool), order(order > 2 ? order : DEFAULT_BPTREE_ORDER) {
     try {
+        // Ensure metadata page exists and is initialized
+        if (pager.get_next_page_id() == 0) {
+            pager.allocate_page(); // Page 0 for metadata
+            pager.allocate_page(); // Page 1 for root
+        }
+
         auto meta_page = buffer_pool.fetch_page(0);
         if (!meta_page) {
             throw std::runtime_error("Failed to fetch metadata page");
         }
-        if (pager.get_next_page_id() > 1) {
-            root_page_id = *reinterpret_cast<uint32_t*>(meta_page->data.data() + sizeof(uint32_t));
-            if (root_page_id >= pager.get_next_page_id()) {
-                throw std::runtime_error("Invalid root page ID: " + std::to_string(root_page_id));
-            }
-        } else {
-            root_page_id = pager.allocate_page();
+
+        // Check if metadata is initialized (first 8 bytes: next_page_id and root_page_id)
+        if (pager.get_next_page_id() <= 2) {
+            root_page_id = 1; // Default root page
+            *reinterpret_cast<uint32_t*>(meta_page->data.data() + sizeof(uint32_t)) = root_page_id;
+            pager.mark_dirty(0);
+            
+            // Initialize empty root node
             auto root_page = buffer_pool.fetch_page(root_page_id);
-            if (!root_page) {
-                throw std::runtime_error("Failed to fetch root page");
-            }
             Node root;
             root.is_leaf = true;
             root.num_keys = 0;
             serialize_node(root, root_page->data);
             pager.mark_dirty(root_page_id);
-            *reinterpret_cast<uint32_t*>(meta_page->data.data() + sizeof(uint32_t)) = root_page_id;
-            pager.mark_dirty(0);
+            return;
         }
+
+        // Read root page ID from metadata
+        root_page_id = *reinterpret_cast<uint32_t*>(meta_page->data.data() + sizeof(uint32_t));
+        
+        // Validate root page exists
+        if (root_page_id == 0 || root_page_id >= pager.get_next_page_id()) {
+            throw std::runtime_error("Invalid root page ID in metadata");
+        }
+
+        // Verify root page contains valid node
+        auto root_page = buffer_pool.fetch_page(root_page_id);
+        if (!root_page) {
+            throw std::runtime_error("Failed to fetch root page");
+        }
+        
+        Node test_node;
+        deserialize_node(root_page->data, test_node);
+
     } catch (const std::exception& e) {
-        throw std::runtime_error("Failed to initialize BPlusTree: " + std::string(e.what()));
+        // If we get here, the index is corrupted - recreate it empty
+        std::cerr << "Warning: B+Tree initialization failed: " << e.what() 
+                  << ". Recreating empty index.\n";
+        
+        root_page_id = pager.allocate_page();
+        auto meta_page = buffer_pool.fetch_page(0);
+        *reinterpret_cast<uint32_t*>(meta_page->data.data() + sizeof(uint32_t)) = root_page_id;
+        pager.mark_dirty(0);
+        
+        auto root_page = buffer_pool.fetch_page(root_page_id);
+        Node root;
+        root.is_leaf = true;
+        root.num_keys = 0;
+        serialize_node(root, root_page->data);
+        pager.mark_dirty(root_page_id);
     }
 }
 
@@ -422,6 +519,69 @@ void BPlusTree::collectKeys(uint32_t page_id,std::vector<uint32_t>& keys) const{
 			collectKeys(node.children[i],keys);
 		}
 	}
+}
+void BPlusTree::update(uint32_t old_key, uint32_t new_key, const std::vector<uint8_t>& value) {
+    std::lock_guard<std::mutex> lock(tree_mutex);
+
+    // Remove old entry
+    if (old_key != new_key) {
+        remove(old_key);
+    }
+
+    // Insert new entry
+    auto page = buffer_pool.fetch_page(root_page_id);
+    Node root;
+    deserialize_node(page->data, root);
+
+    if (root.num_keys == 2 * order - 1) {
+        // Handle root split
+        uint32_t new_root_id = pager.allocate_page();
+        auto new_root_page = buffer_pool.fetch_page(new_root_id);
+        Node new_root;
+        new_root.is_leaf = false;
+        new_root.children.push_back(root_page_id);
+        split_child(new_root, 0, root);
+
+        root_page_id = new_root_id;
+        insert_non_full(new_root, new_key, value);
+        serialize_node(new_root, new_root_page->data);
+        pager.mark_dirty(new_root_id);
+
+        // Update metadata
+        auto meta_page = buffer_pool.fetch_page(0);
+        *reinterpret_cast<uint32_t*>(meta_page->data.data() + sizeof(uint32_t)) = root_page_id;
+        pager.mark_dirty(0);
+    } else {
+        insert_non_full(root, new_key, value);
+        serialize_node(root, page->data);
+        pager.mark_dirty(root_page_id);
+    }
+}
+void BPlusTree::remove(uint32_t key) {
+    std::lock_guard<std::mutex> lock(tree_mutex);
+
+    auto root_page = buffer_pool.fetch_page(root_page_id);
+    Node root;
+    deserialize_node(root_page->data, root);
+
+    remove_from_node(root, key);
+
+    // If root becomes empty and has children, make its first child the new root
+    if (!root.is_leaf && root.num_keys == 0) {
+        uint32_t old_root = root_page_id;
+        root_page_id = root.children[0];
+
+        // Update metadata
+        auto meta_page = buffer_pool.fetch_page(0);
+        *reinterpret_cast<uint32_t*>(meta_page->data.data() + sizeof(uint32_t)) = root_page_id;
+        pager.mark_dirty(0);
+
+        // Free old root page
+        pager.free_page(old_root);
+    } else {
+        serialize_node(root, root_page->data);
+        pager.mark_dirty(root_page_id);
+    }
 }
 std::vector<uint8_t> BPlusTree::search(uint32_t key) {
     try {
@@ -505,7 +665,262 @@ void BPlusTree::insert_non_full(Node& node, uint32_t key, const std::vector<uint
         pager.mark_dirty(node.children[i]);
     }
 }
+void BPlusTree::remove_from_node(Node& node, uint32_t key) {
+    // 1. Find the key position
+    auto it = std::lower_bound(node.keys.begin(), node.keys.begin() + node.num_keys, key);
+    int idx = it - node.keys.begin();
+    
+    // 2. Key found in current node
+    if (idx < node.num_keys && node.keys[idx] == key) {
+        if (node.is_leaf) {
+            // Case 1: Simple leaf node deletion
+            node.keys.erase(node.keys.begin() + idx);
+            node.values.erase(node.values.begin() + idx);
+            node.num_keys--;
+        } else {
+            // Case 2: Internal node deletion
+            uint32_t left_child_id = node.children[idx];
+            uint32_t right_child_id = node.children[idx + 1];
+            
+            auto left_page = buffer_pool.fetch_page(left_child_id);
+            auto right_page = buffer_pool.fetch_page(right_child_id);
+            Node left_child, right_child;
+            deserialize_node(left_page->data, left_child);
+            deserialize_node(right_page->data, right_child);
+            
+            if (left_child.num_keys >= order) {
+                // Case 2a: Borrow from left sibling
+                uint32_t predecessor_key = left_child.keys[left_child.num_keys - 1];
+                std::vector<uint8_t> predecessor_value;
+                if (left_child.is_leaf) {
+                    predecessor_value = left_child.values[left_child.num_keys - 1];
+                }
+                
+                // Remove from left child
+                left_child.keys.pop_back();
+                if (left_child.is_leaf) left_child.values.pop_back();
+                left_child.num_keys--;
+                
+                // Update current node
+                node.keys[idx] = predecessor_key;
+                
+                // Serialize changes
+                serialize_node(left_child, left_page->data);
+                serialize_node(node, buffer_pool.fetch_page(node.children[idx])->data);
+                pager.mark_dirty(left_child_id);
+                pager.mark_dirty(node.children[idx]);
+            } 
+            else if (right_child.num_keys >= order) {
+                // Case 2b: Borrow from right sibling
+                uint32_t successor_key = right_child.keys[0];
+                std::vector<uint8_t> successor_value;
+                if (right_child.is_leaf) {
+                    successor_value = right_child.values[0];
+                }
+                
+                // Remove from right child
+                right_child.keys.erase(right_child.keys.begin());
+                if (right_child.is_leaf) right_child.values.erase(right_child.values.begin());
+                right_child.num_keys--;
+                
+                // Update current node
+                node.keys[idx] = successor_key;
+                
+                // Serialize changes
+                serialize_node(right_child, right_page->data);
+                serialize_node(node, buffer_pool.fetch_page(node.children[idx + 1])->data);
+                pager.mark_dirty(right_child_id);
+                pager.mark_dirty(node.children[idx + 1]);
+            } 
+            else {
+                // Case 2c: Merge children
+                // Move all elements from right to left
+                left_child.keys.insert(left_child.keys.end(), 
+                                      right_child.keys.begin(), 
+                                      right_child.keys.begin() + right_child.num_keys);
+                if (left_child.is_leaf) {
+                    left_child.values.insert(left_child.values.end(),
+                                           right_child.values.begin(),
+                                           right_child.values.begin() + right_child.num_keys);
+                } else {
+                    left_child.children.insert(left_child.children.end(),
+                                             right_child.children.begin(),
+                                             right_child.children.begin() + right_child.num_keys + 1);
+                }
+                left_child.num_keys += right_child.num_keys;
+                
+                // Remove the key and right child pointer from current node
+                node.keys.erase(node.keys.begin() + idx);
+                node.children.erase(node.children.begin() + idx + 1);
+                node.num_keys--;
+                
+                // Serialize changes
+                serialize_node(left_child, left_page->data);
+                serialize_node(node, buffer_pool.fetch_page(node.children[idx])->data);
+                pager.mark_dirty(left_child_id);
+                pager.mark_dirty(node.children[idx]);
+                
+                // Free the right child page
+                pager.free_page(right_child_id);
+            }
+        }
+    } 
+    else if (!node.is_leaf) {
+        // 3. Key not found - recurse into appropriate child
+        uint32_t child_id = node.children[idx];
+        auto child_page = buffer_pool.fetch_page(child_id);
+        Node child;
+        deserialize_node(child_page->data, child);
+        
+        // Check for underflow before recursing
+        if (child.num_keys < order - 1) {
+            handle_underflow(node, idx);
+            // Need to re-fetch as tree structure may have changed
+            child_page = buffer_pool.fetch_page(node.children[idx]);
+            deserialize_node(child_page->data, child);
+        }
+        
+        remove_from_node(child, key);
+        serialize_node(child, child_page->data);
+        pager.mark_dirty(child_id);
+    }
+}
 
+void BPlusTree::handle_underflow(Node& parent, uint32_t child_idx) {
+    uint32_t child_id = parent.children[child_idx];
+    auto child_page = buffer_pool.fetch_page(child_id);
+    Node child;
+    deserialize_node(child_page->data, child);
+    
+    // Try to borrow from left sibling
+    if (child_idx > 0) {
+        uint32_t left_sib_id = parent.children[child_idx - 1];
+        auto left_sib_page = buffer_pool.fetch_page(left_sib_id);
+        Node left_sib;
+        deserialize_node(left_sib_page->data, left_sib);
+        
+        if (left_sib.num_keys >= order) {
+            // Rotate right
+            if (child.is_leaf) {
+                child.keys.insert(child.keys.begin(), left_sib.keys.back());
+                child.values.insert(child.values.begin(), left_sib.values.back());
+                parent.keys[child_idx - 1] = left_sib.keys.back();
+            } else {
+                child.keys.insert(child.keys.begin(), parent.keys[child_idx - 1]);
+                child.children.insert(child.children.begin(), left_sib.children.back());
+                parent.keys[child_idx - 1] = left_sib.keys.back();
+            }
+            
+            left_sib.keys.pop_back();
+            if (left_sib.is_leaf) left_sib.values.pop_back();
+            else left_sib.children.pop_back();
+            left_sib.num_keys--;
+            child.num_keys++;
+            
+            serialize_node(left_sib, left_sib_page->data);
+            serialize_node(child, child_page->data);
+            pager.mark_dirty(left_sib_id);
+            pager.mark_dirty(child_id);
+            return;
+        }
+    }
+    
+    // Try to borrow from right sibling
+    if (child_idx < parent.num_keys) {
+        uint32_t right_sib_id = parent.children[child_idx + 1];
+        auto right_sib_page = buffer_pool.fetch_page(right_sib_id);
+        Node right_sib;
+        deserialize_node(right_sib_page->data, right_sib);
+        
+        if (right_sib.num_keys >= order) {
+            // Rotate left
+            if (child.is_leaf) {
+                child.keys.push_back(right_sib.keys.front());
+                child.values.push_back(right_sib.values.front());
+                parent.keys[child_idx] = right_sib.keys[1];
+            } else {
+                child.keys.push_back(parent.keys[child_idx]);
+                child.children.push_back(right_sib.children.front());
+                parent.keys[child_idx] = right_sib.keys.front();
+            }
+            
+            right_sib.keys.erase(right_sib.keys.begin());
+            if (right_sib.is_leaf) right_sib.values.erase(right_sib.values.begin());
+            else right_sib.children.erase(right_sib.children.begin());
+            right_sib.num_keys--;
+            child.num_keys++;
+            
+            serialize_node(right_sib, right_sib_page->data);
+            serialize_node(child, child_page->data);
+            pager.mark_dirty(right_sib_id);
+            pager.mark_dirty(child_id);
+            return;
+        }
+    }
+    
+    // Must merge with a sibling
+    if (child_idx > 0) {
+        // Merge with left sibling
+        uint32_t left_sib_id = parent.children[child_idx - 1];
+        auto left_sib_page = buffer_pool.fetch_page(left_sib_id);
+        Node left_sib;
+        deserialize_node(left_sib_page->data, left_sib);
+        
+        // Move parent key down
+        if (child.is_leaf) {
+            left_sib.keys.insert(left_sib.keys.end(), child.keys.begin(), child.keys.end());
+            left_sib.values.insert(left_sib.values.end(), child.values.begin(), child.values.end());
+        } else {
+            left_sib.keys.push_back(parent.keys[child_idx - 1]);
+            left_sib.keys.insert(left_sib.keys.end(), child.keys.begin(), child.keys.end());
+            left_sib.children.insert(left_sib.children.end(), child.children.begin(), child.children.end());
+        }
+        left_sib.num_keys += child.num_keys + (child.is_leaf ? 0 : 1);
+        
+        // Remove from parent
+        parent.keys.erase(parent.keys.begin() + child_idx - 1);
+        parent.children.erase(parent.children.begin() + child_idx);
+        parent.num_keys--;
+        
+        serialize_node(left_sib, left_sib_page->data);
+        serialize_node(parent, buffer_pool.fetch_page(parent.children[child_idx - 1])->data);
+        pager.mark_dirty(left_sib_id);
+        pager.mark_dirty(parent.children[child_idx - 1]);
+        
+        // Free the child page
+        pager.free_page(child_id);
+    } else {
+        // Merge with right sibling
+        uint32_t right_sib_id = parent.children[child_idx + 1];
+        auto right_sib_page = buffer_pool.fetch_page(right_sib_id);
+        Node right_sib;
+        deserialize_node(right_sib_page->data, right_sib);
+        
+        // Move parent key down
+        if (child.is_leaf) {
+            child.keys.insert(child.keys.end(), right_sib.keys.begin(), right_sib.keys.end());
+            child.values.insert(child.values.end(), right_sib.values.begin(), right_sib.values.end());
+        } else {
+            child.keys.push_back(parent.keys[child_idx]);
+            child.keys.insert(child.keys.end(), right_sib.keys.begin(), right_sib.keys.end());
+            child.children.insert(child.children.end(), right_sib.children.begin(), right_sib.children.end());
+        }
+        child.num_keys += right_sib.num_keys + (child.is_leaf ? 0 : 1);
+        
+        // Remove from parent
+        parent.keys.erase(parent.keys.begin() + child_idx);
+        parent.children.erase(parent.children.begin() + child_idx + 1);
+        parent.num_keys--;
+        
+        serialize_node(child, child_page->data);
+        serialize_node(parent, buffer_pool.fetch_page(parent.children[child_idx])->data);
+        pager.mark_dirty(child_id);
+        pager.mark_dirty(parent.children[child_idx]);
+        
+        // Free the right sibling page
+        pager.free_page(right_sib_id);
+    }
+}
 void BPlusTree::split_child(Node& parent, uint32_t index, Node& child) {
     validate_node(parent);
     validate_node(child);
