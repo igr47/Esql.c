@@ -1,6 +1,9 @@
 #include "database.h"
 #include "shell.h"
+//#include "executionengine.h"
 #include <iostream>
+#include <chrono>
+#include <iomanip>
 #include <cctype>
 
 Database::Database(const std::string& filename)
@@ -34,13 +37,33 @@ void Database::setCurrentDatabase(const std::string& dbName) {
     current_db = dbName;
 }
 
+std::pair<ExecutionEngine::ResultSet, double> Database::executeQuery(const std::string& query){
+	auto start=std::chrono::high_resolution_clock::now();
+	try{
+		auto stmt = parseQuery(query);
+		SematicAnalyzer analyzer(*this, *storage);                                                         
+		analyzer.analyze(stmt); // Analyze once                                                        
+		ExecutionEngine engine(*this, *storage);                                                           
+		auto result = engine.execute(std::move(stmt));
+		
+		auto end=std::chrono::high_resolution_clock::now();
+		double duration=std::chrono::duration<double>(end-start).count();
+		return {result,duration};
+	}catch(const std::exception& e){
+		auto end=std::chrono::high_resolution_clock::now();
+		double duration=std::chrono::duration<double>(end-start).count();
+		throw;
+	}
+}
+
 void Database::execute(const std::string& query) {
     try {
-        auto stmt = parseQuery(query);
+        /*auto stmt = parseQuery(query);
         SematicAnalyzer analyzer(*this, *storage);
         analyzer.analyze(stmt); // Analyze once
         ExecutionEngine engine(*this, *storage);
-        auto result = engine.execute(std::move(stmt));
+        auto result = engine.execute(std::move(stmt));*/
+	auto [result,duration]=executeQuery(query);
 
         // Print results
         if (!result.columns.empty()) {
@@ -54,8 +77,10 @@ void Database::execute(const std::string& query) {
                 }
                 std::cout << "\n";
             }
+	    std::cout<<"Time: "<<std::fixed<<std::setprecision(4)<<duration <<" seconds\n";
         } else {
             std::cout << "Query executed successfully.\n";
+	    std::cout<<"Time: "<<std::fixed<<std::setprecision(4)<< duration <<" seconds\n";
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
@@ -64,23 +89,7 @@ void Database::execute(const std::string& query) {
         }
     }
 }
-/*Database::QueryResult Database::execute(const std::string& query) {
-    QueryResult result;
-    try {
-        auto stmt = parseQuery(query);
-        SematicAnalyzer analyzer(*this, *storage);
-        analyzer.analyze(stmt);
-        ExecutionEngine engine(*this, *storage);
-        result = engine.execute(std::move(stmt));
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        if (std::string(e.what()) == "No database selected. Use CREATE DATABASE or USE DATABASE first") {
-            std::cerr << "Hint: Use 'CREATE DATABASE <name>;' or 'USE <name>;' to select a database.\n";
-        }
-        // Return empty result on error
-    }
-    return result;
-}*/
+
 
 void Database::startInteractive() {
     // Reset terminal state

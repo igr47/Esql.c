@@ -1,12 +1,14 @@
 #ifndef ESQLSHELL_H
 #define ESQLSHELL_H
 
+#include "executionengine.h"
 #include <string>
 #include <vector>
 #include <map>
 #include <stack>
 #include <termios.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <iostream>
 
 #ifdef _WIN32
@@ -18,10 +20,10 @@
 #include <unistd.h>
 #include <set>
 #include <sys/ioctl.h>
+
 #endif
 
 class Database;
-
 
 class ESQLShell {
 public:
@@ -39,11 +41,13 @@ private:
     std::string connection_status = "disconnected";
     std::vector<std::string> command_history;
     std::stack<std::string> query_stack;
-    std::stsck<std::string> query_stack2;
+    std::stack<std::string> query_stack2;
     static const std::unordered_set<std::string> keywords;
     static const std::unordered_set<std::string> types;
     static const std::unordered_set<std::string> conditionals;
     std::string current_line;
+    std::string last_prompt;
+    size_t cached_prompt_length=0;
     size_t cursor_pos;
     int history_pos;
     int screen_rows,screen_cols;
@@ -60,6 +64,7 @@ private:
     const std::string BLUE = "\033[34m";
     const std::string MAGENTA = "\033[35m";
     const std::string CYAN = "\033[36m";
+    const std::string WHITE= "\033[37m";
     const std::string GRAY = "\033[90m";
 
     //Handle platform setup
@@ -84,8 +89,10 @@ private:
     void insert_char(char c);
     void delete_char();
     void redraw_line();
+    void handle_enter();
+    void print_results(const ExecutionEngine::ResultSet& result,double duration);
     void clear_line();
-
+    
     //Take care of display
     void print_banner();
     void update_connection_status();
@@ -93,14 +100,12 @@ private:
     std::string colorize_sql();
     void show_help();
     std::string expand_alias(const std::string& input);
-    void print_result_table(const std::vector<std::vector<std::string>>& rows,
-                           const std::vector<std::string>& headers,
-                           long long duration_ms = 0);
-    void execute_command(const std::string& raw_cmd);
     void handle_special_keys();
     void handle_windows_input();
     void handle_unix_input();
-    void redraw_line();
+    size_t calculate_visible_length(const std::string& str);
+    std::string get_prompt_string();
+    void update_prompt_cache();
     size_t calculate_visible_position(const std::string& str, size_t logical_pos);
     void run_interactive();
 };
