@@ -59,6 +59,7 @@ class SematicAnalyzer{
 		void validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table);
 		void validateBinaryOperation(AST::BinaryOp&,const DatabaseSchema::Table* table);
 		bool columnExists(const std::string& columnName) const;
+		void validateLiteral(const AST::Literal& literal, const DatabaseSchema::Table* table);
 		bool isValidOperation(Token::Type op,const AST::Expression& left,const AST::Expression& right);
 		//end of the child methods
 		//metod to analyze insert statement analysis
@@ -66,6 +67,7 @@ class SematicAnalyzer{
 		void analyzeCreate(AST::CreateTableStatement& createStmt);
 		const DatabaseSchema::Column* findColumn(const std::string& name) const;
 		DatabaseSchema::Column::Type getValueType(const AST::Expression& expr);
+		bool areTypesComparable(DatabaseSchema::Column::Type t1,DatabaseSchema::Column::Type t2);
 		bool isTypeCompatible(DatabaseSchema::Column::Type columnType,DatabaseSchema::Column::Type valueType);
 		void analyzeDelete(AST::DeleteStatement& deleteStmt);
 		void analyzeDrop(AST::DropStatement& dropStmt);

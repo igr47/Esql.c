@@ -141,7 +141,11 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	auto stmt=std::make_unique<AST::SelectStatement>();
 	//parse select clause
 	consume(Token::Type::SELECT);
-	stmt->columns=parseColumnList();
+	if(match(Token::Type::ASTERIST)){
+		consume(Token::Type::ASTERIST);
+	}else{
+	        stmt->columns=parseColumnList();
+	}
 	//parse From clause
 	consume(Token::Type::FROM);
 	stmt->from=parseFromClause();
@@ -176,7 +180,7 @@ std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement() {
         consume(Token::Type::EQUAL);
 
         // Use parseExpression() for strict value parsing
-        stmt->setClauses.emplace_back(column, parseExpression);
+        stmt->setClauses.emplace_back(column, parseExpression());
     } while (match(Token::Type::COMMA));
 
     //inValueContext = wasInValueContext;  // Restore context
@@ -345,29 +349,36 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
 
     stmt.columns.push_back(std::move(col));
 }
-std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement(){
-	auto stmt=std::make_unique<AST::AlterTableStatement>();
-	//parse Alter caluse
-	consume(Token::Type::ALTER);
-	consume(Token::Type::TABLE);
-	stmt->tablename=currentToken.lexeme;
-	consume(Token::Type::IDENTIFIER);
-	if(match(Token::Type::ADD)){
-		stmt->action=AST::AlterTableStatement::ADD;
-		stmt->columnName=currentToken.lexeme;
-		consume(Token::Type::IDENTIFIER);
-		stmt->type=currentToken.lexeme;
-		consume(Token::Type::IDENTIFIER);
-	}else if(match(Token::Type::DROP)){
-		stmt->action=AST::AlterTableStatement::DROP;
-		stmt->columnName=currentToken.lexeme;
-		consume(Token::Type::IDENTIFIER);
-	}else if(match(Token::Type::RENAME)){
-		stmt->action=AST::AlterTableStatement::RENAME;
-		stmt->columnName=currentToken.lexeme;
-		consume(Token::Type::IDENTIFIER);
-	}
-	return stmt;
+std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
+    auto stmt = std::make_unique<AST::AlterTableStatement>();
+    
+    consume(Token::Type::ALTER);
+    consume(Token::Type::TABLE);
+    stmt->tablename = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+    
+    if (match(Token::Type::ADD)) {
+        stmt->action = AST::AlterTableStatement::ADD;
+        stmt->columnName = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+        stmt->type = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+    } 
+    else if (match(Token::Type::DROP)) {
+        stmt->action = AST::AlterTableStatement::DROP;
+        stmt->columnName = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+    } 
+    else if (match(Token::Type::RENAME)) {
+        stmt->action = AST::AlterTableStatement::RENAME;
+        stmt->columnName = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+        consume(Token::Type::TO);
+        stmt->newColumnName = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+    }
+    
+    return stmt;
 }
 std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
 	std::vector<std::unique_ptr<AST::Expression>> columns;

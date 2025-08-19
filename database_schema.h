@@ -14,6 +14,7 @@ struct DatabaseSchema {
         bool isNullable = true;
         bool hasDefault = false;
         std::string defaultvalue;
+	bool isPrimaryKey;
         
         static Type parseType(const std::string& typeStr);
     };

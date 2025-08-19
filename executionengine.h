@@ -27,6 +27,12 @@ private:
     DiskStorage& storage;
     
     ResultSet executeCreateDatabase(AST::CreateDatabaseStatement& stmt);
+    ResultSet executeAlterTable(AST::AlterTableStatement& stmt);
+    //Helper methods for ALTER TABLE STATEMENT
+     ResultSet handleAlterAdd(AST::AlterTableStatement* stmt);
+    ResultSet handleAlterDrop(AST::AlterTableStatement* stmt);
+    ResultSet handleAlterRename(AST::AlterTableStatement* stmt);
+    //end of helper methods
     ResultSet executeUse(AST::UseDatabaseStatement& stmt);
     ResultSet executeShow(AST::ShowDatabaseStatement& stmt);
     ResultSet executeCreateTable(AST::CreateTableStatement& stmt);

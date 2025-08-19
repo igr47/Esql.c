@@ -5,20 +5,20 @@
 #include <iostream>
 
 DiskStorage::DiskStorage(const std::string& filename)
-    : pager(filename + ".db"), buffer_pool(pager), wal(filename + ".wal") {
-    std::streambuf* orig_cout=std::cout.rdbuf();
+    : pager(filename + ".db"), buffer_pool(pager), wal(filename + ".wal",buffer_pool,pager) {
+    //std::streambuf* orig_cout=std::cout.rdbuf();
     try {
-	std::cout.rdbuf(nullptr);
+	//std::cout.rdbuf(nullptr);
 
         wal.recover(); // Apply pending changes from WAL
         readSchema();  // Load existing schemas
 	
-	std::cout.rdbuf(orig_cout);
+	//std::cout.rdbuf(orig_cout);
         if (!databases.empty()) {
             current_db = databases.begin()->first; // Set default database
         }
     } catch (const std::exception& e) {
-	std::cout.rdbuf(orig_cout);
+	//std::cout.rdbuf(orig_cout);
         throw std::runtime_error("Failed to initialize DiskStorage: " + std::string(e.what()));
     }
 }
@@ -72,6 +72,7 @@ void DiskStorage::createTable(const std::string& dbName, const std::string& name
     if (db.tables.find(name) != db.tables.end()) {
         throw std::runtime_error("Table already exists: " + name);
     }
+    const uint32_t order=4;
     auto tree = std::make_unique<BPlusTree>(pager, buffer_pool);
     db.tables[name] = std::move(tree);
     db.table_schemas[name] = columns;
@@ -142,32 +143,117 @@ std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableD
     return result;
 }
 
-void DiskStorage::updateTableData(const std::string& dbName, const std::string& tableName,
-                                 const std::vector<std::unordered_map<std::string, std::string>>& data) {
+void DiskStorage::updateTableData(const std::string& dbName, const std::string& tableName,uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) {
     ensureDatabaseSelected();
     auto& db = getCurrentDatabase();
-    auto schema_it = db.table_schemas.find(tableName);
-    if (schema_it == db.table_schemas.end()) {
+    
+    // Get existing row
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end()) {
         throw std::runtime_error("Table not found: " + tableName);
     }
-    auto table_it = db.tables.find(tableName);
-    if (table_it == db.tables.end() || !table_it->second) {
-        throw std::runtime_error("Table not initialized: " + tableName);
+    
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) {
+        throw std::runtime_error("Schema not found for table: " + tableName);
     }
 
-    auto new_tree = std::make_unique<BPlusTree>(pager, buffer_pool);
-    uint32_t row_id = 1;
-    for (const auto& row : data) {
-        std::vector<uint8_t> buffer;
-        serializeRow(row, schema_it->second, buffer);
-        new_tree->insert(row_id++, buffer);
+    // Get existing data
+    auto old_data = table_it->second->search(row_id);
+    if (old_data.empty()) {
+        throw std::runtime_error("Row not found with ID: " + std::to_string(row_id));
     }
-    db.tables[tableName] = std::move(new_tree);
-    db.root_page_ids[tableName] = db.tables[tableName]->get_root_page_id();
-    updateRowIdCounter(tableName, row_id);
-    writeSchema();
+    
+    auto old_row = deserializeRow(old_data, schema_it->second);
+    
+    // Merge changes
+    for (const auto& [col, val] : new_values) {
+        old_row[col] = val;
+    }
+    
+    // Serialize new data
+    std::vector<uint8_t> new_buffer;
+    serializeRow(old_row, schema_it->second, new_buffer);
+    
+    // Update in index (using the fixed B+Tree implementation)
+    table_it->second->update(row_id, row_id, new_buffer); // Key remains same
+    
+    // Mark page dirty through buffer pool
+    buffer_pool.flush_all();
 }
+void DiskStorage::deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) {
+    ensureDatabaseSelected();
+    auto& db = getCurrentDatabase();
+    
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
+    }
+    
+    // Verify row exists
+    auto old_data = table_it->second->search(row_id);
+    if (old_data.empty()) {
+        throw std::runtime_error("Row not found with ID: " + std::to_string(row_id));
+    }
+    
+    // Remove from index
+    table_it->second->remove(row_id);
+    
+    // Mark page dirty through buffer pool
+    buffer_pool.flush_all();
+}
+//==============ALTER TABLE METHOD=============
+void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,const std::string& oldColumn, const std::string& newColumn,const std::string& newType, AST::AlterTableStatement::Action action) {
+    ensureDatabaseExists(dbName);
+    auto& db = databases.at(dbName);
+    
+    if (db.tables.find(tableName) == db.tables.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
+    }
 
+    auto& columns = db.table_schemas.at(tableName);
+    std::vector<DatabaseSchema::Column> newColumns = columns;
+    bool schemaChanged = false;
+
+    switch (action) {
+        case AST::AlterTableStatement::ADD: {
+            DatabaseSchema::Column newCol;
+            newCol.name = newColumn;
+            newCol.type = DatabaseSchema::Column::parseType(newType);
+            newCol.isNullable = true; // Default for new columns
+            newColumns.push_back(newCol);
+            schemaChanged = true;
+            break;
+        }
+        case AST::AlterTableStatement::DROP: {
+            auto it = std::remove_if(newColumns.begin(), newColumns.end(),
+                [&oldColumn](const DatabaseSchema::Column& col) {
+                    return col.name == oldColumn;
+                });
+            if (it != newColumns.end()) {
+                newColumns.erase(it, newColumns.end());
+                schemaChanged = true;
+            }
+            break;
+        }
+        case AST::AlterTableStatement::RENAME: {
+            for (auto& col : newColumns) {
+                if (col.name == oldColumn) {
+                    col.name = newColumn;
+                    schemaChanged = true;
+                    break;
+                }
+            }
+            break;
+        }
+        default:
+            throw std::runtime_error("Unsupported ALTER TABLE operation");
+    }
+
+    if (schemaChanged) {
+        rebuildTableWithNewSchema(dbName, tableName, newColumns);
+    }
+}
 const DatabaseSchema::Table* DiskStorage::getTable(const std::string& dbName,
                                                   const std::string& tableName) const {
     ensureDatabaseSelected();
@@ -239,7 +325,46 @@ void DiskStorage::ensureDatabaseSelected() const {
         throw std::runtime_error("No database selected");
     }
 }
-
+//=========HELPER METHOD FOR EXECUTE ALTTER========{
+//==≠==============================================
+void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName,const std::string& tableName,const std::vector<DatabaseSchema::Column>& newSchema) {
+    auto& db = databases.at(dbName);
+    
+    // 1. Get all current data
+    auto oldData = getTableData(dbName, tableName);
+    auto& oldSchema = db.table_schemas.at(tableName);
+    
+    // 2. Create new table with new schema
+    auto newTree = std::make_unique<BPlusTree>(pager, buffer_pool);
+    
+    // 3. Reinsert all rows with new schema
+    uint32_t row_id = 1;
+    for (auto& row : oldData) {
+        std::unordered_map<std::string, std::string> newRow;
+        
+        // Map old columns to new schema
+        for (const auto& newCol : newSchema) {
+            auto it = row.find(newCol.name);
+            if (it != row.end()) {
+                newRow[newCol.name] = it->second;
+            } else {
+                // For added columns, set default value
+                newRow[newCol.name] = "NULL";
+            }
+        }
+        
+        // Serialize and insert
+        std::vector<uint8_t> buffer;
+        serializeRow(newRow, newSchema, buffer);
+        newTree->insert(row_id++, buffer);
+    }
+    
+    // 4. Update metadata
+    db.tables[tableName] = std::move(newTree);
+    db.table_schemas[tableName] = newSchema;
+    db.root_page_ids[tableName] = db.tables[tableName]->get_root_page_id();
+    writeSchema();
+}
 void DiskStorage::ensureDatabaseExists(const std::string& dbName) const {
     if (!databaseExists(dbName)) {
         throw std::runtime_error("Database does not exist: " + dbName);
@@ -273,6 +398,15 @@ void DiskStorage::writeSchema() {
         if (!schema_page) {
             throw std::runtime_error("Failed to fetch schema page");
         }
+	        // Ensure we have current root page IDs
+        for (auto& [dbName, db] : databases) {
+            for (auto& [tableName, _] : db.table_schemas) {
+                if (db.tables[tableName]) {
+                    db.root_page_ids[tableName] = db.tables[tableName]->get_root_page_id();
+                }
+            }
+        }
+
         uint8_t* data = schema_page->data.data();
         uint32_t offset = sizeof(uint32_t); // Reserve space for next_page_id
 
@@ -402,7 +536,8 @@ void DiskStorage::readSchema() {
                     columns.push_back(column);
                 }
                 db.table_schemas[table_name] = columns;
-                db.tables[table_name] = std::make_unique<BPlusTree>(pager, buffer_pool, root_page_id);
+		const uint32_t order=4;
+                db.tables[table_name] = std::make_unique<BPlusTree>(pager, buffer_pool,order, root_page_id);
                 db.root_page_ids[table_name] = root_page_id;
             }
             databases[dbName] = std::move(db);

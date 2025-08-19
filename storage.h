@@ -2,6 +2,7 @@
 #ifndef STORAGE_H
 #define STORAGE_H
 #include "database_schema.h"
+#include "parser.h"
 #include <vector>
 #include <unordered_map>
 #include <string>
@@ -23,9 +24,11 @@ public:
                          const std::unordered_map<std::string, std::string>& row) = 0;
     virtual std::vector<std::unordered_map<std::string, std::string>> 
         getTableData(const std::string& dbName,const std::string& tableName) = 0;
-    virtual void updateTableData(const std::string& dbName,const std::string& tableName,
-                              const std::vector<std::unordered_map<std::string, std::string>>& data) = 0;
+    virtual void updateTableData(const std::string& dbName,const std::string& tableName,uint32_t row_id,
+                              const std::unordered_map<std::string, std::string>& new_data) = 0;
+     virtual void deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) =0;
     virtual const DatabaseSchema::Table* getTable(const std::string& dbName,const std::string& tableName) const=0;
+     virtual void alterTable(const std::string& dbName, const std::string& tableName,const std::string& oldColumn, const std::string& newColumn,const std::string& newType, AST::AlterTableStatement::Action action) =0;
 
 };
 /*
