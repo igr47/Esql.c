@@ -4,7 +4,7 @@
 #include "parser.h"
 #include "analyzer.h"
 #include "storage.h"
-#include "database.h"
+//#include "database.h"
 #include <memory>
 #include <vector>
 #include <unordered_map>

@@ -7,21 +7,17 @@
 #include "executionengine.h"
 #include "diskstorage.h"
 #include <memory>
+#include <utility>
 #include <string>
-
 
 
 
 class Database {
 public:
-    /*struct QueryResult {
-        std::vector<std::string> columns;
-        std::vector<std::vector<std::string>> rows;
-    
-        bool empty() const { return rows.empty(); }
-    };*/
+
 
     explicit Database(const std::string& filename);
+    std::pair<ExecutionEngine::ResultSet, double> executeQuery(const std::string& query);
     void execute(const std::string& query);
     void startInteractive();
     bool hasDatabaseSelected() const;
