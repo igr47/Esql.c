@@ -310,7 +310,7 @@ void ESQLShell::print_results(const ExecutionEngine::ResultSet& result,double du
 				column_widths[i] = row[i].length();
 			}
 		}
-		column_widths[1]+=2;
+		column_widths[i]+=2;
 	}
 	//Print header 
 	std::cout<<CYAN;
@@ -447,7 +447,7 @@ std::string ESQLShell::colorize_sql() {
 			        }else if(conditionals.count(upper_word)){
 				        coloured_line+=CYAN + current_word +RESET;
 			        }else{
-				        coloured_line=current_word;
+				        coloured_line+=current_word;
 			        }
 			        current_word.clear();
 		        }
@@ -568,19 +568,35 @@ void ESQLShell::handle_special_keys(){
 size_t ESQLShell::calculate_visible_position(const std::string& str, size_t logical_pos) {
     size_t visible_pos = 0;
     bool in_escape = false;
-
+    
     for (size_t i = 0; i < str.length() && i < logical_pos; ++i) {
-        if (str[i] == '\033') {
+        char c = str[i];
+        
+        if (c == '\033') { // Start of ANSI escape sequence
             in_escape = true;
-        } else if (in_escape) {
-            if (str[i] == 'm' || str[i] == 'H' || str[i] == 'K') {
+            continue;
+        }
+        
+        if (in_escape) {
+            if (c == 'm') { // End of ANSI color escape sequence
                 in_escape = false;
             }
-        } else {
-            visible_pos++;
+            // Also handle other ANSI sequences that might be present
+            else if (c == '[') {
+                // CSI sequence, skip until command character
+                continue;
+            }
+            else if (c == 'H' || c == 'J' || c == 'K' || c == 'A' || c == 'B' || c == 'C' || c == 'D') {
+                // Common ANSI command characters
+                in_escape = false;
+            }
+            continue;
         }
+        
+        // Only count non-escape characters
+        visible_pos++;
     }
-
+    
     return visible_pos;
 }
 
@@ -699,13 +715,18 @@ void ESQLShell::run() {
 		}else if(c==127 || c=='\b'){
 			delete_char();
 		}else if(c=='\t'){
-
+			continue;
 		}else if(isprint(c)){
 			insert_char(c);
 
 			//Handle line warping
+			//update_prompt_cache();
+			//int line_length = cached_prompt_length + current_line.length();
 			update_prompt_cache();
-			int line_length = cached_prompt_length + current_line.length();
+                        std::string colored_input = colorize_sql();
+                        size_t visible_cursor_pos = calculate_visible_position(colored_input, cursor_pos);
+                        int line_length = cached_prompt_length + visible_cursor_pos;
+
 			if (line_length >= screen_cols){
 				std::cout << "\n";
 			}
