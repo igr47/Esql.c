@@ -1,113 +1,121 @@
-#ifndef ESQLSHELL_H
-#define ESQLSHELL_H
+// shell.h (unchanged)
+#ifndef ESQL_SHELL_H
+#define ESQL_SHELL_H
 
-#include "executionengine.h"
+#include "database.h"
 #include <string>
 #include <vector>
-#include <map>
-#include <stack>
-#include <termios.h>
-#include <unordered_map>
 #include <unordered_set>
-#include <iostream>
-
-#ifdef _WIN32
-#include <windows.h>
-#include <conio.h>
-#else
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <unistd.h>
-#include <set>
-#include <sys/ioctl.h>
-
-#endif
-
-class Database;
+#include <memory>
+#include <termios.h>
 
 class ESQLShell {
 public:
-    enum class Platform { Linux, Windows, Termux, Unknown };
-
-    ESQLShell(Database& db);
+    explicit ESQLShell(Database& db);
     ~ESQLShell();
+    
     void run();
     void setCurrentDatabase(const std::string& db_name);
-    void setConnectionStatus(const std::string& status);
 
 private:
-    Database& db;
-    std::string current_db;
-    std::string connection_status = "disconnected";
-    std::vector<std::string> command_history;
-    std::stack<std::string> query_stack;
-    std::stack<std::string> query_stack2;
-    static const std::unordered_set<std::string> keywords;
-    static const std::unordered_set<std::string> types;
-    static const std::unordered_set<std::string> conditionals;
-    std::string current_line;
-    std::string last_prompt;
-    size_t cached_prompt_length=0;
-    size_t cursor_pos;
-    int history_pos;
-    int screen_rows,screen_cols;
-    bool use_colors = true;
-
-    struct termios orig_termios;
-    //bool raw_mode = false;
-    Platform current_platform = Platform::Unknown;
-
-    const std::string RESET = "\033[0m";
-    const std::string RED = "\033[31m";
-    const std::string GREEN = "\033[32m";
-    const std::string YELLOW = "\033[33m";
-    const std::string BLUE = "\033[34m";
-    const std::string MAGENTA = "\033[35m";
-    const std::string CYAN = "\033[36m";
-    const std::string WHITE= "\033[37m";
-    const std::string GRAY = "\033[90m";
-
-    //Handle platform setup
+    // Platform detection
+    enum class Platform { Linux, Windows, Termux, Unknown };
     Platform detect_platform();
     void platform_specific_init();
+    
+    // Terminal control
     void enable_raw_mode();
     void disable_raw_mode();
-    bool setup_windows_terminal();
-    void restore_windows_terminal();
-
-    //Handle special key presses
-    void get_window_size();
+    void get_terminal_size();
+    void clear_screen();
+    void clear_previous_lines(int line_count);
+    
+    // Input handling
+    int read_key();
+    void handle_enter();
+    void insert_char(char c);
+    void delete_char();
+    void handle_tab_completion();
+    
+    // Navigation
     void move_cursor_left();
     void move_cursor_right();
     void move_cursor_up();
     void move_cursor_down();
-    void refresh_line();
-    void previous_command_up();
-    void previous_command_down();
-
-    //Handle charachter handling
-    void insert_char(char c);
-    void delete_char();
-    void redraw_line();
-    void handle_enter();
-    void print_results(const ExecutionEngine::ResultSet& result,double duration);
-    void clear_line();
+    void navigate_history_up();
+    void navigate_history_down();
     
-    //Take care of display
+    // Display and rendering
+    void initialize_terminal();
     void print_banner();
-    void update_connection_status();
     void print_prompt();
+    void redraw_interface();
     std::string colorize_sql();
+    void print_results(const ExecutionEngine::ResultSet& result, double duration);
     void show_help();
-    std::string expand_alias(const std::string& input);
-    void handle_special_keys();
-    void handle_windows_input();
-    void handle_unix_input();
-    size_t calculate_visible_length(const std::string& str);
-    std::string get_prompt_string();
-    void update_prompt_cache();
-    size_t calculate_visible_position(const std::string& str, size_t logical_pos);
-    void run_interactive();
+    
+    // Cursor positioning
+    void get_cursor_position(int& line, int& col) const;
+    int get_line_count() const;
+    
+    // History and completion
+    void add_to_history(const std::string& command);
+    std::string complete(const std::string& input);
+    
+    // Utility
+    std::string get_current_time() const;
+    bool is_valid_token(const std::string& token) const;
+    bool is_single_line_command(const std::string& command) const;
+    void execute_command(const std::string& command);
+    
+    // Termux-specific handling
+    bool is_termux() const;
+    void run_termux();
+    void run_standard();
+    
+    Database& db;
+    std::string current_db;
+    std::string current_line;
+    size_t cursor_pos = 0;
+    
+    // Multiline support
+    bool multi_line_mode = false;
+    std::vector<std::string> input_lines;
+    size_t current_line_index = 0;
+    
+    std::vector<std::string> command_history;
+    int history_index = -1;
+    
+    int terminal_width = 80;
+    int terminal_height = 24;
+    
+    Platform current_platform = Platform::Unknown;
+    bool use_colors = true;
+    
+    #ifdef _WIN32
+    HANDLE hInput;
+    HANDLE hOutput;
+    DWORD original_mode;
+    #else
+    struct termios orig_termios;
+    #endif
+    
+    // ANSI color codes
+    static constexpr const char* RESET = "\033[0m";
+    static constexpr const char* RED = "\033[31m";
+    static constexpr const char* GREEN = "\033[32m";
+    static constexpr const char* YELLOW = "\033[33m";
+    static constexpr const char* BLUE = "\033[34m";
+    static constexpr const char* MAGENTA = "\033[35m";
+    static constexpr const char* CYAN = "\033[36m";
+    static constexpr const char* WHITE = "\033[37m";
+    static constexpr const char* GRAY = "\033[90m";
+    
+    // SQL elements for syntax highlighting and completion
+    static const std::unordered_set<std::string> keywords;
+    static const std::unordered_set<std::string> datatypes;
+    static const std::unordered_set<std::string> tables;
+    static const std::unordered_set<std::string> conditionals;
 };
 
-#endif
+#endif // ESQL_SHELL_H

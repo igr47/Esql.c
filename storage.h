@@ -29,6 +29,17 @@ public:
      virtual void deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) =0;
     virtual const DatabaseSchema::Table* getTable(const std::string& dbName,const std::string& tableName) const=0;
      virtual void alterTable(const std::string& dbName, const std::string& tableName,const std::string& oldColumn, const std::string& newColumn,const std::string& newType, AST::AlterTableStatement::Action action) =0;
+     virtual void bulkInsert(const std::string& dbName, const std::string& tableName,const std::vector<std::unordered_map <std::string, std::string>>& rows)=0;        
+     virtual void bulkUpdate(const std::string& dbName, const std::string& tableName,const std::vector<std::pair<uint32_t, std::unordered_map<std::string, std::string>>>& updates)=0;                                        
+     virtual void bulkDelete(const std::string& dbName, const std::string& tableName,const std::vector<uint32_t>& row_ids) =0;
+     virtual void beginTransaction() =0;               
+     virtual void commitTransaction() =0;              
+     virtual void rollbackTransaction() =0;            
+     virtual uint64_t getCurrentTransactionId() const =0;                                                      
+     // Maintenance operations                         
+     virtual void compactDatabase(const std::string& dbName) =0;                                               
+     virtual void rebuildIndexes(const std::string& dbName, const std::string& tableName) =0;                       
+     virtual void checkpoint() =0;
 
 };
 /*

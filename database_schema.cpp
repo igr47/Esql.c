@@ -3,14 +3,14 @@
 #include <algorithm>
 
 // Parse string representation of column type to enum
-DatabaseSchema::Column::Type DatabaseSchema::Column::parseType(const std::string& typeStr) {
+/*DatabaseSchema::Column::Type DatabaseSchema::Column::parseType(const std::string& typeStr) {
     if (typeStr == "INT" || typeStr == "INTEGER") return INTEGER;
     if (typeStr == "FLOAT" || typeStr == "REAL") return FLOAT;
     if (typeStr == "STRING" || typeStr == "VARCHAR") return STRING;
     if (typeStr == "BOOLEAN" || typeStr == "BOOL") return BOOLEAN;
     if (typeStr == "TEXT") return TEXT;
     throw std::runtime_error("Unknown column type: " + typeStr);
-}
+}*/
 
 // Add a table to the schema
 void DatabaseSchema::addTable(const Table& table) {

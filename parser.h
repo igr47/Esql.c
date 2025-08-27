@@ -114,6 +114,30 @@ namespace AST{
 			std::string type;
 			std::string newColumnName;
 	};
+	// Add these class declarations after the existing statement classes
+        class BulkInsertStatement : public Statement {
+                public:
+                        std::string table;
+                        std::vector<std::string> columns;
+                        std::vector<std::vector<std::unique_ptr<Expression>>> rows;
+        };
+
+        class BulkUpdateStatement : public Statement {
+                public:
+                        struct UpdateSpec {
+                                uint32_t row_id;
+                                std::vector<std::pair<std::string, std::unique_ptr<Expression>>> setClauses;
+                        };
+
+                        std::string table;
+                        std::vector<UpdateSpec> updates;
+        };
+
+        class BulkDeleteStatement : public Statement {
+                public:
+                        std::string table;
+                        std::vector<uint32_t> row_ids;
+        };
 
 };
 
@@ -158,6 +182,9 @@ class Parse{
 		std::unique_ptr<AST::DropStatement> parseDropStatement();
 		std::unique_ptr<AST::InsertStatement> parseInsertStatement();
 		std::unique_ptr<AST::CreateTableStatement> parseCreateTableStatement();
+		std::unique_ptr<AST::BulkInsertStatement> parseBulkInsertStatement();
+		std::unique_ptr<AST::BulkUpdateStatement> parseBulkUpdateStatement();
+		std::unique_ptr<AST::BulkDeleteStatement> parseBulkDeleteStatement();
 		void parseColumnDefinition(AST::CreateTableStatement& stmt);
 		std::unique_ptr<AST::AlterTableStatement> parseAlterTableStatement();
 		std::vector<std::unique_ptr<AST::Expression>> parseColumnList();

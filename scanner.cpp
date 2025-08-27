@@ -63,7 +63,10 @@ void Lexer::initializeKeyWords(){
 		{"USE",Token::Type::USE},
 		{"TABLES",Token::Type::TABLES},
 		{"COMMA",Token::Type::COMMA},
-		{"TO",Token::Type::TO}
+		{"TO",Token::Type::TO},
+		{"BULK",Token::Type::BULK},
+		{"IN",Token::Type::IN},
+		{"ROW",Token::Type::ROW}
 
 	};
 }

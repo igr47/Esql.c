@@ -73,6 +73,11 @@ class SematicAnalyzer{
 		void analyzeDrop(AST::DropStatement& dropStmt);
 		void analyzeUpdate(AST::UpdateStatement& updateStmt);
 		void analyzeAlter(AST::AlterTableStatement& alterStmt);
+
+                void analyzeBulkInsert(AST::BulkInsertStatement& bulkInsertStmt);
+                void analyzeBulkUpdate(AST::BulkUpdateStatement& bulkUpdateStmt);
+                void analyzeBulkDelete(AST::BulkDeleteStatement& bulkDeleteStmt);
+
 };
 class SematicError : public std::runtime_error {
 public:

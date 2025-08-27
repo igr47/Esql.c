@@ -1,6 +1,5 @@
 #include "database.h"
 #include "shell.h"
-//#include "executionengine.h"
 #include <iostream>
 #include <chrono>
 #include <iomanip>
@@ -38,32 +37,27 @@ void Database::setCurrentDatabase(const std::string& dbName) {
 }
 
 std::pair<ExecutionEngine::ResultSet, double> Database::executeQuery(const std::string& query){
-	auto start=std::chrono::high_resolution_clock::now();
-	try{
-		auto stmt = parseQuery(query);
-		SematicAnalyzer analyzer(*this, *storage);                                                         
-		analyzer.analyze(stmt); // Analyze once                                                        
-		ExecutionEngine engine(*this, *storage);                                                           
-		auto result = engine.execute(std::move(stmt));
-		
-		auto end=std::chrono::high_resolution_clock::now();
-		double duration=std::chrono::duration<double>(end-start).count();
-		return {result,duration};
-	}catch(const std::exception& e){
-		auto end=std::chrono::high_resolution_clock::now();
-		double duration=std::chrono::duration<double>(end-start).count();
-		throw;
-	}
+    auto start=std::chrono::high_resolution_clock::now();
+    try{
+        auto stmt = parseQuery(query);
+        SematicAnalyzer analyzer(*this, *storage);                                                         
+        analyzer.analyze(stmt); // Analyze once                                                        
+        ExecutionEngine engine(*this, *storage);                                                           
+        auto result = engine.execute(std::move(stmt));
+        
+        auto end=std::chrono::high_resolution_clock::now();
+        double duration=std::chrono::duration<double>(end-start).count();
+        return {result,duration};
+    }catch(const std::exception& e){
+        auto end=std::chrono::high_resolution_clock::now();
+        double duration=std::chrono::duration<double>(end-start).count();
+        throw;
+    }
 }
 
 void Database::execute(const std::string& query) {
     try {
-        /*auto stmt = parseQuery(query);
-        SematicAnalyzer analyzer(*this, *storage);
-        analyzer.analyze(stmt); // Analyze once
-        ExecutionEngine engine(*this, *storage);
-        auto result = engine.execute(std::move(stmt));*/
-	auto [result,duration]=executeQuery(query);
+        auto [result,duration]=executeQuery(query);
 
         // Print results
         if (!result.columns.empty()) {
@@ -77,10 +71,10 @@ void Database::execute(const std::string& query) {
                 }
                 std::cout << "\n";
             }
-	    std::cout<<"Time: "<<std::fixed<<std::setprecision(4)<<duration <<" seconds\n";
+            std::cout<<"Time: "<<std::fixed<<std::setprecision(4)<<duration <<" seconds\n";
         } else {
             std::cout << "Query executed successfully.\n";
-	    std::cout<<"Time: "<<std::fixed<<std::setprecision(4)<< duration <<" seconds\n";
+            std::cout<<"Time: "<<std::fixed<<std::setprecision(4)<< duration <<" seconds\n";
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
@@ -90,52 +84,17 @@ void Database::execute(const std::string& query) {
     }
 }
 
-
 void Database::startInteractive() {
-    // Reset terminal state
-    /*std::cout << std::unitbuf;  // Enable automatic flushing
-    std::ios_base::sync_with_stdio(true);
-    
-    std::cout << "\nELVIS QUERY LANGUAGE - Version 0.1\n";
-    std::cout << "Type 'exit' or 'quit' to exit\n";
-    std::cout << "Current database: " << (current_db.empty() ? "none" : current_db) << "\n\n";
-
-    std::string input;
-    while (true) {
-        std::cout << "ESQL> " << std::flush;  // Explicit flush
-        
-        if (!std::getline(std::cin, input)) {
-            if (std::cin.eof()) {
-                std::cout << "\nExiting...\n";
-                break;
-            }
-            std::cin.clear();
-            continue;
-        }
-
-        // Trim input
-        input.erase(0, input.find_first_not_of(" \t\n\r\f\v"));
-        input.erase(input.find_last_not_of(" \t\n\r\f\v") + 1);
-
-        if (input.empty()) continue;
-        if (input == "exit" || input == "quit") break;
-
-        try {
-            execute(input);
-        } catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << "\n";
-        }*/
-	ESQLShell shell(*this);
-	if(hasDatabaseSelected()){
-		shell.setCurrentDatabase(currentDatabase());
-	}
-	shell.run();
-    
+    ESQLShell shell(*this);
+    if(hasDatabaseSelected()){
+        shell.setCurrentDatabase(currentDatabase());
+    }
+    shell.run();
 }
 
 std::unique_ptr<AST::Statement> Database::parseQuery(const std::string& query) {
     Lexer lexer(query);
-    Parse parser(lexer); // Fixed typo: Parse -> Parser
+    Parse parser(lexer);
     return parser.parse();
 }
 

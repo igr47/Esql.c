@@ -32,7 +32,13 @@ void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
 		        analyzeUpdate(*update);
 	        }else if(auto alter=dynamic_cast<AST::AlterTableStatement*>(stmt.get())){
 		        analyzeAlter(*alter);
-	        }
+	        }else if (auto bulkInsert = dynamic_cast<AST::BulkInsertStatement*>(stmt.get())) {
+			analyzeBulkInsert(*bulkInsert);
+		}else if (auto bulkUpdate = dynamic_cast<AST::BulkUpdateStatement*>(stmt.get())) {
+			analyzeBulkUpdate(*bulkUpdate);
+		}else if (auto bulkDelete = dynamic_cast<AST::BulkDeleteStatement*>(stmt.get())) {
+			analyzeBulkDelete(*bulkDelete);
+		}
 	}
 }
 //parse method for create database
@@ -238,39 +244,57 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
     }
 }
 
-void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt){
-	if(storage.tableExists(db.currentDatabase(),createStmt.tablename)){
-		if(createStmt.ifNotExists){
-			return;
-		}
-		throw SematicError("Table already exists: "+ createStmt.tablename);
-	}
+// In analyzer.cpp, update the analyzeCreate method to handle storage manager integration
+void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
+    if (storage.tableExists(db.currentDatabase(), createStmt.tablename)) {
+        if (createStmt.ifNotExists) {
+            return;
+        }
+        throw SematicError("Table already exists: " + createStmt.tablename);
+    }
 
-	std::vector<DatabaseSchema::Column> columns;
-	std::string primarykey;
-	for(auto& colDef : createStmt.columns){
-		DatabaseSchema::Column column;
-		column.name=colDef.name;
-		try{
-		        column.type=DatabaseSchema::Column::parseType(colDef.type);
-		}catch(const std::runtime_error& e){
-		        throw SematicError(e.what());
-		}
-		//handle column constaints
-		for(auto& constraint : colDef.constraints){
-			if(constraint=="PRIMARY KEY"){
-				if(!primarykey.empty()){
-					throw SematicError("Multiple primary keys defined.");
-				}
-				primarykey=colDef.name;
-			}else if(constraint=="NOT NULL"){
-				column.isNullable=false;
-			}
-		}
-		columns.push_back(column);
-	}
-	//schema.createTable(createStmt.tablename,columns,primarykey);
+    // Validate that the table can be created with the storage manager
+    std::vector<DatabaseSchema::Column> columns;
+    std::string primaryKey;
+    
+    for (auto& colDef : createStmt.columns) {
+        DatabaseSchema::Column column;
+        column.name = colDef.name;
+        
+        try {
+            column.type = DatabaseSchema::Column::parseType(colDef.type);
+            
+            // Handle VARCHAR length
+            if (colDef.type.find("VARCHAR") == 0) {
+                size_t openParen = colDef.type.find('(');
+                size_t closeParen = colDef.type.find(')');
+                if (openParen != std::string::npos && closeParen != std::string::npos) {
+                    std::string lengthStr = colDef.type.substr(openParen + 1, closeParen - openParen - 1);
+                    column.length = std::stoul(lengthStr);
+                }
+            }
+            
+        } catch (const std::runtime_error& e) {
+            throw SematicError(e.what());
+        }
+        
+        // Handle constraints
+        for (auto& constraint : colDef.constraints) {
+            if (constraint == "PRIMARY KEY") {
+                if (!primaryKey.empty()) {
+                    throw SematicError("Multiple primary keys defined.");
+                }
+                primaryKey = colDef.name;
+                column.isNullable = false;
+            } else if (constraint == "NOT NULL") {
+                column.isNullable = false;
+            }
+        }
+        
+        columns.push_back(column);
+    }
 }
+	
 //Helper methods for INSERT analysis
 const DatabaseSchema::Column* SematicAnalyzer::findColumn(const std::string& name) const{
 	if(!currentTable)return nullptr;
@@ -455,6 +479,73 @@ void SematicAnalyzer::analyzeAlter(AST::AlterTableStatement& alterStmt) {
             throw SematicError("Unsupported Alter Table operation");
     }
 }
+void SematicAnalyzer::analyzeBulkInsert(AST::BulkInsertStatement& bulkInsertStmt) {
+    currentTable = storage.getTable(db.currentDatabase(), bulkInsertStmt.table);
+    if (!currentTable) {
+        throw SematicError("Table does not exist: " + bulkInsertStmt.table);
+    }
+
+    for (const auto& rowValues : bulkInsertStmt.rows) {
+        if (!bulkInsertStmt.columns.empty() && bulkInsertStmt.columns.size() != rowValues.size()) {
+            throw SematicError("Column count does not match value count in bulk insert");
+        }
+
+        for (size_t i = 0; i < rowValues.size(); i++) {
+            const std::string& colName = bulkInsertStmt.columns.empty() ?
+                                       currentTable->columns[i].name :
+                                       bulkInsertStmt.columns[i];
+
+            auto* column = findColumn(colName);
+            if (!column) {
+                throw SematicError("Unknown column: " + colName);
+            }
+
+            DatabaseSchema::Column::Type valueType = getValueType(*rowValues[i]);
+            if (!isTypeCompatible(column->type, valueType)) {
+                throw SematicError("Type mismatch for column: " + colName);
+            }
+        }
+    }
+}
+
+void SematicAnalyzer::analyzeBulkUpdate(AST::BulkUpdateStatement& bulkUpdateStmt) {
+    currentTable = storage.getTable(db.currentDatabase(), bulkUpdateStmt.table);
+    if (!currentTable) {
+        throw SematicError("Table does not exist: " + bulkUpdateStmt.table);
+    }
+
+    for (const auto& updateSpec : bulkUpdateStmt.updates) {
+        for (const auto& [colName, expr] : updateSpec.setClauses) {
+            auto* column = findColumn(colName);
+            if (!column) {
+                throw SematicError("Unknown column: " + colName);
+            }
+
+            validateExpression(*expr, currentTable);
+
+            DatabaseSchema::Column::Type valueType = getValueType(*expr);
+            if (!isTypeCompatible(column->type, valueType)) {
+                throw SematicError("Type mismatch for column: " + colName);
+            }
+        }
+    }
+}
+
+void SematicAnalyzer::analyzeBulkDelete(AST::BulkDeleteStatement& bulkDeleteStmt) {
+    currentTable = storage.getTable(db.currentDatabase(), bulkDeleteStmt.table);
+    if (!currentTable) {
+        throw SematicError("Table does not exist: " + bulkDeleteStmt.table);
+    }
+
+    // Validate that row IDs exist (optional - could be done at execution time)
+    auto tableData = storage.getTableData(db.currentDatabase(), bulkDeleteStmt.table);
+    for (uint32_t row_id : bulkDeleteStmt.row_ids) {
+        if (row_id == 0 || row_id > tableData.size()) {
+            throw SematicError("Invalid row ID: " + std::to_string(row_id));
+        }
+    }
+}
+
 
 
 
