@@ -18,14 +18,39 @@ std::unique_ptr<AST::Statement> Parse::parse(){
 std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	if(match(Token::Type::SELECT)){
 	        return  parseSelectStatement();
-	}else if(match(Token::Type::UPDATE)){
+	/*}else if(match(Token::Type::UPDATE)){
 		return parseUpdateStatement();
 	}else if(match(Token::Type::DELETE)){
 		return parseDeleteStatement();
 	}else if(match(Token::Type::DROP)){
 		return parseDropStatement();
 	}else if(match(Token::Type::INSERT)){
-		return parseInsertStatement();
+		return parseInsertStatement();*/
+	}else if (match(Token::Type::UPDATE)) {
+        // Check if it's BULK UPDATE
+                Token next = lexer.nextToken();
+                if (next.type == Token::Type::BULK) {
+                        advance(); // consume UPDATE
+                        return parseBulkUpdateStatement();
+                }
+                return parseUpdateStatement();
+        }else if (match(Token::Type::DELETE)) {
+        // Check if it's BULK DELETE
+                Token next = lexer.nextToken();
+                if (next.type == Token::Type::BULK) {
+                        advance(); // consume DELETE
+                        return parseBulkDeleteStatement();
+                }
+                return parseDeleteStatement();
+        }else if (match(Token::Type::INSERT)) {
+        // Check if it's BULK INSERT
+                Token next = lexer.nextToken();
+                if (next.type == Token::Type::BULK) {
+                        advance(); // consume INSERT
+                        return parseBulkInsertStatement();
+                }
+                return parseInsertStatement();
+
 	}else if(match(Token::Type::CREATE)){
 		advance();
 		if(match(Token::Type::TABLE)){
@@ -380,6 +405,130 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
     
     return stmt;
 }
+
+
+std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
+    auto stmt = std::make_unique<AST::BulkInsertStatement>();
+
+    consume(Token::Type::BULK);
+    consume(Token::Type::INSERT);
+    consume(Token::Type::INTO);
+
+    stmt->table = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+        do {
+            if (match(Token::Type::COMMA)) {
+                consume(Token::Type::COMMA);
+            }
+            stmt->columns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
+        } while (match(Token::Type::COMMA));
+        consume(Token::Type::R_PAREN);
+    }
+
+    consume(Token::Type::VALUES);
+
+    bool wasInValueContext = inValueContext;
+    inValueContext = true;
+
+    do {
+        consume(Token::Type::L_PAREN);
+        std::vector<std::unique_ptr<AST::Expression>> rowValues;
+
+        do {
+            if (match(Token::Type::COMMA)) {
+                consume(Token::Type::COMMA);
+            }
+            rowValues.push_back(parseValue());
+        } while (match(Token::Type::COMMA));
+
+        stmt->rows.push_back(std::move(rowValues));
+        consume(Token::Type::R_PAREN);
+
+    } while (match(Token::Type::COMMA));
+
+    inValueContext = wasInValueContext;
+    return stmt;
+}
+
+std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
+    auto stmt = std::make_unique<AST::BulkUpdateStatement>();
+
+    consume(Token::Type::BULK);
+    consume(Token::Type::UPDATE);
+
+    stmt->table = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    consume(Token::Type::SET);
+
+    bool wasInValueContext = inValueContext;
+    inValueContext = true;
+
+    do {
+        AST::BulkUpdateStatement::UpdateSpec updateSpec;
+
+        consume(Token::Type::ROW);
+        consume(Token::Type::NUMBER_LITERAL);
+        updateSpec.row_id = std::stoul(previousToken().lexeme);
+
+        consume(Token::Type::SET);
+
+        do {
+            if (match(Token::Type::COMMA)) {
+                consume(Token::Type::COMMA);
+            }
+
+            std::string column = currentToken.lexeme;
+            consume(Token::Type::IDENTIFIER);
+            consume(Token::Type::EQUAL);
+
+            updateSpec.setClauses.emplace_back(column, parseExpression());
+
+        } while (match(Token::Type::COMMA));
+
+        stmt->updates.push_back(std::move(updateSpec));
+
+    } while (match(Token::Type::COMMA));
+
+    inValueContext = wasInValueContext;
+    return stmt;
+}
+
+std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
+    auto stmt = std::make_unique<AST::BulkDeleteStatement>();
+
+    consume(Token::Type::BULK);
+    consume(Token::Type::DELETE);
+    consume(Token::Type::FROM);
+
+    stmt->table = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    consume(Token::Type::WHERE);
+    consume(Token::Type::ROW);
+    consume(Token::Type::IN);
+    consume(Token::Type::L_PAREN);
+
+    do {
+        if (match(Token::Type::COMMA)) {
+            consume(Token::Type::COMMA);
+        }
+
+        if (match(Token::Type::NUMBER_LITERAL)) {
+            stmt->row_ids.push_back(std::stoul(currentToken.lexeme));
+            consume(Token::Type::NUMBER_LITERAL);
+        }
+
+    } while (match(Token::Type::COMMA));
+
+    consume(Token::Type::R_PAREN);
+    return stmt;
+}
+
 std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
 	std::vector<std::unique_ptr<AST::Expression>> columns;
 	do{

@@ -4,12 +4,12 @@
 
 #include "storage.h"
 #include "storagemanager.h"
-#include "database_schema.h"
+//#include "database_schema.h"
 #include <vector>
 #include <unordered_map>
 #include <string>
-
-class DatabaseSchema;
+#include <memory>
+#include <atomic>
 
 class DiskStorage : public StorageManager {
 public:
@@ -32,19 +32,38 @@ public:
     void deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) override;
     std::vector<std::unordered_map<std::string, std::string>> getTableData(
         const std::string& dbName, const std::string& tableName) override;
-    void updateTableData(const std::string& dbName, const std::string& tableName,uint32_t row_id,const std::unordered_map<std::string, std::string>& new_values) override;
+    void updateTableData(const std::string& dbName, const std::string& tableName,
+                        uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) override;
     const DatabaseSchema::Table* getTable(const std::string& dbName,
                                          const std::string& tableName) const override;
-    // Alter table statements
-    void alterTable(const std::string& dbName, const std::string& tableName,const std::string& oldColumn, const std::string& newColumn,const std::string& newType, AST::AlterTableStatement::Action action) override;
+
+    // Alter table operations
+    void alterTable(const std::string& dbName, const std::string& tableName,
+                   const std::string& oldColumn, const std::string& newColumn,
+                   const std::string& newType, AST::AlterTableStatement::Action action) override;
+
+    // Bulk operations
+    void bulkInsert(const std::string& dbName, const std::string& tableName,const std::vector<std::unordered_map<std::string, std::string>>& rows) override;
+    void bulkUpdate(const std::string& dbName, const std::string& tableName,const std::vector<std::pair<uint32_t, std::unordered_map<std::string, std::string>>>& updates) override;
+    void bulkDelete(const std::string& dbName, const std::string& tableName,const std::vector<uint32_t>& row_ids) override;
+
+    // Transaction management
+    void beginTransaction() override;
+    void commitTransaction() override;
+    void rollbackTransaction() override;
+    uint64_t getCurrentTransactionId() const override;
+
+    // Maintenance operations
+    void compactDatabase(const std::string& dbName) override;
+    void rebuildIndexes(const std::string& dbName, const std::string& tableName) override;
+    void checkpoint() override;
 
 private:
-    DatabaseSchema schema;
     struct Database {
-        std::unordered_map<std::string, std::unique_ptr<BPlusTree>> tables;
+        std::unordered_map<std::string, std::unique_ptr<FractalBPlusTree>> tables;
         std::unordered_map<std::string, std::vector<DatabaseSchema::Column>> table_schemas;
-        std::unordered_map<std::string, uint32_t> root_page_ids; // Store root page IDs
-        uint32_t next_row_id; // Per-database row ID counter
+        std::unordered_map<std::string, uint32_t> root_page_ids;
+        uint32_t next_row_id = 1;
     };
 
     Pager pager;
@@ -52,26 +71,41 @@ private:
     WriteAheadLog wal;
     std::unordered_map<std::string, Database> databases;
     std::string current_db;
+    std::atomic<uint64_t> next_transaction_id{1};
+    uint64_t current_transaction_id{0};
+    bool in_transaction{false};
 
+    // Serialization/deserialization
     uint32_t serializeRow(const std::unordered_map<std::string, std::string>& row,
                           const std::vector<DatabaseSchema::Column>& columns,
                           std::vector<uint8_t>& buffer);
     std::unordered_map<std::string, std::string> deserializeRow(
         const std::vector<uint8_t>& data,
         const std::vector<DatabaseSchema::Column>& columns);
-    void rebuildTableWithNewSchema(const std::string& dbName,const std::string& tableName,const std::vector<DatabaseSchema::Column>& newSchema);
+    
+    // Schema management
+    void rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
+                                  const std::vector<DatabaseSchema::Column>& newSchema);
+    void writeSchema();
+    void readSchema();
 
     // Helper methods
     void ensureDatabaseSelected() const;
     void ensureDatabaseExists(const std::string& dbName) const;
     Database& getCurrentDatabase();
     const Database& getCurrentDatabase() const;
-    void writeSchema();
-    void readSchema();
-
+    
     // Row ID management
     uint32_t getNextRowId(const std::string& tableName);
     void updateRowIdCounter(const std::string& tableName, uint32_t next_id);
+    
+    // Transaction helpers
+    uint64_t getTransactionId();
+    
+    // Bulk operation helpers
+    void prepareBulkData(const std::string& tableName,
+                        const std::vector<std::unordered_map<std::string, std::string>>& rows,
+                        std::vector<std::pair<uint32_t, std::string>>& bulk_data);
 };
 
 #endif

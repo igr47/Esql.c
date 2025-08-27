@@ -1,43 +1,96 @@
 #include "diskstorage.h"
-#include <cstring>
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
+#include <cstring>
+#include <thread>
+#include <sstream>
+#include <iostream>
 
-DiskStorage::DiskStorage(const std::string& filename)
-    : pager(filename + ".db"), buffer_pool(pager), wal(filename + ".wal",buffer_pool,pager) {
-    //std::streambuf* orig_cout=std::cout.rdbuf();
+
+/*DiskStorage::DiskStorage(const std::string& filename)
+    : pager(filename + ".db"), buffer_pool(1000), wal(filename + ".wal") {
     try {
-	//std::cout.rdbuf(nullptr);
+        // Initialize with empty schema first
+        databases.clear();
+        current_db.clear();
+        next_transaction_id = 1;
 
-        wal.recover(); // Apply pending changes from WAL
-        readSchema();  // Load existing schemas
-	
-	//std::cout.rdbuf(orig_cout);
-        if (!databases.empty()) {
-            current_db = databases.begin()->first; // Set default database
+        // Now try to read existing schema
+        uint32_t metadata_page_id = 0;
+        try {
+            wal.recover(pager, metadata_page_id);
+            readSchema();
+
+            if (!databases.empty()) {
+                current_db = databases.begin()->first;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Warning: Failed to read schema, using empty: " << e.what() << std::endl;
+            // Continue with empty databases
         }
     } catch (const std::exception& e) {
-	//std::cout.rdbuf(orig_cout);
+        throw std::runtime_error("Failed to initialize DiskStorage: " + std::string(e.what()));
+    }
+}*/
+
+DiskStorage::DiskStorage(const std::string& filename)
+    : pager(filename + ".db"), buffer_pool(1000), wal(filename + ".wal") {
+    try {
+        // Initialize with empty schema first
+        databases.clear();
+        current_db.clear();
+        next_transaction_id = 1;
+        in_transaction = false;
+
+        // Try to create page 0 if it doesn't exist
+        try {
+            Node test_node;
+            pager.read_page(0, &test_node);
+        } catch (const std::exception&) {
+            // Page 0 doesn't exist, create it
+            Node metadata_page = {};
+            metadata_page.header.type = PageType::METADATA;
+            metadata_page.header.page_id = 0;
+            pager.write_page(0, &metadata_page);
+        }
+
+        // Now try to read existing schema
+        try {
+            uint32_t metadata_page_id = 0;
+            wal.recover(pager, metadata_page_id);
+            readSchema();
+
+            if (!databases.empty()) {
+                current_db = databases.begin()->first;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Warning: Failed to read schema, using empty: " << e.what() << std::endl;
+            // Continue with empty databases
+        }
+    } catch (const std::exception& e) {
         throw std::runtime_error("Failed to initialize DiskStorage: " + std::string(e.what()));
     }
 }
 
 DiskStorage::~DiskStorage() {
     try {
-        writeSchema(); // Persist schemas
-        buffer_pool.flush_all(); // Ensure all pages are written
+        writeSchema();
+        buffer_pool.flush_all();
+        wal.checkpoint(pager, 0); // Checkpoint with metadata page 0
     } catch (const std::exception& e) {
         // Log error but don't throw in destructor
+        std::cerr << "Error in DiskStorage destructor: " << e.what() << std::endl;
     }
 }
 
+// Database operations
 void DiskStorage::createDatabase(const std::string& dbName) {
     if (databases.find(dbName) != databases.end()) {
         throw std::runtime_error("Database already exists: " + dbName);
     }
     databases[dbName] = Database();
-    databases[dbName].next_row_id = 1; // Initialize row ID counter
+    databases[dbName].next_row_id = 1;
     writeSchema();
 }
 
@@ -65,6 +118,7 @@ bool DiskStorage::tableExists(const std::string& dbName, const std::string& tabl
     return db.table_schemas.find(tableName) != db.table_schemas.end();
 }
 
+// Table operations
 void DiskStorage::createTable(const std::string& dbName, const std::string& name,
                              const std::vector<DatabaseSchema::Column>& columns) {
     ensureDatabaseExists(dbName);
@@ -72,11 +126,14 @@ void DiskStorage::createTable(const std::string& dbName, const std::string& name
     if (db.tables.find(name) != db.tables.end()) {
         throw std::runtime_error("Table already exists: " + name);
     }
-    const uint32_t order=4;
-    auto tree = std::make_unique<BPlusTree>(pager, buffer_pool);
+
+    uint32_t root_id = pager.allocate_page();
+    auto tree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, name, root_id);
+    tree->create();
+
     db.tables[name] = std::move(tree);
     db.table_schemas[name] = columns;
-    db.root_page_ids[name] = db.tables[name]->get_root_page_id(); // Store root page ID
+    db.root_page_ids[name] = root_id;
     writeSchema();
 }
 
@@ -110,12 +167,21 @@ void DiskStorage::insertRow(const std::string& dbName, const std::string& tableN
     serializeRow(row, columns, buffer);
 
     uint32_t row_id = getNextRowId(tableName);
-    try {
-        table_it->second->insert(row_id, buffer);
-        updateRowIdCounter(tableName, row_id + 1);
-    } catch (const std::exception& e) {
-        throw std::runtime_error("Failed to insert row into " + tableName + ": " + e.what());
+    std::string value(buffer.begin(), buffer.end());
+    
+    table_it->second->insert(row_id, value, getTransactionId());
+    updateRowIdCounter(tableName, row_id + 1);
+}
+
+void DiskStorage::deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) {
+    ensureDatabaseSelected();
+    auto& db = getCurrentDatabase();
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
     }
+
+    table_it->second->remove(row_id, getTransactionId());
 }
 
 std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableData(
@@ -132,39 +198,39 @@ std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableD
     }
 
     std::vector<std::unordered_map<std::string, std::string>> result;
-    std::vector<uint32_t> row_ids=table_it->second->getAllKeys();
-    //process each row
-    for (uint32_t row_id : row_ids) {
-        auto data = table_it->second->search(row_id);
-        if (!data.empty()){
-                result.push_back(deserializeRow(data, schema_it->second));
-	}
+    
+    // Use range query to get all data (0 to max uint32)
+    auto data = table_it->second->select_range(0, UINT32_MAX, getTransactionId());
+    
+    for (const auto& [row_id, serialized_data] : data) {
+        std::vector<uint8_t> buffer(serialized_data.begin(), serialized_data.end());
+        result.push_back(deserializeRow(buffer, schema_it->second));
     }
+    
     return result;
 }
 
-void DiskStorage::updateTableData(const std::string& dbName, const std::string& tableName,uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) {
+void DiskStorage::updateTableData(const std::string& dbName, const std::string& tableName,
+                                uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) {
     ensureDatabaseSelected();
     auto& db = getCurrentDatabase();
-    
-    // Get existing row
     auto table_it = db.tables.find(tableName);
     if (table_it == db.tables.end()) {
         throw std::runtime_error("Table not found: " + tableName);
     }
-    
     auto schema_it = db.table_schemas.find(tableName);
     if (schema_it == db.table_schemas.end()) {
         throw std::runtime_error("Schema not found for table: " + tableName);
     }
 
     // Get existing data
-    auto old_data = table_it->second->search(row_id);
-    if (old_data.empty()) {
+    auto old_data_str = table_it->second->select(row_id, getTransactionId());
+    if (old_data_str.empty()) {
         throw std::runtime_error("Row not found with ID: " + std::to_string(row_id));
     }
     
-    auto old_row = deserializeRow(old_data, schema_it->second);
+    std::vector<uint8_t> old_data_vec(old_data_str.begin(), old_data_str.end());
+    auto old_row = deserializeRow(old_data_vec, schema_it->second);
     
     // Merge changes
     for (const auto& [col, val] : new_values) {
@@ -174,36 +240,31 @@ void DiskStorage::updateTableData(const std::string& dbName, const std::string& 
     // Serialize new data
     std::vector<uint8_t> new_buffer;
     serializeRow(old_row, schema_it->second, new_buffer);
+    std::string new_data(new_buffer.begin(), new_buffer.end());
     
-    // Update in index (using the fixed B+Tree implementation)
-    table_it->second->update(row_id, row_id, new_buffer); // Key remains same
-    
-    // Mark page dirty through buffer pool
-    buffer_pool.flush_all();
+    // Update using FractalBPlusTree
+    table_it->second->update(row_id, new_data, getTransactionId());
 }
-void DiskStorage::deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) {
+
+const DatabaseSchema::Table* DiskStorage::getTable(const std::string& dbName,
+                                                  const std::string& tableName) const {
     ensureDatabaseSelected();
     auto& db = getCurrentDatabase();
-    
-    auto table_it = db.tables.find(tableName);
-    if (table_it == db.tables.end()) {
-        throw std::runtime_error("Table not found: " + tableName);
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) {
+        return nullptr;
     }
     
-    // Verify row exists
-    auto old_data = table_it->second->search(row_id);
-    if (old_data.empty()) {
-        throw std::runtime_error("Row not found with ID: " + std::to_string(row_id));
-    }
-    
-    // Remove from index
-    table_it->second->remove(row_id);
-    
-    // Mark page dirty through buffer pool
-    buffer_pool.flush_all();
+    static DatabaseSchema::Table tableInfo;
+    tableInfo.name = tableName;
+    tableInfo.columns = schema_it->second;
+    return &tableInfo;
 }
-//==============ALTER TABLE METHOD=============
-void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,const std::string& oldColumn, const std::string& newColumn,const std::string& newType, AST::AlterTableStatement::Action action) {
+
+// Alter table operations
+void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,
+                           const std::string& oldColumn, const std::string& newColumn,
+                           const std::string& newType, AST::AlterTableStatement::Action action) {
     ensureDatabaseExists(dbName);
     auto& db = databases.at(dbName);
     
@@ -220,7 +281,7 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
             DatabaseSchema::Column newCol;
             newCol.name = newColumn;
             newCol.type = DatabaseSchema::Column::parseType(newType);
-            newCol.isNullable = true; // Default for new columns
+            newCol.isNullable = true;
             newColumns.push_back(newCol);
             schemaChanged = true;
             break;
@@ -254,20 +315,175 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
         rebuildTableWithNewSchema(dbName, tableName, newColumns);
     }
 }
-const DatabaseSchema::Table* DiskStorage::getTable(const std::string& dbName,
-                                                  const std::string& tableName) const {
+
+// Bulk operations
+void DiskStorage::bulkInsert(const std::string& dbName, const std::string& tableName,
+                           const std::vector<std::unordered_map<std::string, std::string>>& rows) {
     ensureDatabaseSelected();
     auto& db = getCurrentDatabase();
     auto schema_it = db.table_schemas.find(tableName);
     if (schema_it == db.table_schemas.end()) {
-        return nullptr;
+        throw std::runtime_error("Table not found: " + tableName);
     }
-    static DatabaseSchema::Table tableInfo;
-    tableInfo.name = tableName;
-    tableInfo.columns = schema_it->second;
-    return &tableInfo;
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end() || !table_it->second) {
+        throw std::runtime_error("Table not initialized: " + tableName);
+    }
+
+    std::vector<std::pair<uint32_t, std::string>> bulk_data;
+    prepareBulkData(tableName, rows, bulk_data);
+
+    // Convert to format expected by FractalBPlusTree
+    std::vector<std::pair<int64_t, std::string>> fractal_data;
+    fractal_data.reserve(bulk_data.size());
+    for (const auto& [row_id, data] : bulk_data) {
+        fractal_data.emplace_back(row_id, data);
+    }
+
+    table_it->second->bulk_load(fractal_data, getTransactionId());
+    updateRowIdCounter(tableName, bulk_data.back().first + 1);
 }
 
+void DiskStorage::bulkUpdate(const std::string& dbName, const std::string& tableName,
+                           const std::vector<std::pair<uint32_t, std::unordered_map<std::string, std::string>>>& updates) {
+    ensureDatabaseSelected();
+    auto& db = getCurrentDatabase();
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
+    }
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end() || !table_it->second) {
+        throw std::runtime_error("Table not initialized: " + tableName);
+    }
+
+    uint64_t txn_id = getTransactionId();
+    
+    for (const auto& [row_id, new_values] : updates) {
+        // Get existing data
+        auto old_data_str = table_it->second->select(row_id, txn_id);
+        if (old_data_str.empty()) {
+            continue; // Skip if row doesn't exist
+        }
+        
+        std::vector<uint8_t> old_data_vec(old_data_str.begin(), old_data_str.end());
+        auto old_row = deserializeRow(old_data_vec, schema_it->second);
+        
+        // Merge changes
+        for (const auto& [col, val] : new_values) {
+            old_row[col] = val;
+        }
+        
+        // Serialize new data
+        std::vector<uint8_t> new_buffer;
+        serializeRow(old_row, schema_it->second, new_buffer);
+        std::string new_data(new_buffer.begin(), new_buffer.end());
+        
+        // Update
+        table_it->second->update(row_id, new_data, txn_id);
+    }
+}
+
+void DiskStorage::bulkDelete(const std::string& dbName, const std::string& tableName,
+                           const std::vector<uint32_t>& row_ids) {
+    ensureDatabaseSelected();
+    auto& db = getCurrentDatabase();
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
+    }
+
+    uint64_t txn_id = getTransactionId();
+    for (uint32_t row_id : row_ids) {
+        table_it->second->remove(row_id, txn_id);
+    }
+}
+
+// Transaction management
+void DiskStorage::beginTransaction() {
+    if (in_transaction) {
+        throw std::runtime_error("Transaction already in progress");
+    }
+    in_transaction = true;
+    current_transaction_id = next_transaction_id++;
+}
+
+void DiskStorage::commitTransaction() {
+    if (!in_transaction) {
+        throw std::runtime_error("No transaction in progress");
+    }
+    buffer_pool.flush_all();
+    checkpoint();
+    in_transaction = false;
+}
+
+void DiskStorage::rollbackTransaction() {
+    if (!in_transaction) {
+        throw std::runtime_error("No transaction in progress");
+    }
+    buffer_pool.flush_all(); // Discard changes by flushing clean pages
+    in_transaction = false;
+}
+
+uint64_t DiskStorage::getCurrentTransactionId() const {
+    return current_transaction_id;
+}
+
+// Maintenance operations
+void DiskStorage::compactDatabase(const std::string& dbName) {
+    ensureDatabaseExists(dbName);
+    auto& db = databases.at(dbName);
+    
+    for (auto& [tableName, table] : db.tables) {
+        table->checkpoint();
+    }
+    buffer_pool.flush_all();
+}
+
+void DiskStorage::rebuildIndexes(const std::string& dbName, const std::string& tableName) {
+    ensureDatabaseExists(dbName);
+    auto& db = databases.at(dbName);
+    
+    if (db.tables.find(tableName) == db.tables.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
+    }
+    
+    // Get all data and rebuild the tree
+    auto data = getTableData(dbName, tableName);
+    auto& schema = db.table_schemas.at(tableName);
+    
+    // Create new tree
+    uint32_t new_root_id = pager.allocate_page();
+    auto new_tree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
+    new_tree->create();
+    
+    // Reinsert all data
+    std::vector<std::pair<int64_t, std::string>> bulk_data;
+    bulk_data.reserve(data.size());
+    
+    uint32_t row_id = 1;
+    for (const auto& row : data) {
+        std::vector<uint8_t> buffer;
+        serializeRow(row, schema, buffer);
+        bulk_data.emplace_back(row_id++, std::string(buffer.begin(), buffer.end()));
+    }
+    
+    new_tree->bulk_load(bulk_data, getTransactionId());
+    
+    // Replace old tree
+    db.tables[tableName] = std::move(new_tree);
+    db.root_page_ids[tableName] = new_root_id;
+    updateRowIdCounter(tableName, row_id);
+    
+    writeSchema();
+}
+
+void DiskStorage::checkpoint() {
+    wal.checkpoint(pager, 0); // Use page 0 for metadata
+    buffer_pool.flush_all();
+}
+
+// Private helper methods
 uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
                                   const std::vector<DatabaseSchema::Column>& columns,
                                   std::vector<uint8_t>& buffer) {
@@ -313,21 +529,15 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         if (remaining < length) {
             throw std::runtime_error("Corrupted data: invalid length for column " + column.name);
         }
-        row[column.name] = std::string(reinterpret_cast<const char*>(ptr),/* ptr +*/ length);
+        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
         ptr += length;
         remaining -= length;
     }
     return row;
 }
 
-void DiskStorage::ensureDatabaseSelected() const {
-    if (current_db.empty()) {
-        throw std::runtime_error("No database selected");
-    }
-}
-//=========HELPER METHOD FOR EXECUTE ALTTER========{
-//==≠==============================================
-void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName,const std::string& tableName,const std::vector<DatabaseSchema::Column>& newSchema) {
+void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
+                                          const std::vector<DatabaseSchema::Column>& newSchema) {
     auto& db = databases.at(dbName);
     
     // 1. Get all current data
@@ -335,9 +545,14 @@ void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName,const std:
     auto& oldSchema = db.table_schemas.at(tableName);
     
     // 2. Create new table with new schema
-    auto newTree = std::make_unique<BPlusTree>(pager, buffer_pool);
+    uint32_t new_root_id = pager.allocate_page();
+    auto newTree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
+    newTree->create();
     
     // 3. Reinsert all rows with new schema
+    std::vector<std::pair<int64_t, std::string>> bulk_data;
+    bulk_data.reserve(oldData.size());
+    
     uint32_t row_id = 1;
     for (auto& row : oldData) {
         std::unordered_map<std::string, std::string> newRow;
@@ -348,23 +563,33 @@ void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName,const std:
             if (it != row.end()) {
                 newRow[newCol.name] = it->second;
             } else {
-                // For added columns, set default value
                 newRow[newCol.name] = "NULL";
             }
         }
         
-        // Serialize and insert
+        // Serialize and add to bulk data
         std::vector<uint8_t> buffer;
         serializeRow(newRow, newSchema, buffer);
-        newTree->insert(row_id++, buffer);
+        bulk_data.emplace_back(row_id++, std::string(buffer.begin(), buffer.end()));
     }
     
-    // 4. Update metadata
+    // 4. Bulk load the data
+    newTree->bulk_load(bulk_data, getTransactionId());
+    
+    // 5. Update metadata
     db.tables[tableName] = std::move(newTree);
     db.table_schemas[tableName] = newSchema;
-    db.root_page_ids[tableName] = db.tables[tableName]->get_root_page_id();
+    db.root_page_ids[tableName] = new_root_id;
+    updateRowIdCounter(tableName, row_id);
     writeSchema();
 }
+
+void DiskStorage::ensureDatabaseSelected() const {
+    if (current_db.empty()) {
+        throw std::runtime_error("No database selected");
+    }
+}
+
 void DiskStorage::ensureDatabaseExists(const std::string& dbName) const {
     if (!databaseExists(dbName)) {
         throw std::runtime_error("Database does not exist: " + dbName);
@@ -389,125 +614,261 @@ uint32_t DiskStorage::getNextRowId(const std::string& tableName) {
 void DiskStorage::updateRowIdCounter(const std::string& tableName, uint32_t next_id) {
     auto& db = getCurrentDatabase();
     db.next_row_id = next_id;
-    writeSchema(); // Persist immediately
+    writeSchema();
 }
+
+uint64_t DiskStorage::getTransactionId() {
+    if (!in_transaction) {
+        beginTransaction();
+    }
+    return current_transaction_id;
+}
+
+void DiskStorage::prepareBulkData(const std::string& tableName,
+                                 const std::vector<std::unordered_map<std::string, std::string>>& rows,
+                                 std::vector<std::pair<uint32_t, std::string>>& bulk_data) {
+    auto& db = getCurrentDatabase();
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) {
+        throw std::runtime_error("Table schema not found: " + tableName);
+    }
+
+    uint32_t start_id = db.next_row_id;
+    bulk_data.reserve(rows.size());
+    
+    for (size_t i = 0; i < rows.size(); ++i) {
+        std::vector<uint8_t> buffer;
+        serializeRow(rows[i], schema_it->second, buffer);
+        bulk_data.emplace_back(start_id + i, std::string(buffer.begin(), buffer.end()));
+    }
+}
+
 
 void DiskStorage::writeSchema() {
     try {
-        auto schema_page = buffer_pool.fetch_page(0);
-        if (!schema_page) {
-            throw std::runtime_error("Failed to fetch schema page");
-        }
-	        // Ensure we have current root page IDs
-        for (auto& [dbName, db] : databases) {
-            for (auto& [tableName, _] : db.table_schemas) {
-                if (db.tables[tableName]) {
-                    db.root_page_ids[tableName] = db.tables[tableName]->get_root_page_id();
+	
+	size_t estimated_size = sizeof(uint32_t) * 3; // version, num_dbs, etc.
+        
+        for (const auto& [dbName, db] : databases) {
+            estimated_size += sizeof(uint32_t) + dbName.size();
+            estimated_size += sizeof(uint32_t); // next_row_id
+            estimated_size += sizeof(uint32_t); // num_tables
+            
+            for (const auto& [tableName, columns] : db.table_schemas) {
+                estimated_size += sizeof(uint32_t) + tableName.size();
+                estimated_size += sizeof(uint32_t); // root_page_id
+                estimated_size += sizeof(uint32_t); // num_columns
+                
+                for (const auto& column : columns) {
+                    estimated_size += sizeof(uint32_t) + column.name.size();
+                    estimated_size += sizeof(DatabaseSchema::Column::Type);
+                    estimated_size += sizeof(uint8_t); // constraints
+                    if (column.hasDefault) {
+                        estimated_size += sizeof(uint32_t) + column.defaultValue.size();
+                    }
                 }
             }
         }
+        
+        estimated_size += sizeof(uint32_t) + current_db.size();
+        estimated_size += sizeof(uint64_t); // next_transaction_id
+        
+        if (estimated_size > (BPTREE_PAGE_SIZE - sizeof(PageHeader))) {
+            // Use multiple pages for large schemas
+            throw std::runtime_error("Schema too large - multi-page schema not implemented");
+        } 
 
-        uint8_t* data = schema_page->data.data();
-        uint32_t offset = sizeof(uint32_t); // Reserve space for next_page_id
+	try {
+            Node test_node = {};
+            memset(&test_node, 0, sizeof(Node));
+            test_node.header.type = PageType::METADATA;
+            test_node.header.page_id = 0;
+            pager.write_page(0, &test_node);
+        } catch (const std::exception& e) {
+            // If page 0 doesn't exist, allocate it
+            uint32_t new_page_id = pager.allocate_page();
+            if (new_page_id != 0) {
+                // We need page 0 specifically for metadata
+                throw std::runtime_error("Cannot allocate page 0 for metadata");
+            }
+	}
 
+
+
+        // Create or get schema page
+        Node schema_node = {};
+        schema_node.header.type = PageType::METADATA;
+        schema_node.header.page_id = 0;
+        schema_node.header.num_keys = 0;
+        
+        uint8_t* data = reinterpret_cast<uint8_t*>(schema_node.data);
+        uint32_t offset = 0;
+
+        // Write schema version
+        const uint32_t SCHEMA_VERSION = 1;
+        std::memcpy(data + offset, &SCHEMA_VERSION, sizeof(SCHEMA_VERSION));
+        offset += sizeof(SCHEMA_VERSION);
+
+        // Write number of databases
         uint32_t num_databases = databases.size();
         std::memcpy(data + offset, &num_databases, sizeof(num_databases));
         offset += sizeof(num_databases);
 
         for (const auto& [dbName, db] : databases) {
+            // Write database name
             uint32_t name_length = dbName.size();
             std::memcpy(data + offset, &name_length, sizeof(name_length));
             offset += sizeof(name_length);
             std::memcpy(data + offset, dbName.data(), name_length);
             offset += name_length;
 
+            // Write next_row_id
             std::memcpy(data + offset, &db.next_row_id, sizeof(db.next_row_id));
             offset += sizeof(db.next_row_id);
 
+            // Write number of tables
             uint32_t num_tables = db.table_schemas.size();
             std::memcpy(data + offset, &num_tables, sizeof(num_tables));
             offset += sizeof(num_tables);
 
-            for (const auto& [name, columns] : db.table_schemas) {
-                uint32_t table_name_length = name.size();
+            for (const auto& [tableName, columns] : db.table_schemas) {
+                // Write table name
+                uint32_t table_name_length = tableName.size();
                 std::memcpy(data + offset, &table_name_length, sizeof(table_name_length));
                 offset += sizeof(table_name_length);
-                std::memcpy(data + offset, name.data(), table_name_length);
+                std::memcpy(data + offset, tableName.data(), table_name_length);
                 offset += table_name_length;
 
-                uint32_t root_page_id = db.root_page_ids.at(name);
+                // Write root page ID
+                uint32_t root_page_id = db.root_page_ids.at(tableName);
                 std::memcpy(data + offset, &root_page_id, sizeof(root_page_id));
                 offset += sizeof(root_page_id);
 
+                // Write number of columns
                 uint32_t num_columns = columns.size();
                 std::memcpy(data + offset, &num_columns, sizeof(num_columns));
                 offset += sizeof(num_columns);
 
                 for (const auto& column : columns) {
+                    // Write column name
                     uint32_t col_name_length = column.name.size();
                     std::memcpy(data + offset, &col_name_length, sizeof(col_name_length));
                     offset += sizeof(col_name_length);
                     std::memcpy(data + offset, column.name.data(), col_name_length);
                     offset += col_name_length;
 
+                    // Write column type
                     DatabaseSchema::Column::Type type = column.type;
                     std::memcpy(data + offset, &type, sizeof(type));
                     offset += sizeof(type);
 
+                    // Write constraints
                     uint8_t constraints = 0;
                     if (!column.isNullable) constraints |= 0x01;
                     if (column.hasDefault) constraints |= 0x02;
                     std::memcpy(data + offset, &constraints, sizeof(constraints));
                     offset += sizeof(constraints);
+
+                    // Write default value if exists
+                    if (column.hasDefault) {
+                        uint32_t default_length = column.defaultValue.size();
+                        std::memcpy(data + offset, &default_length, sizeof(default_length));
+                        offset += sizeof(default_length);
+                        std::memcpy(data + offset, column.defaultValue.data(), default_length);
+                        offset += default_length;
+                    }
                 }
             }
         }
-        pager.mark_dirty(0);
+
+        // Write current database
+        uint32_t current_db_length = current_db.size();
+        std::memcpy(data + offset, &current_db_length, sizeof(current_db_length));
+        offset += sizeof(current_db_length);
+        std::memcpy(data + offset, current_db.data(), current_db_length);
+        offset += current_db_length;
+
+        // Write next transaction ID
+        std::memcpy(data + offset, &next_transaction_id, sizeof(next_transaction_id));
+        offset += sizeof(next_transaction_id);
+
+        // Write the schema page
+        pager.write_page(0, &schema_node);
+        
     } catch (const std::exception& e) {
-        throw std::runtime_error("Failed to write schema: " + std::string(e.what()));
+             std::cerr << "Warning: Failed to write schema: " << e.what() << std::endl;
+
     }
 }
 
 void DiskStorage::readSchema() {
     try {
-        auto schema_page = buffer_pool.fetch_page(0);
-        if (!schema_page) {
-            throw std::runtime_error("Failed to fetch schema page");
+        // Try to read schema page
+        Node schema_node;
+        try {
+            pager.read_page(0, &schema_node);
+        } catch (const std::exception&) {
+            // Schema page doesn't exist yet (first run), initialize empty
+            databases.clear();
+            current_db.clear();
+            next_transaction_id = 1;
+            return;
         }
-        const uint8_t* data = schema_page->data.data();
-        uint32_t offset = sizeof(uint32_t); // Skip next_page_id
 
+        // Verify it's a metadata page
+        if (schema_node.header.type != PageType::METADATA) {
+            throw std::runtime_error("Invalid schema page type");
+        }
+
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(schema_node.data);
+        uint32_t offset = 0;
+
+        // Read schema version
+        uint32_t schema_version;
+        std::memcpy(&schema_version, data + offset, sizeof(schema_version));
+        offset += sizeof(schema_version);
+
+        if (schema_version != 1) {
+            throw std::runtime_error("Unsupported schema version: " + std::to_string(schema_version));
+        }
+
+        // Read number of databases
         uint32_t num_databases;
         std::memcpy(&num_databases, data + offset, sizeof(num_databases));
         offset += sizeof(num_databases);
 
         databases.clear();
         for (uint32_t i = 0; i < num_databases; i++) {
+            // Read database name
             uint32_t name_length;
             std::memcpy(&name_length, data + offset, sizeof(name_length));
             offset += sizeof(name_length);
-            std::string dbName(data + offset, data + offset + name_length);
+            std::string dbName(reinterpret_cast<const char*>(data + offset), name_length);
             offset += name_length;
 
             Database db;
             std::memcpy(&db.next_row_id, data + offset, sizeof(db.next_row_id));
             offset += sizeof(db.next_row_id);
 
+            // Read number of tables
             uint32_t num_tables;
             std::memcpy(&num_tables, data + offset, sizeof(num_tables));
             offset += sizeof(num_tables);
 
             for (uint32_t j = 0; j < num_tables; j++) {
+                // Read table name
                 uint32_t table_name_length;
                 std::memcpy(&table_name_length, data + offset, sizeof(table_name_length));
                 offset += sizeof(table_name_length);
-                std::string table_name(data + offset, data + offset + table_name_length);
+                std::string table_name(reinterpret_cast<const char*>(data + offset), table_name_length);
                 offset += table_name_length;
 
+                // Read root page ID
                 uint32_t root_page_id;
                 std::memcpy(&root_page_id, data + offset, sizeof(root_page_id));
                 offset += sizeof(root_page_id);
 
+                // Read number of columns
                 uint32_t num_columns;
                 std::memcpy(&num_columns, data + offset, sizeof(num_columns));
                 offset += sizeof(num_columns);
@@ -516,36 +877,74 @@ void DiskStorage::readSchema() {
                 columns.reserve(num_columns);
                 for (uint32_t k = 0; k < num_columns; k++) {
                     DatabaseSchema::Column column;
+
+                    // Read column name
                     uint32_t col_name_length;
                     std::memcpy(&col_name_length, data + offset, sizeof(col_name_length));
                     offset += sizeof(col_name_length);
-                    column.name.assign(data + offset, data + offset + col_name_length);
+                    column.name.assign(reinterpret_cast<const char*>(data + offset), col_name_length);
                     offset += col_name_length;
 
+                    // Read column type
                     DatabaseSchema::Column::Type type;
                     std::memcpy(&type, data + offset, sizeof(type));
                     offset += sizeof(type);
                     column.type = type;
 
+                    // Read constraints
                     uint8_t constraints;
                     std::memcpy(&constraints, data + offset, sizeof(constraints));
                     offset += sizeof(constraints);
                     column.isNullable = !(constraints & 0x01);
                     column.hasDefault = (constraints & 0x02);
 
+                    // Read default value if exists
+                    if (column.hasDefault) {
+                        uint32_t default_length;
+                        std::memcpy(&default_length, data + offset, sizeof(default_length));
+                        offset += sizeof(default_length);
+                        column.defaultValue.assign(reinterpret_cast<const char*>(data + offset), default_length);
+                        offset += default_length;
+                    }
+
                     columns.push_back(column);
                 }
+
                 db.table_schemas[table_name] = columns;
-		const uint32_t order=4;
-                db.tables[table_name] = std::make_unique<BPlusTree>(pager, buffer_pool,order, root_page_id);
+                
+                // Create FractalBPlusTree instance with the stored root page ID
+                db.tables[table_name] = std::make_unique<FractalBPlusTree>(
+                    pager, wal, buffer_pool, table_name, root_page_id);
                 db.root_page_ids[table_name] = root_page_id;
             }
+
             databases[dbName] = std::move(db);
         }
-        if (!databases.empty()) {
+
+        // Read current database
+        uint32_t current_db_length;
+        std::memcpy(&current_db_length, data + offset, sizeof(current_db_length));
+        offset += sizeof(current_db_length);
+        current_db.assign(reinterpret_cast<const char*>(data + offset), current_db_length);
+        offset += current_db_length;
+
+        // Read next transaction ID
+        std::memcpy(&next_transaction_id, data + offset, sizeof(next_transaction_id));
+        offset += sizeof(next_transaction_id);
+
+        // Verify we have valid databases
+        if (!databases.empty() && databases.find(current_db) == databases.end()) {
+            // Current database no longer exists, use first available
             current_db = databases.begin()->first;
         }
+
     } catch (const std::exception& e) {
-        throw std::runtime_error("Failed to read schema: " + std::string(e.what()));
+        // If schema reading fails, initialize empty databases
+        databases.clear();
+        current_db.clear();
+        next_transaction_id = 1;
+        std::cerr << "Warning: Failed to read schema, initializing empty: " << e.what() << std::endl;
     }
 }
+
+
