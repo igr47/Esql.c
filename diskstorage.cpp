@@ -38,7 +38,7 @@ DiskStorage::DiskStorage(const std::string& filename)
     : pager(filename + ".db"), buffer_pool(1000), wal(filename + ".wal") {
     try {
         // Initialize with empty schema first
-        databases.clear();
+        /*databases.clear();
         current_db.clear();
         next_transaction_id = 1;
         in_transaction = false;
@@ -53,7 +53,33 @@ DiskStorage::DiskStorage(const std::string& filename)
             metadata_page.header.type = PageType::METADATA;
             metadata_page.header.page_id = 0;
             pager.write_page(0, &metadata_page);
+        }*/
+	        // Initialize with empty schema first
+        databases.clear();
+        current_db.clear();
+        next_transaction_id = 1;
+        in_transaction = false;
+
+        // Try to create page 0 if it doesn't exist
+        try {
+            Node test_node = {};
+            memset(&test_node, 0, sizeof(Node));
+            test_node.header.type = PageType::METADATA;
+            test_node.header.page_id = 0;
+            pager.write_page(0, &test_node);
+        } catch (const std::exception& e) {
+            // If writing page 0 fails, try to allocate it
+            uint32_t new_page_id = pager.allocate_page();
+            if (new_page_id != 0) {
+                // We need page 0 specifically for metadata
+                throw std::runtime_error("Cannot allocate page 0 for metadata");
+            }
+            Node metadata_page = {};
+            metadata_page.header.type = PageType::METADATA;
+            metadata_page.header.page_id = 0;
+            pager.write_page(0, &metadata_page);
         }
+
 
         // Now try to read existing schema
         try {
@@ -69,6 +95,10 @@ DiskStorage::DiskStorage(const std::string& filename)
             // Continue with empty databases
         }
     } catch (const std::exception& e) {
+	if (std::string(e.what()).find("Failed to create") != std::string::npos ||
+            std::string(e.what()).find("Failed to open") != std::string::npos) {
+            throw std::runtime_error("Failed to initialize DiskStorage: File access error - check permissions for " + filename);
+        }
         throw std::runtime_error("Failed to initialize DiskStorage: " + std::string(e.what()));
     }
 }
