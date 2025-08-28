@@ -43,13 +43,19 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
                 }
                 return parseDeleteStatement();
         }else if (match(Token::Type::INSERT)) {
-        // Check if it's BULK INSERT
-                Token next = lexer.nextToken();
+		advance();
+		if(match(Token::Type::BULK)){
+			advance();
+			return parseBulkInsertStatement();
+		}else {
+			return parseInsertStatement();
+		}
+                /*Token next = lexer.nextToken();
                 if (next.type == Token::Type::BULK) {
                         advance(); // consume INSERT
                         return parseBulkInsertStatement();
                 }
-                return parseInsertStatement();
+                return parseInsertStatement();*/
 
 	}else if(match(Token::Type::CREATE)){
 		advance();
@@ -247,7 +253,7 @@ std::unique_ptr<AST::DropStatement> Parse::parseDropStatement(){
 std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 	auto stmt=std::make_unique<AST::InsertStatement>();
 	//parse the INSERT statement
-	consume(Token::Type::INSERT);
+	//consume(Token::Type::INSERT);
 	consume(Token::Type::INTO);
 	stmt->table=currentToken.lexeme;
 	consume(Token::Type::IDENTIFIER);

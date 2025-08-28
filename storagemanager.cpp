@@ -33,8 +33,10 @@ namespace {
 }
 
 // Pager implementation
-Pager::Pager(const std::string& fname) : filename(fname) {
+/*Pager::Pager(const std::string& fname) : filename(fname) {
+    // Try to open existing file
     file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+    
     if (!file.is_open()) {
         // Create the file if it doesn't exist
         file.open(filename, std::ios::binary | std::ios::out);
@@ -42,11 +44,37 @@ Pager::Pager(const std::string& fname) : filename(fname) {
             throw std::runtime_error("Failed to create database file: " + filename);
         }
         file.close();
+        
+        // Reopen for both input and output
         file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+        if (!file) {
+            throw std::runtime_error("Failed to open database file: " + filename);
+        }
     }
-    
-    if (!file) {
-        throw std::runtime_error("Failed to open database file: " + filename);
+}*/
+
+Pager::Pager(const std::string& fname) : filename(fname) {
+    // Try to open existing file first
+    file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+
+    if (!file.is_open()) {
+        // Create the file if it doesn't exist
+        std::ofstream create_file(filename, std::ios::binary);
+        if (!create_file) {
+            throw std::runtime_error("Failed to create database file: " + filename);
+        }
+        create_file.close();
+
+        // Now open for both input and output
+        file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
+        if (!file) {
+            throw std::runtime_error("Failed to open database file: " + filename);
+        }
+
+        // Ensure the file has at least one page (for metadata)
+        file.seekp(BPTREE_PAGE_SIZE - 1, std::ios::beg);
+        file.put('\0');
+        file.flush();
     }
 }
 
@@ -77,17 +105,62 @@ void Pager::read_page(uint32_t page_id, Node* node) {
     }
 }*/
 
-void Pager::write_page(uint32_t page_id, const Node* node) {
+/*void Pager::write_page(uint32_t page_id, const Node* node) {
     try {
+        // First, ensure the file is open for writing
+        if (!file.is_open()) {
+            file.open(filename, std::ios::binary | std::ios::out | std::ios::in);
+            if (!file.is_open()) {
+                // If file doesn't exist, create it
+                file.open(filename, std::ios::binary | std::ios::out);
+                file.close();
+                file.open(filename, std::ios::binary | std::ios::out | std::ios::in);
+            }
+        }
+
         file.seekp(page_id * BPTREE_PAGE_SIZE, std::ios::beg);
         if (!file) {
-            // Try to create the file if seeking fails
-            file.clear();
-            file.open(filename, std::ios::binary | std::ios::out | std::ios::app);
+            throw std::runtime_error("Failed to seek to page " + std::to_string(page_id));
+        }
+        
+        file.write(reinterpret_cast<const char*>(node), BPTREE_PAGE_SIZE);
+        if (!file) {
+            throw std::runtime_error("Failed to write page " + std::to_string(page_id));
+        }
+        
+        file.flush();
+        if (!file) {
+            throw std::runtime_error("Failed to flush page " + std::to_string(page_id));
+        }
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Pager write error: " + std::string(e.what()));
+    }
+}*/
+
+void Pager::write_page(uint32_t page_id, const Node* node) {
+    try {
+        // Ensure file is open
+        if (!file.is_open()) {
+            file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
             if (!file) {
                 throw std::runtime_error("Failed to open file for writing");
             }
-            file.seekp(page_id * BPTREE_PAGE_SIZE, std::ios::beg);
+        }
+
+        // Extend file if needed
+        uint64_t required_size = (page_id + 1) * BPTREE_PAGE_SIZE;
+        file.seekp(0, std::ios::end);
+        uint64_t current_size = file.tellp();
+
+        if (required_size > current_size) {
+            file.seekp(required_size - 1, std::ios::beg);
+            file.put('\0');
+            file.flush();
+        }
+
+        file.seekp(page_id * BPTREE_PAGE_SIZE, std::ios::beg);
+        if (!file) {
+            throw std::runtime_error("Failed to seek to page " + std::to_string(page_id));
         }
 
         file.write(reinterpret_cast<const char*>(node), BPTREE_PAGE_SIZE);
@@ -101,14 +174,30 @@ void Pager::write_page(uint32_t page_id, const Node* node) {
     }
 }
 
-uint32_t Pager::allocate_page() {
+/*uint32_t Pager::allocate_page() {
     file.seekp(0, std::ios::end);
     uint32_t page_id = file.tellp() / BPTREE_PAGE_SIZE;
     Node node = {};
     write_page(page_id, &node);
     return page_id;
+}*/
+uint32_t Pager::allocate_page() {
+    file.seekp(0, std::ios::end);
+    uint32_t page_id = file.tellp() / BPTREE_PAGE_SIZE;
+    
+    // Create the new page by extending the file
+    uint64_t new_size = (page_id + 1) * BPTREE_PAGE_SIZE;
+    file.seekp(new_size - 1, std::ios::beg);
+    file.put('\0');
+    file.flush();
+    
+    // Initialize the new page
+    Node node = {};
+    node.header.page_id = page_id;
+    write_page(page_id, &node);
+    
+    return page_id;
 }
-
 uint64_t Pager::write_data_block(const std::string& data) {
     file.seekp(0, std::ios::end);
     uint64_t offset = file.tellp();

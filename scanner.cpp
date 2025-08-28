@@ -174,7 +174,7 @@ Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
     return Token(Token::Type::ERROR, "Unterminated string", tokenline, tokencolumn);
 }
 
-Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
+/*Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
 	char current=input[position];
 	char next=(position+1<input.length() ? input[position] : '\n');
 	//Handle multi charachter operators
@@ -227,5 +227,60 @@ Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
 
 	position++; column++;
 	return Token(Token::Type::ERROR,std::string(1,current),tokenline,tokencolumn);
-}
+}*/
 
+Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
+    char current=input[position];
+    char next=(position+1<input.length() ? input[position+1] : '\0'); // Fixed: position+1
+
+    //Handle multi character operators
+    switch(current){
+        case '=':
+            position++; column++;
+            return Token(Token::Type::EQUAL,"=",tokenline,tokencolumn);
+        case '<':
+            if(next=='='){
+                position+=2; column+=2;
+                return Token(Token::Type::LESS_EQUAL,"<=",tokenline,tokencolumn);
+            }
+            position ++; column++;
+            return Token(Token::Type::LESS,"<",tokenline,tokencolumn);
+        case '>':
+            if(next=='='){
+                position+=2; column+=2;
+                return Token(Token::Type::GREATER_EQUAL,">=",tokenline,tokencolumn);
+            }
+            position++; column++;
+            return Token(Token::Type::GREATER,">",tokenline,tokencolumn);
+        case '!':
+            if(next=='='){
+                position+=2; column+=2;
+                return Token(Token::Type::NOT_EQUAL,"!=",tokenline,tokencolumn);
+            }
+            break;
+        case '.':
+            position++; column++;
+            return Token(Token::Type::DOT,".",tokenline,tokencolumn);
+        case ',':
+            position++; column++;
+            return Token(Token::Type::COMMA,",",tokenline,tokencolumn);
+        case '(':
+            position++; column++;
+            return Token(Token::Type::L_PAREN,"(",tokenline,tokencolumn);
+        case ')':
+            position++; column++;
+            return Token(Token::Type::R_PAREN,")",tokenline,tokencolumn);
+        case ';':
+            position++; column++;
+            return Token(Token::Type::SEMICOLON,";",tokenline,tokencolumn);
+        case ':':
+            position++; column++;
+            return Token(Token::Type::COLON,":",tokenline,tokencolumn);
+        case '*':
+            position++; column++;
+            return Token(Token::Type::ASTERIST,"*",tokenline,tokencolumn);
+    }
+
+    position++; column++;
+    return Token(Token::Type::ERROR,std::string(1,current),tokenline,tokencolumn);
+}
