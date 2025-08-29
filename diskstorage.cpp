@@ -37,24 +37,11 @@
 DiskStorage::DiskStorage(const std::string& filename)
     : pager(filename + ".db"), buffer_pool(1000), wal(filename + ".wal") {
     try {
-        // Initialize with empty schema first
-        /*databases.clear();
-        current_db.clear();
-        next_transaction_id = 1;
-        in_transaction = false;
-
-        // Try to create page 0 if it doesn't exist
         try {
-            Node test_node;
-            pager.read_page(0, &test_node);
-        } catch (const std::exception&) {
-            // Page 0 doesn't exist, create it
-            Node metadata_page = {};
-            metadata_page.header.type = PageType::METADATA;
-            metadata_page.header.page_id = 0;
-            pager.write_page(0, &metadata_page);
-        }*/
-	        // Initialize with empty schema first
+		pager.test_zstd();
+	}catch (const std::exception& e){
+		std::cerr<<"Warning: Zstd test failed: "<<e.what() <<std::endl;
+	}
         databases.clear();
         current_db.clear();
         next_transaction_id = 1;
@@ -518,6 +505,38 @@ uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::st
                                   const std::vector<DatabaseSchema::Column>& columns,
                                   std::vector<uint8_t>& buffer) {
     buffer.clear();
+    
+    for (const auto& column : columns) {
+        auto it = row.find(column.name);
+        
+        if (it == row.end() || it->second.empty()) {
+            if (!column.isNullable) {
+                throw std::runtime_error("Missing value for non-nullable column: " + column.name);
+            }
+            // Write zero length for NULL values
+            uint32_t length = 0;
+            buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length),
+                          reinterpret_cast<uint8_t*>(&length) + sizeof(length));
+            continue;
+        }
+
+        const std::string& value = it->second;
+        uint32_t length = value.size();
+        
+        // Write length
+        buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length),
+                      reinterpret_cast<uint8_t*>(&length) + sizeof(length));
+        
+        // Write value
+        buffer.insert(buffer.end(), value.begin(), value.end());
+    }
+    
+    return buffer.size();
+}
+/*uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
+                                  const std::vector<DatabaseSchema::Column>& columns,
+                                  std::vector<uint8_t>& buffer) {
+    buffer.clear();
     for (const auto& column : columns) {
         auto it = row.find(column.name);
         if (it == row.end()) {
@@ -536,9 +555,9 @@ uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::st
         buffer.insert(buffer.end(), value.begin(), value.end());
     }
     return buffer.size();
-}
+}*/
 
-std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
+/*std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
     std::unordered_map<std::string, std::string> row;
     const uint8_t* ptr = data.data();
@@ -563,6 +582,53 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         ptr += length;
         remaining -= length;
     }
+    return row;
+}*/
+
+std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
+    const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
+    std::unordered_map<std::string, std::string> row;
+    const uint8_t* ptr = data.data();
+    size_t remaining = data.size();
+
+    for (const auto& column : columns) {
+        // Check if we have enough data for the length field
+        if (remaining < sizeof(uint32_t)) {
+            throw std::runtime_error("Corrupted data: insufficient buffer size for column " + column.name +
+                                    ", needed " + std::to_string(sizeof(uint32_t)) + " bytes, got " +
+                                    std::to_string(remaining));
+        }
+
+        // Read length safely (avoid direct memory casting)
+        uint32_t length;
+        std::memcpy(&length, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        remaining -= sizeof(uint32_t);
+
+        // Handle NULL values
+        if (length == 0) {
+            row[column.name] = column.isNullable ? "NULL" : "";
+            continue;
+        }
+
+        // Check if we have enough data for the actual value
+        if (remaining < length) {
+            throw std::runtime_error("Corrupted data: invalid length for column " + column.name +
+                                    ", expected " + std::to_string(length) + " bytes, got " +
+                                    std::to_string(remaining));
+        }
+
+        // Copy the value safely
+        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
+        ptr += length;
+        remaining -= length;
+    }
+
+    // Check if we have extra data (might indicate corruption)
+    if (remaining > 0) {
+        std::cerr << "Warning: " << remaining << " bytes of extra data in serialized row" << std::endl;
+    }
+
     return row;
 }
 
