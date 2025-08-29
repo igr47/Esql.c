@@ -88,54 +88,7 @@ void Pager::read_page(uint32_t page_id, Node* node) {
     if (!file) throw std::runtime_error("Failed to read page " + std::to_string(page_id));
 }
 
-/*void Pager::write_page(uint32_t page_id, const Node* node) {
-    file.seekp(page_id * BPTREE_PAGE_SIZE, std::ios::beg);
-    if (!file) {
-        throw std::runtime_error("Failed to seek to page " + std::to_string(page_id));
-    }
-    
-    file.write(reinterpret_cast<const char*>(node), BPTREE_PAGE_SIZE);
-    if (!file) {
-        throw std::runtime_error("Failed to write page " + std::to_string(page_id));
-    }
-    
-    file.flush();
-    if (!file) {
-        throw std::runtime_error("Failed to flush page " + std::to_string(page_id));
-    }
-}*/
 
-/*void Pager::write_page(uint32_t page_id, const Node* node) {
-    try {
-        // First, ensure the file is open for writing
-        if (!file.is_open()) {
-            file.open(filename, std::ios::binary | std::ios::out | std::ios::in);
-            if (!file.is_open()) {
-                // If file doesn't exist, create it
-                file.open(filename, std::ios::binary | std::ios::out);
-                file.close();
-                file.open(filename, std::ios::binary | std::ios::out | std::ios::in);
-            }
-        }
-
-        file.seekp(page_id * BPTREE_PAGE_SIZE, std::ios::beg);
-        if (!file) {
-            throw std::runtime_error("Failed to seek to page " + std::to_string(page_id));
-        }
-        
-        file.write(reinterpret_cast<const char*>(node), BPTREE_PAGE_SIZE);
-        if (!file) {
-            throw std::runtime_error("Failed to write page " + std::to_string(page_id));
-        }
-        
-        file.flush();
-        if (!file) {
-            throw std::runtime_error("Failed to flush page " + std::to_string(page_id));
-        }
-    } catch (const std::exception& e) {
-        throw std::runtime_error("Pager write error: " + std::string(e.what()));
-    }
-}*/
 
 void Pager::write_page(uint32_t page_id, const Node* node) {
     try {
@@ -174,13 +127,7 @@ void Pager::write_page(uint32_t page_id, const Node* node) {
     }
 }
 
-/*uint32_t Pager::allocate_page() {
-    file.seekp(0, std::ios::end);
-    uint32_t page_id = file.tellp() / BPTREE_PAGE_SIZE;
-    Node node = {};
-    write_page(page_id, &node);
-    return page_id;
-}*/
+
 uint32_t Pager::allocate_page() {
     file.seekp(0, std::ios::end);
     uint32_t page_id = file.tellp() / BPTREE_PAGE_SIZE;
@@ -198,39 +145,325 @@ uint32_t Pager::allocate_page() {
     
     return page_id;
 }
+
 uint64_t Pager::write_data_block(const std::string& data) {
     file.seekp(0, std::ios::end);
     uint64_t offset = file.tellp();
-    std::vector<char> compressed(ZSTD_compressBound(data.size()));
-    size_t compressed_size = ZSTD_compress(compressed.data(), compressed.size(), 
-                                          data.data(), data.size(), 1);
-    if (ZSTD_isError(compressed_size)) {
-        throw std::runtime_error("Zstd compression failed for data block");
+    
+    // Handle empty data more robustly
+    if (data.empty()) {
+        uint32_t original_size = 0;
+        uint32_t compressed_size = 0;
+        uint8_t compression_flag = 0; // 0 = uncompressed
+        
+        file.write(reinterpret_cast<const char*>(&original_size), sizeof(original_size));
+        file.write(reinterpret_cast<const char*>(&compressed_size), sizeof(compressed_size));
+        file.write(reinterpret_cast<const char*>(&compression_flag), sizeof(compression_flag));
+        file.flush();
+        return offset;
     }
-    file.write(compressed.data(), compressed_size);
+    
+    uint32_t original_size = static_cast<uint32_t>(data.size());
+    uint32_t compressed_size;
+    uint8_t compression_flag = 1; // 1 = compressed
+    
+    // Use Zstd compression with better error handling
+    size_t max_compressed_size = ZSTD_compressBound(data.size());
+    std::vector<char> compressed(max_compressed_size);
+    
+    size_t zstd_result = ZSTD_compress(
+        compressed.data(), max_compressed_size,
+        data.data(), data.size(), 
+        3  // Use a more reasonable compression level
+    );
+    
+    if (ZSTD_isError(zstd_result)) {
+        std::cerr << "Zstd compression warning: " << ZSTD_getErrorName(zstd_result) 
+                  << ", falling back to uncompressed for data size: " << data.size() << std::endl;
+        
+        // Fallback to uncompressed storage
+        compression_flag = 0;
+        compressed_size = original_size;
+        
+        file.write(reinterpret_cast<const char*>(&original_size), sizeof(original_size));
+        file.write(reinterpret_cast<const char*>(&compressed_size), sizeof(compressed_size));
+        file.write(reinterpret_cast<const char*>(&compression_flag), sizeof(compression_flag));
+        file.write(data.data(), data.size());
+    } else {
+        // Successfully compressed
+        compressed_size = static_cast<uint32_t>(zstd_result);
+        
+        file.write(reinterpret_cast<const char*>(&original_size), sizeof(original_size));
+        file.write(reinterpret_cast<const char*>(&compressed_size), sizeof(compressed_size));
+        file.write(reinterpret_cast<const char*>(&compression_flag), sizeof(compression_flag));
+        file.write(compressed.data(), compressed_size);
+    }
+    
     file.flush();
     return offset;
 }
 
-std::string Pager::read_data_block(uint64_t offset, uint32_t length) {
+
+/*std::string Pager::read_data_block(uint64_t offset, uint32_t expected_length) {
+    if (offset == 0) {
+        return ""; // No data stored at offset 0
+    }
+    
     file.seekg(offset, std::ios::beg);
-    std::vector<char> compressed(length);
-    file.read(compressed.data(), length);
-    
-    // Use ZSTD_getFrameContentSize instead of deprecated ZSTD_getDecompressedSize
-    unsigned long long const decompressed_size = ZSTD_getFrameContentSize(compressed.data(), length);
-    if (decompressed_size == ZSTD_CONTENTSIZE_ERROR || decompressed_size == ZSTD_CONTENTSIZE_UNKNOWN) {
-        throw std::runtime_error("Zstd decompression failed for data block: invalid frame");
+    if (!file) {
+        throw std::runtime_error("Failed to seek to offset " + std::to_string(offset));
     }
     
-    std::vector<char> decompressed(decompressed_size);
-    size_t actual_decompressed_size = ZSTD_decompress(decompressed.data(), decompressed.size(), 
-                                                     compressed.data(), length);
-    if (ZSTD_isError(actual_decompressed_size)) {
-        throw std::runtime_error("Zstd decompression failed for data block");
+    // Read the metadata we stored
+    uint32_t original_size, compressed_size;
+    uint8_t compression_flag;
+    
+    file.read(reinterpret_cast<char*>(&original_size), sizeof(original_size));
+    file.read(reinterpret_cast<char*>(&compressed_size), sizeof(compressed_size));
+    file.read(reinterpret_cast<char*>(&compression_flag), sizeof(compression_flag));
+    
+    if (!file) {
+        throw std::runtime_error("Failed to read data block metadata at offset " + 
+                                std::to_string(offset));
     }
-    return std::string(decompressed.data(), actual_decompressed_size);
+    
+    // Handle empty data block
+    if (original_size == 0 && compressed_size == 0) {
+        return "";
+    }
+    
+    // Validate sizes
+    if (original_size > 100 * 1024 * 1024) { // 100MB sanity check
+        throw std::runtime_error("Suspiciously large original size: " + 
+                               std::to_string(original_size) + " at offset " + 
+                               std::to_string(offset));
+    }
+    
+    if (expected_length > 0 && expected_length != original_size) {
+        std::cerr << "Warning: Data block size mismatch: expected " 
+                  << expected_length << ", got " << original_size 
+                  << " at offset " << offset << std::endl;
+        // Continue anyway, as this might be a legitimate case
+    }
+    
+    // Check if data is compressed
+    if (compression_flag == 0) {
+        // Data is uncompressed
+        std::string result(original_size, '\0');
+        file.read(&result[0], original_size);
+        
+        if (!file || file.gcount() != static_cast<std::streamsize>(original_size)) {
+            throw std::runtime_error("Failed to read uncompressed data at offset " + 
+                                    std::to_string(offset) + ", expected " +
+                                    std::to_string(original_size) + " bytes, got " +
+                                    std::to_string(file.gcount()) + " bytes");
+        }
+        
+        return result;
+    } else {
+        // Data is compressed with Zstd
+        std::vector<char> compressed(compressed_size);
+        file.read(compressed.data(), compressed_size);
+        
+        if (!file || file.gcount() != static_cast<std::streamsize>(compressed_size)) {
+            throw std::runtime_error("Failed to read compressed data at offset " + 
+                                    std::to_string(offset) + ", expected " +
+                                    std::to_string(compressed_size) + " bytes, got " +
+                                    std::to_string(file.gcount()) + " bytes");
+        }
+        
+        std::vector<char> decompressed(original_size);
+        size_t actual_decompressed_size = ZSTD_decompress(
+            decompressed.data(), original_size,
+            compressed.data(), compressed_size
+        );
+        
+        if (ZSTD_isError(actual_decompressed_size)) {
+            std::string error_msg = "Zstd decompression failed: " + 
+                std::string(ZSTD_getErrorName(actual_decompressed_size)) +
+                " at offset " + std::to_string(offset) +
+                ", original_size: " + std::to_string(original_size) +
+                ", compressed_size: " + std::to_string(compressed_size) +
+                ", Zstd version: " + ZSTD_versionString();
+            
+            // Try to dump some debug info
+            std::cerr << error_msg << std::endl;
+            
+            // Fixed the std::min call here:
+            size_t bytes_to_dump = std::min(static_cast<size_t>(10), static_cast<size_t>(compressed_size));
+            if (compressed_size > 0 && bytes_to_dump > 0) {
+                std::cerr << "First few bytes of compressed data: ";
+                for (size_t i = 0; i < bytes_to_dump; i++) {
+                    std::cerr << std::hex << static_cast<int>(compressed[i]) << " ";
+                }
+                std::cerr << std::dec << std::endl;
+            }
+            
+            throw std::runtime_error(error_msg);
+        }
+        
+        if (actual_decompressed_size != original_size) {
+            throw std::runtime_error("Decompressed size mismatch: expected " + 
+                std::to_string(original_size) + ", got " + std::to_string(actual_decompressed_size));
+        }
+        
+        return std::string(decompressed.data(), actual_decompressed_size);
+    }
+}*/
+
+std::string Pager::read_data_block(uint64_t offset, uint32_t expected_length) {
+    if (offset == 0) {
+        return ""; // No data stored at offset 0
+    }
+
+    file.seekg(offset, std::ios::beg);
+    if (!file) {
+        throw std::runtime_error("Failed to seek to offset " + std::to_string(offset));
+    }
+
+    // Read the metadata we stored
+    uint32_t original_size, compressed_size;
+    uint8_t compression_flag;
+
+    file.read(reinterpret_cast<char*>(&original_size), sizeof(original_size));
+    file.read(reinterpret_cast<char*>(&compressed_size), sizeof(compressed_size));
+    file.read(reinterpret_cast<char*>(&compression_flag), sizeof(compression_flag));
+
+    if (!file) {
+        throw std::runtime_error("Failed to read data block metadata at offset " +
+                                std::to_string(offset));
+    }
+
+    // Handle empty data block
+    if (original_size == 0 && compressed_size == 0) {
+        return "";
+    }
+
+    // Validate sizes
+    if (original_size > 100 * 1024 * 1024) { // 100MB sanity check
+        throw std::runtime_error("Suspiciously large original size: " +
+                               std::to_string(original_size) + " at offset " +
+                               std::to_string(offset));
+    }
+
+    if (expected_length > 0 && expected_length != original_size) {
+        std::cerr << "Warning: Data block size mismatch: expected "
+                  << expected_length << ", got " << original_size
+                  << " at offset " << offset << std::endl;
+        // Continue anyway, as this might be a legitimate case
+    }
+
+    // Check if data is compressed
+    if (compression_flag == 0) {
+        // Data is uncompressed
+        std::string result(original_size, '\0');
+        file.read(&result[0], original_size);
+
+        if (!file || file.gcount() != static_cast<std::streamsize>(original_size)) {
+            throw std::runtime_error("Failed to read uncompressed data at offset " +
+                                    std::to_string(offset) + ", expected " +
+                                    std::to_string(original_size) + " bytes, got " +
+                                    std::to_string(file.gcount()) + " bytes");
+        }
+
+        return result;
+    } else {
+        // Data is compressed with Zstd
+        std::vector<char> compressed(compressed_size);
+        file.read(compressed.data(), compressed_size);
+
+        if (!file || file.gcount() != static_cast<std::streamsize>(compressed_size)) {
+            throw std::runtime_error("Failed to read compressed data at offset " +
+                                    std::to_string(offset) + ", expected " +
+                                    std::to_string(compressed_size) + " bytes, got " +
+                                    std::to_string(file.gcount()) + " bytes");
+        }
+
+        // Handle edge case where compression might have failed but flag was set
+        if (compressed_size == original_size) {
+            // Data might not actually be compressed despite the flag
+            return std::string(compressed.data(), compressed_size);
+        }
+
+        std::vector<char> decompressed(original_size);
+        size_t actual_decompressed_size = ZSTD_decompress(
+            decompressed.data(), original_size,
+            compressed.data(), compressed_size
+        );
+
+        if (ZSTD_isError(actual_decompressed_size)) {
+            // Fallback: try to return the raw data if decompression fails
+            std::cerr << "Zstd decompression warning: " <<
+                ZSTD_getErrorName(actual_decompressed_size) <<
+                ", returning raw data for offset " << offset << std::endl;
+
+            return std::string(compressed.data(), compressed_size);
+        }
+
+        if (actual_decompressed_size != original_size) {
+            std::cerr << "Decompressed size mismatch: expected " <<
+                original_size << ", got " << actual_decompressed_size <<
+                " at offset " << offset << std::endl;
+
+            // Return what we got rather than failing completely
+            return std::string(decompressed.data(), actual_decompressed_size);
+        }
+
+        return std::string(decompressed.data(), actual_decompressed_size);
+    }
 }
+
+void Pager::test_zstd() {
+    std::cout << "Testing Zstd compression..." << std::endl;
+    
+    // Test with the actual data that's causing issues
+    std::string test_data = "ELVIS";
+    
+    std::cout << "Testing with data: '" << test_data << "'" << std::endl;
+    
+    // Test compression
+    size_t compressed_size = ZSTD_compressBound(test_data.size());
+    std::vector<char> compressed(compressed_size);
+
+    size_t result = ZSTD_compress(
+        compressed.data(), compressed_size,
+        test_data.data(), test_data.size(),
+        1
+    );
+
+    if (ZSTD_isError(result)) {
+        std::string error_msg = "Zstd compression test failed: " + 
+            std::string(ZSTD_getErrorName(result));
+        throw std::runtime_error(error_msg);
+    }
+
+    // Test decompression
+    std::vector<char> decompressed(test_data.size());
+    size_t decompressed_size = ZSTD_decompress(
+        decompressed.data(), test_data.size(),
+        compressed.data(), result
+    );
+
+    if (ZSTD_isError(decompressed_size)) {
+        std::string error_msg = "Zstd decompression test failed: " + 
+            std::string(ZSTD_getErrorName(decompressed_size));
+        throw std::runtime_error(error_msg);
+    }
+
+    // Verify data integrity
+    std::string decompressed_str(decompressed.data(), decompressed_size);
+    if (test_data != decompressed_str) {
+        throw std::runtime_error("Data mismatch in test: expected '" + 
+            test_data + "', got '" + decompressed_str + "'");
+    }
+    
+    std::cout << "Zstd test passed successfully!" << std::endl;
+    std::cout << "Zstd version: " << ZSTD_versionString() << std::endl;
+    std::cout << "Original size: " << test_data.size() << std::endl;
+    std::cout << "Compressed size: " << result << std::endl;
+    std::cout << "Decompressed size: " << decompressed_size << std::endl;
+}
+
 
 // WriteAheadLog implementation
 WriteAheadLog::WriteAheadLog(const std::string& fname) : filename(fname) {
@@ -536,7 +769,7 @@ void FractalBPlusTree::write_node(uint32_t page_id, const Node* node, uint64_t t
     buffer_pool.write_page(pager, wal, page_id, node);
 }
 
-void FractalBPlusTree::compress_node(Node* node) {
+/*void FractalBPlusTree::compress_node(Node* node) {
     char temp[BPTREE_PAGE_SIZE];
     memcpy(temp, node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader));
     size_t compressed_size = ZSTD_compress(node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader),
@@ -555,6 +788,41 @@ void FractalBPlusTree::decompress_node(Node* node) {
     if (ZSTD_isError(decompressed_size)) {
         throw std::runtime_error("Zstd decompression failed");
     }
+    memcpy(node->data, temp, decompressed_size);
+    node->header.num_keys &= ~(1U << 31);
+}*/
+
+void FractalBPlusTree::compress_node(Node* node) {
+    char temp[BPTREE_PAGE_SIZE];
+    memcpy(temp, node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader));
+
+    size_t compressed_size = ZSTD_compress(
+        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        1
+    );
+
+    if (ZSTD_isError(compressed_size)) {
+        throw std::runtime_error("Zstd node compression failed: " +
+            std::string(ZSTD_getErrorName(compressed_size)));
+    }
+    node->header.num_keys |= (1U << 31);
+}
+
+void FractalBPlusTree::decompress_node(Node* node) {
+    if (!(node->header.num_keys & (1U << 31))) return;
+
+    char temp[BPTREE_PAGE_SIZE];
+    size_t decompressed_size = ZSTD_decompress(
+        temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader)
+    );
+
+    if (ZSTD_isError(decompressed_size)) {
+        throw std::runtime_error("Zstd node decompression failed: " +
+            std::string(ZSTD_getErrorName(decompressed_size)));
+    }
+
     memcpy(node->data, temp, decompressed_size);
     node->header.num_keys &= ~(1U << 31);
 }
@@ -1133,7 +1401,12 @@ std::string FractalBPlusTree::select(int64_t key, uint64_t transaction_id) {
             if (messages[i].type == MessageType::DELETE) {
                 return "";
             }
-            return pager.read_data_block(messages[i].value_offset, messages[i].value_length);
+            try {
+                return pager.read_data_block(messages[i].value_offset, messages[i].value_length);
+            } catch (const std::exception& e) {
+                std::cerr << "Error reading data block for message: " << e.what() << std::endl;
+                return "";
+            }
         }
     }
 
@@ -1144,7 +1417,12 @@ std::string FractalBPlusTree::select(int64_t key, uint64_t transaction_id) {
 
     for (uint32_t i = 0; i < node->header.num_keys; ++i) {
         if (kvs[i].key == key) {
-            return pager.read_data_block(kvs[i].value_offset, kvs[i].value_length);
+            try {
+                return pager.read_data_block(kvs[i].value_offset, kvs[i].value_length);
+            } catch (const std::exception& e) {
+                std::cerr << "Error reading data block for KV: " << e.what() << std::endl;
+                return "";
+            }
         }
     }
 

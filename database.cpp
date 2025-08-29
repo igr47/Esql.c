@@ -36,12 +36,31 @@ void Database::setCurrentDatabase(const std::string& dbName) {
     current_db = dbName;
 }
 
+// In database.cpp - Database::executeQuery() method
 std::pair<ExecutionEngine::ResultSet, double> Database::executeQuery(const std::string& query){
     auto start=std::chrono::high_resolution_clock::now();
     try{
         auto stmt = parseQuery(query);
+        
+        // Handle USE DATABASE statements directly
+        if (auto useStmt = dynamic_cast<AST::UseDatabaseStatement*>(stmt.get())) {
+            storage->useDatabase(useStmt->dbName);
+            setCurrentDatabase(useStmt->dbName);
+            
+            ExecutionEngine::ResultSet result;
+            result.columns = {"Status"};
+            result.rows = {{"Database changed to '" + useStmt->dbName + "'"}};
+            
+            auto end=std::chrono::high_resolution_clock::now();
+            double duration=std::chrono::duration<double>(end-start).count();
+            return {result, duration};
+        }
+        
+        // For other statements, ensure a database is selected
+        ensureDatabaseSelected();
+        
         SematicAnalyzer analyzer(*this, *storage);                                                         
-        analyzer.analyze(stmt); // Analyze once                                                        
+        analyzer.analyze(stmt);                                                        
         ExecutionEngine engine(*this, *storage);                                                           
         auto result = engine.execute(std::move(stmt));
         
@@ -54,6 +73,42 @@ std::pair<ExecutionEngine::ResultSet, double> Database::executeQuery(const std::
         throw;
     }
 }
+
+/*std::pair<ExecutionEngine::ResultSet, double> Database::executeQuery(const std::string& query){
+    auto start=std::chrono::high_resolution_clock::now();
+    try{
+        auto stmt = parseQuery(query);
+
+        // Check if this is a USE DATABASE statement
+        if (auto useStmt = dynamic_cast<AST::UseDatabaseStatement*>(stmt.get())) {
+            setCurrentDatabase(useStmt->dbName);
+            storage->useDatabase(useStmt->dbName);
+            ExecutionEngine::ResultSet result;
+            result.columns = {"Status"};
+            result.rows = {{"Switched to database: " + useStmt->dbName}};
+
+            auto end=std::chrono::high_resolution_clock::now();
+            double duration=std::chrono::duration<double>(end-start).count();
+            return {result, duration};
+        }
+
+        // For other statements, ensure a database is selected
+        ensureDatabaseSelected();
+
+        SematicAnalyzer analyzer(*this, *storage);
+        analyzer.analyze(stmt); // Analyze once
+        ExecutionEngine engine(*this, *storage);
+        auto result = engine.execute(std::move(stmt));
+
+        auto end=std::chrono::high_resolution_clock::now();
+        double duration=std::chrono::duration<double>(end-start).count();
+        return {result,duration};
+    }catch(const std::exception& e){
+        auto end=std::chrono::high_resolution_clock::now();
+        double duration=std::chrono::duration<double>(end-start).count();
+        throw;
+    }
+}*/
 
 void Database::execute(const std::string& query) {
     try {

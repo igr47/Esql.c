@@ -20,6 +20,13 @@
 #include <immintrin.h>
 #endif
 
+
+#if defined(__ANDROID__) || defined(__arm__) || defined(__aarch64__)
+#define ARM_PLATFORM 1
+#else
+#define ARM_PLATFORM 0
+#endif
+
 #ifdef __linux__
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
@@ -94,6 +101,7 @@ public:
     uint32_t allocate_page();
     uint64_t write_data_block(const std::string& data);
     std::string read_data_block(uint64_t offset, uint32_t length);
+    void test_zstd();
 };
 
 // Write-Ahead Log for durability

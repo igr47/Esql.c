@@ -670,6 +670,7 @@ bool ESQLShell::is_single_line_command(const std::string& command) const {
            upper_cmd.find("USE ") == 0;
 }
 
+// In ESQLShell::execute_command() method in shell.cpp
 void ESQLShell::execute_command(const std::string& command) {
     std::cout << "\n";
     
@@ -711,8 +712,10 @@ void ESQLShell::execute_command(const std::string& command) {
                         }
                         
                         if (!db_name.empty()) {
-                            // Use the database through proper channels
+                            // Use the database through proper channels - FIXED HERE
                             db.setCurrentDatabase(db_name);
+                            // ADD THIS LINE to update the storage layer:
+                            db.storage->useDatabase(db_name);
                             current_db = db_name;
                             std::cout << "Switched to database: " << db_name << "\n";
                         }
@@ -735,7 +738,7 @@ void ESQLShell::execute_command(const std::string& command) {
         
         std::cout << "\n";
     }
-} 
+}
 
 void ESQLShell::add_to_history(const std::string& command) {
     if (!command.empty() && (command_history.empty() || command_history.back() != command)) {
