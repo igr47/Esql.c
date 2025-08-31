@@ -57,6 +57,7 @@ public:
     void compactDatabase(const std::string& dbName) override;
     void rebuildIndexes(const std::string& dbName, const std::string& tableName) override;
     void checkpoint() override;
+    void debugDataFlow(const std::string& tableName,const std::unordered_map<std::string, std::string>& row,uint32_t row_id);
 
 private:
     struct Database {
@@ -91,7 +92,7 @@ private:
 
     // Helper methods
     void ensureDatabaseSelected() const;
-    void ensureDatabaseExists(const std::string& dbName) const;
+    void ensureDatabaseExists(const std::string& dbName	) const;
     Database& getCurrentDatabase();
     const Database& getCurrentDatabase() const;
     

@@ -114,7 +114,6 @@ namespace AST{
 			std::string type;
 			std::string newColumnName;
 	};
-	// Add these class declarations after the existing statement classes
         class BulkInsertStatement : public Statement {
                 public:
                         std::string table;

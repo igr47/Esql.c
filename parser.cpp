@@ -18,44 +18,24 @@ std::unique_ptr<AST::Statement> Parse::parse(){
 std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	if(match(Token::Type::SELECT)){
 	        return  parseSelectStatement();
-	/*}else if(match(Token::Type::UPDATE)){
-		return parseUpdateStatement();
-	}else if(match(Token::Type::DELETE)){
-		return parseDeleteStatement();
-	}else if(match(Token::Type::DROP)){
-		return parseDropStatement();
-	}else if(match(Token::Type::INSERT)){
-		return parseInsertStatement();*/
 	}else if (match(Token::Type::UPDATE)) {
-        // Check if it's BULK UPDATE
-                Token next = lexer.nextToken();
-                if (next.type == Token::Type::BULK) {
-                        advance(); // consume UPDATE
-                        return parseBulkUpdateStatement();
-                }
                 return parseUpdateStatement();
         }else if (match(Token::Type::DELETE)) {
-        // Check if it's BULK DELETE
-                Token next = lexer.nextToken();
-                if (next.type == Token::Type::BULK) {
-                        advance(); // consume DELETE
-                        return parseBulkDeleteStatement();
-                }
                 return parseDeleteStatement();
         }else if (match(Token::Type::INSERT)) {
+		return parseInsertStatement();
+	}else if(match(Token::Type::BULK)){
 		advance();
-		if(match(Token::Type::BULK)){
+		if(match(Token::Type::INSERT)){
 			advance();
 			return parseBulkInsertStatement();
-		}else {
-			return parseInsertStatement();
+		}else if(match(Token::Type::UPDATE)){
+			advance();
+			return parseBulkUpdateStatement();
+		}else if(match(Token::Type::DELETE)){
+			advance();
+			return parseBulkDeleteStatement();
 		}
-                /*Token next = lexer.nextToken();
-                if (next.type == Token::Type::BULK) {
-                        advance(); // consume INSERT
-                        return parseBulkInsertStatement();
-                }
-                return parseInsertStatement();*/
 
 	}else if(match(Token::Type::CREATE)){
 		advance();
@@ -253,7 +233,7 @@ std::unique_ptr<AST::DropStatement> Parse::parseDropStatement(){
 std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 	auto stmt=std::make_unique<AST::InsertStatement>();
 	//parse the INSERT statement
-	//consume(Token::Type::INSERT);
+	consume(Token::Type::INSERT);
 	consume(Token::Type::INTO);
 	stmt->table=currentToken.lexeme;
 	consume(Token::Type::IDENTIFIER);
@@ -285,41 +265,7 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 	return stmt;
 }
 //parse the create  statement
-/*std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement(){
-	auto stmt=std::make_unique<AST::CreateTableStatement>();
-	//parse the CREATE clause
-	//consume(Token::Type::CREATE);
-	//consume(Token::Type::TABLE);
-	if(match(Token::Type::IDENTIFIER)){
-		stmt->tablename=currentToken.lexeme;
-		consume(Token::Type::IDENTIFIER);
-	}
-	//parse the table describtions
-	consume(Token::Type::L_PAREN);
-	do{
-		if(match(Token::Type::COMMA)){
-			consume(Token::Type::COMMA);
-		}
-		AST::ColumnDefination col;
-		col.name=currentToken.lexeme;
-		consume(Token::Type::IDENTIFIER);
-		consume(Token::Type::COLON);
-		col.type=currentToken.lexeme;
-		if(match(Token::Type::INT) || match(Token::Type::TEXT) || match(Token::Type::BOOL) || match(Token::Type::FLOAT)){
-			consume(currentToken.type);
-		}else{
-			throw std::runtime_error("expected column type");
-		}
-		//parse constraints if any
-		while(match(Token::Type::IDENTIFIER)){
-			col.constraints.push_back(currentToken.lexeme);
-			consume(Token::Type::IDENTIFIER);
-		}
-		stmt->columns.push_back(std::move(col));
-	}while(match(Token::Type::COMMA));
-	consume(Token::Type::R_PAREN);
-	return stmt;
-}*/
+
 std::unique_ptr<AST::CreateTableStatement> Parse::parseCreateTableStatement() {
     auto stmt = std::make_unique<AST::CreateTableStatement>();
 
@@ -385,28 +331,52 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
     
     consume(Token::Type::ALTER);
     consume(Token::Type::TABLE);
+    
+    // Get table name
     stmt->tablename = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
     
     if (match(Token::Type::ADD)) {
+        consume(Token::Type::ADD);
         stmt->action = AST::AlterTableStatement::ADD;
+        
+        // Get column name
         stmt->columnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
-        stmt->type = currentToken.lexeme;
-        consume(Token::Type::IDENTIFIER);
+        
+        // Get column type
+        if (matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT})) {
+            stmt->type = currentToken.lexeme;
+            consume(currentToken.type);
+        } else {
+            throw std::runtime_error("Expected column type after ADD COLUMN");
+        }
     } 
     else if (match(Token::Type::DROP)) {
+        consume(Token::Type::DROP);
         stmt->action = AST::AlterTableStatement::DROP;
+        
+        // Get column name
         stmt->columnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
     } 
     else if (match(Token::Type::RENAME)) {
+        consume(Token::Type::RENAME);
         stmt->action = AST::AlterTableStatement::RENAME;
+        
+        // Get old column name
         stmt->columnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
+        
+        // Consume TO keyword
         consume(Token::Type::TO);
+        
+        // Get new column name
         stmt->newColumnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
+    }
+    else {
+        throw std::runtime_error("Expected ADD, DROP, or RENAME after ALTER TABLE");
     }
     
     return stmt;
@@ -416,8 +386,8 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
 std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
     auto stmt = std::make_unique<AST::BulkInsertStatement>();
 
-    consume(Token::Type::BULK);
-    consume(Token::Type::INSERT);
+    //consume(Token::Type::BULK);
+    //consume(Token::Type::INSERT);
     consume(Token::Type::INTO);
 
     stmt->table = currentToken.lexeme;
@@ -463,8 +433,8 @@ std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
 std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
     auto stmt = std::make_unique<AST::BulkUpdateStatement>();
 
-    consume(Token::Type::BULK);
-    consume(Token::Type::UPDATE);
+    //consume(Token::Type::BULK);
+    //consume(Token::Type::UPDATE);
 
     stmt->table = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
@@ -507,8 +477,8 @@ std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
 std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     auto stmt = std::make_unique<AST::BulkDeleteStatement>();
 
-    consume(Token::Type::BULK);
-    consume(Token::Type::DELETE);
+    //consume(Token::Type::BULK);
+    //consume(Token::Type::DELETE);
     consume(Token::Type::FROM);
 
     stmt->table = currentToken.lexeme;

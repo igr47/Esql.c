@@ -208,7 +208,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
     return ResultSet({"Status", {{"1 row inserted into '" + stmt.table + "'"}}});
 }
 
-ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
+/*ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     auto table = storage.getTable(db.currentDatabase(), stmt.table);
     if (!table) {
         throw std::runtime_error("Table not found: " + stmt.table);
@@ -239,6 +239,53 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
     }
     
     return ResultSet({"Status", {{std::to_string(updated_count) + " rows updated in '" + stmt.table + "'"}}});
+}*/
+
+ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
+    bool wasInTransaction = inTransaction();
+    if (!wasInTransaction) {
+        beginTransaction();
+    }
+
+    try {
+        auto table = storage.getTable(db.currentDatabase(), stmt.table);
+        if (!table) {
+            throw std::runtime_error("Table not found: " + stmt.table);
+        }
+
+        // Get ALL table data to find matching rows
+        auto table_data = storage.getTableData(db.currentDatabase(), stmt.table);
+        int updated_count = 0;
+
+        for (uint32_t i = 0; i < table_data.size(); i++) {
+            auto& current_row = table_data[i];
+
+            // Check if this row matches the WHERE clause
+            if (!stmt.where || evaluateWhereClause(stmt.where.get(), current_row)) {
+                // Apply updates to this row
+                std::unordered_map<std::string, std::string> updates;
+                for (const auto& [col, expr] : stmt.setClauses) {
+                    updates[col] = evaluateExpression(expr.get(), current_row);
+                }
+
+                // Update the row (use 1-based row ID)
+                storage.updateTableData(db.currentDatabase(), stmt.table, i + 1, updates);
+                updated_count++;
+            }
+        }
+
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
+
+        return ResultSet({"Status", {{std::to_string(updated_count) + " rows updated in '" + stmt.table + "'"}}});
+
+    } catch (...) {
+        if (!wasInTransaction) {
+            rollbackTransaction();
+        }
+        throw;
+    }
 }
 
 ExecutionEngine::ResultSet ExecutionEngine::executeDelete(AST::DeleteStatement& stmt) {
@@ -439,6 +486,17 @@ bool ExecutionEngine::evaluateWhereClause(const AST::Expression* where,
 std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
                                               const std::unordered_map<std::string, std::string>& row) {
     if (auto lit = dynamic_cast<const AST::Literal*>(expr)) {
+	 if (lit->token.type == Token::Type::STRING_LITERAL || 
+            lit->token.type == Token::Type::DOUBLE_QUOTED_STRING) {
+            // Remove quotes from string literals
+            std::string value = lit->token.lexeme;
+            if (value.size() >= 2 && 
+                ((value[0] == '\'' && value[value.size()-1] == '\'') ||
+                 (value[0] == '"' && value[value.size()-1] == '"'))) {
+                return value.substr(1, value.size() - 2);
+            }
+            return value;
+        }
         return lit->token.lexeme;
     }
     else if (auto ident = dynamic_cast<const AST::Identifier*>(expr)) {
