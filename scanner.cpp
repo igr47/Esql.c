@@ -66,7 +66,8 @@ void Lexer::initializeKeyWords(){
 		{"TO",Token::Type::TO},
 		{"BULK",Token::Type::BULK},
 		{"IN",Token::Type::IN},
-		{"ROW",Token::Type::ROW}
+		{"ROW",Token::Type::ROW},
+		{"COLUMN",Token::Type::COLUMN}
 
 	};
 }

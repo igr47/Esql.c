@@ -184,6 +184,7 @@ void DiskStorage::insertRow(const std::string& dbName, const std::string& tableN
     serializeRow(row, columns, buffer);
 
     uint32_t row_id = getNextRowId(tableName);
+    debugDataFlow(tableName,row,row_id);
     std::string value(buffer.begin(), buffer.end());
     
     table_it->second->insert(row_id, value, getTransactionId());
@@ -227,7 +228,30 @@ std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableD
     return result;
 }
 
-void DiskStorage::updateTableData(const std::string& dbName, const std::string& tableName,
+void DiskStorage::debugDataFlow(const std::string& tableName,const std::unordered_map<std::string, std::string>& row,uint32_t row_id) {
+    auto& db = getCurrentDatabase();
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) return;
+
+    std::vector<uint8_t> buffer;
+    serializeRow(row, schema_it->second, buffer);
+
+    std::cout << "DEBUG: Serialized row " << row_id << " for table " << tableName << std::endl;
+    std::cout << "  Size: " << buffer.size() << " bytes" << std::endl;
+
+    // Test deserialization immediately
+    try {
+        auto test_row = deserializeRow(buffer, schema_it->second);
+        std::cout << "  Deserialization test successful" << std::endl;
+        for (const auto& [key, value] : test_row) {
+            std::cout << "  " << key << ": '" << value << "'" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "  Deserialization test failed: " << e.what() << std::endl;
+    }
+}
+
+/*void DiskStorage::updateTableData(const std::string& dbName, const std::string& tableName,
                                 uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) {
     ensureDatabaseSelected();
     auto& db = getCurrentDatabase();
@@ -259,6 +283,46 @@ void DiskStorage::updateTableData(const std::string& dbName, const std::string& 
     serializeRow(old_row, schema_it->second, new_buffer);
     std::string new_data(new_buffer.begin(), new_buffer.end());
     
+    // Update using FractalBPlusTree
+    table_it->second->update(row_id, new_data, getTransactionId());
+}*/
+
+void DiskStorage::updateTableData(const std::string& dbName, const std::string& tableName,
+                                uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) {
+    ensureDatabaseSelected();
+    auto& db = getCurrentDatabase();
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
+    }
+
+    // Get the current row data directly from the tree
+    std::string old_data_str = table_it->second->select(row_id, getTransactionId());
+    if (old_data_str.empty()) {
+        throw std::runtime_error("Row not found with ID: " + std::to_string(row_id));
+    }
+
+    // Deserialize the existing data
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) {
+        throw std::runtime_error("Schema not found for table: " + tableName);
+    }
+
+    std::vector<uint8_t> old_data_vec(old_data_str.begin(), old_data_str.end());
+    auto old_row = deserializeRow(old_data_vec, schema_it->second);
+
+
+    std::cout<<"DEBUG: updating row" <<row_id<< "in table" << tableName<<std::endl;
+    for (const auto& [col, val] : new_values) {
+        old_row[col] = val;
+	std::cout<<" SET " <<col <<"="<<val<<"'"<<std::endl;
+    }
+
+    // Serialize new data
+    std::vector<uint8_t> new_buffer;
+    serializeRow(old_row, schema_it->second, new_buffer);
+    std::string new_data(new_buffer.begin(), new_buffer.end());
+
     // Update using FractalBPlusTree
     table_it->second->update(row_id, new_data, getTransactionId());
 }
@@ -501,89 +565,39 @@ void DiskStorage::checkpoint() {
 }
 
 // Private helper methods
-uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
+
+/*uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
                                   const std::vector<DatabaseSchema::Column>& columns,
                                   std::vector<uint8_t>& buffer) {
     buffer.clear();
-    
+
     for (const auto& column : columns) {
         auto it = row.find(column.name);
-        
+
         if (it == row.end() || it->second.empty()) {
             if (!column.isNullable) {
                 throw std::runtime_error("Missing value for non-nullable column: " + column.name);
             }
             // Write zero length for NULL values
             uint32_t length = 0;
-            buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length),
-                          reinterpret_cast<uint8_t*>(&length) + sizeof(length));
+            uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
+            buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
             continue;
         }
 
         const std::string& value = it->second;
-        uint32_t length = value.size();
-        
+        uint32_t length = static_cast<uint32_t>(value.size());
+
         // Write length
-        buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length),
-                      reinterpret_cast<uint8_t*>(&length) + sizeof(length));
-        
+        uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
+        buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
+
         // Write value
         buffer.insert(buffer.end(), value.begin(), value.end());
     }
-    
+
     return buffer.size();
 }
-/*uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
-                                  const std::vector<DatabaseSchema::Column>& columns,
-                                  std::vector<uint8_t>& buffer) {
-    buffer.clear();
-    for (const auto& column : columns) {
-        auto it = row.find(column.name);
-        if (it == row.end()) {
-            if (!column.isNullable) {
-                throw std::runtime_error("Missing value for non-nullable column: " + column.name);
-            }
-            uint32_t length = 0;
-            buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length),
-                          reinterpret_cast<uint8_t*>(&length) + sizeof(length));
-            continue;
-        }
-        const std::string& value = it->second;
-        uint32_t length = value.size();
-        buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length),
-                      reinterpret_cast<uint8_t*>(&length) + sizeof(length));
-        buffer.insert(buffer.end(), value.begin(), value.end());
-    }
-    return buffer.size();
-}*/
-
-/*std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
-    const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
-    std::unordered_map<std::string, std::string> row;
-    const uint8_t* ptr = data.data();
-    size_t remaining = data.size();
-
-    for (const auto& column : columns) {
-        if (remaining < sizeof(uint32_t)) {
-            throw std::runtime_error("Corrupted data: insufficient buffer size");
-        }
-        uint32_t length = *reinterpret_cast<const uint32_t*>(ptr);
-        ptr += sizeof(uint32_t);
-        remaining -= sizeof(uint32_t);
-
-        if (length == 0) {
-            row[column.name] = column.isNullable ? "NULL" : "";
-            continue;
-        }
-        if (remaining < length) {
-            throw std::runtime_error("Corrupted data: invalid length for column " + column.name);
-        }
-        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
-        ptr += length;
-        remaining -= length;
-    }
-    return row;
-}*/
 
 std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
@@ -599,9 +613,9 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
                                     std::to_string(remaining));
         }
 
-        // Read length safely (avoid direct memory casting)
+        // Read length safely
         uint32_t length;
-        std::memcpy(&length, ptr, sizeof(uint32_t));
+        memcpy(&length, ptr, sizeof(uint32_t));
         ptr += sizeof(uint32_t);
         remaining -= sizeof(uint32_t);
 
@@ -624,9 +638,75 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         remaining -= length;
     }
 
-    // Check if we have extra data (might indicate corruption)
-    if (remaining > 0) {
-        std::cerr << "Warning: " << remaining << " bytes of extra data in serialized row" << std::endl;
+    return row;
+}*/
+
+uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
+                                  const std::vector<DatabaseSchema::Column>& columns,
+                                  std::vector<uint8_t>& buffer) {
+    buffer.clear();
+
+    for (const auto& column : columns) {
+        auto it = row.find(column.name);
+
+        // Handle NULL values
+        if (it == row.end() || it->second.empty() || it->second == "NULL") {
+            if (!column.isNullable) {
+                throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be NULL");
+            }
+            // Write a special NULL marker (0xFFFFFFFF)
+            uint32_t null_marker = 0xFFFFFFFF;
+            uint8_t* marker_bytes = reinterpret_cast<uint8_t*>(&null_marker);
+            buffer.insert(buffer.end(), marker_bytes, marker_bytes + sizeof(null_marker));
+            continue;
+        }
+
+        const std::string& value = it->second;
+        uint32_t length = static_cast<uint32_t>(value.size());
+
+        // Write length
+        uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
+        buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
+
+        // Write value
+        buffer.insert(buffer.end(), value.begin(), value.end());
+    }
+
+    return buffer.size();
+}
+
+std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
+    const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
+    std::unordered_map<std::string, std::string> row;
+    const uint8_t* ptr = data.data();
+    size_t remaining = data.size();
+
+    for (const auto& column : columns) {
+        if (remaining < sizeof(uint32_t)) {
+            throw std::runtime_error("Corrupted data: insufficient buffer size");
+        }
+
+        uint32_t length_or_marker;
+        memcpy(&length_or_marker, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        remaining -= sizeof(uint32_t);
+
+        // Check for NULL marker
+        if (length_or_marker == 0xFFFFFFFF) {
+            row[column.name] = "NULL";
+            continue;
+        }
+
+        // Regular value
+        uint32_t length = length_or_marker;
+
+        if (remaining < length) {
+            throw std::runtime_error("Corrupted data: invalid length for column " + column.name);
+        }
+
+        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
+        ptr += length;
+        remaining -= length;
     }
 
     return row;

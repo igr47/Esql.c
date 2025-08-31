@@ -244,7 +244,7 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
     }
 }
 
-// In analyzer.cpp, update the analyzeCreate method to handle storage manager integration
+
 void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
     if (storage.tableExists(db.currentDatabase(), createStmt.tablename)) {
         if (createStmt.ifNotExists) {
@@ -253,7 +253,6 @@ void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
         throw SematicError("Table already exists: " + createStmt.tablename);
     }
 
-    // Validate that the table can be created with the storage manager
     std::vector<DatabaseSchema::Column> columns;
     std::string primaryKey;
     
