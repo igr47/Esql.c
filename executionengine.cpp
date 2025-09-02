@@ -307,8 +307,15 @@ ExecutionEngine::ResultSet ExecutionEngine::executeDelete(AST::DeleteStatement& 
 
 // ALTER TABLE operations
 ExecutionEngine::ResultSet ExecutionEngine::executeAlterTable(AST::AlterTableStatement& stmt) {
-    beginTransaction();
+    // EMERGENCY: Backup current data first
+    auto backup_data = storage.getTableData(db.currentDatabase(), stmt.tablename);
+    std::cout << "SAFETY: Backed up " << backup_data.size() << " rows before ALTER TABLE" << std::endl;
     
+    bool wasInTransaction = inTransaction();
+    if (!wasInTransaction) {
+        beginTransaction();
+    }
+
     try {
         ResultSet result;
         
@@ -326,11 +333,29 @@ ExecutionEngine::ResultSet ExecutionEngine::executeAlterTable(AST::AlterTableSta
                 throw std::runtime_error("Unsupported ALTER TABLE operation");
         }
         
-        commitTransaction();
+        auto new_data = storage.getTableData(db.currentDatabase(), stmt.tablename);
+        if (new_data.size() < backup_data.size()) {
+            std::cerr << "WARNING: Data loss detected! Had " << backup_data.size() 
+                      << " rows, now " << new_data.size() << " rows" << std::endl;
+        }
+        
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
         return result;
         
     } catch (const std::exception& e) {
-        rollbackTransaction();
+        std::cerr << "ALTER TABLE FAILED: " << e.what() << std::endl;
+        
+        try {
+            if (!wasInTransaction) {
+                rollbackTransaction();
+            }
+            std::cerr << "Attempting automatic rollback..." << std::endl;
+        } catch (const std::exception& rollback_error) {
+            std::cerr << "ROLLBACK ALSO FAILED: " << rollback_error.what() << std::endl;
+        }
+        
         throw std::runtime_error("ALTER TABLE failed: " + std::string(e.what()));
     }
 }
