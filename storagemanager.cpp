@@ -659,14 +659,34 @@ Node* FractalBPlusTree::get_node(uint32_t page_id) {
     return buffer_pool.get_page(pager, page_id);
 }
 
-void FractalBPlusTree::write_node(uint32_t page_id, const Node* node, uint64_t transaction_id) {
+/*void FractalBPlusTree::write_node(uint32_t page_id, const Node* node, uint64_t transaction_id) {
     {
         std::lock_guard<std::mutex> lock(version_mutex);
         versioned_nodes[transaction_id].push_back(*node);
     }
     buffer_pool.write_page(pager, wal, page_id, node);
-}
+}*/
 
+void FractalBPlusTree::write_node(uint32_t page_id, const Node* node, uint64_t transaction_id) {
+    // Create a copy of the node to avoid modifying the original
+    Node node_copy = *node;
+    
+    if (node_copy.header.num_keys >= 10 && !(node_copy.header.num_keys & (1U << 31))) {
+        compress_node_optimized(&node_copy);
+    }
+    
+    {
+        std::lock_guard<std::mutex> lock(version_mutex);
+        versioned_nodes[transaction_id].push_back(node_copy);
+    }
+    
+    // Write to buffer pool and WAL
+    buffer_pool.write_page(pager, wal, page_id, &node_copy);
+    
+    std::cout << "WRITE_NODE: Wrote page " << page_id << " with " << node_copy.header.num_keys 
+              << " keys, compressed: " << ((node_copy.header.num_keys & (1U << 31)) ? "yes" : "no") 
+              << std::endl;
+}
 
 
 void FractalBPlusTree::compress_keys(char* dest, const int64_t* keys, uint32_t num_keys) {
@@ -1133,6 +1153,11 @@ void FractalBPlusTree::create() {
     root.header.num_messages = 0;
     root.header.version = 0;
     write_node(0, &root, 0);
+    memset(root.data, 0, sizeof(root.data));
+
+    write_node(root_page_id.load(), &root, 0);
+    std::cout << "TREE_CREATE: Created new tree with root page " << root_page_id.load() << std::endl;
+
 }
 
 void FractalBPlusTree::drop() {
@@ -1509,13 +1534,21 @@ std::string FractalBPlusTree::select(int64_t key, uint64_t transaction_id) {
     return "";
 }
 
-std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::select_range(int64_t start_key,
-                                                                           int64_t end_key,
-                                                                           uint64_t transaction_id) {
+std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::select_range(int64_t start_key,int64_t end_key,
+uint64_t transaction_id) {
+    std::cout << "SELECT_RANGE: Querying range [" << start_key << ", " << end_key << "] with transaction ID " << transaction_id << std::endl;
+    
+    uint32_t current_page_id = root_page_id.load();
+    std::cout << "SELECT_RANGE: Starting at root page ID " << current_page_id << std::endl;
+    
+    Node* node = get_node(current_page_id);
+    decompress_node_optimized(node);
+    
+    std::cout << "SELECT_RANGE: Root node type: " << (node->header.type == PageType::LEAF ? "LEAF" : "INTERNAL") << ", num_keys: " << node->header.num_keys << std::endl;
     std::vector<std::pair<int64_t, std::string>> result;
 
-    uint32_t current_page_id = root_page_id.load();
-    Node* node = get_node(current_page_id);
+    //uint32_t current_page_id = root_page_id.load();
+    //Node* node = get_node(current_page_id);
 
     while (node->header.type == PageType::INTERNAL) {
         uint32_t child_index = find_child_index(node, start_key);
@@ -1597,38 +1630,149 @@ std::vector<int64_t> FractalBPlusTree::select_by_secondary(const std::string& in
     return {};
 }
 
-void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& data,
+/*void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& data,
                                 uint64_t transaction_id) {
+    if (data.empty()) return;
+    
     std::sort(data.begin(), data.end());
+    std::cout << "BULK_LOAD: Starting bulk load of " << data.size() << " rows" << std::endl;
 
     uint32_t current_page_id = root_page_id.load();
     Node* node = get_node(current_page_id);
+    
+    // Ensure the node is decompressed before working with it
+    decompress_node_optimized(node);
+    
+    // Verify this is a leaf node
+    if (node->header.type != PageType::LEAF) {
+        throw std::runtime_error("BULK_LOAD: Root node is not a leaf node");
+    }
 
-    for (const auto& kv : data) {
+    for (size_t i = 0; i < data.size(); i++) {
+        const auto& kv = data[i];
+        
+        // Check if node is full and needs splitting
         if (is_node_full(node)) {
+            std::cout << "BULK_LOAD: Node full, splitting node " << current_page_id << std::endl;
             split_node(current_page_id, node, node->header.parent_page_id, transaction_id);
+            current_page_id = root_page_id.load(); // Get the new root if it changed
             node = get_node(current_page_id);
+            decompress_node_optimized(node);
         }
 
+        // Write the data to storage and get the offset
         uint64_t value_offset = pager.write_data_block(kv.second);
+        uint32_t value_length = kv.second.size();
 
-        KeyValue kvs[BPTREE_ORDER + 1];
-        memcpy(kvs, node->data + node->header.num_keys * MAX_KEY_PREFIX,
-               sizeof(KeyValue) * node->header.num_keys);
+        // Get existing keys from the node
+        int64_t keys[BPTREE_ORDER];
+        if (node->header.num_keys > 0) {
+            decompress_keys_optimized(keys, node->data, node->header.num_keys);
+        }
 
+        // Get existing values from the node
+        KeyValue kvs[BPTREE_ORDER];
+        if (node->header.num_keys > 0) {
+            memcpy(kvs, node->data + node->header.num_keys * MAX_KEY_PREFIX,
+                   sizeof(KeyValue) * node->header.num_keys);
+        }
+
+        // Add the new key-value pair
+        keys[node->header.num_keys] = kv.first;
         kvs[node->header.num_keys].key = kv.first;
         kvs[node->header.num_keys].value_offset = value_offset;
-        kvs[node->header.num_keys].value_length = kv.second.size();
+        kvs[node->header.num_keys].value_length = value_length;
 
         node->header.num_keys++;
+
+        // Write back the compressed keys
+        compress_keys_optimized(node->data, keys, node->header.num_keys);
+        
+        // Write back the values
         memcpy(node->data + node->header.num_keys * MAX_KEY_PREFIX,
                kvs, sizeof(KeyValue) * node->header.num_keys);
 
-        compress_node_optimized(node);
-        write_node(current_page_id, node, transaction_id);
-    }
-}
+        std::cout << "BULK_LOAD: Added key " << kv.first << " to node " << current_page_id 
+                  << ", num_keys: " << node->header.num_keys << std::endl;
 
+        // Write the node (let write_node handle compression)
+        write_node(current_page_id, node, transaction_id);
+        
+        // Re-fetch the node for the next iteration to ensure we have the latest version
+        if (i < data.size() - 1) {
+            node = get_node(current_page_id);
+            decompress_node_optimized(node);
+        }
+    }
+
+    std::cout << "BULK_LOAD: Completed successfully, inserted " << data.size() << " rows" << std::endl;
+}*/
+void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& data,
+                                uint64_t transaction_id) {
+    if (data.empty()) {
+        std::cout << "BULK_LOAD: No data to load" << std::endl;
+        return;
+    }
+    
+    std::sort(data.begin(), data.end());
+    std::cout << "BULK_LOAD: Starting bulk load of " << data.size() << " rows" << std::endl;
+
+    uint32_t current_page_id = root_page_id.load();
+    Node* node = get_node(current_page_id);
+    decompress_node_optimized(node);
+    
+    for (size_t i = 0; i < data.size(); i++) {
+        const auto& kv = data[i];
+        
+        std::cout << "BULK_LOAD: Processing row " << (i+1) << "/" << data.size() 
+                  << ", key: " << kv.first << std::endl;
+        
+        if (is_node_full(node)) {
+            std::cout << "BULK_LOAD: Node full, splitting" << std::endl;
+            split_node(current_page_id, node, node->header.parent_page_id, transaction_id);
+            current_page_id = root_page_id.load();
+            node = get_node(current_page_id);
+            decompress_node_optimized(node);
+        }
+        
+        // Process the key-value pair
+        uint64_t value_offset = pager.write_data_block(kv.second);
+        
+        // Get existing keys and values
+        int64_t keys[BPTREE_ORDER];
+        KeyValue kvs[BPTREE_ORDER];
+        
+        if (node->header.num_keys > 0) {
+            decompress_keys_optimized(keys, node->data, node->header.num_keys);
+            memcpy(kvs, node->data + node->header.num_keys * MAX_KEY_PREFIX,
+                   sizeof(KeyValue) * node->header.num_keys);
+        }
+        
+        // Add new key-value pair
+        keys[node->header.num_keys] = kv.first;
+        kvs[node->header.num_keys].key = kv.first;
+        kvs[node->header.num_keys].value_offset = value_offset;
+        kvs[node->header.num_keys].value_length = kv.second.size();
+        
+        node->header.num_keys++;
+        
+        // Write back compressed keys and values
+        compress_keys_optimized(node->data, keys, node->header.num_keys);
+        memcpy(node->data + node->header.num_keys * MAX_KEY_PREFIX,
+               kvs, sizeof(KeyValue) * node->header.num_keys);
+        
+        // Write the node
+        write_node(current_page_id, node, transaction_id);
+        
+        // Refresh node pointer for next iteration
+        if (i < data.size() - 1) {
+            node = get_node(current_page_id);
+            decompress_node_optimized(node);
+        }
+    }
+    
+    std::cout << "BULK_LOAD: Completed successfully, inserted " << data.size() << " rows" << std::endl;
+}
 void FractalBPlusTree::checkpoint() {
     wal.checkpoint(pager, root_page_id.load());
 }

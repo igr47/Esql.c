@@ -83,8 +83,10 @@ private:
     std::unordered_map<std::string, std::string> deserializeRow(
         const std::vector<uint8_t>& data,
         const std::vector<DatabaseSchema::Column>& columns);
+    void emergencyDataRecovery(const std::string& dbName, const std::string& tableName);
     
     // Schema management
+    std::vector<std::unordered_map<std::string, std::string>> getTableDataWithSchema(const std::string& dbName, const std::string& tableName,const std::vector<DatabaseSchema::Column>& schema);
     void rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
                                   const std::vector<DatabaseSchema::Column>& newSchema);
     void writeSchema();

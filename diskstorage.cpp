@@ -346,54 +346,92 @@ const DatabaseSchema::Table* DiskStorage::getTable(const std::string& dbName,
 void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,
                            const std::string& oldColumn, const std::string& newColumn,
                            const std::string& newType, AST::AlterTableStatement::Action action) {
-    ensureDatabaseExists(dbName);
-    auto& db = databases.at(dbName);
-    
-    if (db.tables.find(tableName) == db.tables.end()) {
-        throw std::runtime_error("Table not found: " + tableName);
+    bool wasInTransaction = in_transaction;
+    if (!wasInTransaction) {
+        beginTransaction();
     }
 
-    auto& columns = db.table_schemas.at(tableName);
-    std::vector<DatabaseSchema::Column> newColumns = columns;
-    bool schemaChanged = false;
+    try {
+        ensureDatabaseExists(dbName);
+        auto& db = databases.at(dbName);
+        
+        if (db.tables.find(tableName) == db.tables.end()) {
+            throw std::runtime_error("Table not found: " + tableName);
+        }
 
-    switch (action) {
-        case AST::AlterTableStatement::ADD: {
-            DatabaseSchema::Column newCol;
-            newCol.name = newColumn;
-            newCol.type = DatabaseSchema::Column::parseType(newType);
-            newCol.isNullable = true;
-            newColumns.push_back(newCol);
-            schemaChanged = true;
-            break;
-        }
-        case AST::AlterTableStatement::DROP: {
-            auto it = std::remove_if(newColumns.begin(), newColumns.end(),
-                [&oldColumn](const DatabaseSchema::Column& col) {
-                    return col.name == oldColumn;
-                });
-            if (it != newColumns.end()) {
-                newColumns.erase(it, newColumns.end());
-                schemaChanged = true;
-            }
-            break;
-        }
-        case AST::AlterTableStatement::RENAME: {
-            for (auto& col : newColumns) {
-                if (col.name == oldColumn) {
-                    col.name = newColumn;
-                    schemaChanged = true;
-                    break;
+        auto& columns = db.table_schemas.at(tableName);
+        std::vector<DatabaseSchema::Column> newColumns = columns;
+        bool schemaChanged = false;
+
+        switch (action) {
+            case AST::AlterTableStatement::ADD: {
+                // Validate the column doesn't already exist
+                for (const auto& col : columns) {
+                    if (col.name == newColumn) {
+                        throw std::runtime_error("Column already exists: " + newColumn);
+                    }
                 }
+                
+                DatabaseSchema::Column newCol;
+                newCol.name = newColumn;
+                newCol.type = DatabaseSchema::Column::parseType(newType);
+                newCol.isNullable = true;
+                newColumns.push_back(newCol);
+                schemaChanged = true;
+                break;
             }
-            break;
+            case AST::AlterTableStatement::DROP: {
+                auto it = std::remove_if(newColumns.begin(), newColumns.end(),
+                    [&oldColumn](const DatabaseSchema::Column& col) {
+                        return col.name == oldColumn;
+                    });
+                if (it != newColumns.end()) {
+                    newColumns.erase(it, newColumns.end());
+                    schemaChanged = true;
+                } else {
+                    throw std::runtime_error("Column not found: " + oldColumn);
+                }
+                break;
+            }
+            case AST::AlterTableStatement::RENAME: {
+                bool found = false;
+                for (auto& col : newColumns) {
+                    if (col.name == oldColumn) {
+                        col.name = newColumn;
+                        schemaChanged = true;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    throw std::runtime_error("Column not found: " + oldColumn);
+                }
+                break;
+            }
+            default:
+                throw std::runtime_error("Unsupported ALTER TABLE operation");
         }
-        default:
-            throw std::runtime_error("Unsupported ALTER TABLE operation");
-    }
 
-    if (schemaChanged) {
-        rebuildTableWithNewSchema(dbName, tableName, newColumns);
+        if (schemaChanged) {
+	    auto old_data_count = getTableData(dbName, tableName).size();
+
+            rebuildTableWithNewSchema(dbName, tableName, newColumns);
+	    auto new_data_count = getTableData(dbName, tableName).size();
+            if (new_data_count != old_data_count) {
+                throw std::runtime_error("Data loss detected during ALTER TABLE: had " +std::to_string(old_data_count) + " rows, now " +std::to_string(new_data_count) + " rows");
+            }
+
+        }
+        
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
+
+    } catch (const std::exception& e) {
+        if (!wasInTransaction) {
+            rollbackTransaction();
+        }
+        throw;
     }
 }
 
@@ -571,107 +609,33 @@ void DiskStorage::checkpoint() {
                                   std::vector<uint8_t>& buffer) {
     buffer.clear();
 
-    for (const auto& column : columns) {
-        auto it = row.find(column.name);
-
-        if (it == row.end() || it->second.empty()) {
-            if (!column.isNullable) {
-                throw std::runtime_error("Missing value for non-nullable column: " + column.name);
-            }
-            // Write zero length for NULL values
-            uint32_t length = 0;
-            uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
-            buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
-            continue;
-        }
-
-        const std::string& value = it->second;
-        uint32_t length = static_cast<uint32_t>(value.size());
-
-        // Write length
-        uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
-        buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
-
-        // Write value
-        buffer.insert(buffer.end(), value.begin(), value.end());
-    }
-
-    return buffer.size();
-}
-
-std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
-    const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
-    std::unordered_map<std::string, std::string> row;
-    const uint8_t* ptr = data.data();
-    size_t remaining = data.size();
-
-    for (const auto& column : columns) {
-        // Check if we have enough data for the length field
-        if (remaining < sizeof(uint32_t)) {
-            throw std::runtime_error("Corrupted data: insufficient buffer size for column " + column.name +
-                                    ", needed " + std::to_string(sizeof(uint32_t)) + " bytes, got " +
-                                    std::to_string(remaining));
-        }
-
-        // Read length safely
-        uint32_t length;
-        memcpy(&length, ptr, sizeof(uint32_t));
-        ptr += sizeof(uint32_t);
-        remaining -= sizeof(uint32_t);
-
-        // Handle NULL values
-        if (length == 0) {
-            row[column.name] = column.isNullable ? "NULL" : "";
-            continue;
-        }
-
-        // Check if we have enough data for the actual value
-        if (remaining < length) {
-            throw std::runtime_error("Corrupted data: invalid length for column " + column.name +
-                                    ", expected " + std::to_string(length) + " bytes, got " +
-                                    std::to_string(remaining));
-        }
-
-        // Copy the value safely
-        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
-        ptr += length;
-        remaining -= length;
-    }
-
-    return row;
-}*/
-
-uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
-                                  const std::vector<DatabaseSchema::Column>& columns,
-                                  std::vector<uint8_t>& buffer) {
-    buffer.clear();
+    std::cout << "SERIALIZING ROW with " << columns.size() << " columns:" << std::endl;
 
     for (const auto& column : columns) {
         auto it = row.find(column.name);
+        std::cout << "  " << column.name << ": ";
 
-        // Handle NULL values
         if (it == row.end() || it->second.empty() || it->second == "NULL") {
             if (!column.isNullable) {
                 throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be NULL");
             }
-            // Write a special NULL marker (0xFFFFFFFF)
             uint32_t null_marker = 0xFFFFFFFF;
             uint8_t* marker_bytes = reinterpret_cast<uint8_t*>(&null_marker);
             buffer.insert(buffer.end(), marker_bytes, marker_bytes + sizeof(null_marker));
-            continue;
+            std::cout << "NULL" << std::endl;
+        } else {
+            const std::string& value = it->second;
+            uint32_t length = static_cast<uint32_t>(value.size());
+
+            uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
+            buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
+            buffer.insert(buffer.end(), value.begin(), value.end());
+
+            std::cout << "'" << value << "' (length: " << length << ")" << std::endl;
         }
-
-        const std::string& value = it->second;
-        uint32_t length = static_cast<uint32_t>(value.size());
-
-        // Write length
-        uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
-        buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
-
-        // Write value
-        buffer.insert(buffer.end(), value.begin(), value.end());
     }
 
+    std::cout << "TOTAL SERIALIZED SIZE: " << buffer.size() << " bytes" << std::endl;
     return buffer.size();
 }
 
@@ -710,54 +674,335 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     }
 
     return row;
+}*/
+uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
+                                  const std::vector<DatabaseSchema::Column>& columns,
+                                  std::vector<uint8_t>& buffer) {
+    buffer.clear();
+
+    for (const auto& column : columns) {
+        auto it = row.find(column.name);
+        
+        if (it == row.end() || it->second.empty() || it->second == "NULL") {
+            if (!column.isNullable) {
+                throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be NULL");
+            }
+            // Write NULL marker (0xFFFFFFFF)
+            uint32_t null_marker = 0xFFFFFFFF;
+            buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&null_marker), 
+                         reinterpret_cast<uint8_t*>(&null_marker) + sizeof(null_marker));
+        } else {
+            const std::string& value = it->second;
+            uint32_t length = static_cast<uint32_t>(value.size());
+            
+            // Write length
+            buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length), 
+                         reinterpret_cast<uint8_t*>(&length) + sizeof(length));
+            
+            // Write value
+            buffer.insert(buffer.end(), value.begin(), value.end());
+        }
+    }
+
+    return buffer.size();
 }
 
-void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
+std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
+    const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
+    std::unordered_map<std::string, std::string> row;
+    const uint8_t* ptr = data.data();
+    size_t remaining = data.size();
+
+    for (const auto& column : columns) {
+        if (remaining < sizeof(uint32_t)) {
+            throw std::runtime_error("Corrupted data: insufficient buffer size for column " + column.name);
+        }
+
+        uint32_t length_or_marker;
+        memcpy(&length_or_marker, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        remaining -= sizeof(uint32_t);
+
+        // Check for NULL marker
+        if (length_or_marker == 0xFFFFFFFF) {
+            row[column.name] = "NULL";
+            continue;
+        }
+
+        // Regular value
+        uint32_t length = length_or_marker;
+
+        if (remaining < length) {
+            throw std::runtime_error("Corrupted data: invalid length for column " + column.name + 
+                                   ", expected " + std::to_string(length) + 
+                                   " bytes, but only " + std::to_string(remaining) + " remaining");
+        }
+
+        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
+        ptr += length;
+        remaining -= length;
+    }
+
+    if (remaining > 0) {
+        std::cerr << "WARNING: " << remaining << " bytes remaining after deserialization" << std::endl;
+    }
+
+    return row;
+}
+/*void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
                                           const std::vector<DatabaseSchema::Column>& newSchema) {
     auto& db = databases.at(dbName);
-    
-    // 1. Get all current data
-    auto oldData = getTableData(dbName, tableName);
     auto& oldSchema = db.table_schemas.at(tableName);
     
-    // 2. Create new table with new schema
+    std::cout << "BACKUP: Saving current data for table " << tableName << std::endl;
+    
+    // Read data using OLD schema - get both data AND row IDs
+    auto oldData = getTableDataWithSchema(dbName, tableName, oldSchema);
+    std::cout << "BACKUP: Found " << oldData.size() << " rows to migrate" << std::endl;
+    
+    // Get the actual row IDs from the original table
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end() || !table_it->second) {
+        throw std::runtime_error("Table not initialized: " + tableName);
+    }
+    
+    // Get all data with their actual row IDs
+    auto all_data = table_it->second->select_range(1, UINT32_MAX, getTransactionId());
+    
+    // Create new tree with new schema 
     uint32_t new_root_id = pager.allocate_page();
     auto newTree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
     newTree->create();
     
-    // 3. Reinsert all rows with new schema
+    // Reinsert all rows with their original row IDs and new schema
     std::vector<std::pair<int64_t, std::string>> bulk_data;
     bulk_data.reserve(oldData.size());
     
-    uint32_t row_id = 1;
-    for (auto& row : oldData) {
+    uint32_t data_index = 0;
+    for (const auto& [row_id, serialized_data] : all_data) {
+        if (data_index >= oldData.size()) break;
+        
+        const auto& old_row = oldData[data_index++];
         std::unordered_map<std::string, std::string> newRow;
         
-        // Map old columns to new schema
+        // Copy all existing data
+        for (const auto& [col_name, value] : old_row) {
+            newRow[col_name] = value;
+        }
+        
+        // Add NULL values for new columns
         for (const auto& newCol : newSchema) {
-            auto it = row.find(newCol.name);
-            if (it != row.end()) {
-                newRow[newCol.name] = it->second;
-            } else {
+            if (newRow.find(newCol.name) == newRow.end()) {
+                newRow[newCol.name] = "NULL";
+            }
+        }
+        // Serialize with NEW schema
+        std::vector<uint8_t> buffer;
+        serializeRow(newRow, newSchema, buffer);
+        bulk_data.emplace_back(row_id, std::string(buffer.begin(), buffer.end()));
+    }
+    
+    // Bulk load with original row IDs
+    if (!bulk_data.empty()) {
+        try {
+            newTree->bulk_load(bulk_data, getTransactionId());
+            std::cout << "SUCCESS: Migrated " << bulk_data.size() << " rows to new schema" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "ERROR: Bulk load failed: " << e.what() << std::endl;
+            throw;
+        }
+    }
+    
+    // Verify the migration worked
+    auto verify_data = newTree->select_range(1, UINT32_MAX, getTransactionId());
+    std::cout << "VERIFICATION: New table has " << verify_data.size() << " rows" << std::endl;
+    
+    if (verify_data.size() != oldData.size()) {
+        throw std::runtime_error("Data loss detected during ALTER TABLE: had " + 
+            std::to_string(oldData.size()) + " rows, now " + 
+            std::to_string(verify_data.size()) + " rows");
+    }
+    
+    // Replace old tree and update schema
+    db.tables[tableName] = std::move(newTree);
+    db.table_schemas[tableName] = newSchema;
+    db.root_page_ids[tableName] = new_root_id;
+    
+    writeSchema();
+}*/
+
+void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
+                                          const std::vector<DatabaseSchema::Column>& newSchema) {
+    auto& db = databases.at(dbName);
+    auto& oldSchema = db.table_schemas.at(tableName);
+    
+    std::cout << "BACKUP: Saving current data for table " << tableName << std::endl;
+    
+    // Read data using OLD schema
+    auto oldData = getTableDataWithSchema(dbName, tableName, oldSchema);
+    std::cout << "BACKUP: Found " << oldData.size() << " rows to migrate" << std::endl;
+    
+    // Get the actual row IDs and serialized data from the original table
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end() || !table_it->second) {
+        throw std::runtime_error("Table not initialized: " + tableName);
+    }
+    
+    // Get all data with their actual row IDs from the original tree
+    auto all_data_with_ids = table_it->second->select_range(1, UINT32_MAX, getTransactionId());
+    std::cout << "BACKUP: Retrieved " << all_data_with_ids.size() << " rows with IDs from original table" << std::endl;
+    
+    // Data consistency check
+    if (all_data_with_ids.size() != oldData.size()) {
+        std::stringstream error_msg;
+        error_msg << "Data inconsistency: retrieved " << all_data_with_ids.size() 
+                  << " row IDs but have " << oldData.size() << " data rows";
+        throw std::runtime_error(error_msg.str());
+    }
+    
+    // Create new tree with new schema 
+    uint32_t new_root_id = pager.allocate_page();
+    auto newTree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
+    newTree->create();
+    
+    // Reinsert all rows with their original row IDs and new schema
+    std::vector<std::pair<int64_t, std::string>> bulk_data;
+    bulk_data.reserve(oldData.size());
+    
+    uint32_t row_index = 0;
+    for (const auto& [actual_row_id, old_serialized_data] : all_data_with_ids) {
+        if (row_index >= oldData.size()) {
+            std::cerr << "WARNING: More row IDs than data rows found" << std::endl;
+            break;
+        }
+        
+        const auto& old_row = oldData[row_index++];
+        std::unordered_map<std::string, std::string> newRow;
+        
+        // Copy all existing data from the old row
+        for (const auto& [col_name, value] : old_row) {
+            newRow[col_name] = value;
+        }
+        
+        // Add NULL values for new columns
+        for (const auto& newCol : newSchema) {
+            if (newRow.find(newCol.name) == newRow.end()) {
                 newRow[newCol.name] = "NULL";
             }
         }
         
-        // Serialize and add to bulk data
+        // Serialize with NEW schema
         std::vector<uint8_t> buffer;
-        serializeRow(newRow, newSchema, buffer);
-        bulk_data.emplace_back(row_id++, std::string(buffer.begin(), buffer.end()));
+        try {
+            serializeRow(newRow, newSchema, buffer);
+            bulk_data.emplace_back(actual_row_id, std::string(buffer.begin(), buffer.end()));
+            std::cout << "MIGRATING: Row ID " << actual_row_id << " with " << newRow.size() << " columns" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "MIGRATING: Failed to serialize row ID " << actual_row_id << ": " << e.what() << std::endl;
+            throw;
+        }
     }
     
-    // 4. Bulk load the data
-    newTree->bulk_load(bulk_data, getTransactionId());
+    std::cout << "MIGRATION: Prepared " << bulk_data.size() << " rows for bulk load" << std::endl;
     
-    // 5. Update metadata
+    // Bulk load with original row IDs
+    if (!bulk_data.empty()) {
+        try {
+            auto transaction_id = getTransactionId();
+            std::cout << "BULK_LOAD: Starting bulk load of " << bulk_data.size() << " rows with transaction ID " << transaction_id << std::endl;
+            newTree->bulk_load(bulk_data, transaction_id);
+            std::cout << "SUCCESS: Migrated " << bulk_data.size() << " rows to new schema" << std::endl;
+            
+            // Immediate verification - read directly from the tree
+            std::cout << "IMMEDIATE_VERIFICATION: Reading data directly from new tree" << std::endl;
+            auto immediate_data = newTree->select_range(1, UINT32_MAX, transaction_id);
+            std::cout << "IMMEDIATE_VERIFICATION: Found " << immediate_data.size() << " rows" << std::endl;
+            
+            for (const auto& [row_id, data] : immediate_data) {
+                std::cout << "IMMEDIATE_VERIFICATION: Row ID " << row_id << " - Data size: " << data.size() << " bytes" << std::endl;
+                // Try to deserialize to verify data integrity
+                try {
+                    auto row = deserializeRow(std::vector<uint8_t>(data.begin(), data.end()), newSchema);
+                    std::cout << "IMMEDIATE_VERIFICATION: Row " << row_id << " deserialized successfully" << std::endl;
+                } catch (const std::exception& e) {
+                    std::cerr << "IMMEDIATE_VERIFICATION: Failed to deserialize row " << row_id << ": " << e.what() << std::endl;
+                }
+            }
+            
+        } catch (const std::exception& e) {
+            std::cerr << "ERROR: Bulk load failed: " << e.what() << std::endl;
+            throw std::runtime_error("Bulk load failed: " + std::string(e.what()));
+        }
+    } else {
+        std::cout << "WARNING: No data to migrate" << std::endl;
+    }
+    
+    // Verify the migration worked by reading back from the new tree
+    auto transaction_id = getTransactionId();
+    auto verify_data = newTree->select_range(1, UINT32_MAX, transaction_id);
+    std::cout << "VERIFICATION: Using transaction ID " << transaction_id << " - New table has " << verify_data.size() << " rows" << std::endl;
+    
+    for (const auto& [row_id, data] : verify_data) {
+        std::cout << "VERIFY: Row ID " << row_id << " - Data size: " << data.size() << " bytes" << std::endl;
+    }
+    
+    if (verify_data.size() != oldData.size()) {
+        std::stringstream error_msg;
+        error_msg << "Data loss detected during ALTER TABLE: had " 
+                  << oldData.size() << " rows, now " << verify_data.size() << " rows";
+        
+        // Additional debug info
+        error_msg << "\nOriginal data count: " << oldData.size();
+        error_msg << "\nRow IDs retrieved: " << all_data_with_ids.size();
+        error_msg << "\nBulk data prepared: " << bulk_data.size();
+        error_msg << "\nNew tree verification: " << verify_data.size();
+        
+        throw std::runtime_error(error_msg.str());
+    }
+    
+    // Replace old tree and update schema
     db.tables[tableName] = std::move(newTree);
     db.table_schemas[tableName] = newSchema;
     db.root_page_ids[tableName] = new_root_id;
-    updateRowIdCounter(tableName, row_id);
+    
+    // Preserve the row ID counter
+    updateRowIdCounter(tableName, db.next_row_id);
+    
     writeSchema();
+    
+    std::cout << "SCHEMA_MIGRATION: Completed successfully for table " << tableName << std::endl;
+}
+std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableDataWithSchema(const std::string& dbName, const std::string& tableName,const std::vector<DatabaseSchema::Column>& schema){
+    
+    ensureDatabaseSelected();
+    auto& db = getCurrentDatabase();
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end() || !table_it->second) {
+        throw std::runtime_error("Table not initialized: " + tableName);
+    }
+
+    std::vector<std::unordered_map<std::string, std::string>> result;
+    
+    try {
+        // Use range query to get all data
+        auto data = table_it->second->select_range(1, UINT32_MAX, getTransactionId());
+        
+        for (const auto& [row_id, serialized_data] : data) {
+            try {
+                std::vector<uint8_t> buffer(serialized_data.begin(), serialized_data.end());
+                result.push_back(deserializeRow(buffer, schema));
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Failed to deserialize row " << row_id 
+                          << ": " << e.what() << std::endl;
+                // Continue with other rows
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Warning: Failed to read table data: " << e.what() << std::endl;
+        // Return empty result instead of crashing
+    }
+    
+    return result;
 }
 
 void DiskStorage::ensureDatabaseSelected() const {
@@ -765,7 +1010,6 @@ void DiskStorage::ensureDatabaseSelected() const {
         throw std::runtime_error("No database selected");
     }
 }
-
 void DiskStorage::ensureDatabaseExists(const std::string& dbName) const {
     if (!databaseExists(dbName)) {
         throw std::runtime_error("Database does not exist: " + dbName);
@@ -787,6 +1031,31 @@ uint32_t DiskStorage::getNextRowId(const std::string& tableName) {
     return db.next_row_id++;
 }
 
+void DiskStorage::emergencyDataRecovery(const std::string& dbName, const std::string& tableName) {
+    std::cout << "EMERGENCY DATA RECOVERY for table: " << tableName << std::endl;
+
+    auto& db = databases.at(dbName);
+    auto& oldSchema = db.table_schemas.at(tableName);
+
+    // Try to read data with old schema regardless of current state
+    try {
+        auto recovered_data = getTableDataWithSchema(dbName, tableName, oldSchema);
+        std::cout << "RECOVERY: Found " << recovered_data.size() << " rows with old schema" << std::endl;
+
+        // Print sample data for verification
+        if (!recovered_data.empty()) {
+            std::cout << "SAMPLE ROW: ";
+            for (const auto& [key, value] : recovered_data[0]) {
+                std::cout << key << "='" << value << "' ";
+            }
+            std::cout << std::endl;
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "RECOVERY FAILED: " << e.what() << std::endl;
+    }
+}
+
 void DiskStorage::updateRowIdCounter(const std::string& tableName, uint32_t next_id) {
     auto& db = getCurrentDatabase();
     db.next_row_id = next_id;
@@ -800,7 +1069,7 @@ uint64_t DiskStorage::getTransactionId() {
     return current_transaction_id;
 }
 
-void DiskStorage::prepareBulkData(const std::string& tableName,
+/*void DiskStorage::prepareBulkData(const std::string& tableName,
                                  const std::vector<std::unordered_map<std::string, std::string>>& rows,
                                  std::vector<std::pair<uint32_t, std::string>>& bulk_data) {
     auto& db = getCurrentDatabase();
@@ -817,8 +1086,37 @@ void DiskStorage::prepareBulkData(const std::string& tableName,
         serializeRow(rows[i], schema_it->second, buffer);
         bulk_data.emplace_back(start_id + i, std::string(buffer.begin(), buffer.end()));
     }
-}
+}*/
 
+void DiskStorage::prepareBulkData(const std::string& tableName,
+                                 const std::vector<std::unordered_map<std::string, std::string>>& rows,
+                                 std::vector<std::pair<uint32_t, std::string>>& bulk_data) {
+    auto& db = getCurrentDatabase();
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) {
+        throw std::runtime_error("Table schema not found: " + tableName);
+    }
+
+    uint32_t start_id = db.next_row_id;
+    bulk_data.reserve(rows.size());
+    
+    for (size_t i = 0; i < rows.size(); ++i) {
+        std::vector<uint8_t> buffer;
+        try {
+            serializeRow(rows[i], schema_it->second, buffer);
+            bulk_data.emplace_back(start_id + i, std::string(buffer.begin(), buffer.end()));
+            std::cout << "PREPARE_BULK: Prepared row ID " << (start_id + i) 
+                      << ", size: " << buffer.size() << " bytes" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "PREPARE_BULK: Failed to serialize row " << i 
+                      << ": " << e.what() << std::endl;
+            throw;
+        }
+    }
+    
+    std::cout << "PREPARE_BULK: Prepared " << bulk_data.size() 
+              << " rows for bulk insertion" << std::endl;
+}
 
 void DiskStorage::writeSchema() {
     try {
