@@ -401,21 +401,40 @@ void ESQLShell::initialize_terminal() {
 
 void ESQLShell::print_banner() {
     clear_screen();
-    if (use_colors) {
+    /*if (use_colors) {
         std::cout << BLUE << "\n";
         std::cout << "   _____ ______ ____  _      \n";
         std::cout << "  | ____|  ____/ ___|| |     \n";
         std::cout << "  |  _| | |__  \\___ \\| |     \n";
         std::cout << "  | |___|  __|  ___) | |___  \n";
         std::cout << "  |_____|_|    |____/|_____| \n";
-        std::cout << RESET << "  Enhanced SQL Shell v2.0\n\n";
+        std::cout << RESET << "  Enhanced SQL Shell v2.0\n\n";*/
+     if (use_colors) {
+        std::cout << GRAY;
+        std::cout << "   ███████╗███████╗ ██████╗ ██╗   \n";
+        std::cout << "   ██╔════╝██╔════╝██╔═══██╗██║   \n";
+        std::cout << "   █████╗  ███████╗██║   ██║██║   \n";
+        std::cout << "   ██╔══╝  ╚════██║██║   ██║██║   \n";
+        std::cout << "   ███████╗███████║╚██████╔╝███████╗\n";
+        std::cout << "   ╚══════╝╚══════╝ ╚═════╝ ╚══════╝\n";
+        std::cout << RESET;
+        
+        // Box with enhanced SQL shell text
+        std::cout << CYAN << "╔═══════════════════════════════════════╗\n";
+        std::cout << "║    " << MAGENTA << "E N H A N C E D   ES Q L   S H E L L" << CYAN << "  ║\n";
+        std::cout << "║        " << YELLOW << "H4CK3R  STYL3  V3RSI0N" << CYAN << "         ║\n";
+        std::cout << "╚═══════════════════════════════════════╝\n" << RESET;
+
+
     } else {
         std::cout << "\nESQL Enhanced SQL Shell v2.0\n\n";
     }
     
-    std::cout << "Type 'help' for commands, 'exit' to quit\n";
-    std::cout << "Connected to: " << (use_colors ? GREEN : "") << current_db 
-              << (use_colors ? RESET : "") << "\n\n";
+    std::cout << RED << "[*] "<< CYAN <<  "Type 'help' for commands, 'exit' to quit\n";
+    std::cout << RED << "[*] " << CYAN << "Initializing ESQL Database Matrix...\n";
+    std::cout << RED << "[*] " << MAGENTA << "Quantum ESQL Processor: ONLINE\n";
+    std::cout << RED << "[*] " << GRAY << "Syntax Highlighting: ACTIVATED\n"<<RESET;
+    std::cout << MAGENTA << "[+] "<< CYAN << "Connected to: " << (use_colors ? GRAY : "") << current_db <<GREEN << "•" << (use_colors ? RESET : "") << "\n\n";
 }
 
 void ESQLShell::print_prompt() {
@@ -804,11 +823,13 @@ void ESQLShell::print_results(const ExecutionEngine::ResultSet& result, double d
     std::cout << "\n";
     
     // Print rows
+    //std::cout << (use_colors ? MAGENTA : "");
     for (const auto& row : result.rows) {
+	std::cout << (use_colors ? MAGENTA : "");
         for (size_t i = 0; i < row.size(); ++i) {
             std::cout << std::left << std::setw(widths[i]) << row[i] << " |";
         }
-        std::cout << "\n";
+        std::cout << (use_colors ? RESET : "") <<"\n";
     }
     
     // Print summary
