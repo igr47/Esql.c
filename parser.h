@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 #include "scanner.h"
+#include <stdexcept>
 #include <memory>
 #include <vector>
 #include <string>
@@ -150,8 +151,7 @@ public:
     
     // Helper function to format the error message
     std::string fullMessage() const {
-        return "Parse error at line " + std::to_string(line) + 
-               ", column " + std::to_string(column) + ": " + what();
+        return "Parse error at line " + std::to_string(line) + ", column " + std::to_string(column) + ": " + what();
     }
 };
 class Parse{

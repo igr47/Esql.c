@@ -476,17 +476,17 @@ bool FractalBPlusTree::has_neon_support() const {
 
 // Transactional memory helpers
 bool FractalBPlusTree::begin_transaction() {
-#if HAS_HARDWARE_TM
-    return _xbegin() == _XBEGIN_STARTED;
-#else
+//#if HAS_HARDWARE_TM
+    //return _xbegin() == _XBEGIN_STARTED;
+//#else
     return false; // Fallback to mutex on non-x86 platforms
-#endif
+//#endif
 }
 
 void FractalBPlusTree::end_transaction() {
-#if HAS_HARDWARE_TM
+/*#if HAS_HARDWARE_TM
     _xend();
-#endif
+#endif*/
 }
 
 void FractalBPlusTree::transaction_fallback() {
