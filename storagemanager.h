@@ -29,7 +29,7 @@
 
 #ifdef __linux__
 #include <sys/auxv.h>
-#include <asm/hwcap.h>
+//#include <asm/hwcap.h>
 #ifdef HAS_NUMA
 #include <numa.h>
 #endif

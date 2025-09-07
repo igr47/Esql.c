@@ -220,7 +220,7 @@ void ESQLShell::run() {
     if (is_termux()) {
         run_termux();
     } else {
-        run_standard();
+        run_termux();
     }
 }
 
