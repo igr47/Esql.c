@@ -700,6 +700,7 @@ void ESQLShell::execute_command(const std::string& command) {
         std::transform(upper_cmd.begin(), upper_cmd.end(), upper_cmd.begin(), ::toupper);
         
         if (upper_cmd == "EXIT" || upper_cmd == "QUIT") {
+	    db.shutdown();
             disable_raw_mode();
             exit(0);
         } else if (upper_cmd == "HELP") {
@@ -709,7 +710,7 @@ void ESQLShell::execute_command(const std::string& command) {
             print_banner();
         } else {
             try {
-                // Handle USE command specifically to avoid double processing
+			// Handle USE command specifically to avoid double processing
                 if (upper_cmd.find("USE ") == 0) {
                     size_t pos = command.find(' ');
                     if (pos != std::string::npos) {
@@ -862,7 +863,7 @@ void ESQLShell::show_help() {
     
     for (const auto& [cmd, desc] : commands) {
         std::cout << "  " << (use_colors ? MAGENTA : "") << cmd 
-                  << (use_colors ? WHITE : "") << " - " << desc 
+                  << (use_colors ? GREEN : "") << " - " << desc 
                   << (use_colors ? RESET : "") << "\n";
     }
     std::cout << "\n";

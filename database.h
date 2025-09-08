@@ -17,7 +17,9 @@ public:
 
 
     explicit Database(const std::string& filename);
+    ~Database();
     std::pair<ExecutionEngine::ResultSet, double> executeQuery(const std::string& query);
+    void shutdown();
     void execute(const std::string& query);
     void startInteractive();
     bool hasDatabaseSelected() const;
