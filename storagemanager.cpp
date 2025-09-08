@@ -457,15 +457,21 @@ void BufferPool::flush_all() {
 
 // FractalBPlusTree implementation
 FractalBPlusTree::FractalBPlusTree(Pager& p, WriteAheadLog& w, BufferPool& bp, const std::string& tname, uint32_t root_id): pager(p), wal(w), buffer_pool(bp), table_name(tname), root_page_id(root_id) ,neon_supported(detect_neon_support()){
-    Node root;
-    pager.read_page(root_id, &root);
-    if (root.header.type != PageType::INTERNAL && root.header.type != PageType::LEAF) {
-        root.header.type = PageType::LEAF;
-        root.header.page_id = root_id;
-        root.header.num_keys = 0;
-        root.header.num_messages = 0;
-        root.header.version = 0;
-        write_node(root_id, &root, 0);
+    try{
+             Node root;
+             pager.read_page(root_id, &root);
+             if (root.header.type != PageType::INTERNAL && root.header.type != PageType::LEAF) {
+		 std::cout<<"Initializing new tree for table: " << tname << std::endl;
+                 root.header.type = PageType::LEAF;
+                 root.header.page_id = root_id;
+                 root.header.num_keys = 0;
+                 root.header.num_messages = 0;
+                 root.header.version = 0;
+                 write_node(root_id, &root, 0);
+	     }
+    }catch (const std::exception& e){
+	    std::cerr <<"Error initilizing tree for table " <<tname << ":" << e.what() << std::endl;
+	    throw;
     }
 }
 

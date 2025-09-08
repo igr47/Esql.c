@@ -48,6 +48,7 @@ public:
     void bulkDelete(const std::string& dbName, const std::string& tableName,const std::vector<uint32_t>& row_ids) override;
 
     // Transaction management
+    void shutdown();
     void beginTransaction() override;
     void commitTransaction() override;
     void rollbackTransaction() override;

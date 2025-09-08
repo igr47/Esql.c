@@ -11,6 +11,7 @@
 DiskStorage::DiskStorage(const std::string& filename)
     : pager(filename + ".db"), buffer_pool(1000), wal(filename + ".wal") {
     try {
+	std::cout<<"INITIALIZING DISKSTORAGE: "<<filename <<std::endl;
         try {
 		pager.test_zstd();
 	}catch (const std::exception& e){
@@ -21,14 +22,22 @@ DiskStorage::DiskStorage(const std::string& filename)
         next_transaction_id = 1;
         in_transaction = false;
 
+	//Check if database file exists and has data
+	
+	bool file_exists = false;
+
         // Try to create page 0 if it doesn't exist
         try {
             Node test_node = {};
-            memset(&test_node, 0, sizeof(Node));
-            test_node.header.type = PageType::METADATA;
-            test_node.header.page_id = 0;
-            pager.write_page(0, &test_node);
+            //memset(&test_node, 0, sizeof(Node));
+            //test_node.header.type = PageType::METADATA;
+            //test_node.header.page_id = 0;
+            //pager.write_page(0, &test_node);
+	    pager.read_page(0,&test_node);
+	    file_exists = true;
+	    std::cout<<"Existing database file found " <<std::endl;
         } catch (const std::exception& e) {
+	    std::cout<<"No existing database file, creating new one" <<std::endl;
             // If writing page 0 fails, try to allocate it
             uint32_t new_page_id = pager.allocate_page();
             if (new_page_id != 0) {
@@ -820,6 +829,24 @@ uint32_t DiskStorage::getNextRowId(const std::string& tableName) {
     return db.next_row_id++;
 }
 
+void DiskStorage::shutdown(){
+	try{
+		std::cout<<"Shutting down storage engine...." <<std::endl;
+
+		//write schema first
+		writeSchema();
+
+		//Flush bufferpool
+		buffer_pool.flush_all();
+
+		//Create checkpoint
+		checkpoint();
+
+		std::cout<<"Storage shutdown complete" <<std::endl;
+	}catch (const std::exception& e){
+		std::cerr<<"Error during shutdown: "<< e.what() <<std::endl;
+	}
+}
 void DiskStorage::emergencyDataRecovery(const std::string& dbName, const std::string& tableName) {
     std::cout << "EMERGENCY DATA RECOVERY for table: " << tableName << std::endl;
 
@@ -1035,7 +1062,13 @@ void DiskStorage::writeSchema() {
         offset += sizeof(next_transaction_id);
 
         // Write the schema page
-        pager.write_page(0, &schema_node);
+	try{
+                pager.write_page(0, &schema_node);
+		std::cout<<"Schem successfull written to page 0"<<std::endl;
+	}catch (const std::exception& e){
+		std::cerr<<"Failed to write schema page: "<<e.what()<<std::endl;
+		throw;
+	}
         
     } catch (const std::exception& e) {
              std::cerr << "Warning: Failed to write schema: " << e.what() << std::endl;
@@ -1045,12 +1078,15 @@ void DiskStorage::writeSchema() {
 
 void DiskStorage::readSchema() {
     try {
+	std::cout<<"Attemptinyg to read schema from disky...."<<std::endl;
         // Try to read schema page
         Node schema_node;
         try {
             pager.read_page(0, &schema_node);
+	    std::cout<<"Schema read successfull from page 0 "<<std::endl;
         } catch (const std::exception&) {
             // Schema page doesn't exist yet (first run), initialize empty
+	    std::cout<<"No existing schema found ,initializing fresh database"<<std::endl;
             databases.clear();
             current_db.clear();
             next_transaction_id = 1;
@@ -1059,7 +1095,12 @@ void DiskStorage::readSchema() {
 
         // Verify it's a metadata page
         if (schema_node.header.type != PageType::METADATA) {
-            throw std::runtime_error("Invalid schema page type");
+            //throw std::runtime_error(Invalid schema page type);
+		std::cerr<< "Warning: Page 0 is not a metadata page, initializing fresh database"<<std::endl;
+		databases.clear();
+		current_db.clear();
+		next_transaction_id=1;
+		return;
         }
 
         const uint8_t* data = reinterpret_cast<const uint8_t*>(schema_node.data);
@@ -1158,6 +1199,15 @@ void DiskStorage::readSchema() {
                 db.tables[table_name] = std::make_unique<FractalBPlusTree>(
                     pager, wal, buffer_pool, table_name, root_page_id);
                 db.root_page_ids[table_name] = root_page_id;
+		//verif the tree can be accessed
+		/*try{
+			auto test_node=db.tables[table_name]->get_node(root_page_id);
+			std::cout<<" Tree initialized successfully "<<std::endl;
+		}catch (const std::exception& e) {
+			std::cerr<<" WARNING: Tree initialization filed: "<<e.what()<<std::endl;
+		}*/
+
+
             }
 
             databases[dbName] = std::move(db);
@@ -1180,12 +1230,22 @@ void DiskStorage::readSchema() {
             current_db = databases.begin()->first;
         }
 
+	std::cout<<"Schema loaded successfull "<<databases.size() << "databses found" <<std::endl;
+	for(const auto& [dbName,db] : databases){
+		std::cout<< "Database: "<<dbName << "with " <<db.table_schemas.size() << "tables" <<std::endl;
+		for(const auto& [tableName,_] : db.table_schemas){
+			std::cout<<" Table: "<<tableName <<std::endl;
+		}
+	}
+
     } catch (const std::exception& e) {
         // If schema reading fails, initialize empty databases
+	std::cerr<< "Critical error reading schema: "<<e.what() <<std::endl;
+	std::cerr<< "Initializing fresh database due to shema corruption "<<std::endl;
         databases.clear();
         current_db.clear();
         next_transaction_id = 1;
-        std::cerr << "Warning: Failed to read schema, initializing empty: " << e.what() << std::endl;
+        //std::cerr << Warning: Failed to read schema, initializing empty:  << e.what() << std::endl;
     }
 }
 

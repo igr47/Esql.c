@@ -24,6 +24,22 @@ Database::Database(const std::string& filename)
     }
 }
 
+Database::~Database() {
+	shutdown();
+}
+
+
+void Database::shutdown(){
+	try{
+		if(storage) {
+			storage->checkpoint();
+		}
+	}catch (const std::exception& e) {
+			std::cerr<< "Error during database shutdown: " <<e.what() <<std::endl;
+	}
+}
+
+
 bool Database::hasDatabaseSelected() const {
     return !current_db.empty();
 }
@@ -62,8 +78,7 @@ std::pair<ExecutionEngine::ResultSet, double> Database::executeQuery(const std::
         SematicAnalyzer analyzer(*this, *storage);                                                         
         analyzer.analyze(stmt);                                                        
         ExecutionEngine engine(*this, *storage);                                                           
-        auto result = engine.execute(std::move(stmt));
-        
+        auto result = engine.execute(std::move(stmt)); 
         auto end=std::chrono::high_resolution_clock::now();
         double duration=std::chrono::duration<double>(end-start).count();
         return {result,duration};

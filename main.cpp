@@ -1,9 +1,25 @@
 #include <iostream>
+//#include <csignal>
 #include "database.h"
+
+//Database* global =nullptr;
+
+/*void signalHandler(int signal) {
+	std::cout <<"\nReceived signal " << signal << ", shutting down gracefull...." <<std::endl;
+	if(globalDb) {
+		delete globalDb;
+		globalDb = nullptr;
+	}
+
+	exit(signal);
+}*/
 
 int main() {
     try {
-        std::cout << "Starting database system...\n";
+        //std::cout << Starting database system...\n;
+
+	//std::signal(SIGINT,signalHandler);
+	//std::signal(SIGINT,signalHandler);
         Database db("mydb");
         std::cout << "Database initialized successfully\n";
         std::cout << "Starting interactive shell...\n";
