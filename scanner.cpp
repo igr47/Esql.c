@@ -67,7 +67,8 @@ void Lexer::initializeKeyWords(){
 		{"BULK",Token::Type::BULK},
 		{"IN",Token::Type::IN},
 		{"ROW",Token::Type::ROW},
-		{"COLUMN",Token::Type::COLUMN}
+		{"COLUMN",Token::Type::COLUMN},
+		{"BETWEEN",Token::Type::BETWEE}
 
 	};
 }
