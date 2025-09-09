@@ -1084,9 +1084,9 @@ void DiskStorage::readSchema() {
         try {
             pager.read_page(0, &schema_node);
 	    std::cout<<"Schema read successfull from page 0 "<<std::endl;
-        } catch (const std::exception&) {
+        } catch (const std::exception& e) {
             // Schema page doesn't exist yet (first run), initialize empty
-	    std::cout<<"No existing schema found ,initializing fresh database"<<std::endl;
+	    std::cout<<"No existing schema found ,initializing fresh database" <<e.what()<<std::endl;
             databases.clear();
             current_db.clear();
             next_transaction_id = 1;
@@ -1230,13 +1230,25 @@ void DiskStorage::readSchema() {
             current_db = databases.begin()->first;
         }
 
-	std::cout<<"Schema loaded successfull "<<databases.size() << "databses found" <<std::endl;
-	for(const auto& [dbName,db] : databases){
-		std::cout<< "Database: "<<dbName << "with " <<db.table_schemas.size() << "tables" <<std::endl;
-		for(const auto& [tableName,_] : db.table_schemas){
-			std::cout<<" Table: "<<tableName <<std::endl;
-		}
-	}
+	for (auto& [dbName, db] : databases) {
+            for (auto& [tableName, _] : db.table_schemas) {
+                try {
+                    // Try to access the table to verify it's valid
+                    auto table_ptr = db.tables[tableName].get();
+                    if (table_ptr) {
+                        // Test reading a single key to verify the tree is accessible
+                        table_ptr->select(1, 0); // Try to read key 1 with transaction 0
+                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Table " << tableName << " in database " << dbName 
+                              << " appears corrupted: " << e.what() << std::endl;
+                    // Rebuild the table if it's corrupted
+                    rebuildIndexes(dbName, tableName);
+                }
+            }
+        }
+
+
 
     } catch (const std::exception& e) {
         // If schema reading fails, initialize empty databases
