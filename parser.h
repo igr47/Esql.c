@@ -17,6 +17,7 @@ namespace AST{
 	};
 	class Expression:public Node{
 		public:
+			virtual std::unique_ptr<Expression> clone() const =0;
 			virtual ~Expression()=default;
 			virtual std::string toString() const=0;
 	};
@@ -24,6 +25,9 @@ namespace AST{
 	class Literal:public Expression{
 		public:
 			Token token;
+			std::unique_ptr<Expression> clone() const override{
+				return std::make_unique<Literal>(token);
+			}
 			//Literal()=default;
 			explicit Literal(const Token& token);
 			std::string toString() const override{
@@ -34,6 +38,9 @@ namespace AST{
 	class Identifier:public Expression{
 		public:
 			Token token;
+			std::unique_ptr<Expression> clone() const override {
+				return std::make_unique<Identifier>(token);
+			}
 			explicit Identifier(const Token& token);
 			std::string toString() const override{
 				return token.lexeme;
@@ -43,6 +50,9 @@ namespace AST{
 	class BinaryOp:public Expression{
 		public:
 			Token op;
+			std::unique_ptr<Expression> clone() const override {
+				return std::make_unique<BinaryOp>(op, left->clone(),right->clone());
+			}
 			std::unique_ptr<Expression> left;
 			std::unique_ptr<Expression> right;
 

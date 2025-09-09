@@ -502,8 +502,8 @@ std::vector<std::string> ExecutionEngine::evaluateSelectColumns(
     return result;
 }
 
-bool ExecutionEngine::evaluateWhereClause(const AST::Expression* where,
-                                        const std::unordered_map<std::string, std::string>& row) {
+bool ExecutionEngine::evaluateWhereClause(const AST::Expression* where,const std::unordered_map<std::string, std::string>& row) {
+    if (!where) return true;
     std::string result = evaluateExpression(where, row);
     return result == "true" || result == "1";
 }
