@@ -705,20 +705,87 @@ void FractalBPlusTree::decompress_keys(int64_t* keys, const char* src, uint32_t 
     }
 }
 
-void FractalBPlusTree::compress_node(Node* node) {
+
+size_t FractalBPlusTree::calculate_actual_data_size(uint64_t transaction_id) {
+    size_t total_data_size = 0;
+    uint32_t current_page_id = root_page_id.load();
+    Node* node = get_node(current_page_id);
+
+    // Traverse to the first leaf node
+    while (node->header.type == PageType::INTERNAL) {
+        uint32_t children[BPTREE_ORDER + 1];
+        memcpy(children, node->data + node->header.num_keys * MAX_KEY_PREFIX,
+               sizeof(uint32_t) * (node->header.num_keys + 1));
+        current_page_id = children[0];
+        node = get_node(current_page_id);
+    }
+
+    // Iterate through all leaf nodes
+    while (node) {
+        decompress_node_optimized(node);
+
+        KeyValue kvs[BPTREE_ORDER];
+        memcpy(kvs, node->data + node->header.num_keys * MAX_KEY_PREFIX,
+               sizeof(KeyValue) * node->header.num_keys);
+
+        Message messages[MAX_MESSAGES];
+        memcpy(messages, node->data + node->header.num_keys * MAX_KEY_PREFIX +
+               sizeof(KeyValue) * node->header.num_keys,
+               sizeof(Message) * node->header.num_messages);
+
+        std::map<int64_t, uint32_t> visible_data_sizes;
+
+        // Add stored key-value pair sizes
+        for (uint32_t i = 0; i < node->header.num_keys; ++i) {
+            visible_data_sizes[kvs[i].key] = kvs[i].value_length;
+        }
+
+        // Apply messages (overwrite stored data)
+        for (int32_t i = node->header.num_messages - 1; i >= 0; --i) {
+            if (messages[i].version <= transaction_id || transaction_id == 0) {
+                if (messages[i].type == MessageType::DELETE) {
+                    visible_data_sizes.erase(messages[i].key);
+                } else {
+                    visible_data_sizes[messages[i].key] = messages[i].value_length;
+                }
+            }
+        }
+
+        // Add visible data sizes to total
+        for (const auto& kv : visible_data_sizes) {
+            total_data_size += kv.second;
+        }
+
+        // Move to next leaf node
+        if (node->header.next_page_id) {
+            current_page_id = node->header.next_page_id;
+            node = get_node(current_page_id);
+        } else {
+            break;
+        }
+    }
+
+    return total_data_size;
+}
+
+/*void FractalBPlusTree::compress_node(Node* node) {
     // Don't compress already compressed nodes or very small nodes
     if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
         return;
     }
 
     char temp[BPTREE_PAGE_SIZE];
-    memcpy(temp, node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader));
+    uint64_t transaction_id= node-header.version;
+    size_t data_size=calculate_actual_data_size(transaction_id);
+    memcpy(temp, node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader)data_size);
 
     size_t compressed_size = ZSTD_compress(
         node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader),
         temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
         1
     );
+    size_t compressed_size = ZSTD_compress(node->data + sizeof(size_t),BPTREE_PAGE_SIZE - sizeof(PageHeader) - sizeof(size_t),temp, data_size,1);
+
 
     if (ZSTD_isError(compressed_size)) {
         // If compression fails, restore original data
@@ -728,9 +795,38 @@ void FractalBPlusTree::compress_node(Node* node) {
     } else {
         node->header.num_keys |= (1U << 31);
     }
-}
+}*/
+void FractalBPlusTree::compress_node(Node* node) {
+    if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
+        return;
+    }
 
-void FractalBPlusTree::decompress_node(Node* node) {
+    char temp[BPTREE_PAGE_SIZE];
+    uint64_t transaction_id = node->header.version;
+    size_t data_size = calculate_actual_data_size(transaction_id);
+    memcpy(temp, node->data, data_size);
+
+    // Reserve space for compressed_size at the start of node->data
+    size_t compressed_size = ZSTD_compress(
+        node->data + sizeof(size_t),
+        BPTREE_PAGE_SIZE - sizeof(PageHeader) - sizeof(size_t),
+        temp,
+        data_size,
+        1
+    );
+
+    if (ZSTD_isError(compressed_size)) {
+        memcpy(node->data, temp, data_size);
+        std::cerr << "Zstd node compression failed: " << ZSTD_getErrorName(compressed_size)
+                  << ", keeping uncompressed" << std::endl;
+        return;
+    }
+
+    // Store compressed_size at the start of node->data
+    memcpy(node->data, &compressed_size, sizeof(size_t));
+    node->header.num_keys |= (1U << 31); // Mark as compressed
+}
+/*void FractalBPlusTree::decompress_node(Node* node) {
     if (!(node->header.num_keys & (1U << 31))) return;
 
     char temp[BPTREE_PAGE_SIZE];
@@ -746,6 +842,29 @@ void FractalBPlusTree::decompress_node(Node* node) {
 
     memcpy(node->data, temp, decompressed_size);
     node->header.num_keys &= ~(1U << 31);
+}*/
+
+void FractalBPlusTree::decompress_node(Node* node) {
+    if (!(node->header.num_keys & (1U << 31))) return;
+
+    char temp[BPTREE_PAGE_SIZE];
+    size_t compressed_size;
+    memcpy(&compressed_size, node->data, sizeof(size_t)); // Read stored compressed size
+
+    size_t decompressed_size = ZSTD_decompress(
+        temp,
+        BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        node->data + sizeof(size_t),
+        compressed_size
+    );
+
+    if (ZSTD_isError(decompressed_size)) {
+        throw std::runtime_error("Zstd node decompression failed: " +
+                                 std::string(ZSTD_getErrorName(decompressed_size)));
+    }
+
+    memcpy(node->data, temp, decompressed_size);
+    node->header.num_keys &= ~(1U << 31); // Mark as uncompressed
 }
 
 bool FractalBPlusTree::is_node_full(const Node* node) {

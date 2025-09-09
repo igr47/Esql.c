@@ -192,6 +192,7 @@ private:
     bool begin_transaction();
     void end_transaction();
     void transaction_fallback();
+    size_t calculate_actual_data_size(uint64_t transaction_id);
 
 public:
     FractalBPlusTree(Pager& p, WriteAheadLog& w, BufferPool& bp, 

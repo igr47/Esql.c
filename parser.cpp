@@ -383,7 +383,7 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
 }
 
 
-std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
+/*std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
     auto stmt = std::make_unique<AST::BulkInsertStatement>();
 
     //consume(Token::Type::BULK);
@@ -425,6 +425,68 @@ std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
         consume(Token::Type::R_PAREN);
 
     } while (match(Token::Type::COMMA));
+
+    inValueContext = wasInValueContext;
+    return stmt;
+}*/
+
+std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
+    auto stmt = std::make_unique<AST::BulkInsertStatement>();
+
+    consume(Token::Type::INTO);
+
+    stmt->table = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    // Parse optional column list
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+        do {
+            if (match(Token::Type::COMMA)) {
+                consume(Token::Type::COMMA);
+            }
+            stmt->columns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
+        } while (match(Token::Type::COMMA));
+        consume(Token::Type::R_PAREN);
+    }
+
+    consume(Token::Type::VALUES);
+
+    bool wasInValueContext = inValueContext;
+    inValueContext = true;
+
+    // Parse first row
+    consume(Token::Type::L_PAREN);
+    std::vector<std::unique_ptr<AST::Expression>> firstRowValues;
+
+    do {
+        if (match(Token::Type::COMMA)) {
+            consume(Token::Type::COMMA);
+        }
+        firstRowValues.push_back(parseValue());
+    } while (match(Token::Type::COMMA));
+
+    stmt->rows.push_back(std::move(firstRowValues));
+    consume(Token::Type::R_PAREN);
+
+    // Parse additional rows
+    while (match(Token::Type::COMMA)) {
+        consume(Token::Type::COMMA);
+        consume(Token::Type::L_PAREN);
+
+        std::vector<std::unique_ptr<AST::Expression>> rowValues;
+
+        do {
+            if (match(Token::Type::COMMA)) {
+                consume(Token::Type::COMMA);
+            }
+            rowValues.push_back(parseValue());
+        } while (match(Token::Type::COMMA));
+
+        stmt->rows.push_back(std::move(rowValues));
+        consume(Token::Type::R_PAREN);
+    }
 
     inValueContext = wasInValueContext;
     return stmt;
