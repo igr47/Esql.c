@@ -31,6 +31,11 @@ class SematicAnalyzer{
 		//child methode of analyzeselect
 		void validateFromClause(AST::SelectStatement& selectStmt);
 		void validateSelectColumns(AST::SelectStatement& selectStmt);
+		void validateGroupByClause(AST::SelectStatement& selectStmt);
+		void validateHavingClause(AST::SelectStatent& selectStmt);
+		void validateOrderByClause(AST::SelectStatement& selectStmt);
+		void isAggregateFunction(const std::string& functionName);
+		void validateAggregateUsage(AST::SelectStatement& selectStmt);
 		//void validateColumnReference(AST::Expression& expr);
 		void validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table);
 		void validateBinaryOperation(AST::BinaryOp&,const DatabaseSchema::Table* table);
