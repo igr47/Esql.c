@@ -118,6 +118,17 @@ void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSch
 		}
 	}else if(auto* literal=dynamic_cast<AST::Literal*>(&expr)){
 		validateLiteral(*literal,table);
+	}else if (auto* between = dynamic_cast<const AST::BetweenOp*>(&expr)) {
+		validateExpression(*between->column,table);
+		validateExpression(*between->lower, table);
+		validateExpression(*between->upper, table);
+	}else if (auto* inop=dynamic_cast<const AST::InOp*>(&expr)){
+		validateExpression(*inop->column,table);
+		for(const auto& value : inop->values){
+			validateExpression(*value, table);
+		}
+	}else if (auto* notop = dynamic_cast<const AST::NotOp*>(&expr)) {
+		validateExpression(*notop->expr, table);
 	}else{
 		throw SematicError("Invalid expression type");
 	}

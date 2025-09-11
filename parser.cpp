@@ -583,37 +583,64 @@ std::unique_ptr<AST::Expression> Parse::parseFromClause(){
 }
 
 std::unique_ptr<AST::Expression> Parse::parseExpression(){
-	return parseBinaryExpression(0);
+	return parseBinaryExpression(1);
 }
 
 std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence){
-	auto left=parsePrimaryExpression();
+	std::unique_ptr<AST::Expression> left;
+	if(match(Token::Type::NOT)) {
+		consume(Token::Type::NOT);
+		auto expr = parseBinaryExpression(4);
+
+		left=std::make_unique<AST::NotOp>(std::move(expr));
+	}else{
+	        auto left=parsePrimaryExpression();
+	}
 
 	while(true){
 		Token op=currentToken;
 		int precedence=getPrecedence(op.type);
+		if(precedence < minPrecedence){
+			break;
+		}
+
 		if(op.type == Token::Type::BETWEEN){
-			advance(); //consume between
+			consume(Token::Type::BETWEEN); //consume between
 		        
 			auto lower = parseExpression();
 			consume(Token::Type::AND);
 			auto upper = parseExpression();
 
 			//Create a compound expression: value >= lower AND value <=upper
-			auto ge = std::make_unique<AST::BinaryOp>(Token(Token::Type::GREATER_EQUAL, ">=" , op.line, op.column),left->clone(),std::move(lower));
+			/*auto ge = std::make_unique<AST::BinaryOp>(Token(Token::Type::GREATER_EQUAL, ">=" , op.line, op.column),left->clone(),std::move(lower));
 			auto le = std::make_unique<AST::BinaryOp>(Token(Token::Type::LESS_EQUAL, "<=" ,op.line,op.column),left->clone(),std::move(upper));
 			left = std::make_unique<AST::BinaryOp>(Token(Token::Type::AND, "AND" , op.line,op.column),std::move(ge),std::move(le));
-			continue;
-		}
-		if(precedence<minPrecedence){
+			continue;*/
+
+			left=std::make_unique<AST::BetweenOp>(std::move(left),std::move(lower),std::move(upper));
+		}else if(op.type == Token::Type::IN){
+			consume(Token::Type::IN);
+			consume(Token::Type::L_PAREN);
+			std::vector<std::unique_ptr<AST::Expression>> values;
+			
+			do{
+				values.push_back(parseExpression());
+				if(!match(Token::Type::R_PAREN)){
+					consume(Token::Type::COMMA);
+				}
+			}while(!match(Token::Type::R_PAREN));
+			consume(Token::Type::R_PAREN);
+			left = std::make_unique<AST::InOp>(std::move(left), std::move(values));
+		}else if(isBinaryOperator(op.type)){
+			advance();
+			auto right = parseBinaryExpression(precedence+1);
+			left = std::make_unique<AST::BinaryOp>(op,std::move(left), std::move(right));
+		}else{
 			break;
 		}
-		if(!isBinaryOperator(op.type)){
-			break;
-		}
-		advance();
+		/*advance();
 		auto right=parseBinaryExpression(precedence+1);
-		left=std::make_unique<AST::BinaryOp>(op,std::move(left),std::move(right));
+		left=std::make_unique<AST::BinaryOp>(op,std::move(left),std::move(right));*/
 	}
 	return left;
 }
@@ -664,7 +691,9 @@ int Parse::getPrecedence(Token::Type type){
 	switch(type){
 		case Token::Type::OR: return 1;
 		case Token::Type::AND: return 2;
+	        case Token::Type::IN:
 		case Token::Type::BETWEEN: return 3;
+	        case Token::Type::NOT: return 4;
 		case Token::Type::EQUAL:
 		case Token::Type::NOT_EQUAL:
 		case Token::Type::LESS:
@@ -675,5 +704,5 @@ int Parse::getPrecedence(Token::Type type){
 	}
 }
 bool Parse::isBinaryOperator(Token::Type type){
-	return getPrecedence(type) >0 || type == Token::Type::BETWEEN;
+	return getPrecedence(type) >0; //|| type == Token::Type::BETWEEN;
 }
