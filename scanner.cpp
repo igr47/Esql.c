@@ -71,7 +71,13 @@ void Lexer::initializeKeyWords(){
 		{"BETWEEN",Token::Type::BETWEEN},
 		{"SLASH",Token::Type::SLASH},
 		{"PLUS",Token::Type::PLUS},
-		{"MINUS",Token::Type::MINUS}
+		{"MINUS",Token::Type::MINUS},
+		{"GROUP",Token::Type::GROUP},
+		{"BY",Token::Type::BY},
+		{"ORDER",Token::Type::ORDER},
+		{"ASC",Token::Type::ASC},
+		{"HAVING",Token::Type::HAVING},
+		{"DESC",Token::Type::DESC}
 
 	};
 }

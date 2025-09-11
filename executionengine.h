@@ -45,6 +45,12 @@ private:
     ResultSet executeUpdate(AST::UpdateStatement& stmt);
     ResultSet executeDelete(AST::DeleteStatement& stmt);
     ResultSet executeAlterTable(AST::AlterTableStatement& stmt);
+    //Methods for select statements
+    ResultSet executeSelectWithAggregates(AST::SelectStatement& stmt);
+    std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::vector<std::unordered_map<std::string,std::string>>& group);
+    bool evaluateHavingCondition(const AST::Expression* having, const std::unordered_map<std::string,std::string>& group);
+    std::vector<std::unordered_map<std::string,std::string>> groupRows(const std::vector<std::unordered_map<std::string,std::string>>& data,const std::vector<std::string>& groupColumns);
+    std::vector<std::unordered_map<std::string,std::string>> sortResult(const std::vector<std::unordered_map<std::string,std::string>>& result,AST::OrderByClause* orderBy);
     
     // ALTER TABLE helper methods
     ResultSet handleAlterAdd(AST::AlterTableStatement* stmt);

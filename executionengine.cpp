@@ -134,11 +134,12 @@ ExecutionEngine::ResultSet ExecutionEngine::executeDropTable(AST::DropStatement&
 }
 
 // Query operations
-ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
+/*ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
     auto data = storage.getTableData(db.currentDatabase(), tableName);
     
     ResultSet result;
+
     
     // Determine columns to select
     if (stmt.columns.empty()) {
@@ -173,7 +174,293 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
     }
     
     return result;
+}*/
+
+ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
+    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
+    auto data = storage.getTableData(db.currentDatabase(), tableName);
+
+    ResultSet result;
+
+    // Determine columns to select
+    if (stmt.columns.empty()) {
+        auto table = storage.getTable(db.currentDatabase(), tableName);
+        for (const auto& col : table->columns) {
+            result.columns.push_back(col.name);
+        }
+    } else {
+        for (const auto& col : stmt.columns) {
+            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
+                result.columns.push_back(ident->token.lexeme);
+            } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+                // Handle aggregate functions
+                if (isAggregateFunction(binaryOp->op.lexeme)) {
+                    result.columns.push_back(binaryOp->op.lexeme + "(" +
+                                           binaryOp->left->toString() + ")");
+                } else {
+                    result.columns.push_back(col->toString());
+                }
+            } else {
+                result.columns.push_back(col->toString());
+            }
+        }
+    }
+
+    // Check if we need to handle aggregates
+    bool hasAggregates = false;
+    for (const auto& col : stmt.columns) {
+        if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+            if (isAggregateFunction(binaryOp->op.lexeme)) {
+                hasAggregates = true;
+                break;
+            }
+        }
+    }
+
+    if (hasAggregates || stmt.groupBy) {
+        return executeSelectWithAggregates(stmt);
+    }
+
+    // Regular non-aggregate query
+    for (const auto& row : data) {
+        bool include = true;
+        if (stmt.where) {
+            include = evaluateWhereClause(stmt.where.get(), row);
+        }
+
+        if (include) {
+            std::vector<std::string> resultRow;
+            for (const auto& col : result.columns) {
+                resultRow.push_back(row.at(col));
+            }
+            result.rows.push_back(resultRow);
+        }
+    }
+
+    // Apply ORDER BY if specified
+    if (stmt.orderBy) {
+        // Convert to map for sorting
+        std::vector<std::unordered_map<std::string, std::string>> sortedData;
+        for (const auto& rowVec : result.rows) {
+            std::unordered_map<std::string, std::string> rowMap;
+            for (size_t i = 0; i < result.columns.size(); ++i) {
+                rowMap[result.columns[i]] = rowVec[i];
+            }
+            sortedData.push_back(rowMap);
+        }
+
+        sortedData = sortResult(sortedData, stmt.orderBy.get());
+
+        // Convert back to vector format
+        result.rows.clear();
+        for (const auto& rowMap : sortedData) {
+            std::vector<std::string> rowVec;
+            for (const auto& col : result.columns) {
+                rowVec.push_back(rowMap.at(col));
+            }
+            result.rows.push_back(rowVec);
+        }
+    }
+
+    return result;
 }
+
+ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
+    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
+    auto data = storage.getTableData(db.currentDatabase(), tableName);
+
+    ResultSet result;
+
+    // Extract group by columns
+    std::vector<std::string> groupColumns;
+    if (stmt.groupBy) {
+        for (const auto& col : stmt.groupBy->columns) {
+            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
+                groupColumns.push_back(ident->token.lexeme);
+                result.columns.push_back(ident->token.lexeme);
+            }
+        }
+    }
+
+    // Add aggregate columns to result
+    for (const auto& col : stmt.columns) {
+        if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+            if (isAggregateFunction(binaryOp->op.lexeme)) {
+                std::string aggName = binaryOp->op.lexeme + "(";
+                if (auto ident = dynamic_cast<AST::Identifier*>(binaryOp->left.get())) {
+                    aggName += ident->token.lexeme;
+                }
+                aggName += ")";
+                result.columns.push_back(aggName);
+            } else {
+                result.columns.push_back(col->toString());
+            }
+        } else {
+            result.columns.push_back(col->toString());
+        }
+    }
+
+    // Group data
+    auto groupedData = groupRows(data, groupColumns);
+
+    // Process each group
+    for (const auto& group : groupedData) {
+        // Apply HAVING clause if specified
+        if (stmt.having) {
+            if (!evaluateHavingCondition(stmt.having->condition.get(), group)) {
+                continue;
+            }
+        }
+
+        // Evaluate aggregate functions for this group
+        auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group);
+        result.rows.push_back(aggregatedRow);
+    }
+
+    // Apply ORDER BY if specified
+    if (stmt.orderBy) {
+        auto sortedData = sortResult(groupedData, stmt.orderBy.get());
+
+        // Rebuild result rows in sorted order
+        result.rows.clear();
+        for (const auto& group : sortedData) {
+            auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group);
+            result.rows.push_back(aggregatedRow);
+        }
+    }
+
+    return result;
+}
+
+std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
+    const std::vector<std::unique_ptr<AST::Expression>>& columns,
+    const std::vector<std::unordered_map<std::string, std::string>>& group) {
+
+    std::vector<std::string> result;
+
+    for (const auto& col : columns) {
+        if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+            if (isAggregateFunction(binaryOp->op.lexeme)) {
+                std::string columnName;
+                if (auto ident = dynamic_cast<AST::Identifier*>(binaryOp->left.get())) {
+                    columnName = ident->token.lexeme;
+                }
+
+                std::string aggResult;
+                if (binaryOp->op.lexeme == "COUNT") {
+                    aggResult = std::to_string(group.size());
+                } else if (binaryOp->op.lexeme == "SUM") {
+                    double sum = 0;
+                    for (const auto& row : group) {
+                        sum += std::stod(row.at(columnName));
+                    }
+                    aggResult = std::to_string(sum);
+                } else if (binaryOp->op.lexeme == "AVG") {
+                    double sum = 0;
+                    for (const auto& row : group) {
+                        sum += std::stod(row.at(columnName));
+                    }
+                    aggResult = std::to_string(sum / group.size());
+                } else if (binaryOp->op.lexeme == "MIN") {
+                    double minVal = std::numeric_limits<double>::max();
+                    for (const auto& row : group) {
+                        double val = std::stod(row.at(columnName));
+                        if (val < minVal) minVal = val;
+                    }
+                    aggResult = std::to_string(minVal);
+                } else if (binaryOp->op.lexeme == "MAX") {
+                    double maxVal = std::numeric_limits<double>::lowest();
+                    for (const auto& row : group) {
+                        double val = std::stod(row.at(columnName));
+                        if (val > maxVal) maxVal = val;
+                    }
+                    aggResult = std::to_string(maxVal);
+                }
+
+                result.push_back(aggResult);
+            } else {
+                // Handle non-aggregate expressions
+                result.push_back(evaluateExpression(col.get(), group[0]));
+            }
+        } else {
+            // Handle non-aggregate columns
+            result.push_back(evaluateExpression(col.get(), group[0]));
+        }
+    }
+
+    return result;
+}
+
+bool ExecutionEngine::evaluateHavingCondition(const AST::Expression* having,
+                                           const std::unordered_map<std::string, std::string>& group) {
+    if (!having) return true;
+
+    std::string result = evaluateExpression(having, group);
+    return result == "true" || result == "1";
+}
+
+std::vector<std::unordered_map<std::string, std::string>> ExecutionEngine::groupRows(
+    const std::vector<std::unordered_map<std::string, std::string>>& data,
+    const std::vector<std::string>& groupColumns) {
+
+    if (groupColumns.empty()) {
+        return {data}; // Single group containing all rows
+    }
+
+    std::map<std::vector<std::string>, std::vector<std::unordered_map<std::string, std::string>>> groups;
+
+    for (const auto& row : data) {
+        std::vector<std::string> key;
+        for (const auto& col : groupColumns) {
+            key.push_back(row.at(col));
+        }
+        groups[key].push_back(row);
+    }
+
+    std::vector<std::unordered_map<std::string, std::string>> result;
+    for (auto& [key, group] : groups) {
+        result.push_back(group[0]); // Store representative row for each group
+    }
+
+    return result;
+}
+
+std::vector<std::unordered_map<std::string, std::string>> ExecutionEngine::sortResult(
+    const std::vector<std::unordered_map<std::string, std::string>>& data,
+    AST::OrderByClause* orderBy) {
+
+    if (!orderBy) return data;
+
+    std::vector<std::unordered_map<std::string, std::string>> sortedData = data;
+
+    std::sort(sortedData.begin(), sortedData.end(),
+        [&](const auto& a, const auto& b) {
+            for (const auto& [expr, ascending] : orderBy->columns) {
+                std::string valA = evaluateExpression(expr.get(), a);
+                std::string valB = evaluateExpression(expr.get(), b);
+
+                if (valA != valB) {
+                    if (ascending) {
+                        return valA < valB;
+                    } else {
+                        return valA > valB;
+                    }
+                }
+            }
+            return false;
+        });
+
+    return sortedData;
+}
+
+
+bool ExecutionEngine::isAggregateFunction(const std::string& functionName) {
+    static const std::set<std::string> aggregateFunctions = {
+        "COUNT", "SUM", "AVG", "MIN", "MAX"
+    };
+    return aggregateFunctions.find(functionName) != aggregateFunctions.end();
+}
+
 
 ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& stmt) {
     auto table = storage.getTable(db.currentDatabase(), stmt.table);
@@ -535,45 +822,28 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
         std::string right = evaluateExpression(binOp->right.get(), row);
 
         switch (binOp->op.type) {
-            case Token::Type::EQUAL: return left == right ? "true" : "false";
-            case Token::Type::NOT_EQUAL: return left != right ? "true" : "false";
-            case Token::Type::LESS: return left < right ? "true" : "false";
-            case Token::Type::LESS_EQUAL: return left <= right ? "true" : "false";
-            case Token::Type::GREATER: return left > right ? "true" : "false";
-            case Token::Type::GREATER_EQUAL: return left >= right ? "true" : "false";
+            case Token::Type::EQUAL: 
+		    return left == right ? "true" : "false";
+            case Token::Type::NOT_EQUAL: 
+		    return left != right ? "true" : "false";
+            case Token::Type::LESS: 
+		    return std::stod(left) < std::stod(right) ? "true" : "false";
+            case Token::Type::LESS_EQUAL: 
+		    return std::stod(left) <= std::stod(right) ? "true" : "false";
+            case Token::Type::GREATER: 
+		    return std::stod(left) > std::stod(right) ? "true" : "false";
+            case Token::Type::GREATER_EQUAL: 
+		    return std::stod(left) >= std::stod(right) ? "true" : "false";
+	    case Token::Type::PLUS:
+		    return std::to_string(std::stod(left)+std::stod(right));
+	    case Token::Type::MINUS:
+		    return std::to_string(std::stod(left)+std::stod(right));
+	    case Token::Type::SLASH:
+		    return std::to_string(std::stod(left) + std::stod(right));
             case Token::Type::AND: return (left == "true" && right == "true") ? "true" : "false";
             case Token::Type::OR: return (left == "true" || right == "true") ? "true" : "false";
             default: return "false";
         }
-    }
-    else if (auto* between = dynamic_cast<const AST::BetweenOp*>(expr)){
-        auto colval = evaluateValue(between->column.get(), row);
-        auto lowerval = evaluateValue(between->lower.get(),row);
-        auto upperval = evaluateValue(between->upper.get(),row);
-        
-        try{
-            double colNum=std::stod(colval);
-            double lowerNum = std::stod(lowerval);
-            double upperNum = std::stod(upperval);
-            return (colNum >= lowerNum && colNum <= upperNum) ? "true" : "false";
-        } catch(...){
-            return (colval >= lowerval && colval <= upperval) ? "true" : "false";
-        }
-    }
-    else if (auto* inop = dynamic_cast<const AST::InOp*>(expr)){
-        auto colval=evaluateValue(inop->column.get(),row);
-        for(const auto& value : inop->values){
-            if(colval == evaluateValue(value.get(),row)){
-                return "true";
-            }
-        }
-        return "false";
-    }
-    else if (auto* notop = dynamic_cast<const AST::NotOp*>(expr)) {
-        //return !evaluateExpression(notop->expr.get(),row) ? "true" : "false";
-	    std::string result = evaluateExpression(notop->expr.get(),row);
-	    bool boolResult = (result =="true" || result=="1");
-	    return (!boolResult) ? "true" : "false";
     }
 
     return "NULL";
