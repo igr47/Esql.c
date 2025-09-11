@@ -22,6 +22,52 @@ namespace AST{
 			virtual std::string toString() const=0;
 	};
 
+	class BetweenOp : public Expression{
+		public:
+			std::unique_ptr<Expression> column;
+			std::unique_ptr<Expression> lower;
+			std::unique_ptr<Expression> upper;
+			std::unique_ptr<Expression> clone() const override{
+				return std::make_unique<BetweenOp>(token);
+			}
+			BetweenOp(std::unique_ptr<Expression> col, std::unique_ptr<Expression> low,std::unique_ptr<Expression> up) : column(std::move(col)),lower(std::move(low)),upper(std::move(up)){}
+			std::string toString() const override{
+				return column->toString() + "BETWEEN" +lower->toString()+ "AND" +upper->toString();
+			}
+	};
+
+	class InOp : public Expression{
+		public:
+			std::unique_ptr<Expression> column;
+			std::vector<std::unique_ptr<Expression>> values;
+			std::unique_ptr<Expression> clone() const override{
+				return std::make_unique<InOp> (token);
+			}
+			InOp(std::unique_ptr<Expression> col, std::vector<std::unique_ptr<Expression>> vals) : column(std::move(col)), values(std::move(vals)){}
+
+			std::string toString() const override {
+				std::string result = column->toString() + "IN(" ;
+				for(size_t i=0; i<values.size(); ++i){
+					result += values[i]->toString();
+					if(i<values.size()-1) result += ",";
+				}
+				return result += ")";
+			}
+	};
+
+	class NotOp : public Expression{
+		public:
+			std::unique_ptr<Expression> expr;
+			std::unique_ptr<Expression> clone() const override{
+				return std::make_unique<NotOp> (token);
+			}
+
+			 explicit NotOp(std::unique_ptr<Expression> e) : expr(std::move(e)) {}
+			 std::string toString() const override{
+				 return "NOT " +expr->toString();
+			}
+	};
+
 	class Literal:public Expression{
 		public:
 			Token token;

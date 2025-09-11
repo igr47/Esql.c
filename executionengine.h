@@ -76,6 +76,7 @@ private:
     
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);
+    std::string evaluateValue(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row);
 };
 
 #endif

@@ -1,6 +1,7 @@
 #include "executionengine.h"
 #include "database.h"
 #include <iostream>
+#include <string>
 #include <stdexcept>
 #include <algorithm>
 #include <sstream>
@@ -531,6 +532,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
     else if (auto binOp = dynamic_cast<const AST::BinaryOp*>(expr)) {
         std::string left = evaluateExpression(binOp->left.get(), row);
         std::string right = evaluateExpression(binOp->right.get(), row);
+
         
         switch (binOp->op.type) {
             case Token::Type::EQUAL: return left == right ? "true" : "false";
@@ -543,7 +545,41 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
             case Token::Type::OR: return (left == "true" || right == "true") ? "true" : "false";
             default: return "false";
         }
-    }
+    }else if (auto* between = dynamic_cast<const AST::BetweenOp*>(expr)){
+	    auto colval = evaluateValue(between->column.get(), row);
+	    auto lowerval = evaluateValue(between->lower.get(),row);
+	    auto upperval = evaluateValue(between->upper.get(),row);
+	    
+	    try{
+		    double colNum=std::stod(colval);
+		    double lowerNum = std::stood(lowerval);
+		    double upperNum = std::stood(upperval);
+		    return colNum >= lowerNum && colNum <= upperNum;
+	    } catch(...){
+		    return colval >=lowerval && colval <= upperval;
+	    }
+    }else if (auto* inop = dynamic_cast<const AST::InOp*>(expr)){
+	    auto colval=evaluateValue(inop->column.get(),row);
+	    for(const auto& value : inop->values){
+		    if(colval == evaluateValue(value.get(),row)){
+			    return true;
+		     }
+	     }
+	    return false;
+      }else if (auto* notop = dynamic_cast<const AST::NotOp*>(expr)) {
+	      return !evaluateExpresion(notop->expe.get(),row);
+       }
+
+
     
     return "NULL";
 }
+std::string ExecutionEngine::evaluateValue(const AST::Expression* expr,const std::unorderd_map<std::string,std::string>& row){
+	if(auto* ident=dynamic_cast<const AST::Identifier*>(expr)) {
+		return row.at(ident->token.lexeme);
+	}else if(auto* literal=dynamic_cast<AST::Literal*>(expr)) {
+		return literal->token.lexeme;
+	}
+	throw std::runtime_error("Cannot evaluate value");
+}
+
