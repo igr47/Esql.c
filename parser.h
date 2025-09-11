@@ -299,6 +299,9 @@ class Parse{
 		std::unique_ptr<AST::UseDatabaseStatement> parseUseStatement();
 		std::unique_ptr<AST::ShowDatabaseStatement> parseShowDatabaseStatement();
 		std::unique_ptr<AST::ShowTableStatement> parseShowTableStatement();
+		std::unique_ptr<AST::GroupByClause>  parseGroupByClause();
+		std::unique_ptr<AST::HavingClause> parseHavingClause();
+		std::unique_ptr<AST::OrderByClause> parseOrderByClause();
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
 		std::unique_ptr<AST::UpdateStatement> parseUpdateStatement();
 		std::unique_ptr<AST::DeleteStatement> parseDeleteStatement();

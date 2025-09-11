@@ -69,10 +69,100 @@ void SematicAnalyzer::analyzeSelect(AST::SelectStatement& selectStmt){
 	if(selectStmt.where){
 		validateExpression(*selectStmt.where,currentTable);
 	}
+	if (selectStmt.groupBy){
+		validateGroupByClause(selectStmt);
+	if (selectStmt.having){
+		validateHavingByClause(selectStmt);
+	}
+	if (selectStmt.orderBy){
+		validateOrderByClause(selectStmt);
+	}
+	validateAggregateUsage(selectStmt);
 }
 
+void SematicAnalyzer::validateGroupByclause(AST::SelectStatemet& selectStmt){
+	if(!selectStmt.groupBy) return;
 
-//method for validate FROM clause
+	for(const auto& column : selectStmt.groupBy->columns){
+		validateExpression(*column,currentTable);
+		if (auto* ident = dynamic_cast<AST::Identifier*>(column.get())){
+			if(!columnExists(ident->token.lexeme)){
+				throw SematicError("Column '" + ident->token.lexeme + "' In GROUP B clause does not exist");
+			}
+		}
+	}
+}
+
+void SematicAnalyzer::validateHavingClause(AST::SelectStatement& selectStmt){
+	if(!selectStmt.having) return;
+
+	if (!selectStmt.groupBy){
+		throw SematicError("HAVING clause requires GROUP BY clause");
+	}
+
+	validateExpression(*selectStmt.having->condition, currentTable);
+}
+
+void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
+	if(!selectStmt.orderBy) return;
+
+	for(const auto* [column,_] : selectStmt.orderBy->columns){
+		validateExpression(*column,currentTable);
+
+		//check if column exist in SELECT list or table
+		if(auto* ident = dynamic_cast<AST::Identifier*>(column.get())){
+			bool foundInSelect = false;
+			for(const auto* setCol : selectStmt.columns){
+				if(auto* selectIdent = dynamic_cast<AST::Identifier*>(selectCol.get())){
+					if(selectIdent->token.lexeme == ident->token.lexeme){
+						foundInSelect = true;
+						break;
+					}
+				}
+			}
+			if (!foundInSelect && !columnExists(ident->token.lexeme)){
+				throw SematicError("Column '" + ident->token.lexeme + "'in ORDER BY clause does not exist in SELECT list or table");
+			}
+		}
+	}
+}
+
+bool SematicAnalyzer::isAggregateFunction(const std:;string& functionaNme){
+	static const std::set<std::string> aggregateFunction ={
+		"COUNT","SUM","AVG","MIN","MAX"
+	};
+
+	return aggregateFunctions.find(functionName) != aggregateFunctions.end();
+}
+
+void SematicAnalyzer::validateAggregateUsage(AST::SelectStatement& selectStmt) {
+	bool hasAggregate = false;
+	bool hasNonAggregate = false;
+
+	//check SELECT columns for aggregates
+	for(const auto&  column : selectStmt.columns){
+		if(auto* binarOp = dynamic_cast<AST::BinryOp*> (column.get())){
+			//check if this is a function call
+			if(binaryOp->op.type == Token::Type::Identifier && isAggregateFunction(binarOp->op.lexeme)){
+				hasAggregate = true;
+			}
+		}
+		else{
+			hasNonAggregate=true;
+		}
+	}
+
+	//Mixed aggregate and non aggregate columns require Group By
+	if(hasAggregate && hasNonAggregate && !selectStmt.groupBy) {
+		throw SematicError("No-aggregtecolumns must appear in GROUP BY clause " + "When using aggregate functions");
+	}
+
+	//check HAVING for aggregtes if is full
+	if(selectStmt.having){
+		//similar validation for having
+	}
+}
+
 void SematicAnalyzer::validateFromClause(AST::SelectStatement& selectStmt){
 	auto* fromIdent=dynamic_cast<AST::Identifier*>(selectStmt.from.get());
 	if(!fromIdent){
