@@ -148,6 +148,53 @@ std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement(){
 	consume(Token::Type::TABLES);
 	return stmt;
 }
+
+std::unique_ptr<AST::GroupByClause> parse::parseGroupByClause() {
+	consume(Token::Type::GROUP);
+	consume(Token::Type::BY);
+	std::vector<std::unique_ptr<AST::Expression>> columns;
+
+	do{
+		if(match(Token::Type::COMMA)){
+			consume(Token::Type::COMMA);
+		}
+		columns.push_back(parseExpression());
+	}while(match(Token::Type::COMMA));
+
+	return std::make_unique<AST::GroupByClause>(std::move(columns));
+}
+
+std::unique_ptr<HavingClause> parse::parseHavingClause(){
+	consume(Token::Type::HAVING);
+	return std::make_unique<AST::HavingClause>(parseExpression());
+}
+
+std::unique_ptr<AST::OrderByClause> parse::parse::OrderByClause() {
+	consume(Token::Type::ORDER);
+	consume(Token::Type::BY);
+
+	std::vector<std::pair<std::unique_ptr<AST::Expression>, bool>> columns;
+	do{
+		if(match(Token::Type::COMMA)){
+			consume(Token:Type::COMMA);
+		}
+
+		auto expr=parseExpression();
+		bool ascending = true;
+
+		if(match(Token::Type::ASC)){
+			consume(Token::Type::ASC);
+			ascending = true;
+		}else if(match(Token::Type::DESC)) {
+			consume(Token::Type::DESC);
+			ascending = false;
+		}
+
+		columns.emplace_back(std::move(expr),ascending);
+	}while(Token::Type::COMMA);
+	return std::make_unique<AST::OrderByClause>(std::move(columns));
+}
+
 std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	auto stmt=std::make_unique<AST::SelectStatement>();
 	//parse select clause
@@ -164,6 +211,26 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	if(match(Token::Type::WHERE)){
 		consume(Token::Type::WHERE);
 		stmt->where=parseExpression();
+	}
+	//parse Group By clause
+	if(match(Token::Type::GROUP)){
+		stmt->groupBy=parseGroupByClause();
+	}
+	//parse Having clause
+	if(match(Token::Type::HAVING)){
+		stmt->having = parseHavingClause();
+	}
+	//parse orderBy clause
+	if(match(Token::Type::ORDER)){
+		stmt->orderBy = parseOrderByClause();
+	}
+	if(match(Token::Type::LIMIT)){
+		consume(Token::Type::LIMIT);
+		stmt->limit = parseExpression();
+		if(match(Token::Type::OFFSET)){
+			consume(Token::Type::OFFSET);
+			stmt->offset - parseExpression();
+		}
 	}
 	return stmt;
 }
