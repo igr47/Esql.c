@@ -28,7 +28,7 @@ namespace AST{
 			std::unique_ptr<Expression> lower;
 			std::unique_ptr<Expression> upper;
 			std::unique_ptr<Expression> clone() const override{
-				return std::make_unique<BetweenOp>(token);
+				return std::make_unique<BetweenOp>(column->clone(),lower->clone(),upper->clone());
 			}
 			BetweenOp(std::unique_ptr<Expression> col, std::unique_ptr<Expression> low,std::unique_ptr<Expression> up) : column(std::move(col)),lower(std::move(low)),upper(std::move(up)){}
 			std::string toString() const override{
@@ -36,12 +36,75 @@ namespace AST{
 			}
 	};
 
+	class HavingClause : public Expression{
+		public:
+			std::unique_ptr<Expression> condition;
+			std::unique_ptr<Expression> clone() const override{
+				return std::make_unique<HavingClause>(condition->clone());
+			}
+
+			explicit HavingClause(std::unique_ptr<Expression> cond) : condition(std::move(cond)) {}
+			std::string toString() const override {
+				return "HAVING "+ condition->toString();
+			}
+	};
+
+	class OrderByClause : public Expression{
+		public:
+			std::vector<std::pair<std::unique_ptr<Expression,bool>> columns;
+			std::unique_ptr<Expression> clone() const override{
+				std::vector<std::pair<std::unique_ptr<Expression>, bool>> clonedColumns;
+				for(const auto& col : columns){
+					clonedColumns.emplace_back(col.first->clone(),col.second);
+				}
+				return std::make_unique<OrderByClause>(std::move(clonedColumns));
+			}
+			explicit OrderByClause(std::vector<std::pair<std::unique_ptr<Expression>,bool>>,cols) : columns(std::move(cols)) {}
+			std::string toString() const override{
+				std::string result = "ORDER BY ";
+				for(size_t i = 0 ; i<columns.size(); i++){
+					result += columns[i].first->toString();
+					if(!columns[i].second) result += "DESC";
+					if(i<columns.size()-1) result += ",";
+				}
+
+				return result;
+			}
+	};
+
+	class GroupByClause : public Expression{
+		public:
+			std::vector<std::unique_ptr<Expression>> columns;
+			std::unique_ptr<Expression> clone() const override{
+				std::vector<std::unique_ptr<Expression>> clonedColumns;
+				for (const auto& col : columns){
+					clonedColumns.push_back(col.clone());
+				}
+				return std::make_unique<GroupByClause>(std::move(clonedColumns));
+			}
+
+			explicit GroupByClause(st::vector<std::unique_ptr<Expression>> cols) : columns(std::move(cols)) {}
+			std::string toString() const override{
+				std::string resulr = "GROUP BY " ;
+				for(size_t i =0; i<columns.size();++i){
+					result += columns[i].toString();
+					if(i<columns.size() - 1) result += "'";
+				}
+				return result;
+			}
+	};
+
+
 	class InOp : public Expression{
 		public:
 			std::unique_ptr<Expression> column;
 			std::vector<std::unique_ptr<Expression>> values;
 			std::unique_ptr<Expression> clone() const override{
-				return std::make_unique<InOp> (token);
+				std::vector<std::unique_ptr<Expression>> clonedValues;
+				for(const auto& val : values){
+					clonedValues.push_back(val->clone());
+				}
+				return std::make_unique<InOp> (column->clone(), std::move(clonedValues));
 			}
 			InOp(std::unique_ptr<Expression> col, std::vector<std::unique_ptr<Expression>> vals) : column(std::move(col)), values(std::move(vals)){}
 
@@ -59,7 +122,7 @@ namespace AST{
 		public:
 			std::unique_ptr<Expression> expr;
 			std::unique_ptr<Expression> clone() const override{
-				return std::make_unique<NotOp> (token);
+				return std::make_unique<NotOp> (expr->clone());
 			}
 
 			 explicit NotOp(std::unique_ptr<Expression> e) : expr(std::move(e)) {}
@@ -132,6 +195,11 @@ namespace AST{
 			std::vector<std::unique_ptr<Expression>> columns;
 			std::unique_ptr<Expression> from;
 			std::unique_ptr<Expression> where;
+			std::unique_ptr<GroupByClause> groupBy;
+			std::unique_ptr<HavingClause> having;
+			std::unique_ptr<OrderByClause> orderBy;
+			std::unique_ptr<Expression> limit;
+			std::unique_ptr<Expression> offset;
 	};
 	class UpdateStatement:public Statement{
 		public:

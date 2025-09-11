@@ -586,63 +586,67 @@ std::unique_ptr<AST::Expression> Parse::parseExpression(){
 	return parseBinaryExpression(1);
 }
 
-std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence){
-	std::unique_ptr<AST::Expression> left;
-	if(match(Token::Type::NOT)) {
-		consume(Token::Type::NOT);
-		auto expr = parseBinaryExpression(4);
+std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence) {
+    // Parse left side (could be a NOT expression or primary)
+    std::unique_ptr<AST::Expression> left;
+    
+    if (match(Token::Type::NOT)) {
+        consume(Token::Type::NOT);
+        auto expr = parseBinaryExpression(getPrecedence(Token::Type::NOT) + 1);
+        left = std::make_unique<AST::NotOp>(std::move(expr));
+    } else {
+        left = parsePrimaryExpression();
+    }
 
-		left=std::make_unique<AST::NotOp>(std::move(expr));
-	}else{
-	        auto left=parsePrimaryExpression();
-	}
+    // Now process binary operators
+    while (true) {
+        Token op = currentToken;
+        int precedence = getPrecedence(op.type);
+        
+        // Stop if precedence is too low or not a binary operator
+        if (precedence < minPrecedence || !isBinaryOperator(op.type)) {
+            break;
+        }
 
-	while(true){
-		Token op=currentToken;
-		int precedence=getPrecedence(op.type);
-		if(precedence < minPrecedence){
-			break;
-		}
+        // Handle special operators first
+        if (op.type == Token::Type::BETWEEN) {
+            consume(Token::Type::BETWEEN);
+            auto lower = parseExpression();
+            if (!match(Token::Type::AND)) {
+                throw ParseError(currentToken.line, currentToken.column, 
+                               "Expected AND after BETWEEN lower bound");
+            }
+            consume(Token::Type::AND);
+            auto upper = parseExpression();
+            left = std::make_unique<AST::BetweenOp>(std::move(left), std::move(lower), std::move(upper));
+            continue;
+        } 
+        else if (op.type == Token::Type::IN) {
+            consume(Token::Type::IN);
+            consume(Token::Type::L_PAREN);
+            std::vector<std::unique_ptr<AST::Expression>> values;
+            
+            // Parse values inside IN clause
+            do {
+                values.push_back(parseExpression());
+            } while (match(Token::Type::COMMA) && (consume(Token::Type::COMMA), true));
+            
+            consume(Token::Type::R_PAREN);
+            left = std::make_unique<AST::InOp>(std::move(left), std::move(values));
+            continue;
+        }
 
-		if(op.type == Token::Type::BETWEEN){
-			consume(Token::Type::BETWEEN); //consume between
-		        
-			auto lower = parseExpression();
-			consume(Token::Type::AND);
-			auto upper = parseExpression();
-
-			//Create a compound expression: value >= lower AND value <=upper
-			/*auto ge = std::make_unique<AST::BinaryOp>(Token(Token::Type::GREATER_EQUAL, ">=" , op.line, op.column),left->clone(),std::move(lower));
-			auto le = std::make_unique<AST::BinaryOp>(Token(Token::Type::LESS_EQUAL, "<=" ,op.line,op.column),left->clone(),std::move(upper));
-			left = std::make_unique<AST::BinaryOp>(Token(Token::Type::AND, "AND" , op.line,op.column),std::move(ge),std::move(le));
-			continue;*/
-
-			left=std::make_unique<AST::BetweenOp>(std::move(left),std::move(lower),std::move(upper));
-		}else if(op.type == Token::Type::IN){
-			consume(Token::Type::IN);
-			consume(Token::Type::L_PAREN);
-			std::vector<std::unique_ptr<AST::Expression>> values;
-			
-			do{
-				values.push_back(parseExpression());
-				if(!match(Token::Type::R_PAREN)){
-					consume(Token::Type::COMMA);
-				}
-			}while(!match(Token::Type::R_PAREN));
-			consume(Token::Type::R_PAREN);
-			left = std::make_unique<AST::InOp>(std::move(left), std::move(values));
-		}else if(isBinaryOperator(op.type)){
-			advance();
-			auto right = parseBinaryExpression(precedence+1);
-			left = std::make_unique<AST::BinaryOp>(op,std::move(left), std::move(right));
-		}else{
-			break;
-		}
-		/*advance();
-		auto right=parseBinaryExpression(precedence+1);
-		left=std::make_unique<AST::BinaryOp>(op,std::move(left),std::move(right));*/
-	}
-	return left;
+        // Handle regular binary operators
+        if (isBinaryOperator(op.type)) {
+            advance(); // Consume the operator
+            auto right = parseBinaryExpression(precedence + 1);
+            left = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right));
+        } else {
+            break;
+        }
+    }
+    
+    return left;
 }
 
 std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
@@ -687,7 +691,7 @@ std::unique_ptr<AST::Expression> Parse::parseLiteral() {
     return literal;
 }
 
-int Parse::getPrecedence(Token::Type type){
+/*int Parse::getPrecedence(Token::Type type){
 	switch(type){
 		case Token::Type::OR: return 1;
 		case Token::Type::AND: return 2;
@@ -702,7 +706,51 @@ int Parse::getPrecedence(Token::Type type){
 		case Token::Type::GREATER_EQUAL: return 3;
 		default: return 0;
 	}
+}*/
+
+int Parse::getPrecedence(Token::Type type) {
+    switch(type) {
+        case Token::Type::OR: return 1;
+        case Token::Type::AND: return 2;
+        case Token::Type::NOT: return 3;
+        case Token::Type::EQUAL:
+        case Token::Type::NOT_EQUAL: return 4;
+        case Token::Type::LESS:
+        case Token::Type::LESS_EQUAL:
+        case Token::Type::GREATER:
+        case Token::Type::GREATER_EQUAL: return 5;
+        case Token::Type::BETWEEN:
+        case Token::Type::IN: return 6;
+        case Token::Type::PLUS:
+        case Token::Type::MINUS: return 7;
+        case Token::Type::ASTERIST:
+        case Token::Type::SLASH: return 8;
+        default: return 0;
+    }
 }
-bool Parse::isBinaryOperator(Token::Type type){
+/*bool Parse::isBinaryOperator(Token::Type type){
 	return getPrecedence(type) >0; //|| type == Token::Type::BETWEEN;
+}*/
+
+bool Parse::isBinaryOperator(Token::Type type) {
+    switch(type) {
+        case Token::Type::EQUAL:
+        case Token::Type::NOT_EQUAL:
+        case Token::Type::LESS:
+        case Token::Type::LESS_EQUAL:
+        case Token::Type::GREATER:
+        case Token::Type::GREATER_EQUAL:
+        case Token::Type::PLUS:
+        case Token::Type::MINUS:
+        case Token::Type::ASTERIST:
+        case Token::Type::SLASH:
+        case Token::Type::AND:
+        case Token::Type::OR:
+            return true;
+        case Token::Type::BETWEEN:
+        case Token::Type::IN:
+            return true; // These are handled specially but are still binary operators
+        default:
+            return false;
+    }
 }
