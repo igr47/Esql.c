@@ -149,7 +149,7 @@ std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement(){
 	return stmt;
 }
 
-std::unique_ptr<AST::GroupByClause> parse::parseGroupByClause() {
+std::unique_ptr<AST::GroupByClause> Parse::parseGroupByClause() {
 	consume(Token::Type::GROUP);
 	consume(Token::Type::BY);
 	std::vector<std::unique_ptr<AST::Expression>> columns;
@@ -164,19 +164,19 @@ std::unique_ptr<AST::GroupByClause> parse::parseGroupByClause() {
 	return std::make_unique<AST::GroupByClause>(std::move(columns));
 }
 
-std::unique_ptr<HavingClause> parse::parseHavingClause(){
+std::unique_ptr<AST::HavingClause> Parse::parseHavingClause(){
 	consume(Token::Type::HAVING);
 	return std::make_unique<AST::HavingClause>(parseExpression());
 }
 
-std::unique_ptr<AST::OrderByClause> parse::parse::OrderByClause() {
+std::unique_ptr<AST::OrderByClause> Parse::parseOrderByClause() {
 	consume(Token::Type::ORDER);
 	consume(Token::Type::BY);
 
 	std::vector<std::pair<std::unique_ptr<AST::Expression>, bool>> columns;
 	do{
 		if(match(Token::Type::COMMA)){
-			consume(Token:Type::COMMA);
+			consume(Token::Type::COMMA);
 		}
 
 		auto expr=parseExpression();
@@ -191,7 +191,7 @@ std::unique_ptr<AST::OrderByClause> parse::parse::OrderByClause() {
 		}
 
 		columns.emplace_back(std::move(expr),ascending);
-	}while(Token::Type::COMMA);
+	}while(match(Token::Type::COMMA));
 	return std::make_unique<AST::OrderByClause>(std::move(columns));
 }
 
@@ -229,7 +229,7 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 		stmt->limit = parseExpression();
 		if(match(Token::Type::OFFSET)){
 			consume(Token::Type::OFFSET);
-			stmt->offset - parseExpression();
+			stmt->offset = parseExpression();
 		}
 	}
 	return stmt;

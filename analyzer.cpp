@@ -71,8 +71,9 @@ void SematicAnalyzer::analyzeSelect(AST::SelectStatement& selectStmt){
 	}
 	if (selectStmt.groupBy){
 		validateGroupByClause(selectStmt);
+	}
 	if (selectStmt.having){
-		validateHavingByClause(selectStmt);
+		validateHavingClause(selectStmt);
 	}
 	if (selectStmt.orderBy){
 		validateOrderByClause(selectStmt);
@@ -80,7 +81,7 @@ void SematicAnalyzer::analyzeSelect(AST::SelectStatement& selectStmt){
 	validateAggregateUsage(selectStmt);
 }
 
-void SematicAnalyzer::validateGroupByclause(AST::SelectStatemet& selectStmt){
+void SematicAnalyzer::validateGroupByClause(AST::SelectStatement& selectStmt){
 	if(!selectStmt.groupBy) return;
 
 	for(const auto& column : selectStmt.groupBy->columns){
@@ -106,13 +107,13 @@ void SematicAnalyzer::validateHavingClause(AST::SelectStatement& selectStmt){
 void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
 	if(!selectStmt.orderBy) return;
 
-	for(const auto* [column,_] : selectStmt.orderBy->columns){
+	for(auto* [column,_] : selectStmt.orderBy->columns){
 		validateExpression(*column,currentTable);
 
 		//check if column exist in SELECT list or table
 		if(auto* ident = dynamic_cast<AST::Identifier*>(column.get())){
 			bool foundInSelect = false;
-			for(const auto* setCol : selectStmt.columns){
+			for(const auto* selectCol : selectStmt.columns){
 				if(auto* selectIdent = dynamic_cast<AST::Identifier*>(selectCol.get())){
 					if(selectIdent->token.lexeme == ident->token.lexeme){
 						foundInSelect = true;
@@ -127,8 +128,8 @@ void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
 	}
 }
 
-bool SematicAnalyzer::isAggregateFunction(const std:;string& functionaNme){
-	static const std::set<std::string> aggregateFunction ={
+bool SematicAnalyzer::isAggregateFunction(const std::string& functionNme){
+	static const std::set<std::string> aggregateFunctions ={
 		"COUNT","SUM","AVG","MIN","MAX"
 	};
 
@@ -141,9 +142,9 @@ void SematicAnalyzer::validateAggregateUsage(AST::SelectStatement& selectStmt) {
 
 	//check SELECT columns for aggregates
 	for(const auto&  column : selectStmt.columns){
-		if(auto* binarOp = dynamic_cast<AST::BinryOp*> (column.get())){
+		if(auto* binaryOp = dynamic_cast<AST::BinaryOp*> (column.get())){
 			//check if this is a function call
-			if(binaryOp->op.type == Token::Type::Identifier && isAggregateFunction(binarOp->op.lexeme)){
+			if(binaryOp->op.type == Token::Type::IDENTIFIER && isAggregateFunction(binaryOp->op.lexeme)){
 				hasAggregate = true;
 			}
 		}
@@ -154,7 +155,7 @@ void SematicAnalyzer::validateAggregateUsage(AST::SelectStatement& selectStmt) {
 
 	//Mixed aggregate and non aggregate columns require Group By
 	if(hasAggregate && hasNonAggregate && !selectStmt.groupBy) {
-		throw SematicError("No-aggregtecolumns must appear in GROUP BY clause " + "When using aggregate functions");
+		throw SematicError("No-aggregtecolumns must appear in GROUP BY clause When using aggregate functions");
 	}
 
 	//check HAVING for aggregtes if is full

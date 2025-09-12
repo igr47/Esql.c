@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <sstream>
+#include <set>
 
 ExecutionEngine::ExecutionEngine(Database& db, DiskStorage& storage) 
     : db(db), storage(storage) {}

@@ -51,6 +51,7 @@ private:
     bool evaluateHavingCondition(const AST::Expression* having, const std::unordered_map<std::string,std::string>& group);
     std::vector<std::unordered_map<std::string,std::string>> groupRows(const std::vector<std::unordered_map<std::string,std::string>>& data,const std::vector<std::string>& groupColumns);
     std::vector<std::unordered_map<std::string,std::string>> sortResult(const std::vector<std::unordered_map<std::string,std::string>>& result,AST::OrderByClause* orderBy);
+    bool isAggregateFunction(const std::string& functionName);
     
     // ALTER TABLE helper methods
     ResultSet handleAlterAdd(AST::AlterTableStatement* stmt);

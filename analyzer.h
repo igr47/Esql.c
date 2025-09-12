@@ -32,9 +32,9 @@ class SematicAnalyzer{
 		void validateFromClause(AST::SelectStatement& selectStmt);
 		void validateSelectColumns(AST::SelectStatement& selectStmt);
 		void validateGroupByClause(AST::SelectStatement& selectStmt);
-		void validateHavingClause(AST::SelectStatent& selectStmt);
+		void validateHavingClause(AST::SelectStatement& selectStmt);
 		void validateOrderByClause(AST::SelectStatement& selectStmt);
-		void isAggregateFunction(const std::string& functionName);
+                bool isAggregateFunction(const std::string& functionName);
 		void validateAggregateUsage(AST::SelectStatement& selectStmt);
 		//void validateColumnReference(AST::Expression& expr);
 		void validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table);
