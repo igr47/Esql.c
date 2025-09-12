@@ -211,18 +211,64 @@ void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSch
 	}else if(auto* literal=dynamic_cast<AST::Literal*>(&expr)){
 		validateLiteral(*literal,table);
 	}else if (auto* between = dynamic_cast<const AST::BetweenOp*>(&expr)) {
-		validateExpression(*between->column,table);
+		/*validateExpression(*between->column,table);
 		validateExpression(*between->lower, table);
-		validateExpression(*between->upper, table);
+		validateExpression(*between->upper, table);*/
+		validateBetweenOperation(*between,table);
 	}else if (auto* inop=dynamic_cast<const AST::InOp*>(&expr)){
-		validateExpression(*inop->column,table);
+		/*validateExpression(*inop->column,table);
 		for(const auto& value : inop->values){
 			validateExpression(*value, table);
-		}
+		}*/
+		validateInOperation(*inop,table);
 	}else if (auto* notop = dynamic_cast<const AST::NotOp*>(&expr)) {
-		validateExpression(*notop->expr, table);
+		//validateExpression(*notop->expr, table);
+		validateNotOperation(*notop,table);
 	}else{
 		throw SematicError("Invalid expression type");
+	}
+}
+
+void SematicAnalyzer::validateBetweenOperation(AST::BetweenOp& between,const DatabaseSchema::Table* table){
+	validateExpression(*between.column,table);
+	validateExpression(*between.lower , table);
+	validateExpression(*between.upper , table);
+
+	//Check that all operands are comparable
+	auto columnType = getValueType(*between.column);
+	auto lowerType = getValueType(*between.lower);
+	auto upperType = getValueType(*between.upper);
+
+	if(!areTypesComparable(columnType,lowerType) || !areTypesComparable(columnType, upperType)){
+		throw SematicError("Incompatible types in BETWEEN operation");
+	}
+}
+
+void SematicAnalyzer::validateInOperation(AST::InOp& inOp, const DatabaseSchema::Table* table){
+	validateExpression(*inOp.column,table);
+
+	if(inOp.values.empty()){
+		throw SematicError("IN operator requires at least one value");
+	}
+
+	auto columnType = getValueType(*inOp.column);
+
+	for(const auto& value : inOp.values){
+		validateExpression(*value,table);
+		auto valueType(*value);
+		 if(!areTypesComparable(columnType , valueType)){
+			 throw SeamaticError("Incompatible types between IN operation");
+		}
+	}
+}
+
+void SematicAnalyzer::validateNotOperation(AST::NotOp& notOp, const DatabaseSchema::Table* table) {
+	validateExpression(*notOp.expr , table);
+
+	//NOT operator  should be implemented to a boolean expression
+	auto exprType = getValueType(*notOp.expr);
+	if(exprType != DatabaseSchema::Column::BOOLEAN){
+		throw SematicError("NOT operator can only be applied to boolean expressions");
 	}
 }
 void SematicAnalyzer::validateLiteral(const AST::Literal& literal, const DatabaseSchema::Table* table) {
