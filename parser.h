@@ -51,7 +51,7 @@ namespace AST{
 
 	class OrderByClause : public Expression{
 		public:
-			std::vector<std::pair<std::unique_ptr<Expression,bool>> columns;
+			std::vector<std::pair<std::unique_ptr<Expression>,bool>> columns;
 			std::unique_ptr<Expression> clone() const override{
 				std::vector<std::pair<std::unique_ptr<Expression>, bool>> clonedColumns;
 				for(const auto& col : columns){
@@ -59,7 +59,7 @@ namespace AST{
 				}
 				return std::make_unique<OrderByClause>(std::move(clonedColumns));
 			}
-			explicit OrderByClause(std::vector<std::pair<std::unique_ptr<Expression>,bool>>,cols) : columns(std::move(cols)) {}
+			explicit OrderByClause(std::vector<std::pair<std::unique_ptr<Expression>, bool>> cols) : columns(std::move(cols)) {}
 			std::string toString() const override{
 				std::string result = "ORDER BY ";
 				for(size_t i = 0 ; i<columns.size(); i++){
@@ -78,16 +78,16 @@ namespace AST{
 			std::unique_ptr<Expression> clone() const override{
 				std::vector<std::unique_ptr<Expression>> clonedColumns;
 				for (const auto& col : columns){
-					clonedColumns.push_back(col.clone());
+					clonedColumns.push_back(col->clone());
 				}
 				return std::make_unique<GroupByClause>(std::move(clonedColumns));
 			}
 
-			explicit GroupByClause(st::vector<std::unique_ptr<Expression>> cols) : columns(std::move(cols)) {}
+			explicit GroupByClause(std::vector<std::unique_ptr<Expression>> cols) : columns(std::move(cols)) {}
 			std::string toString() const override{
-				std::string resulr = "GROUP BY " ;
+				std::string result = "GROUP BY " ;
 				for(size_t i =0; i<columns.size();++i){
-					result += columns[i].toString();
+					result += columns[i]->toString();
 					if(i<columns.size() - 1) result += "'";
 				}
 				return result;

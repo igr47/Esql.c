@@ -77,7 +77,9 @@ void Lexer::initializeKeyWords(){
 		{"ORDER",Token::Type::ORDER},
 		{"ASC",Token::Type::ASC},
 		{"HAVING",Token::Type::HAVING},
-		{"DESC",Token::Type::DESC}
+		{"DESC",Token::Type::DESC},
+		{"LIMIT",Token::Type::LIMIT},
+		{"OFFSET",Token::Type::OFFSET}
 
 	};
 }
