@@ -895,24 +895,62 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
             case Token::Type::NOT_EQUAL: 
 		    return left != right ? "true" : "false";
             case Token::Type::LESS: 
-		    return std::stod(left) < std::stod(right) ? "true" : "false";
+		    try {return std::stod(left) < std::stod(right) ? "true" : "false";}
+		    catch (...) {return left < right ? "true" : "false";}
             case Token::Type::LESS_EQUAL: 
-		    return std::stod(left) <= std::stod(right) ? "true" : "false";
+		    try {return std::stod(left) <= std::stod(right) ? "true" : "false";}
+		    catch (...) {return left <= right ? "true" : "false";}
             case Token::Type::GREATER: 
-		    return std::stod(left) > std::stod(right) ? "true" : "false";
+		    try {return std::stod(left) > std::stod(right) ? "true" : "false";}
+		    catch (...) {return left > right ? "true" : "false";}
             case Token::Type::GREATER_EQUAL: 
-		    return std::stod(left) >= std::stod(right) ? "true" : "false";
+		    try {return std::stod(left) >= std::stod(right) ? "true" : "false";}
+		    catch (...) {return left >= right ? "true" : "false";}
 	    case Token::Type::PLUS:
-		    return std::to_string(std::stod(left)+std::stod(right));
+		    try {return std::to_string(std::stod(left)+std::stod(right));}
+		    catch (...) {return left + right;}
 	    case Token::Type::MINUS:
-		    return std::to_string(std::stod(left)+std::stod(right));
+		    try {return std::to_string(std::stod(left)-std::stod(right));}
+		    catch (...) {throw std::runtime_error("Cannot subtract non numeric vaues");}
 	    case Token::Type::SLASH:
-		    return std::to_string(std::stod(left) + std::stod(right));
+		    try{
+			    double divisor = std::stod(right);
+			    if (divisor == 0) throw std::runtime_error ("Divosion b Zero");
+			    return std::to_string(std::stod(left) / divisor);
+		     }
+		    catch (...) {throw std::runtime_error("Cannot divide non-numeric values");
+		     return std::to_string(std::stod(left) + std::stod(right));}
             case Token::Type::AND: return (left == "true" && right == "true") ? "true" : "false";
             case Token::Type::OR: return (left == "true" || right == "true") ? "true" : "false";
             default: return "false";
         }
-    }
+    }else if (auto* between = dynamic_cast<const AST::BetweenOp*>(expr)){
+	    auto colval = evaluateExpression(between->column.get(), row);
+	    auto lowerval = evaluateExpression(between->lower.get(), row);
+	    auto upperval = evaluateExpression(between->upper.get(), row);
+
+	    try{
+		    //Try numeric comparison first
+		    double colNum = std::stod(colval);
+		    double lowerNum = std::stod(lowerval);
+		    double upperNum = std::stod(upperval);
+		    return (colNum >= lowerNum && colNum <=upperNum) ? "true" : "false";
+	    }catch (...){
+		    return (colval >= lowerval && colval <= upperval) ? "true" : "false";
+	    }else if (auto* inop = dynamic_cast<const AST::InOp*>(expr)){
+		    auto colval = evaluateExpression(inop->column.get(),row);
+		    for(const auto& value : inop->values){
+			    if (colval == evaluateExpression(value.get(),row)){
+				    return "true";
+			    }
+		     }
+		    return "false";
+	     }else if(auto* notop = dynamic_cast<const AST::NotOp*>(expr)){
+		     std::string result = evaluateExpression(notop->expr.get(),row);
+		     bool boolResult = (result == "true" || result =="1");
+		     return (!boolResult) ? "true" : "false";
+	      }
+
 
     return "NULL";
 }

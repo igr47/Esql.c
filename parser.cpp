@@ -654,7 +654,7 @@ std::unique_ptr<AST::Expression> Parse::parseExpression(){
 }
 
 std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence) {
-    // Parse left side (could be a NOT expression or primary)
+    // Parse left side 
     std::unique_ptr<AST::Expression> left;
     
     if (match(Token::Type::NOT)) {
