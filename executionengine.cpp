@@ -266,7 +266,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
     return result;
 }
 
-ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
+/*ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
     auto data = storage.getTableData(db.currentDatabase(), tableName);
 
@@ -314,7 +314,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         }
 
         // Evaluate aggregate functions for this group
-        auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group);
+        auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group, groupedDataMap[groupKey]);
         result.rows.push_back(aggregatedRow);
     }
 
@@ -325,17 +325,84 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         // Rebuild result rows in sorted order
         result.rows.clear();
         for (const auto& group : sortedData) {
-            auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group);
+            auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group ,groupedDataMap[groupKey]);
+            result.rows.push_back(aggregatedRow);
+        }
+    }
+
+    return result;
+}*/
+
+ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
+    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
+    auto data = storage.getTableData(db.currentDatabase(), tableName);
+
+    ResultSet result;
+
+    // Extract group by columns
+    std::vector<std::string> groupColumns;
+    if (stmt.groupBy) {
+        for (const auto& col : stmt.groupBy->columns) {
+            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
+                groupColumns.push_back(ident->token.lexeme);
+                result.columns.push_back(ident->token.lexeme);
+            }
+        }
+    }
+
+    // Add aggregate columns to result
+    for (const auto& col : stmt.columns) {
+        if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+            if (isAggregateFunction(binaryOp->op.lexeme)) {
+                std::string aggName = binaryOp->op.lexeme + "(";
+                if (auto ident = dynamic_cast<AST::Identifier*>(binaryOp->left.get())) {
+                    aggName += ident->token.lexeme;
+                }
+                aggName += ")";
+                result.columns.push_back(aggName);
+            } else {
+                result.columns.push_back(col->toString());
+            }
+        } else {
+            result.columns.push_back(col->toString());
+        }
+    }
+
+    // Group data
+    auto groupedData = groupRows(data, groupColumns);
+
+    // Process each group
+    for (const auto& group : groupedData) {
+        // Apply HAVING clause if specified
+        if (stmt.having) {
+            if (!evaluateHavingCondition(stmt.having->condition.get(), group)) {
+                continue;
+            }
+        }
+
+        // Evaluate aggregate functions for this grou
+        auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group, groupedData);
+        result.rows.push_back(aggregatedRow);
+    }
+
+    if (stmt.orderBy) {
+        auto sortedData = sortResult(groupedData, stmt.orderBy.get());
+
+        // Rebuild result rows in sorted order
+        result.rows.clear();
+        for (const auto& group : sortedData) {
+            auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group, groupedData);
             result.rows.push_back(aggregatedRow);
         }
     }
 
     return result;
 }
+//std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
+    //const std::vector<std::unique_ptr<AST::Expression>>& columns,
+    //const std::vector<std::unordered_map<std::string, std::string>>& group) {
 
-std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
-    const std::vector<std::unique_ptr<AST::Expression>>& columns,
-    const std::vector<std::unordered_map<std::string, std::string>>& group) {
+std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::unordered_map<std::string, std::string>>& groupData){
 
     std::vector<std::string> result;
 
@@ -349,29 +416,29 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
 
                 std::string aggResult;
                 if (binaryOp->op.lexeme == "COUNT") {
-                    aggResult = std::to_string(group.size());
+                    aggResult = std::to_string(groupData.size());
                 } else if (binaryOp->op.lexeme == "SUM") {
                     double sum = 0;
-                    for (const auto& row : group) {
+                    for (const auto& row : groupData) {
                         sum += std::stod(row.at(columnName));
                     }
                     aggResult = std::to_string(sum);
                 } else if (binaryOp->op.lexeme == "AVG") {
                     double sum = 0;
-                    for (const auto& row : group) {
+                    for (const auto& row : groupData) {
                         sum += std::stod(row.at(columnName));
                     }
-                    aggResult = std::to_string(sum / group.size());
+                    aggResult = std::to_string(sum / groupData.size());
                 } else if (binaryOp->op.lexeme == "MIN") {
                     double minVal = std::numeric_limits<double>::max();
-                    for (const auto& row : group) {
+                    for (const auto& row : groupData) {
                         double val = std::stod(row.at(columnName));
                         if (val < minVal) minVal = val;
                     }
                     aggResult = std::to_string(minVal);
                 } else if (binaryOp->op.lexeme == "MAX") {
                     double maxVal = std::numeric_limits<double>::lowest();
-                    for (const auto& row : group) {
+                    for (const auto& row : groupData) {
                         double val = std::stod(row.at(columnName));
                         if (val > maxVal) maxVal = val;
                     }
@@ -381,11 +448,11 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
                 result.push_back(aggResult);
             } else {
                 // Handle non-aggregate expressions
-                result.push_back(evaluateExpression(col.get(), group[0]));
+                result.push_back(evaluateExpression(col.get(), /*group[0]*/groupRow));
             }
         } else {
             // Handle non-aggregate columns
-            result.push_back(evaluateExpression(col.get(), group[0]));
+            result.push_back(evaluateExpression(col.get(), /*group[0]*/groupRow));
         }
     }
 

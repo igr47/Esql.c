@@ -107,14 +107,15 @@ void SematicAnalyzer::validateHavingClause(AST::SelectStatement& selectStmt){
 void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
 	if(!selectStmt.orderBy) return;
 
-	for(auto* [column,_] : selectStmt.orderBy->columns){
+	for(auto& column_pair : selectStmt.orderBy->columns){
+		auto* column = column_pair.first.get();
 		validateExpression(*column,currentTable);
 
 		//check if column exist in SELECT list or table
-		if(auto* ident = dynamic_cast<AST::Identifier*>(column.get())){
+		if(auto* ident = dynamic_cast<AST::Identifier*>(column)){
 			bool foundInSelect = false;
-			for(const auto* selectCol : selectStmt.columns){
-				if(auto* selectIdent = dynamic_cast<AST::Identifier*>(selectCol.get())){
+			for(const auto& selectCol : selectStmt.columns){
+				if(const auto* selectIdent = dynamic_cast<AST::Identifier*>(selectCol.get())){
 					if(selectIdent->token.lexeme == ident->token.lexeme){
 						foundInSelect = true;
 						break;
@@ -128,7 +129,7 @@ void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
 	}
 }
 
-bool SematicAnalyzer::isAggregateFunction(const std::string& functionNme){
+bool SematicAnalyzer::isAggregateFunction(const std::string& functionName){
 	static const std::set<std::string> aggregateFunctions ={
 		"COUNT","SUM","AVG","MIN","MAX"
 	};
