@@ -374,7 +374,7 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
 
         // Special handling for TEXT columns
         if (column->type == DatabaseSchema::Column::TEXT) {
-            if (auto* literal = dynamic_cast<AST::Literal*>(insertStmt.values[i].get())) {
+            if (auto* literal = dynamic_cast<AST::Literal*>(insertStmt.values[0][i].get())) {
                 if (literal->token.type != Token::Type::STRING_LITERAL && 
                     literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
                     throw SematicError("String values must be quoted for TEXT column: " + colName);
@@ -386,7 +386,7 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
         }
 
         // General type checking
-        DatabaseSchema::Column::Type valueType = getValueType(*insertStmt.values[i]);
+        DatabaseSchema::Column::Type valueType = getValueType(*insertStmt.values[0][i]);
         if (!isTypeCompatible(column->type, valueType)) {
             throw SematicError("Type mismatch for column: " + colName);
         }

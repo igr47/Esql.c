@@ -131,7 +131,9 @@ std::unique_ptr<AST::CreateDatabaseStatement> Parse::parseCreateDatabaseStatemen
 std::unique_ptr<AST::UseDatabaseStatement> Parse::parseUseStatement(){
 	auto stmt=std::make_unique<AST::UseDatabaseStatement>();
 	consume(Token::Type::USE);
-	consume(Token::Type::DATABASE);
+	if (match(Token::Type::DATABASE)){
+	         consume(Token::Type::DATABASE);
+        }
 	stmt->dbName=currentToken.lexeme;
 	consume(Token::Type::IDENTIFIER);
 	return stmt;
@@ -317,18 +319,39 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement(){
 	}
 	//parse the values clause
 	consume(Token::Type::VALUES);
+	bool wasInValueContext = inValueContext;
+	inValueContext = true;
 	consume(Token::Type::L_PAREN);
+	std::vector<std::unique_ptr<AST::Expression>> firstRowValues;
 	//set value context flag
-	bool wasInValueContext=inValueContext;
-	inValueContext=true;
+	//bool wasInValueContext=inValueContext;
+	//inValueContext=true;
 	do{
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
-	        stmt->values.push_back(parseValue());
+		firstRowValues.push_back(parseValue());
+	        //stmt->values.push_back(parseValue());
 	}while(match(Token::Type::COMMA));
-	inValueContext=wasInValueContext;
+	stmt->values.push_back(std::move(firstRowValues));
 	consume(Token::Type::R_PAREN);
+	//PARSE ADDITIONAL ROWS
+	while(match(Token::Type::COMMA)){
+		consume(Token::Type::COMMA);
+		consume(Token::Type::L_PAREN);
+		std::vector<std::unique_ptr<AST::Expression>> rowValues;
+
+		do{
+			if (match(Token::Type::COMMA)){
+				consume(Token::Type::COMMA);
+				rowValues.push_back(parseValue());
+			}
+		}while (match(Token::Type::COMMA));
+			stmt->values.push_back(std::move(rowValues));
+			consume(Token::Type::R_PAREN);
+	}
+	inValueContext=wasInValueContext;
+	//consume(Token::Type::R_PAREN);
 	return stmt;
 }
 //parse the create  statement

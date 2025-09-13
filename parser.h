@@ -223,7 +223,7 @@ namespace AST{
 		public:
 			std::string table;
 			std::vector<std::string> columns;
-			std::vector<std::unique_ptr<Expression>> values;
+			std::vector<std::vector<std::unique_ptr<Expression>>> values;
 	};
 	class CreateTableStatement:public Statement{
 		public:
