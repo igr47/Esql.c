@@ -36,7 +36,7 @@ class SematicAnalyzer{
 		void validateOrderByClause(AST::SelectStatement& selectStmt);
                 bool isAggregateFunction(const std::string& functionName);
 		void validateAggregateUsage(AST::SelectStatement& selectStmt);
-		void validateBetweenOperation(AST::BetweenOp& between, constDatabaseSchema::Table* table);
+		void validateBetweenOperation(AST::BetweenOp& between, const DatabaseSchema::Table* table);
 		void validateInOperation(AST::InOp& inOp,const DatabaseSchema::Table* table);
 		void validateNotOperation(AST::NotOp& notOp, const DatabaseSchema::Table* table);
 		//void validateColumnReference(AST::Expression& expr);

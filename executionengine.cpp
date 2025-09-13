@@ -937,7 +937,8 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 		    return (colNum >= lowerNum && colNum <=upperNum) ? "true" : "false";
 	    }catch (...){
 		    return (colval >= lowerval && colval <= upperval) ? "true" : "false";
-	    }else if (auto* inop = dynamic_cast<const AST::InOp*>(expr)){
+	    }
+      }else if (auto* inop = dynamic_cast<const AST::InOp*>(expr)){
 		    auto colval = evaluateExpression(inop->column.get(),row);
 		    for(const auto& value : inop->values){
 			    if (colval == evaluateExpression(value.get(),row)){
@@ -945,7 +946,8 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 			    }
 		     }
 		    return "false";
-	     }else if(auto* notop = dynamic_cast<const AST::NotOp*>(expr)){
+	     
+      }else if(auto* notop = dynamic_cast<const AST::NotOp*>(expr)){
 		     std::string result = evaluateExpression(notop->expr.get(),row);
 		     bool boolResult = (result == "true" || result =="1");
 		     return (!boolResult) ? "true" : "false";
