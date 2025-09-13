@@ -535,68 +535,50 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
     if (!table) {
         throw std::runtime_error("Table not found: " + stmt.table);
     }
-    
-    std::unordered_map<std::string, std::string> row;
-    
+   
+    //std::unordered_map<std::string, std::string> row;
     if (stmt.columns.empty()) {
         // Insert all columns in schema order
+	std::unordered_map<std::string,std::string> row;
         for (size_t i = 0; i < stmt.values.size() && i < table->columns.size(); i++) {
             const auto& column = table->columns[i];
-            std::string value = evaluateExpression(stmt.values[i].get(), {});
+            std::string value = evaluateExpression(stmt.values[0][i].get(), {});
             
             if (value.empty() && !column.isNullable) {
                 throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
             }
             
             row[column.name] = value;
+	    validateRowAgainstSchema(row,table);
+	    storage.insertRow(db.currentDatabase(), stmt.table, row);
+	    return ResultSet({"Status" , {{"1 row inserted into '"+ stmt.table + "'"}}});
         }
     } else {
         // Insert specified columns
+	std::unordered_map<std::string, std::string> row;
         for (size_t i = 0; i < stmt.columns.size(); i++) {
-            std::string value = evaluateExpression(stmt.values[i].get(), {});
+            std::string value = evaluateExpression(stmt.values[0][i].get(), {});
             row[stmt.columns[i]] = value;
+	    validateRowAgainstSchema(row, table);
+	    storage.insertRow(db.currentDatabase(), stmt.table, row);
+	    return ResultSet({"Status" ,{{"1 row inserrted into '" + stmt.table + "'"}}});
         }
     }
+    if(!stmt.columns.empty() && stmt.columns.size() < stmt.values.size()){
+	    std::vector<std::unordered_map<std::string,std::string>> rows;
+	    rows.reserve(stmt.values.size());
+	    for (const auto& row_values : stmt.values){
+		  auto row = buildRowFromValues(stmt.columns,row_values);
+		  validateRowAgainstSchema(row , table);
+		  rows.push_back(row);
+	    }
+	    storage.bulkInsert(db.currentDatabase() ,stmt.table , rows);
+	    return ResultSet({"Status" , {{std::to_string(stmt.values.size()) + "rows inserted into '" + stmt.table + "'"}}});
+     }
     
-    // Validate against schema
-    validateRowAgainstSchema(row, table);
-    
-    storage.insertRow(db.currentDatabase(), stmt.table, row);
-    return ResultSet({"Status", {{"1 row inserted into '" + stmt.table + "'"}}});
+    return ResultSet({"Row added successfull"});
 }
-
-/*ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
-    auto table = storage.getTable(db.currentDatabase(), stmt.table);
-    if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
-    }
-    
-    // Find matching row IDs
-    auto row_ids = findMatchingRowIds(stmt.table, stmt.where.get());
-    int updated_count = 0;
-    
-    for (uint32_t row_id : row_ids) {
-        // Get current row data
-        auto table_data = storage.getTableData(db.currentDatabase(), stmt.table);
-        if (row_id > table_data.size()) continue;
-        
-        auto current_row = table_data[row_id - 1]; // Convert to 0-based index
-        
-        // Apply updates
-        for (const auto& [col, expr] : stmt.setClauses) {
-            current_row[col] = evaluateExpression(expr.get(), current_row);
-        }
-        
-        // Validate against schema
-        validateRowAgainstSchema(current_row, table);
-        
-        // Update the row
-        storage.updateTableData(db.currentDatabase(), stmt.table, row_id, current_row);
-        updated_count++;
-    }
-    
-    return ResultSet({"Status", {{std::to_string(updated_count) + " rows updated in '" + stmt.table + "'"}}});
-}*/
+ 
 
 ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     bool wasInTransaction = inTransaction();
