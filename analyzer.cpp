@@ -210,18 +210,18 @@ void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSch
 		}
 	}else if(auto* literal=dynamic_cast<AST::Literal*>(&expr)){
 		validateLiteral(*literal,table);
-	}else if (auto* between = dynamic_cast<const AST::BetweenOp*>(&expr)) {
+	}else if (auto* between = dynamic_cast<AST::BetweenOp*>(&expr)) {
 		/*validateExpression(*between->column,table);
 		validateExpression(*between->lower, table);
 		validateExpression(*between->upper, table);*/
 		validateBetweenOperation(*between,table);
-	}else if (auto* inop=dynamic_cast<const AST::InOp*>(&expr)){
+	}else if (auto* inop=dynamic_cast<AST::InOp*>(&expr)){
 		/*validateExpression(*inop->column,table);
 		for(const auto& value : inop->values){
 			validateExpression(*value, table);
 		}*/
 		validateInOperation(*inop,table);
-	}else if (auto* notop = dynamic_cast<const AST::NotOp*>(&expr)) {
+	}else if (auto* notop = dynamic_cast<AST::NotOp*>(&expr)) {
 		//validateExpression(*notop->expr, table);
 		validateNotOperation(*notop,table);
 	}else{
@@ -255,9 +255,9 @@ void SematicAnalyzer::validateInOperation(AST::InOp& inOp, const DatabaseSchema:
 
 	for(const auto& value : inOp.values){
 		validateExpression(*value,table);
-		auto valueType(*value);
+		auto valueType = getValueType(*value);
 		 if(!areTypesComparable(columnType , valueType)){
-			 throw SeamaticError("Incompatible types between IN operation");
+			 throw SematicError("Incompatible types between IN operation");
 		}
 	}
 }
