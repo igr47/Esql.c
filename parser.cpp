@@ -80,6 +80,11 @@ std::unique_ptr<AST::Expression> Parse::parseValue() {
         return literal;
     }
     else if (inValueContext && match(Token::Type::IDENTIFIER)) {
+	if(currentToken.lexeme == "true" || currentToken.lexeme == "false"){
+		auto literal = std::make_unique<AST::Literal>(currentToken);
+		advance();
+		return literal;
+	}
         throw ParseError(
             currentToken.line,
             currentToken.column,
@@ -399,7 +404,7 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
     consume(Token::Type::IDENTIFIER);
 
     // Colon separator
-    consume(Token::Type::COLON);
+    //consume(Token::Type::COLON);
 
     // Column type
     if (!matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT})) {
@@ -409,9 +414,16 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
     consume(currentToken.type);
 
     // Column constraints
-    while (match(Token::Type::IDENTIFIER)) {
-        col.constraints.push_back(currentToken.lexeme);
-        consume(Token::Type::IDENTIFIER);
+    if(matchAny({Token::Type::PRIMARY_KEY , Token::Type::NOT_NULL})){
+        do{
+	     if(match(Token::Type::PRIMARY_KEY)){
+                   col.constraints.push_back(currentToken.lexeme);
+		   consume(Token::Type::PRIMARY_KEY);
+	     }else if(match(Token::Type::NOT_NULL)){
+		    col.constraints.push_back(currentToken.lexeme);
+		    consume(Token::Type::NOT_NULL);
+	     }
+	}while(match(Token::Type::PRIMARY_KEY) || match(Token::Type::NOT_NULL));
     }
 
     stmt.columns.push_back(std::move(col));
