@@ -193,6 +193,7 @@ namespace AST{
 	class SelectStatement:public Statement{
 		public:
 			std::vector<std::unique_ptr<Expression>> columns;
+			std::vector<std::pair<std::unique_ptr<Expression>,std::string>> newCols;
 			std::unique_ptr<Expression> from;
 			std::unique_ptr<Expression> where;
 			std::unique_ptr<GroupByClause> groupBy;
@@ -291,6 +292,7 @@ class Parse{
 		const Token& previousToken() const;
 		std::unique_ptr<AST::Expression> parseValue();
 		void consume(Token::Type expected);
+		Token peekToken();
 		void advance();
 		bool match(Token::Type type) const;
 		bool matchAny(const std::vector<Token::Type>& types) const;
@@ -314,6 +316,7 @@ class Parse{
 		void parseColumnDefinition(AST::CreateTableStatement& stmt);
 		std::unique_ptr<AST::AlterTableStatement> parseAlterTableStatement();
 		std::vector<std::unique_ptr<AST::Expression>> parseColumnList();
+		std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> parseColumnListAs();
 		std::unique_ptr<AST::Expression> parseFromClause();
 		std::unique_ptr<AST::Expression> parseExpression();
 		std::unique_ptr<AST::Expression> parseBinaryExpression(int minPrecedence);
