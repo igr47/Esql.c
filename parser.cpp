@@ -115,6 +115,28 @@ void Parse::advance() {
     }
 }
 
+Token Parse::peekToken() {
+    // Save current state
+    //size_t savedPosition = lexer.position;
+    //size_t savedLine = lexer.line;
+    //size_t savedColumn = lexer.column;
+    //Token savedCurrent = currentToken;
+    size_t savedPos, savedLine , savedCol;
+    lexer.saveState(savedPos,savedLine,savedCol);
+
+    // Get next token
+    Token nextToken = lexer.nextToken();
+
+    // Restore state
+    //lexer.position = savedPosition;
+    //lexer.line = savedLine;
+    //lexer.column = savedColumn;
+    //currentToken = savedCurrent;
+    lexer.restoreState(savedPos, savedLine , savedCol);
+
+    return nextToken;
+}
+
 bool Parse::match(Token::Type type) const{
 	return currentToken.type==type;
 }
@@ -209,8 +231,19 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	if(match(Token::Type::ASTERIST)){
 		consume(Token::Type::ASTERIST);
 	}else{
-	        stmt->columns=parseColumnList();
+		Token peeked=peekToken();
+		if(peeked.type == Token::Type::AS){
+			stmt->newCols = parseColumnListAs();
+		}
+		else{
+	                stmt->columns=parseColumnList();
+		}
+
+		//if(match(Token::Type::AS) || matchAny({Token::Type::IDENTIFIER, Token::Type::STRING_LITERAL})){
+			//stmt->newCols = parseColumnListAs();
+		//}
 	}
+
 	//parse From clause
 	consume(Token::Type::FROM);
 	stmt->from=parseFromClause();
@@ -668,6 +701,35 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     consume(Token::Type::R_PAREN);
     return stmt;
 }
+std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> Parse::parseColumnListAs(){
+	std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> newColumns;
+	
+	do{
+		if(match(Token::Type::COMMA)){
+			consume(Token::Type::COMMA);
+		}
+		auto expr = parseExpression();
+		std::string alias;
+		if(match(Token::Type::AS)){
+			consume(Token::Type::AS);
+			if(match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)){
+				//remove quotes from alises
+				alias = currentToken.lexeme;
+				if(alias.size()>2 && ((alias[0] == '\'' && alias[alias.size()-1] == '\'' || (alias[0] == '"' && alias[alias.size() -1] == '"')))){
+					alias = alias.substr(1,alias.size() - 2);
+				}
+				consume(currentToken.type);
+			}else if(match(Token::Type::IDENTIFIER)){
+				alias= currentToken.lexeme;
+				consume(Token::Type::IDENTIFIER);
+			}
+		}
+		newColumns.emplace_back(std::move(expr),alias);
+	}while(match(Token::Type::COMMA));
+	return newColumns;
+}
+
+
 
 std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
 	std::vector<std::unique_ptr<AST::Expression>> columns;
@@ -675,6 +737,10 @@ std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
+		//if(match(Token::Type::AS){
+				//parseColumnListAs();
+
+
 		columns.push_back(parseExpression());
 	}while(match(Token::Type::COMMA));
 	return columns;

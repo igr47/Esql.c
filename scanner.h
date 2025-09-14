@@ -8,7 +8,7 @@ class Token{
 	public:
 		enum class Type{
 			//Keywords
-			SELECT,FROM,WHERE,AND,OR,NOT,UPDATE,SET,DROP,TABLE,DELETE,INSERT,INTO,ALTER,CREATE,ADD,RENAME,VALUES,BOOL,TEXT,INT,FLOAT,DATABASE,DATABASES,SHOW,USE,TABLES,TO,ROW,BULK,IN,COLUMN,BETWEEN,GROUP,BY,HAVING,ORDER,ASC,DESC,LIMIT,OFFSET,PRIMARY_KEY,NOT_NULL,
+			SELECT,FROM,WHERE,AND,OR,NOT,UPDATE,SET,DROP,TABLE,DELETE,INSERT,INTO,ALTER,CREATE,ADD,RENAME,VALUES,BOOL,TEXT,INT,FLOAT,DATABASE,DATABASES,SHOW,USE,TABLES,TO,ROW,BULK,IN,COLUMN,BETWEEN,GROUP,BY,HAVING,ORDER,ASC,DESC,LIMIT,OFFSET,PRIMARY_KEY,NOT_NULL,AS,
 			//Identifier & Literals
 			IDENTIFIER,STRING_LITERAL,NUMBER_LITERAL,DOUBLE_QUOTED_STRING,
 			//conditiinals
@@ -30,6 +30,19 @@ class Lexer{
 	public:
 		explicit Lexer(const std::string& input);
 		Token nextToken();
+		size_t getPosition () const {return position;}
+		size_t getLine () const {return line;}
+		size_t getColumn () const {return column;}
+		void saveState(size_t& savePos,size_t saveLine, size_t& saveCol) const{
+			savePos= position;
+			saveLine = line;
+			saveCol = column;
+		}
+		void restoreState(size_t savePos,size_t saveLine,size_t savecol){
+			position = savePos;
+			line = saveLine;
+			column = savecol;
+		}
 	private:
 		const std::string input;
 		size_t position;

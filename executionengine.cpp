@@ -207,6 +207,23 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
         }
     }
 
+    if(!stmt.newCols.empty()){
+	    //auto table= storage.getTable(db.currentDatabase(), tableName);
+	    result.columns.clear();
+	    for(const auto& col : stmt.newCols){
+		    //for(const auto& vals : table->columns){
+	            //if(vals.name == col.first){
+		    if(!col.second.empty()){
+			    result.columns.push_back(col.second);
+			    //vals.name = col.second;
+			    //result.columns.push_back(vals.name);
+		     }else {
+			     result.columns.push_back(col.first->toString());
+		     }
+	     }
+    }
+
+
     // Check if we need to handle aggregates
     bool hasAggregates = false;
     for (const auto& col : stmt.columns) {
