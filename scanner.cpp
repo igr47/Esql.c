@@ -24,7 +24,7 @@ Token Lexer::nextToken(){
 		return readIdentifierOrKeyword(tokenline,tokencolumn);
 	}else if(isdigit(current)){
 		return readNumber(tokenline,tokencolumn);
-	}else if(current=='\"' || current=='"'){
+	}else if(current=='\'' || current=='"'){
 		return readString(tokenline,tokencolumn);
 	}else{
 		return readOperatorOrPanctuation(tokenline,tokencolumn);
@@ -79,7 +79,9 @@ void Lexer::initializeKeyWords(){
 		{"HAVING",Token::Type::HAVING},
 		{"DESC",Token::Type::DESC},
 		{"LIMIT",Token::Type::LIMIT},
-		{"OFFSET",Token::Type::OFFSET}
+		{"OFFSET",Token::Type::OFFSET},
+		{"PRIMARY_KEY",Token::Type::PRIMARY_KEY},
+		{"NOT_NULL",Token::Type::NOT_NULL}
 
 	};
 }

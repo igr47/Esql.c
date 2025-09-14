@@ -203,6 +203,11 @@ void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSch
 		validateBinaryOperation(*binaryOp,table);
 	}else if(auto* ident=dynamic_cast<AST::Identifier*>(&expr)){
 		if(!columnExists(ident->token.lexeme)){
+			//Check if this is a boolean literal(true/false)
+			if(ident->token.lexeme == "true" || ident->token.lexeme == "false" ){
+				// This is a boolean literal not an unquoted string
+				return;
+			}
 			if(/*inValueContext &&*/ ident->token.lexeme.find(' ')==std::string::npos){
 				throw SematicError("String value'"+ ident->token.lexeme+ "'must be quoted.Did you mean '"+ ident->token.lexeme +"'?");
 			        throw SematicError("Unknown column in expression: "+ ident->token.lexeme);
@@ -211,9 +216,6 @@ void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSch
 	}else if(auto* literal=dynamic_cast<AST::Literal*>(&expr)){
 		validateLiteral(*literal,table);
 	}else if (auto* between = dynamic_cast<AST::BetweenOp*>(&expr)) {
-		/*validateExpression(*between->column,table);
-		validateExpression(*between->lower, table);
-		validateExpression(*between->upper, table);*/
 		validateBetweenOperation(*between,table);
 	}else if (auto* inop=dynamic_cast<AST::InOp*>(&expr)){
 		/*validateExpression(*inop->column,table);
