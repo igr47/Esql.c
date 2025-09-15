@@ -269,6 +269,41 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
 	    result.rows = applyDistinct(result.rows);
     }
 
+    if(stmt.limit || stmt.offset){
+	    size_t offset = 0;
+	    size_t limit = result.rows.size(); //Default to all rows
+	    
+	    if(stmt.offset){
+		    try{
+			    std::string offsetstr = evaluateExpression(stmt.offset.get(),{});
+			    offset= std::stoul(offsetstr);
+		    } catch(const std::exception& e){
+			    throw std::runtime_error("Invalid OFFSET valu: "+ std::string(e.what()));
+		    }
+	    }
+
+	    if(stmt.limit){
+		    try{
+			    std::string limitStr = evaluateExpression(stmt.limit.get(), {});
+			    limit = std::stoul(limitStr);
+		    } catch (const std::exception& e){
+			    throw std::runtime_error("Invalid LIMIT value: " + std::string(e.what()));
+		    }
+	    }
+
+	    //Apply offset and limit
+	    if(offset >= result.rows.size()){
+		    result.rows.clear();
+	    }else {
+		    size_t end = std::min(offset + limit,result.rows.size());
+		    result.rows = std::vector<std::vector<std::string>>(
+				    result.rows.begin() + offset,
+				    result.rows.begin() + end
+		    );
+	    }
+    }
+
+
     return result;
 }
 
@@ -528,6 +563,41 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     if(stmt.distinct) {
 	    result.rows = applyDistinct(result.rows);
      }
+
+    //Aplly LIMIT and OFFSET
+    if(stmt.limit || stmt.offset){
+	    size_t offset=0;
+	    size_t limit = result.rows.size();
+
+	    if(stmt.offset){
+		    try{
+			    std::string offsetStr = evaluateExpression(stmt.offset.get(), {});
+			    offset = std::stoul(offsetStr);
+		    } catch(const std::exception& e) {
+			    throw std::runtime_error("Invalid OFFSET value: "+ std::string(e.what()));
+		    }
+	    }
+
+	    if(stmt.limit){
+		    try{
+			    std::string limitStr = evaluateExpression(stmt.limit.get(),{});
+			    limit = std::stoul(limitStr);
+		    }catch(const std::exception& e){
+			    throw std::runtime_error("Invalid LIMIT value: " + std::string(e.what()));
+		    }
+	    }
+
+	    //Appl offset and limit
+	    if(offset >= result.rows.size()){
+		    result.rows.clear();
+	    }else{
+		    size_t end = std::min(offset+limit,result.rows.size());
+		    result.rows = std::vector<std::vector<std::string>>(
+				    result.rows.begin() + offset,
+				    result.rows.begin() + end
+		    );
+	    }
+    }
 
     return result;
 }
