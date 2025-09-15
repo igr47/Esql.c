@@ -429,72 +429,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
     return result;
 }*/
 
-/*ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
-    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
-    auto data = storage.getTableData(db.currentDatabase(), tableName);
 
-    ResultSet result;
-
-    // Extract group by columns
-    std::vector<std::string> groupColumns;
-    if (stmt.groupBy) {
-        for (const auto& col : stmt.groupBy->columns) {
-            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
-                groupColumns.push_back(ident->token.lexeme);
-                result.columns.push_back(ident->token.lexeme);
-            }
-        }
-    }
-
-    // Add aggregate columns to result
-    for (const auto& col : stmt.columns) {
-        if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
-            if (isAggregateFunction(binaryOp->op.lexeme)) {
-                std::string aggName = binaryOp->op.lexeme + "(";
-                if (auto ident = dynamic_cast<AST::Identifier*>(binaryOp->left.get())) {
-                    aggName += ident->token.lexeme;
-                }
-                aggName += ")";
-                result.columns.push_back(aggName);
-            } else {
-                result.columns.push_back(col->toString());
-            }
-        } else {
-            result.columns.push_back(col->toString());
-        }
-    }
-
-    // Group data
-    auto groupedData = groupRows(data, groupColumns);
-
-    // Process each group
-    for (const auto& group : groupedData) {
-        // Apply HAVING clause if specified
-        if (stmt.having) {
-            if (!evaluateHavingCondition(stmt.having->condition.get(), group)) {
-                continue;
-            }
-        }
-
-        // Evaluate aggregate functions for this group
-        auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group, groupedDataMap[groupKey]);
-        result.rows.push_back(aggregatedRow);
-    }
-
-    // Apply ORDER BY if specified
-    if (stmt.orderBy) {
-        auto sortedData = sortResult(groupedData, stmt.orderBy.get());
-
-        // Rebuild result rows in sorted order
-        result.rows.clear();
-        for (const auto& group : sortedData) {
-            auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group ,groupedDataMap[groupKey]);
-            result.rows.push_back(aggregatedRow);
-        }
-    }
-
-    return result;
-}*/
 
 ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
@@ -1052,6 +987,194 @@ bool ExecutionEngine::evaluateWhereClause(const AST::Expression* where,const std
 
 std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
                                               const std::unordered_map<std::string, std::string>& row) {
+    if (!expr) {
+        return "NULL";
+    }
+
+    // Handle literals
+    if (auto lit = dynamic_cast<const AST::Literal*>(expr)) {
+        if (lit->token.type == Token::Type::STRING_LITERAL ||
+            lit->token.type == Token::Type::DOUBLE_QUOTED_STRING) {
+            // Remove quotes from string literals
+            std::string value = lit->token.lexeme;
+            if (value.size() >= 2 &&
+                ((value[0] == '\'' && value[value.size()-1] == '\'') ||
+                 (value[0] == '"' && value[value.size()-1] == '"'))) {
+                return value.substr(1, value.size() - 2);
+            }
+            return value;
+        }
+        return lit->token.lexeme;
+    }
+
+    // Handle identifiers (column references)
+    else if (auto ident = dynamic_cast<const AST::Identifier*>(expr)) {
+        auto it = row.find(ident->token.lexeme);
+        if (it != row.end()) {
+            return it->second;
+        }
+
+        // Check if this is a boolean literal (true/false)
+        if (ident->token.lexeme == "true") return "true";
+        if (ident->token.lexeme == "false") return "false";
+
+        return "NULL";
+    }
+
+    // Handle binary operations (AND, OR, =, !=, <, >, etc.)
+    else if (auto binOp = dynamic_cast<const AST::BinaryOp*>(expr)) {
+        std::string left = evaluateExpression(binOp->left.get(), row);
+        std::string right = evaluateExpression(binOp->right.get(), row);
+
+        // Handle NULL values
+        if (left == "NULL" || right == "NULL") {
+            // For most operations, NULL results in NULL
+            // For equality/inequality with NULL, use SQL semantics
+            if (binOp->op.type == Token::Type::EQUAL) {
+                return (left == right) ? "true" : "false";
+            }
+            else if (binOp->op.type == Token::Type::NOT_EQUAL) {
+                return (left != right) ? "true" : "false";
+            }
+            return "NULL";
+        }
+
+        switch (binOp->op.type) {
+            case Token::Type::EQUAL:
+                return (left == right) ? "true" : "false";
+
+            case Token::Type::NOT_EQUAL:
+                return (left != right) ? "true" : "false";
+
+            case Token::Type::LESS:
+                try {
+                    return (std::stod(left) < std::stod(right)) ? "true" : "false";
+                } catch (...) {
+                    return (left < right) ? "true" : "false";
+                }
+
+            case Token::Type::LESS_EQUAL:
+                try {
+                    return (std::stod(left) <= std::stod(right)) ? "true" : "false";
+                } catch (...) {
+                    return (left <= right) ? "true" : "false";
+                }
+
+            case Token::Type::GREATER:
+                try {
+                    return (std::stod(left) > std::stod(right)) ? "true" : "false";
+                } catch (...) {
+                    return (left > right) ? "true" : "false";
+                }
+
+            case Token::Type::GREATER_EQUAL:
+                try {
+                    return (std::stod(left) >= std::stod(right)) ? "true" : "false";
+                } catch (...) {
+                    return (left >= right) ? "true" : "false";
+                }
+
+            case Token::Type::AND:
+                return ((left == "true" || left == "1") &&
+                        (right == "true" || right == "1")) ? "true" : "false";
+
+            case Token::Type::OR:
+                return ((left == "true" || left == "1") ||
+                        (right == "true" || right == "1")) ? "true" : "false";
+
+            case Token::Type::PLUS:
+                try {
+                    return std::to_string(std::stod(left) + std::stod(right));
+                } catch (...) {
+                    return left + right; // String concatenation
+                }
+
+            case Token::Type::MINUS:
+                try {
+                    return std::to_string(std::stod(left) - std::stod(right));
+                } catch (...) {
+                    throw std::runtime_error("Cannot subtract non-numeric values");
+                }
+
+            case Token::Type::ASTERIST:
+                try {
+                    return std::to_string(std::stod(left) * std::stod(right));
+                } catch (...) {
+                    throw std::runtime_error("Cannot multiply non-numeric values");
+                }
+
+            case Token::Type::SLASH:
+                try {
+                    double divisor = std::stod(right);
+                    if (divisor == 0) throw std::runtime_error("Division by zero");
+                    return std::to_string(std::stod(left) / divisor);
+                } catch (...) {
+                    throw std::runtime_error("Cannot divide non-numeric values");
+                }
+
+            default:
+                throw std::runtime_error("Unsupported binary operator: " + binOp->op.lexeme);
+        }
+    }
+
+    // Handle BETWEEN operations
+    else if (auto* between = dynamic_cast<const AST::BetweenOp*>(expr)) {
+        auto colval = evaluateExpression(between->column.get(), row);
+        auto lowerval = evaluateExpression(between->lower.get(), row);
+        auto upperval = evaluateExpression(between->upper.get(), row);
+
+        // Handle NULL values
+        if (colval == "NULL" || lowerval == "NULL" || upperval == "NULL") {
+            return "NULL";
+        }
+
+        try {
+            // Try numeric comparison first
+            double colNum = std::stod(colval);
+            double lowerNum = std::stod(lowerval);
+            double upperNum = std::stod(upperval);
+            return (colNum >= lowerNum && colNum <= upperNum) ? "true" : "false";
+        } catch (...) {
+            // Fall back to string comparison
+            return (colval >= lowerval && colval <= upperval) ? "true" : "false";
+        }
+    }
+
+    // Handle IN operations
+    else if (auto* inop = dynamic_cast<const AST::InOp*>(expr)) {
+        auto colval = evaluateExpression(inop->column.get(), row);
+
+        // Handle NULL values
+        if (colval == "NULL") {
+            return "NULL";
+        }
+
+        for (const auto& value : inop->values) {
+            auto current_val = evaluateExpression(value.get(), row);
+            if (colval == current_val) {
+                return "true";
+            }
+        }
+        return "false";
+    }
+
+    // Handle NOT operations
+    else if (auto* notop = dynamic_cast<const AST::NotOp*>(expr)) {
+        std::string result = evaluateExpression(notop->expr.get(), row);
+
+        // Handle NULL values
+        if (result == "NULL") {
+            return "NULL";
+        }
+
+        bool boolResult = (result == "true" || result == "1");
+        return (!boolResult) ? "true" : "false";
+    }
+
+    throw std::runtime_error("Unsupported expression type in evaluation");
+}
+/*std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
+                                              const std::unordered_map<std::string, std::string>& row) {
     if (auto lit = dynamic_cast<const AST::Literal*>(expr)) {
         if (lit->token.type == Token::Type::STRING_LITERAL || 
             lit->token.type == Token::Type::DOUBLE_QUOTED_STRING) {
@@ -1140,7 +1263,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 
 
     return "NULL";
-}
+}*/
 
 
 
