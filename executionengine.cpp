@@ -134,93 +134,188 @@ ExecutionEngine::ResultSet ExecutionEngine::executeDropTable(AST::DropStatement&
     return ResultSet({"Status", {{"Table '" + stmt.tablename + "' dropped successfully"}}});
 }
 
-// Query operations
-/*ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
-    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
-    auto data = storage.getTableData(db.currentDatabase(), tableName);
-    
-    ResultSet result;
-
-    
-    // Determine columns to select
-    if (stmt.columns.empty()) {
-        // Select all columns
-        auto table = storage.getTable(db.currentDatabase(), tableName);
-        for (const auto& col : table->columns) {
-            result.columns.push_back(col.name);
-        }
-    } else {
-        // Select specified columns
-        for (const auto& col : stmt.columns) {
-            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
-                result.columns.push_back(ident->token.lexeme);
-            }
-        }
-    }
-    
-    // Filter rows based on WHERE clause
-    for (const auto& row : data) {
-        bool include = true;
-        if (stmt.where) {
-            include = evaluateWhereClause(stmt.where.get(), row);
-        }
-        
-        if (include) {
-            std::vector<std::string> resultRow;
-            for (const auto& col : result.columns) {
-                resultRow.push_back(row.at(col));
-            }
-            result.rows.push_back(resultRow);
-        }
-    }
-    
-    return result;
-}*/
-
 ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
     auto data = storage.getTableData(db.currentDatabase(), tableName);
 
     ResultSet result;
 
+    // Store mapping between display names and original column names
+    std::vector<std::pair<std::string, std::string>> columnMapping;
+    
+    // Determine columns to select and create mapping
+    if (stmt.columns.empty()) {
+        auto table = storage.getTable(db.currentDatabase(), tableName);
+        for (const auto& col : table->columns) {
+            result.columns.push_back(col.name);
+            columnMapping.emplace_back(col.name, col.name);
+        }
+    } else {
+        for (const auto& col : stmt.columns) {
+            std::string originalName;
+            std::string displayName;
+            
+            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
+                originalName = ident->token.lexeme;
+                displayName = ident->token.lexeme;
+            } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+                if (isAggregateFunction(binaryOp->op.lexeme)) {
+                    if (auto leftIdent = dynamic_cast<AST::Identifier*>(binaryOp->left.get())) {
+                        originalName = leftIdent->token.lexeme;
+                    }
+                    displayName = binaryOp->op.lexeme + "(" + binaryOp->left->toString() + ")";
+                } else {
+                    originalName = col->toString();
+                    displayName = col->toString();
+                }
+            } else {
+                originalName = col->toString();
+                displayName = col->toString();
+            }
+            
+            result.columns.push_back(displayName);
+            columnMapping.emplace_back(displayName, originalName);
+        }
+    }
+
+    // Handle column aliases if present
+    if (!stmt.newCols.empty()) {
+        result.columns.clear();
+        columnMapping.clear();
+        
+        for (const auto& col : stmt.newCols) {
+            std::string originalName = col.first->toString();
+            std::string displayName = col.second.empty() ? originalName : col.second;
+            
+            result.columns.push_back(displayName);
+            columnMapping.emplace_back(displayName, originalName);
+        }
+    }
+
+    // Check if we need to handle aggregates
+    bool hasAggregates = false;
+    for (const auto& col : stmt.columns) {
+        if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+            if (isAggregateFunction(binaryOp->op.lexeme)) {
+                hasAggregates = true;
+                break;
+            }
+        }
+    }
+
+    if (hasAggregates || stmt.groupBy) {
+        return executeSelectWithAggregates(stmt);
+    }
+
+    // Regular non-aggregate query
+    for (const auto& row : data) {
+        bool include = true;
+        if (stmt.where) {
+            include = evaluateWhereClause(stmt.where.get(), row);
+        }
+
+        if (include) {
+            std::vector<std::string> resultRow;
+            for (const auto& [displayName, originalName] : columnMapping) {
+                try {
+                    resultRow.push_back(row.at(originalName));
+                } catch (const std::out_of_range&) {
+                    // If original column not found, try to evaluate expression
+                    //resultRow.push_back(evaluateExpression(col, row));
+                }
+            }
+            result.rows.push_back(resultRow);
+        }
+    }
+
+    // Apply ORDER BY if specified
+    if (stmt.orderBy) {
+        // Create a mapping for sorting
+        std::vector<std::unordered_map<std::string, std::string>> sortedData;
+        for (const auto& rowVec : result.rows) {
+            std::unordered_map<std::string, std::string> rowMap;
+            for (size_t i = 0; i < result.columns.size(); ++i) {
+                rowMap[result.columns[i]] = rowVec[i];
+            }
+            sortedData.push_back(rowMap);
+        }
+
+        sortedData = sortResult(sortedData, stmt.orderBy.get());
+
+        // Convert back to vector format
+        result.rows.clear();
+        for (const auto& rowMap : sortedData) {
+            std::vector<std::string> rowVec;
+            for (const auto& colName : result.columns) {
+                rowVec.push_back(rowMap.at(colName));
+            }
+            result.rows.push_back(rowVec);
+        }
+    }
+
+    return result;
+}
+
+/*ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
+    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
+    auto data = storage.getTableData(db.currentDatabase(), tableName);
+
+    ResultSet result;
+    std::vector<std::pair<std::string,std::string>> columnMapping;
+
     // Determine columns to select
     if (stmt.columns.empty()) {
         auto table = storage.getTable(db.currentDatabase(), tableName);
         for (const auto& col : table->columns) {
             result.columns.push_back(col.name);
+	    columnMapping.emplace_back(col.name,col.name);
         }
     } else {
         for (const auto& col : stmt.columns) {
+	    std::string originalName;
+	    std::string displayName;
             if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
-                result.columns.push_back(ident->token.lexeme);
+                //result.columns.push_back(ident->token.lexeme);
+		//originalColumns.push_back(ident->token.lexeme);
+		originalName = ident->token.lexeme;
+		displayName = ident->token.lexeme;
             } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
                 // Handle aggregate functions
                 if (isAggregateFunction(binaryOp->op.lexeme)) {
-                    result.columns.push_back(binaryOp->op.lexeme + "(" +
-                                           binaryOp->left->toString() + ")");
+		    if(auto leftIdent = dynamic_cast<AST::Identifier*>(binaryOp->left.get())){
+			    originalName = leftIdent->token.lexeme;
+		    }
+                    //result.columns.push_back(binaryOp->op.lexeme + "(" +
+                                           //binaryOp->left->toString() + ")");
+		    //riginalColumns.push_back(binaryOp->left->toString());
+		    displayName = binaryOp.op.lexeme + "(" + binaryOp->left->toString() + ")";
+
+
                 } else {
-                    result.columns.push_back(col->toString());
+                    //result.columns.push_back(col->toString());
+		    originalName = col->toString();
+		    //originalColumns.push_back(col->toString());
+		    displayNmae = col->toString();
                 }
             } else {
                 result.columns.push_back(col->toString());
+		originalColumns.push_back(col->toString());
             }
         }
     }
 
+    std::vector<std::string> displayColumns;
     if(!stmt.newCols.empty()){
-	    //auto table= storage.getTable(db.currentDatabase(), tableName);
-	    result.columns.clear();
+	    //result.columns.clear();
+	    displayColumns.clear();
 	    for(const auto& col : stmt.newCols){
-		    //for(const auto& vals : table->columns){
-	            //if(vals.name == col.first){
 		    if(!col.second.empty()){
-			    result.columns.push_back(col.second);
-			    //vals.name = col.second;
-			    //result.columns.push_back(vals.name);
+			    displayColumns.push_back(col.second);
 		     }else {
-			     result.columns.push_back(col.first->toString());
+			     displayColumns.push_back(col.first->toString());
 		     }
 	     }
+	    result.columns = displayColumns;
     }
 
 
@@ -248,7 +343,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
 
         if (include) {
             std::vector<std::string> resultRow;
-            for (const auto& col : result.columns) {
+            for (const auto& col : originalColumns) {
                 resultRow.push_back(row.at(col));
             }
             result.rows.push_back(resultRow);
@@ -281,7 +376,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
     }
 
     return result;
-}
+}*/
 
 /*ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
