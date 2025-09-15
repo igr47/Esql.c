@@ -134,11 +134,23 @@ ExecutionEngine::ResultSet ExecutionEngine::executeDropTable(AST::DropStatement&
     return ResultSet({"Status", {{"Table '" + stmt.tablename + "' dropped successfully"}}});
 }
 
+std::vector<std::vector<std::string>> ExecutionEngine::applyDistinct(const std::vector<std::vector<std::string>>& rows){
+	if(rows.empty()) return rows;
+
+	std::set<std::vector<std::string>> uniqueRows;
+	for(const auto& row : rows){
+		uniqueRows.insert(row);
+	}
+
+	return std::vector<std::vector<std::string>>(uniqueRows.begin(),uniqueRows.end());
+}
+
 ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
     auto data = storage.getTableData(db.currentDatabase(), tableName);
 
     ResultSet result;
+    result.distinct = stmt.distinct;
 
     // Store mapping between display names and original column names
     std::vector<std::pair<std::string, std::string>> columnMapping;
@@ -251,6 +263,10 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
             }
             result.rows.push_back(rowVec);
         }
+    }
+
+    if(stmt.distinct){
+	    result.rows = applyDistinct(result.rows);
     }
 
     return result;
@@ -450,6 +466,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     auto data = storage.getTableData(db.currentDatabase(), tableName);
 
     ResultSet result;
+    result.distinct = stmt.distinct;
 
     // Extract group by columns
     std::vector<std::string> groupColumns;
@@ -507,6 +524,10 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
             result.rows.push_back(aggregatedRow);
         }
     }
+
+    if(stmt.distinct) {
+	    result.rows = applyDistinct(result.rows);
+     }
 
     return result;
 }

@@ -201,6 +201,7 @@ namespace AST{
 			std::unique_ptr<OrderByClause> orderBy;
 			std::unique_ptr<Expression> limit;
 			std::unique_ptr<Expression> offset;
+			bool distinct = false;
 	};
 	class UpdateStatement:public Statement{
 		public:

@@ -39,6 +39,7 @@ class SematicAnalyzer{
 		void validateBetweenOperation(AST::BetweenOp& between, const DatabaseSchema::Table* table);
 		void validateInOperation(AST::InOp& inOp,const DatabaseSchema::Table* table);
 		void validateNotOperation(AST::NotOp& notOp, const DatabaseSchema::Table* table);
+		void validateDistinctUsage(AST::SelectStatement& selectStmt);
 		//void validateColumnReference(AST::Expression& expr);
 		void validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table);
 		void validateBinaryOperation(AST::BinaryOp&,const DatabaseSchema::Table* table);

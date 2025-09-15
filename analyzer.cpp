@@ -66,6 +66,9 @@ void SematicAnalyzer::analyzeSelect(AST::SelectStatement& selectStmt){
 
 	validateFromClause(selectStmt);
 	validateSelectColumns(selectStmt);
+	if(selectStmt.distinct){
+		validateDistinctUsage(selectStmt);
+	}
 	if(selectStmt.where){
 		validateExpression(*selectStmt.where,currentTable);
 	}
@@ -165,6 +168,20 @@ void SematicAnalyzer::validateAggregateUsage(AST::SelectStatement& selectStmt) {
 	}
 }
 
+void SematicAnalyzer::validateDistinctUsage(AST::SelectStatement& selectStmt){
+	if(selectStmt.distinct && selectStmt.groupBy) {
+		throw SematicError("Cannot use DISTINCT with GROUP BY");
+	}
+
+	//check if any columns are aggregate funtions
+	for(const auto& column : selectStmt.columns){
+		if(auto* binarOp = dynamic_cast<AST::BinaryOp*> (column.get())){
+			if(isAggregateFunction(binarOp->op.lexeme)){
+				throw SematicError("Cannot use DISTINCT with aggregate functions");
+			}
+		}
+	}
+}
 void SematicAnalyzer::validateFromClause(AST::SelectStatement& selectStmt){
 	auto* fromIdent=dynamic_cast<AST::Identifier*>(selectStmt.from.get());
 	if(!fromIdent){

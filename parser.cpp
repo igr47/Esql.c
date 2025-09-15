@@ -228,6 +228,10 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	auto stmt=std::make_unique<AST::SelectStatement>();
 	//parse select clause
 	consume(Token::Type::SELECT);
+	if(match(Token::Type::DISTINCT)){
+		consume(Token::Type::DISTINCT);
+		stmt->distinct = true;
+	}
 	if(match(Token::Type::ASTERIST)){
 		consume(Token::Type::ASTERIST);
 	}else{
@@ -239,9 +243,6 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	                stmt->columns=parseColumnList();
 		}
 
-		//if(match(Token::Type::AS) || matchAny({Token::Type::IDENTIFIER, Token::Type::STRING_LITERAL})){
-			//stmt->newCols = parseColumnListAs();
-		//}
 	}
 
 	//parse From clause

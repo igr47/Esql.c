@@ -82,7 +82,8 @@ void Lexer::initializeKeyWords(){
 		{"OFFSET",Token::Type::OFFSET},
 		{"PRIMARY_KEY",Token::Type::PRIMARY_KEY},
 		{"NOT_NULL",Token::Type::NOT_NULL},
-		{"AS" ,Token::Type::AS}
+		{"AS" ,Token::Type::AS},
+		{"DISTINCT",Token::Type::DISTINCT}
 
 	};
 }
