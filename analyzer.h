@@ -46,6 +46,7 @@ class SematicAnalyzer{
 		bool columnExists(const std::string& columnName) const;
 		void validateLiteral(const AST::Literal& literal, const DatabaseSchema::Table* table);
 		bool isValidOperation(Token::Type op,const AST::Expression& left,const AST::Expression& right);
+		bool isComparisonOperator(Token::Type type);
 		//end of the child methods
 		//metod to analyze insert statement analysis
 		void analyzeInsert(AST::InsertStatement& insertStmt);

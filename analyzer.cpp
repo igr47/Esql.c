@@ -287,6 +287,23 @@ void SematicAnalyzer::validateNotOperation(AST::NotOp& notOp, const DatabaseSche
 	//NOT operator  should be implemented to a boolean expression
 	auto exprType = getValueType(*notOp.expr);
 	if(exprType != DatabaseSchema::Column::BOOLEAN){
+		if(auto* binaryOp = dynamic_cast<AST::BinaryOp*>(notOp.expr.get())){
+			switch (binaryOp->op.type){
+				case Token::Type::EQUAL:
+				case Token::Type::NOT_EQUAL:
+				case Token::Type::LESS:
+				case Token::Type::LESS_EQUAL:
+				case Token::Type::GREATER:
+				case Token::Type::GREATER_EQUAL:
+					return;
+				default:
+					break;
+			}
+		}
+		//check if this is a BETWEEN or IN operation (which alsoreturns a boolean)
+		if(dynamic_cast<AST::BetweenOp*> (notOp.expr.get()) || dynamic_cast<AST::InOp*>(notOp.expr.get())){
+			return;
+		}
 		throw SematicError("NOT operator can only be applied to boolean expressions");
 	}
 }
@@ -317,7 +334,7 @@ void SematicAnalyzer::validateLiteral(const AST::Literal& literal, const Databas
     }
 }
 
-void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op,const DatabaseSchema::Table* table){
+/*void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op,const DatabaseSchema::Table* table){
 	validateExpression(*op.left,table);
 	validateExpression(*op.right,table);
 
@@ -334,7 +351,7 @@ void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op,const DatabaseSc
 	if(!isValidOperation(op.op.type,*op.left,*op.right)){
 		throw SematicError("Invalid operation between these operands");
 	}
-}
+}*/
 
 bool SematicAnalyzer::columnExists(const std::string& columnName) const{
 	if(!currentTable) return false;
@@ -346,30 +363,178 @@ bool SematicAnalyzer::columnExists(const std::string& columnName) const{
 	return false;
 }
 
-bool SematicAnalyzer::isValidOperation(Token::Type op,const AST::Expression& left,const AST::Expression& right){
-	auto leftType=getValueType(left);
-	auto rightType=getValueType(right);
+void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op, const DatabaseSchema::Table* table) {
+    validateExpression(*op.left, table);
+    validateExpression(*op.right, table);
 
-	if(leftType==rightType){
-		return false;
-	}
+    auto leftType = getValueType(*op.left);
+    auto rightType = getValueType(*op.right);
 
-	switch(op){
+    // Debug output
+    std::cout << "DEBUG: Comparing " << op.left->toString() << " (type: " << static_cast<int>(leftType)
+              << ") with " << op.right->toString() << " (type: " << static_cast<int>(rightType)
+              << ") using operator: " << static_cast<int>(op.op.type) << std::endl;
+
+    // Special handling for string comparisons
+    if(op.op.type == Token::Type::AND || op.op.type == Token::Type::OR){
+	    //for boolean operators both sides should be boolean expressions
+	    if(leftType != DatabaseSchema::Column::BOOLEAN){
+		    //Check if the left side is acomparison that returns a boolean
+		    if(auto* leftBinOp = dynamic_cast<AST::BinaryOp*>(op.left.get())){
+			    if (isComparisonOperator(leftBinOp->op.type)){
+				    leftType = DatabaseSchema::Column::BOOLEAN;
+			    }
+		    }
+	    }
+	    if(rightType != DatabaseSchema::Column::BOOLEAN) {
+		    //Check if the right side is a comparison that reurns a boolean
+		    if(auto* rightBinOp = dynamic_cast<AST::BinaryOp*>(op.right.get())){
+			    if(isComparisonOperator(rightBinOp->op.type)){
+				    rightType = DatabaseSchema::Column::BOOLEAN;
+			    }
+		    }
+	    }
+	    if(leftType != DatabaseSchema::Column::BOOLEAN || rightType !=DatabaseSchema::Column::BOOLEAN){
+		    throw SematicError("AND/OR operations require boolean expressions on both sides");
+	    }
+	    return;
+    }
+    if (op.op.type == Token::Type::EQUAL || op.op.type == Token::Type::NOT_EQUAL) {
+        if (!areTypesComparable(leftType, rightType)) {
+            throw SematicError("Cannot compare types: " + std::to_string(static_cast<int>(leftType)) +
+                              " and " + std::to_string(static_cast<int>(rightType)));
+        }
+        return;
+    }
+
+    // Check operator is valid for the operator types
+    if (!isValidOperation(op.op.type, *op.left, *op.right)) {
+        throw SematicError("Invalid operation between these operands");
+    }
+}
+
+bool SematicAnalyzer::isComparisonOperator(Token::Type type) {
+	switch(type){
 		case Token::Type::EQUAL:
-		case Token::Type::NOT_EQUAL: return true;
+		case Token::Type::NOT_EQUAL:
 		case Token::Type::LESS:
 		case Token::Type::LESS_EQUAL:
 		case Token::Type::GREATER:
 		case Token::Type::GREATER_EQUAL:
-					  return leftType==DatabaseSchema::Column::INTEGER|| leftType==DatabaseSchema::Column::FLOAT;
-		case Token::Type::AND:
-		case Token::Type::OR:
-					return leftType==DatabaseSchema::Column::BOOLEAN;
+		case Token::Type::BETWEEN:
+		case Token::Type::IN:
+			return true;
+		default: 
+			return false;
+	}
+}
+/*bool SematicAnalyzer::isValidOperation(Token::Type op,const AST::Expression& left,const AST::Expression& right){
+	auto leftType=getValueType(left);
+	auto rightType=getValueType(right);
+
+	if(leftType==rightType){
+		switch (op){
+			case Token::Type::EQUAL:
+			case Token::Type::NOT_EQUAL:
+				return true;
+			case Token::Type::LESS:
+			case Token::Type::LESS_EQUAL:
+			case Token::Type::GREATER:
+			case Token::Type::GREATER_EQUAL:
+				//Allow comparison for numeric and string tpes
+				return leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT || leftType == DatabaseSchema::Column::STRING || leftType == DatabaseSchema::Column::TEXT;
+			case Token::Type::AND:
+			case Token::Type::OR:
+				return leftType == DatabaseSchema::Column::BOOLEAN;
+			default :
+		                return false;
+		}
+	}
+
+	switch(op){
+		case Token::Type::EQUAL:
+		case Token::Type::NOT_EQUAL: 
+			return areTypesComparable(leftType,rightType);
+		case Token::Type::LESS:
+		case Token::Type::LESS_EQUAL:
+		case Token::Type::GREATER:
+		case Token::Type::GREATER_EQUAL:
+			//return leftType==DatabaseSchema::Column::INTEGER|| leftType==DatabaseSchema::Column::FLOAT;
+			return (leftType == DatabaseSchema::Column::INTEGER ||leftType == DatabaseSchema::Column::FLOAT) && 
+				(rightType == DatabaseSchema::Column::INTEGER || rightType ==DatabaseSchema::Column::FLOAT);
+		//case Token::Type::AND:
+		//case Token::Type::OR:
+					//return leftType==DatabaseSchema::Column::BOOLEAN;
 		default: return false;
 
 	}
-}
+}*/
 
+bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& left, const AST::Expression& right) {
+    if (op == Token::Type::AND || op == Token::Type::OR) {
+        // For AND/OR, check if both expressions can evaluate to boolean
+        auto leftType = getValueType(left);
+        auto rightType = getValueType(right);
+        
+        // Allow if both are explicitly boolean, or if they are comparison operations
+        bool leftIsBoolean = (leftType == DatabaseSchema::Column::BOOLEAN) || 
+                            (dynamic_cast<const AST::BinaryOp*>(&left) && isComparisonOperator(dynamic_cast<const AST::BinaryOp*>(&left)->op.type));
+        
+        bool rightIsBoolean = (rightType == DatabaseSchema::Column::BOOLEAN) || 
+                             (dynamic_cast<const AST::BinaryOp*>(&right) && isComparisonOperator(dynamic_cast<const AST::BinaryOp*>(&right)->op.type));
+        
+        return leftIsBoolean && rightIsBoolean;
+    }
+    auto leftType = getValueType(left);
+    auto rightType = getValueType(right);
+
+    // All types are comparable with themselves for equality
+    if (leftType == rightType) {
+        switch (op) {
+            case Token::Type::EQUAL:
+            case Token::Type::NOT_EQUAL:
+                return true;
+            case Token::Type::LESS:
+            case Token::Type::LESS_EQUAL:
+            case Token::Type::GREATER:
+            case Token::Type::GREATER_EQUAL:
+                // Allow comparison for numeric and string types
+                return leftType == DatabaseSchema::Column::INTEGER || 
+                       leftType == DatabaseSchema::Column::FLOAT || 
+                       leftType == DatabaseSchema::Column::STRING || 
+                       leftType == DatabaseSchema::Column::TEXT;
+            case Token::Type::AND:
+            case Token::Type::OR:
+                return leftType == DatabaseSchema::Column::BOOLEAN;
+            default:
+                return false;
+        }
+    }
+
+    // Handle cross-type comparisons
+    switch (op) {
+        case Token::Type::EQUAL:
+        case Token::Type::NOT_EQUAL:
+            // Allow equality comparisons between compatible types
+            return areTypesComparable(leftType, rightType);
+            
+        case Token::Type::LESS:
+        case Token::Type::LESS_EQUAL:
+        case Token::Type::GREATER:
+        case Token::Type::GREATER_EQUAL:
+            // Only allow numeric comparisons for inequality operators
+            return (leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT) && 
+                   (rightType == DatabaseSchema::Column::INTEGER || rightType == DatabaseSchema::Column::FLOAT);
+            
+        case Token::Type::AND:
+        case Token::Type::OR:
+            // Boolean operations require both operands to be boolean
+            return leftType == DatabaseSchema::Column::BOOLEAN && rightType == DatabaseSchema::Column::BOOLEAN;
+            
+        default:
+            return false;
+    }
+}
 //Method to analyze insert statement
 void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
     currentTable = storage.getTable(db.currentDatabase(), insertStmt.table);
@@ -474,6 +639,17 @@ const DatabaseSchema::Column* SematicAnalyzer::findColumn(const std::string& nam
 }
 
 DatabaseSchema::Column::Type SematicAnalyzer::getValueType(const AST::Expression& expr) {
+    if(auto* binOp = dynamic_cast<const AST::BinaryOp*>(&expr)){
+	    if(isComparisonOperator(binOp->op.type)){
+		    return DatabaseSchema::Column::BOOLEAN;
+	    }
+    }else if(auto* between = dynamic_cast<const AST::BetweenOp*>(&expr)){
+	    return DatabaseSchema::Column::BOOLEAN;
+    }else if(auto* inop = dynamic_cast<const AST::InOp*>(&expr)){
+	    return DatabaseSchema::Column::BOOLEAN;
+    }else if(auto* notOp = dynamic_cast<const AST::NotOp*>(&expr)){
+	    return DatabaseSchema::Column::BOOLEAN;
+    }
     if (auto* literal = dynamic_cast<const AST::Literal*>(&expr)) {
         switch (literal->token.type) {
             case Token::Type::NUMBER_LITERAL:
@@ -500,7 +676,7 @@ DatabaseSchema::Column::Type SematicAnalyzer::getValueType(const AST::Expression
     return DatabaseSchema::Column::STRING;
 }
 
-bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1,DatabaseSchema::Column::Type t2) {
+/*bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1,DatabaseSchema::Column::Type t2) {
     // All types are comparable with themselves
     if (t1 == t2) return true;
     
@@ -515,6 +691,12 @@ bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1,Databas
         (t1 == DatabaseSchema::Column::STRING && t2 == DatabaseSchema::Column::TEXT)) {
         return true;
     }
+
+    //BOOLEAN can be compared with string representationd
+
+    if((t1 == DatabaseSchema::Column::BOOLEAN && (t2 == DatabaseSchema::Column::STRING || t2 == DatabaseSchema::Column::TEXT)) || (t2 ==DatabaseSchema::Column::BOOLEAN && (t1 == DatabaseSchema::Column::STRING || t1 == DatabaseSchema::Column::TEXT))){
+	    return true;
+    }
     
     // These are the basic comparable types
     static const std::set<DatabaseSchema::Column::Type> comparableTypes = {
@@ -525,6 +707,40 @@ bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1,Databas
         DatabaseSchema::Column::BOOLEAN
     };
     
+    return comparableTypes.count(t1) && comparableTypes.count(t2);
+}*/
+
+bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1, DatabaseSchema::Column::Type t2) {
+    // All types are comparable with themselves
+    if (t1 == t2) return true;
+
+    // Special cases for compatible types
+    if ((t1 == DatabaseSchema::Column::INTEGER && t2 == DatabaseSchema::Column::FLOAT) ||
+        (t1 == DatabaseSchema::Column::FLOAT && t2 == DatabaseSchema::Column::INTEGER)) {
+        return true;
+    }
+
+    // TEXT is compatible with STRING literals
+    if ((t1 == DatabaseSchema::Column::TEXT && t2 == DatabaseSchema::Column::STRING) ||
+        (t1 == DatabaseSchema::Column::STRING && t2 == DatabaseSchema::Column::TEXT)) {
+        return true;
+    }
+
+    // BOOLEAN can be compared with string representations
+    if ((t1 == DatabaseSchema::Column::BOOLEAN && (t2 == DatabaseSchema::Column::STRING || t2 == DatabaseSchema::Column::TEXT)) ||
+        (t2 == DatabaseSchema::Column::BOOLEAN && (t1 == DatabaseSchema::Column::STRING || t1 == DatabaseSchema::Column::TEXT))) {
+        return true;
+    }
+
+    // These are the basic comparable types
+    static const std::set<DatabaseSchema::Column::Type> comparableTypes = {
+        DatabaseSchema::Column::INTEGER,
+        DatabaseSchema::Column::FLOAT,
+        DatabaseSchema::Column::TEXT,
+        DatabaseSchema::Column::STRING,
+        DatabaseSchema::Column::BOOLEAN
+    };
+
     return comparableTypes.count(t1) && comparableTypes.count(t2);
 }
 bool SematicAnalyzer::isTypeCompatible(DatabaseSchema::Column::Type columnType,DatabaseSchema::Column::Type valueType) {
