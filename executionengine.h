@@ -17,9 +17,10 @@ public:
     struct ResultSet {
         std::vector<std::string> columns;
         std::vector<std::vector<std::string>> rows;
+	bool distinct = false;
         
         ResultSet() = default;
-        ResultSet(const std::vector<std::string>& cols) : columns(cols) {}
+        ResultSet(const std::vector<std::string>& cols,bool distinct = false) : columns(cols) , distinct(distinct) {}
     };
     
     ResultSet execute(std::unique_ptr<AST::Statement> stmt);
@@ -53,6 +54,7 @@ private:
     std::vector<std::unordered_map<std::string,std::string>> groupRows(const std::vector<std::unordered_map<std::string,std::string>>& data,const std::vector<std::string>& groupColumns);
     std::vector<std::unordered_map<std::string,std::string>> sortResult(const std::vector<std::unordered_map<std::string,std::string>>& result,AST::OrderByClause* orderBy);
     bool isAggregateFunction(const std::string& functionName);
+    std::vector<std::vector<std::string>> applyDistinct(const std::vector<std::vector<std::string>>& rows);
     
     // ALTER TABLE helper methods
     ResultSet handleAlterAdd(AST::AlterTableStatement* stmt);
