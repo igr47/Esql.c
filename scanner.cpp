@@ -83,7 +83,12 @@ void Lexer::initializeKeyWords(){
 		{"PRIMARY_KEY",Token::Type::PRIMARY_KEY},
 		{"NOT_NULL",Token::Type::NOT_NULL},
 		{"AS" ,Token::Type::AS},
-		{"DISTINCT",Token::Type::DISTINCT}
+		{"DISTINCT",Token::Type::DISTINCT},
+		{"COUNT", Token::Type::COUNT},
+		{"SUM",Token::Type::SUM},
+		{"AVG",Token::Type::AVG},
+		{"MIN",Token::Type::MIN},
+		{"MAX",Token::Type::MAX}
 
 	};
 }

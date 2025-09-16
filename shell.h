@@ -1,4 +1,4 @@
-// shell.h (unchanged)
+// shell.h
 #ifndef ESQL_SHELL_H
 #define ESQL_SHELL_H
 
@@ -21,14 +21,12 @@ private:
     // Platform detection
     enum class Platform { Linux, Windows, Termux, Unknown };
     Platform detect_platform();
-    void platform_specific_init();
     
     // Terminal control
     void enable_raw_mode();
     void disable_raw_mode();
     void get_terminal_size();
     void clear_screen();
-    void clear_previous_lines(int line_count);
     
     // Input handling
     int read_key();
@@ -40,13 +38,10 @@ private:
     // Navigation
     void move_cursor_left();
     void move_cursor_right();
-    void move_cursor_up();
-    void move_cursor_down();
     void navigate_history_up();
     void navigate_history_down();
     
     // Display and rendering
-    void initialize_terminal();
     void print_banner();
     void print_prompt();
     void redraw_interface();
@@ -54,41 +49,29 @@ private:
     void print_results(const ExecutionEngine::ResultSet& result, double duration);
     void show_help();
     
-    // Cursor positioning
-    void get_cursor_position(int& line, int& col) const;
-    int get_line_count() const;
-    
     // History and completion
     void add_to_history(const std::string& command);
-    std::string complete(const std::string& input);
+    std::vector<std::string> get_completion_suggestion(const std::string& input);
     
     // Utility
     std::string get_current_time() const;
-    bool is_valid_token(const std::string& token) const;
     bool is_single_line_command(const std::string& command) const;
     void execute_command(const std::string& command);
-    std::vector<std::string> get_completion_suggestion(const std::string& input);
     
-    // Termux-specific handling
-    bool is_termux() const;
+    // Platform-specific runners
     void run_termux();
-    void run_standard();
+    void run_linux();
+    bool is_termux() const;
     
     Database& db;
     std::string current_db;
     std::string current_line;
     size_t cursor_pos = 0;
     
-    // Multiline support
-    bool multi_line_mode = false;
-    std::vector<std::string> input_lines;
-    size_t current_line_index = 0;
-    
     std::vector<std::string> command_history;
     int history_index = -1;
     
     int terminal_width = 80;
-    int terminal_height = 24;
     
     Platform current_platform = Platform::Unknown;
     bool use_colors = true;
@@ -115,7 +98,6 @@ private:
     // SQL elements for syntax highlighting and completion
     static const std::unordered_set<std::string> keywords;
     static const std::unordered_set<std::string> datatypes;
-    static const std::unordered_set<std::string> tables;
     static const std::unordered_set<std::string> conditionals;
 };
 
