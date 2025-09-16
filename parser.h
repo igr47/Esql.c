@@ -203,6 +203,25 @@ namespace AST{
 			std::unique_ptr<Expression> offset;
 			bool distinct = false;
 	};
+	class AggregateExpression : public Expression{
+		public:
+			Token function;
+			std::unique_ptr<Expression> argument;
+			bool isCountAll = false;
+			
+			std::unique_ptr<Expression> clone() const override {
+				return std::make_unique<AggregateExpression>(function,argument ? argument->clone() : nullptr , isCountAll);
+			}
+
+			AggregateExpression(Token func,std::unique_ptr<Expression> arg,bool countAll = false) : function(func) , argument(std::move(arg)),isCountAll(countAll){}
+			std::string toString() const override {
+				if(isCountAll){
+					return function.lexeme + "(*)";
+				}
+				return function.lexeme + "(" + (argument ? argument-> toString() : "") + ")";
+			}
+	};
+
 	class UpdateStatement:public Statement{
 		public:
 			std::string table;

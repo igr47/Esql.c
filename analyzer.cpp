@@ -216,7 +216,18 @@ void SematicAnalyzer::validateSelectColumns(AST::SelectStatement& selectStmt){
 
 	
 void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table){
-	if(auto* binaryOp=dynamic_cast<AST::BinaryOp*>(&expr)){
+	if(auto* aggregate = dynamic_cast<AST::AggregateExpression*>(&expr)){
+		if(!aggregate->isCountAll && aggregate->argument){
+			validateExpression(*aggregate->argument,table);
+			//For non count tpe ensure argument is numeric
+			if(aggregate->function.lexeme != "COUNT"){
+				auto argType=getValueType(*aggregate->argument);
+				if(argType != DatabaseSchema::Column::INTEGER && argType != DatabaseSchema::Column::FLOAT){
+					throw SematicError("Aggregatefunction" + aggregate->function.lexeme + "requires numeric argument");
+				}
+			}
+		}
+	}else if(auto* binaryOp=dynamic_cast<AST::BinaryOp*>(&expr)){
 		validateBinaryOperation(*binaryOp,table);
 	}else if(auto* ident=dynamic_cast<AST::Identifier*>(&expr)){
 		if(!columnExists(ident->token.lexeme)){

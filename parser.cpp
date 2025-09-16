@@ -3,6 +3,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <iostream>
 
 namespace AST{
 	Literal::Literal(const Token& token):token(token){}
@@ -183,12 +184,16 @@ std::unique_ptr<AST::GroupByClause> Parse::parseGroupByClause() {
 	consume(Token::Type::BY);
 	std::vector<std::unique_ptr<AST::Expression>> columns;
 
-	do{
-		if(match(Token::Type::COMMA)){
-			consume(Token::Type::COMMA);
-		}
+	columns.push_back(parseExpression());
+
+	std::cout <<"DEBUG: Parsing GROUP B clause" <<std::endl;
+
+	while(match(Token::Type::COMMA)){
+		std::cout<<"DEBUG : Found comma, parsing next expression" <<std::endl;
+		consume(Token::Type::COMMA);
 		columns.push_back(parseExpression());
-	}while(match(Token::Type::COMMA));
+		std::cout<<"DEBUG: Added expression to GROUP BY " <<std::endl;
+	}
 
 	return std::make_unique<AST::GroupByClause>(std::move(columns));
 }
@@ -235,7 +240,14 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	if(match(Token::Type::ASTERIST)){
 		consume(Token::Type::ASTERIST);
 	}else{
+		bool hasAliases = false;
+		size_t savePos, saveLine, saveCol;
+		lexer.saveState(savePos, saveLine, saveCol);
+		//parse the first expression to see if it followed by AS
+		auto firstExpr = parseExpression();
 		Token peeked=peekToken();
+		lexer.restoreState(savePos,saveLine,saveCol);
+
 		if(peeked.type == Token::Type::AS){
 			stmt->newCols = parseColumnListAs();
 		}
@@ -259,7 +271,7 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	}
 	//parse Having clause
 	if(match(Token::Type::HAVING)){
-		stmt->having = parseHavingClause();
+			stmt->having = parseHavingClause();
 	}
 	//parse orderBy clause
 	if(match(Token::Type::ORDER)){
@@ -709,7 +721,26 @@ std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> Parse::pars
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
-		auto expr = parseExpression();
+		std::unique_ptr<AST::Expression> expr;
+		if(matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
+			Token funcToken = currentToken;
+			consume(currentToken.type);
+
+			consume(Token::Type::L_PAREN);
+
+			std::unique_ptr<AST::Expression> arg = nullptr;
+			bool isCountAll = false;
+			if(funcToken.type == Token::Type::COUNT && match(Token::Type::ASTERIST)){
+				consume(Token::Type::ASTERIST);
+				isCountAll = true;
+			}else {
+                                arg = parseExpression();
+                        }
+                        consume(Token::Type::R_PAREN);
+                        expr = std::make_unique<AST::AggregateExpression>(funcToken,std::move(arg),isCountAll);
+                }else{			
+			auto expr = parseExpression();
+		}
 		std::string alias;
 		if(match(Token::Type::AS)){
 			consume(Token::Type::AS);
@@ -738,11 +769,27 @@ std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
-		//if(match(Token::Type::AS){
-				//parseColumnListAs();
+		
+		if(matchAny({Token::Type::COUNT, Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
+			Token funcToken = currentToken;
+			consume(currentToken.type);
 
+			consume(Token::Type::L_PAREN);
 
-		columns.push_back(parseExpression());
+			std::unique_ptr<AST::Expression> arg = nullptr;
+			bool isCountAll= false;
+
+			if(funcToken.type == Token::Type::COUNT &&  match(Token::Type::ASTERIST)){
+				consume(Token::Type::ASTERIST);
+				isCountAll = true;
+			}else{
+				arg = parseExpression();
+			}
+			consume(Token::Type::R_PAREN);
+			columns.push_back(std::make_unique<AST::AggregateExpression>(funcToken,std::move(arg),isCountAll));
+		}else{
+		         columns.push_back(parseExpression());
+		}
 	}while(match(Token::Type::COMMA));
 	return columns;
 }
@@ -819,7 +866,26 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 }
 
 std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
-	if(match(Token::Type::IDENTIFIER)){
+	if(matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
+		Token funcToken = currentToken;
+		consume(currentToken.type);
+
+		consume(Token::Type::L_PAREN);
+
+		std::unique_ptr<AST::Expression> arg = nullptr;
+		bool isCountAll = false;
+		//Handle COUNT(*) specifically
+		if(funcToken.type == Token::Type::COUNT && match(Token::Type::ASTERIST)){
+			consume(Token::Type::ASTERIST);
+			isCountAll = true;
+		}else{
+			arg=parseExpression();
+		}
+
+		consume(Token::Type::R_PAREN);
+
+		return std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg), isCountAll);
+	}else if(match(Token::Type::IDENTIFIER)){
 		return parseIdentifier();
 	}else if(match(Token::Type::NUMBER_LITERAL) || match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING) || match(Token::Type::FALSE) || match(Token::Type::TRUE)){
 		return parseLiteral();
