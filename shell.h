@@ -50,7 +50,7 @@ private:
     void print_banner();
     void print_prompt();
     void redraw_interface();
-    std::string colorize_sql();
+    std::string colorize_sql(const std::string& input);
     void print_results(const ExecutionEngine::ResultSet& result, double duration);
     void show_help();
     
@@ -67,6 +67,7 @@ private:
     bool is_valid_token(const std::string& token) const;
     bool is_single_line_command(const std::string& command) const;
     void execute_command(const std::string& command);
+    std::vector<std::string> get_completion_suggestion(const std::string& input);
     
     // Termux-specific handling
     bool is_termux() const;

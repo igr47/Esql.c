@@ -9,6 +9,8 @@
 #include <thread>
 #include <cstring>
 
+#include <readline/readline.h>
+#include <readline/history.h>
 #ifdef _WIN32
 #include <windows.h>
 #include <conio.h>
@@ -22,7 +24,7 @@
 const std::unordered_set<std::string> ESQLShell::keywords = {
     "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
     "DELETE", "CREATE", "TABLE", "DATABASE", "DROP", "ALTER", "ADD", "RENAME",
-    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP"
+    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP","DISTINCT","DATABASES"
 };
 
 const std::unordered_set<std::string> ESQLShell::datatypes = {
@@ -34,7 +36,7 @@ const std::unordered_set<std::string> ESQLShell::tables = {
 };
 
 const std::unordered_set<std::string> ESQLShell::conditionals = {
-    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN"
+    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN","OFFSET","LIMIT"
 };
 
 ESQLShell::ESQLShell(Database& db) : db(db), current_db("default") {
@@ -129,7 +131,7 @@ void ESQLShell::disable_raw_mode() {
     #endif
 }
 
-void ESQLShell::get_terminal_size() {
+/*void ESQLShell::get_terminal_size() {
     #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(hOutput, &csbi);
@@ -141,6 +143,11 @@ void ESQLShell::get_terminal_size() {
     if (ws.ws_col > 0) terminal_width = ws.ws_col;
     if (ws.ws_row > 0) terminal_height = ws.ws_row;
     #endif
+}*/
+void ESQLShell::get_terminal_size(){
+	struct winsize ws;
+	ioctl(STDOUT_FILENO,TIOCGWINSZ, &ws);
+	if(ws.ws_col > 0)terminal_width = ws.ws_col;
 }
 
 void ESQLShell::clear_screen() {
@@ -157,7 +164,7 @@ void ESQLShell::clear_previous_lines(int line_count) {
     std::cout << "\033[0G";
 }
 
-int ESQLShell::read_key() {
+/*int ESQLShell::read_key() {
     if (is_termux()) {
         // Termux uses simple input
         return -1;
@@ -210,7 +217,33 @@ int ESQLShell::read_key() {
     }
     return -1;
     #endif
+}*/
+
+int ESQLShell::read_key(){
+	char c;
+	if(read(STDIN_FILENO, &c, 1) == 1){
+		if (c == '\x1d'){
+			char seq[2];
+			if(read(STDIN_FILENO, &seq[0],1) == 1){
+				if (seq[0] == '['){
+					if(read(STDIN_FILENO, &seq[1],1) == 1){
+						switch (seq[1]){
+							case 'A' : return 1000;
+							case 'B' : return 1001;
+							case 'C' : return 1002;
+							case 'D' : return 1003;
+							case 'Z' : return '\t';
+						}
+					}
+				}
+			}
+			return c;
+		}
+		return c;
+	}
+	return -1;
 }
+
 
 void ESQLShell::run() {
     initialize_terminal();
@@ -225,7 +258,7 @@ void ESQLShell::run() {
 }
 
 // Standard terminal mode (Linux/Windows)
-void ESQLShell::run_standard() {
+/*void ESQLShell::run_standard() {
     while (true) {
         print_prompt();
         redraw_interface();
@@ -291,9 +324,50 @@ void ESQLShell::run_standard() {
                 break;
         }
     }
-}
+}*/
 
-// Termux-specific implementation - uses line-based input like bash
+void ESQLShell::run_standard(){
+	clear_screen();
+	print_banner();
+
+	while(true){
+		print_prompt();
+		redraw_interface();
+
+		int ch = read_key();
+		switch(ch){
+			case '\n' : case '\r':
+				handle_enter();
+				break;
+			case 127 : case 8:
+				delete_char();
+				break;
+			case '\t' :
+				handle_tab_completion();
+				break;
+			case 1000:
+				navigate_history_up();
+				break;
+			case 1001:
+				navigate_history_down(); 
+				break;
+			case 1002:
+				move_cursor_right();
+				break;
+			case 1003:
+				move_cursor_left();
+				break;
+			case 4:
+				std::cout<<"\n";
+				return;
+			default: 
+				if(ch >= 32 && ch <= 126){
+					insert_char(static_cast<char>(ch));
+				}
+				break;
+		}
+	}
+}
 void ESQLShell::run_termux() {
     if (use_colors) {
         std::cout << BLUE << "Termux mode activated (using line-based input with ANSI colors)\n\n" << RESET;
@@ -350,7 +424,7 @@ void ESQLShell::redraw_interface() {
         return;
     }
     
-    int line_count = get_line_count();
+    /*int line_count = get_line_count();
     
     // Clear previous lines
     if (line_count > 0) {
@@ -378,6 +452,15 @@ void ESQLShell::redraw_interface() {
 
     // Move cursor to correct position
     std::cout << "\033[" << (cursor_line + 1) << ";" << (cursor_col + 1) << "H";
+    std::cout.flush();*/
+    std::cout << "\r\033[K";
+    print_prompt();
+    std::cout << colorize_sql(current_line);
+
+    //position cursor correctl
+    int prompt_length = get_current_time().length() +current_db.length() +6;
+    int cursor_pos_actual = prompt_length+ cursor_pos;
+    std::cout<< "\r\033[" <<cursor_pos_actual << "C";
     std::cout.flush();
 }
 
@@ -460,7 +543,7 @@ std::string ESQLShell::get_current_time() const {
     return ss.str();
 }
 
-std::string ESQLShell::colorize_sql() {
+/*std::string ESQLShell::colorize_sql() {
     std::string result;
     bool in_string = false;
     char string_delim = 0;
@@ -553,13 +636,93 @@ std::string ESQLShell::colorize_sql() {
     }
     
     return result;
+}*/
+
+std::string ESQLShell::colorize_sql(const std::string& input) {
+    std::string result;
+    bool in_string = false;
+    char string_delim = 0;
+    std::string current_word;
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        char c = input[i];
+
+        if (in_string) {
+            result += GREEN + std::string(1, c);
+            if (c == string_delim) {
+                in_string = false;
+                result += RESET;
+            }
+            continue;
+        }
+
+        if (c == '"' || c == '\'') {
+            if (!current_word.empty()) {
+                // Process the current word before the quote
+                std::string upper_word = current_word;
+                std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
+
+                if (keywords.find(upper_word) != keywords.end()) {
+                    result += MAGENTA + current_word + RESET;
+                } else if (datatypes.find(upper_word) != datatypes.end()) {
+                    result += BLUE + current_word + RESET;
+                } else if (conditionals.find(upper_word) != conditionals.end()) {
+                    result += CYAN + current_word + RESET;
+                } else {
+                    result += current_word;
+                }
+                current_word.clear();
+            }
+
+            in_string = true;
+            string_delim = c;
+            result += GREEN + std::string(1, c);
+            continue;
+        }
+
+        if (std::isspace(c) || c == ',' || c == ';' || c == '(' || c == ')' ||
+            c == '=' || c == '<' || c == '>' || c == '+' || c == '-' || c == '*' || c == '/') {
+            if (!current_word.empty()) {
+                std::string upper_word = current_word;
+                std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
+
+                if (keywords.find(upper_word) != keywords.end()) {
+                    result += MAGENTA + current_word + RESET;
+                } else if (datatypes.find(upper_word) != datatypes.end()) {
+                    result += BLUE + current_word + RESET;
+                } else if (conditionals.find(upper_word) != conditionals.end()) {
+                    result += CYAN + current_word + RESET;
+                } else {
+                    result += current_word;
+                }
+                current_word.clear();
+            }
+            result += std::string(1, c);
+            continue;
+        }
+
+        current_word += c;
+    }
+
+    if (!current_word.empty()) {
+        std::string upper_word = current_word;
+        std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
+
+        if (keywords.find(upper_word) != keywords.end()) {
+            result += MAGENTA + current_word + RESET;
+        } else if (datatypes.find(upper_word) != datatypes.end()) {
+            result += BLUE + current_word + RESET;
+        } else if (conditionals.find(upper_word) != conditionals.end()) {
+            result += CYAN + current_word + RESET;
+        } else {
+            result += current_word;
+        }
+    }
+
+    return result;
 }
 
-bool ESQLShell::is_valid_token(const std::string& token) const {
-    if (token.empty()) return true;
-    if (std::isdigit(token[0])) return false;
-    return true;
-}
+
 
 bool ESQLShell::is_termux() const {
     return current_platform == Platform::Termux;
@@ -568,21 +731,30 @@ bool ESQLShell::is_termux() const {
 void ESQLShell::insert_char(char c) {
     current_line.insert(cursor_pos, 1, c);
     cursor_pos++;
+    redraw_interface();
 }
 
 void ESQLShell::delete_char() {
     if (cursor_pos > 0 && !current_line.empty()) {
         current_line.erase(cursor_pos - 1, 1);
         cursor_pos--;
+	redraw_interface();
     }
 }
 
 void ESQLShell::move_cursor_left() {
-    if (cursor_pos > 0) cursor_pos--;
+	if (cursor_pos > 0) {
+		cursor_pos--;
+		redraw_interface();
+	}
+
 }
 
 void ESQLShell::move_cursor_right() {
-    if (cursor_pos < current_line.length()) cursor_pos++;
+    if (cursor_pos < current_line.length()){ 
+	    cursor_pos++;
+	    redraw_interface();
+    }
 }
 
 void ESQLShell::move_cursor_up() {
@@ -604,15 +776,24 @@ void ESQLShell::move_cursor_down() {
 }
 
 void ESQLShell::navigate_history_up() {
-    if (history_index > 0) {
+    /*if (history_index > 0) {
         history_index--;
         current_line = command_history[history_index];
         cursor_pos = current_line.length();
+    }*/
+    if(command_history.empty()) return;
+    if(history_index == -1){
+	    history_index = command_history.size() - 1;
+    }else if(history_index > 0){
+	    history_index --;
     }
+    current_line = command_history[history_index];
+    cursor_pos = current_line.length();
+    redraw_interface();
 }
 
 void ESQLShell::navigate_history_down() {
-    if (history_index < static_cast<int>(command_history.size()) - 1) {
+    /*if (history_index < static_cast<int>(command_history.size()) - 1) {
         history_index++;
         current_line = command_history[history_index];
         cursor_pos = current_line.length();
@@ -620,64 +801,90 @@ void ESQLShell::navigate_history_down() {
         history_index++;
         current_line.clear();
         cursor_pos = 0;
+    }*/
+    if(command_history.empty()) return;
+    if(history_index < (int)command_history.size() - 1){
+	    history_index ++;
+	    current_line = command_history[history_index];
+    }else{
+	    history_index = command_history.size();
+	    current_line.clear();
     }
+    cursor_pos = current_line.length();
+    redraw_interface();
 }
 
 void ESQLShell::handle_tab_completion() {
-    std::string completed = complete(current_line);
+    /*std::string completed = complete(current_line);
     if (completed != current_line) {
         current_line = completed;
         cursor_pos = current_line.length();
+    }*/
+    auto suggestions = get_completion_suggestion(current_line);
+    if(suggestions.empty()) return;
+
+    if (suggestions.size() == 1){
+	    current_line = suggestions[0];
+	    cursor_pos = current_line.length();
+    }else{
+	    std::cout<<"\n";
+	    for(const auto& suggestion : suggestions){
+		    std::cout<<" "<<colorize_sql(suggestion) <<"\n";
+	    }
+	    std::cout<<"\n";
+	    redraw_interface();
     }
 }
 
+std::vector<std::string> ESQLShell::get_completion_suggestion(const std::string& input){
+	std::vector<std::string> suggestions;
+	std::string last_word;
+	//find the last word in the input
+	size_t last_space =input.find_last_of("\t\n,;()");
+	if(last_space == std::string::npos){
+		last_word = input;
+	}else{
+		last_word = input.substr(last_space + 1);
+	}
+	//Convert to uppercase for case-insesitive matching
+	std::string upper_last_word = last_word;
+	std::transform(upper_last_word.begin(),upper_last_word.end(),upper_last_word.begin(),::toupper);
+	//Check against ke words
+	for(const auto& kw : keywords){
+		if(kw.find(upper_last_word)==0){
+			std::string completion =input.substr(0,last_space+1) + kw;
+			suggestions.push_back(completion);
+		}
+	}
+
+	for (const auto& dt : datatypes) {
+        if (dt.find(upper_last_word) == 0) {
+            std::string completion = input.substr(0, last_space + 1) + dt;
+            suggestions.push_back(completion);
+        }
+	}
+
+         // Check against functions
+	 for (const auto& fn : conditionals) {
+		 if (fn.find(upper_last_word) == 0) {
+			 std::string completion = input.substr(0, last_space + 1) + fn;
+			 suggestions.push_back(completion);
+		 }
+	 }
+	 return suggestions;
+}
+
 void ESQLShell::handle_enter() {
-    if (multi_line_mode) {
-        // Add current line to multiline input
-        input_lines.push_back(current_line);
-        current_line_index++;
-        
-        // Check if we should end multiline mode (ends with semicolon)
-        if (current_line.find(';') != std::string::npos) {
-            // Combine all lines and execute
-            std::string full_command;
-            for (const auto& line : input_lines) {
-                full_command += line + " ";
-            }
-            
-            execute_command(full_command);
-            
-            // Reset multiline state
-            multi_line_mode = false;
-            input_lines.clear();
-            current_line_index = 0;
-            current_line.clear();
-            cursor_pos = 0;
-        } else {
-            // Continue multiline input
-            std::cout << "\n";
-            current_line.clear();
-            cursor_pos = 0;
-        }
-    } else {
-        // Single line mode
-        if (current_line.find(';') == std::string::npos && 
-            !current_line.empty() && 
-            !is_single_line_command(current_line)) {
-            // Start multiline mode
-            multi_line_mode = true;
-            input_lines.push_back(current_line);
-            current_line_index = 1;
-            std::cout << "\n";
-            current_line.clear();
-            cursor_pos = 0;
-        } else {
-            // Execute single line command
-            execute_command(current_line);
-            current_line.clear();
-            cursor_pos = 0;
-        }
+    std::cout << "\n";
+    
+    if (!current_line.empty()) {
+        add_to_history(current_line);
+        execute_command(current_line);
     }
+    
+    current_line.clear();
+    cursor_pos = 0;
+    history_index = -1;
 }
 
 bool ESQLShell::is_single_line_command(const std::string& command) const {
@@ -761,11 +968,17 @@ void ESQLShell::execute_command(const std::string& command) {
     }
 }
 
-void ESQLShell::add_to_history(const std::string& command) {
+/*void ESQLShell::add_to_history(const std::string& command) {
     if (!command.empty() && (command_history.empty() || command_history.back() != command)) {
         command_history.push_back(command);
     }
     history_index = command_history.size();
+}*/
+
+void ESQLShell::add_to_history(const std::string& command) {
+    if (!command.empty() && (command_history.empty() || command_history.back() != command)) {
+        command_history.push_back(command);
+    }
 }
 
 std::string ESQLShell::complete(const std::string& input) {
