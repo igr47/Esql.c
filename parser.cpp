@@ -780,13 +780,13 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
         // Handle special operators first
         if (op.type == Token::Type::BETWEEN) {
             consume(Token::Type::BETWEEN);
-            auto lower = parseExpression();
+            auto lower = parseBinaryExpression(precedence+1);
             if (!match(Token::Type::AND)) {
                 throw ParseError(currentToken.line, currentToken.column, 
                                "Expected AND after BETWEEN lower bound");
             }
             consume(Token::Type::AND);
-            auto upper = parseExpression();
+            auto upper = parseBinaryExpression(precedence+1);
             left = std::make_unique<AST::BetweenOp>(std::move(left), std::move(lower), std::move(upper));
             continue;
         } 
