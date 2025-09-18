@@ -207,13 +207,15 @@ namespace AST{
 		public:
 			Token function;
 			std::unique_ptr<Expression> argument;
+			std::unique_ptr<Expression> argument2;
 			bool isCountAll = false;
+
 			
 			std::unique_ptr<Expression> clone() const override {
-				return std::make_unique<AggregateExpression>(function,argument ? argument->clone() : nullptr , isCountAll);
+				return std::make_unique<AggregateExpression>(function,argument ? argument->clone() : nullptr , argument2 ? argument2->clone() : nullptr ,isCountAll);
 			}
 
-			AggregateExpression(Token func,std::unique_ptr<Expression> arg,bool countAll = false) : function(func) , argument(std::move(arg)),isCountAll(countAll){}
+			AggregateExpression(Token func,std::unique_ptr<Expression> arg,std::unique_ptr<Expression> arg2 = nullptr ,bool countAll = false) : function(func) , argument(std::move(arg)),argument2(std::move(arg2)),isCountAll(countAll){}
 			std::string toString() const override {
 				if(isCountAll){
 					return function.lexeme + "(*)";

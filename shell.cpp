@@ -22,7 +22,7 @@
 const std::unordered_set<std::string> ESQLShell::keywords = {
     "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
     "DELETE", "CREATE", "TABLE", "DATABASE", "DROP", "ALTER", "ADD", "RENAME",
-    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", "DATABASES"
+    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", "DATABASES","BY","ORDER","GROUP","HAVING",
 };
 
 const std::unordered_set<std::string> ESQLShell::datatypes = {
@@ -30,7 +30,7 @@ const std::unordered_set<std::string> ESQLShell::datatypes = {
 };
 
 const std::unordered_set<std::string> ESQLShell::conditionals = {
-    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT"
+    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT","AS",
 };
 
 ESQLShell::ESQLShell(Database& db) : db(db), current_db("default") {

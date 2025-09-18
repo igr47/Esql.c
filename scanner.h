@@ -35,12 +35,12 @@ class Lexer{
 		size_t getPosition () const {return position;}
 		size_t getLine () const {return line;}
 		size_t getColumn () const {return column;}
-		void saveState(size_t& savePos,size_t saveLine, size_t& saveCol) const{
+		void saveState(size_t& savePos,size_t& saveLine, size_t& saveCol) const{
 			savePos= position;
 			saveLine = line;
 			saveCol = column;
 		}
-		void restoreState(size_t savePos,size_t saveLine,size_t savecol){
+		void restoreState(size_t savePos,size_t& saveLine,size_t savecol){
 			position = savePos;
 			line = saveLine;
 			column = savecol;
