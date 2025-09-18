@@ -237,21 +237,38 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 		consume(Token::Type::DISTINCT);
 		stmt->distinct = true;
 	}
+
+	//bool hasAggregates = false;
+	//size_t savePos,saveLine,saveCol;
+	
+	//Save state and peek ahead
+	//lexer.saveState(savePos,saveLine,saveCol);
+	//Token peeked = peekToken();
+
+	//if(peeked.type == Token::Type::COUNT || peeked.type == Token::Type::SUM || peeked.type == Token::Type::AVG || peeked.type == Token::Type::MIN || peeked.type == Token::Type::MAX){
+		//hasAggregates = true;
+	//}
 	if(match(Token::Type::ASTERIST)){
 		consume(Token::Type::ASTERIST);
+	//} else if(hasAggregates) {
+		//stmt->newCols = parseColumnListAs();
 	}else{
-		bool hasAliases = false;
-		size_t savePos, saveLine, saveCol;
-		lexer.saveState(savePos, saveLine, saveCol);
+		//lexer.restoreState(savePos, saveLine, saveCol);
 		//parse the first expression to see if it followed by AS
-		auto firstExpr = parseExpression();
-		Token peeked=peekToken();
-		lexer.restoreState(savePos,saveLine,saveCol);
+		//auto firstExpr = parseExpression();
+		Token nextToken = peekToken();
+		//lexer.restoreState(savePos,saveLine,saveCol);
 
-		if(peeked.type == Token::Type::AS){
+		if(nextToken.type == Token::Type::AS){
+			//lexer.restoreState(savePos, saveLine, saveCol);
 			stmt->newCols = parseColumnListAs();
+
+		//if(peeked.type == Token::Type::AS){
+			//stmt->newCols = parseColumnListAs();
+		//}
 		}
 		else{
+			//lexer.restoreState(savePos, saveLine, saveCol);
 	                stmt->columns=parseColumnList();
 		}
 
@@ -714,7 +731,7 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     consume(Token::Type::R_PAREN);
     return stmt;
 }
-std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> Parse::parseColumnListAs(){
+/*std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> Parse::parseColumnListAs(){
 	std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> newColumns;
 	
 	do{
@@ -733,13 +750,22 @@ std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> Parse::pars
 			if(funcToken.type == Token::Type::COUNT && match(Token::Type::ASTERIST)){
 				consume(Token::Type::ASTERIST);
 				isCountAll = true;
+			}else if(match(Token::Type::IDENTIFIER)){
+				arg = parseIdentifier();
+			}else if(match(Token::Type::ASTERIST)){
+				if(funcToken.type == Token::Type::COUNT){
+					consume(Token::Type::ASTERIST);
+					isCountAll = true;
+				} else {
+					throw ParseError(currentToken.line,currentToken.column,"Onl COUNT suports * argument");
+				}
 			}else {
                                 arg = parseExpression();
                         }
                         consume(Token::Type::R_PAREN);
                         expr = std::make_unique<AST::AggregateExpression>(funcToken,std::move(arg),isCountAll);
                 }else{			
-			auto expr = parseExpression();
+			expr = parseExpression();
 		}
 		std::string alias;
 		if(match(Token::Type::AS)){
@@ -759,40 +785,80 @@ std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> Parse::pars
 		newColumns.emplace_back(std::move(expr),alias);
 	}while(match(Token::Type::COMMA));
 	return newColumns;
+}*/
+
+std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::parseColumnListAs() {
+    std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> newColumns;
+    
+    do {
+        if (match(Token::Type::COMMA)) {
+            consume(Token::Type::COMMA);
+        }
+
+        std::unique_ptr<AST::Expression> expr;
+        
+        // Check for aggregate functions first
+        if (matchAny({Token::Type::COUNT, Token::Type::SUM, Token::Type::AVG, 
+                     Token::Type::MIN, Token::Type::MAX})) {
+            Token funcToken = currentToken;
+            advance();  // Consume the function name
+
+            consume(Token::Type::L_PAREN);
+
+            std::unique_ptr<AST::Expression> arg = nullptr;
+            bool isCountAll = false;
+
+            if (funcToken.type == Token::Type::COUNT && match(Token::Type::ASTERIST)) {
+                consume(Token::Type::ASTERIST);
+                isCountAll = true;
+            } else if (match(Token::Type::IDENTIFIER)) {
+                arg = parseIdentifier();
+            } else {
+                arg = parseExpression();  // Handle complex expressions
+            }
+
+            consume(Token::Type::R_PAREN);
+            expr = std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg),nullptr, isCountAll);
+        } else {
+            // Regular expression
+            expr = parseExpression();
+        }
+
+        std::string alias;
+        if (match(Token::Type::AS)) {
+            consume(Token::Type::AS);
+            if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                alias = currentToken.lexeme;
+                if (alias.size() > 2 && 
+                    ((alias[0] == '\'' && alias.back() == '\'') || 
+                     (alias[0] == '"' && alias.back() == '"'))) {
+                    alias = alias.substr(1, alias.size() - 2);
+                }
+                consume(currentToken.type);
+            } else if (match(Token::Type::IDENTIFIER)) {
+                alias = currentToken.lexeme;
+                consume(Token::Type::IDENTIFIER);
+            }
+        }
+
+        newColumns.emplace_back(std::move(expr), alias);
+    } while (match(Token::Type::COMMA));
+    
+    return newColumns;
 }
 
-
-
-std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList(){
+std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList() {
 	std::vector<std::unique_ptr<AST::Expression>> columns;
+
 	do{
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
-		
-		if(matchAny({Token::Type::COUNT, Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
-			Token funcToken = currentToken;
-			consume(currentToken.type);
-
-			consume(Token::Type::L_PAREN);
-
-			std::unique_ptr<AST::Expression> arg = nullptr;
-			bool isCountAll= false;
-
-			if(funcToken.type == Token::Type::COUNT &&  match(Token::Type::ASTERIST)){
-				consume(Token::Type::ASTERIST);
-				isCountAll = true;
-			}else{
-				arg = parseExpression();
-			}
-			consume(Token::Type::R_PAREN);
-			columns.push_back(std::make_unique<AST::AggregateExpression>(funcToken,std::move(arg),isCountAll));
-		}else{
-		         columns.push_back(parseExpression());
-		}
+		columns.push_back(parseExpression());
 	}while(match(Token::Type::COMMA));
 	return columns;
 }
+
 
 std::unique_ptr<AST::Expression> Parse::parseFromClause(){
 	return parseIdentifier();
@@ -866,25 +932,45 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 }
 
 std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
+	std::cout<< "DEBUG: parsePrimarExpression() - current Token:" << static_cast<int>(currentToken.type) <<"'" <<currentToken.lexeme <<"'"<<std::endl;
 	if(matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
+		std::cout<< "DEBUG: Foung aggregate function: " <<currentToken.lexeme<<std::endl;
 		Token funcToken = currentToken;
 		consume(currentToken.type);
 
 		consume(Token::Type::L_PAREN);
 
+		std::unique_ptr<AST::Expression> expre;
 		std::unique_ptr<AST::Expression> arg = nullptr;
 		bool isCountAll = false;
 		//Handle COUNT(*) specifically
 		if(funcToken.type == Token::Type::COUNT && match(Token::Type::ASTERIST)){
 			consume(Token::Type::ASTERIST);
 			isCountAll = true;
+		}else if(match(Token::Type::IDENTIFIER)){
+			std::cout<<"DEBUG: Handling identifier argument"<<std::endl;
+			arg = parseIdentifier();
+		}else if(match(Token::Type::ASTERIST)){
+			if(funcToken.type == Token::Type::COUNT){
+				consume(Token::Type::ASTERIST);
+				isCountAll = true;
+			} else {
+				throw ParseError(currentToken.line,currentToken.column,"Only COUNT function supports * argument");
+			}
+			//continue;
 		}else{
+			std::cout<< "DEBUG: Handling expression argument"<<std::endl;
 			arg=parseExpression();
 		}
 
 		consume(Token::Type::R_PAREN);
 
-		return std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg), isCountAll);
+		if(match(Token::Type::AS)){
+			consume(Token::Type::AS);
+			expre = parseIdentifier();
+		}
+
+		return std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg),std::move(expre), isCountAll);
 	}else if(match(Token::Type::IDENTIFIER)){
 		return parseIdentifier();
 	}else if(match(Token::Type::NUMBER_LITERAL) || match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING) || match(Token::Type::FALSE) || match(Token::Type::TRUE)){
