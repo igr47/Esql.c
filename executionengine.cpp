@@ -638,20 +638,15 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
             if (auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())) {
                 if (aggregate->isCountAll) {
                     originalExpr = "COUNT(*)";
-		    if(aggregate->argument2){
-			    displayName = aggregate->argument2->toString();
-		    }else{
-                            displayName = "COUNT(*)";
-		    }
+                    displayName = "COUNT(*)";
                 } else {
                     originalExpr = aggregate->function.lexeme + "(" + 
                                  (aggregate->argument ? aggregate->argument->toString() : "") + ")";
-		    if(aggregate->argument2){
-			    displayName = aggregate->function.lexeme + "(" + aggregate->argument2->toString() + ")";
-	            }else{
-                            displayName = originalExpr;
-		    }
+                    displayName = originalExpr;
                 }
+		if(aggregate->argument2){
+			displayName = aggregate->argument2->toString();
+		}
             } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
                 if (isAggregateFunction(binaryOp->op.lexeme)) {
                     originalExpr = binaryOp->op.lexeme + "(" + binaryOp->left->toString() + ")";
@@ -748,22 +743,49 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         }
     }
 
+    
+    if (!stmt.newCols.empty()) {
+             result.columns.clear();
+             for (const auto& col : stmt.newCols) {
+                       result.columns.push_back(col.second.empty() ? col.first->toString() : col.second);
+	     }
+    } else {
+	    result.columns.clear();
+	    for (const auto& col : stmt.columns) {
+		    if (auto aggregate = dynamic_cast<const AST::AggregateExpression*>(col.get())) {
+			    if (aggregate->argument2) {
+				    result.columns.push_back(aggregate->argument2->toString());
+			    } else {
+				    result.columns.push_back(aggregate->toString());
+			    }
+		    } else {
+			    result.columns.push_back(col->toString());
+		    }
+	    }
+    }
     return result;
 }
 
 
-std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
-    const std::vector<std::unique_ptr<AST::Expression>>& columns,
-    const std::unordered_map<std::string, std::string>& groupRow,
-    const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData) {
+/*std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData) {
 
     std::vector<std::string> result;
 
     const std::vector<std::unordered_map<std::string,std::string>>* actualGroupData = nullptr;
     for(const auto& group : groupedData){
 	    if(!group.empty() && group[0] == groupRow){
-		    actualGroupData = &group;
-		    break;
+		    bool match = true;
+		    for(const auto& [key , value] : groupRow){
+			    auto it = group[0].find(key);
+			    if(it == group[0].end() || it->second != value){
+				    match = false;
+				    break;
+			    }
+		    }
+		    if(match){
+			    actualGroupData = &group;
+			    break;
+		    }
 	    }
     }
 
@@ -895,18 +917,50 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
     }
 
     return result;
-}
-/*std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
+}*/
+
+std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
     const std::vector<std::unique_ptr<AST::Expression>>& columns,
     const std::unordered_map<std::string, std::string>& groupRow,
-    const std::vector<std::unordered_map<std::string, std::string>>& groupData) {
+    const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData) {
 
     std::vector<std::string> result;
 
+    // Find the correct group data for this groupRow
+    const std::vector<std::unordered_map<std::string,std::string>>* actualGroupData = nullptr;
+    for(const auto& group : groupedData){
+        if(!group.empty()) {
+            // Compare representative rows to find the matching group
+            bool match = true;
+            for(const auto& [key, value] : groupRow) {
+                auto it = group[0].find(key);
+                if(it == group[0].end() || it->second != value) {
+                    match = false;
+                    break;
+                }
+            }
+            if(match) {
+                actualGroupData = &group;
+                break;
+            }
+        }
+    }
+
+    if(!actualGroupData){
+        // If no matching group found, use empty data
+        for(size_t i = 0; i < columns.size(); i++){
+            result.push_back("NULL");
+        }
+        return result;
+    }
+
+    const auto& groupData = *actualGroupData;
+
     for (const auto& col : columns) {
         if (auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(col.get())) {
+            // Handle aggregate functions...
             std::string columnName;
-            if (aggregate->argument) {
+            if (aggregate->argument && !aggregate->isCountAll) {
                 if (auto* ident = dynamic_cast<const AST::Identifier*>(aggregate->argument.get())) {
                     columnName = ident->token.lexeme;
                 }
@@ -919,7 +973,6 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
                 if (aggregate->isCountAll) {
                     aggResult = std::to_string(groupData.size());
                 } else {
-                    // Count non-null values
                     int count = 0;
                     for (const auto& row : groupData) {
                         auto it = row.find(columnName);
@@ -932,18 +985,19 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
             }
             else if (functionName == "SUM") {
                 double sum = 0.0;
-		int valid_count = 0;
+                int valid_count = 0;
                 for (const auto& row : groupData) {
                     auto it = row.find(columnName);
                     if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
                         try {
                             sum += std::stod(it->second);
+                            valid_count++;
                         } catch (...) {
                             // Ignore non-numeric values
                         }
                     }
                 }
-                aggResult = valid_count>0 ? std::to_string(sum) : "";
+                aggResult = valid_count > 0 ? std::to_string(sum) : "0";
             }
             else if (functionName == "AVG") {
                 double sum = 0.0;
@@ -999,23 +1053,25 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
                 }
                 aggResult = found ? std::to_string(maxVal) : "NULL";
             }
-	    else{
-		    aggResult = "NULL";
-	    }
+            else {
+                aggResult = "NULL";
+            }
 
             result.push_back(aggResult);
-        }else if(auto* ident = dynamic_cast<const AST::Identifier*>(col.get())){
-		auto it = groupRow.find(ident->token.lexeme);
-		result.push_back(it != groupRow.end() ? it->second : "NULL");
-	}
+        }
+        else if (auto* ident = dynamic_cast<const AST::Identifier*>(col.get())) {
+            // For non-aggregate GROUP BY columns, use the representative row
+            auto it = groupRow.find(ident->token.lexeme);
+            result.push_back(it != groupRow.end() ? it->second : "NULL");
+        }
         else {
-            // Handle non-aggregate expressions (including regular columns in GROUP BY)
+            // Handle other expressions
             result.push_back(evaluateExpression(col.get(), groupRow));
         }
     }
 
     return result;
-}*/
+}
 
 
 
