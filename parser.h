@@ -194,6 +194,7 @@ namespace AST{
 		public:
 			std::vector<std::unique_ptr<Expression>> columns;
 			std::vector<std::pair<std::unique_ptr<Expression>,std::string>> newCols;
+			std::vector<std::string> check;
 			std::unique_ptr<Expression> from;
 			std::unique_ptr<Expression> where;
 			std::unique_ptr<GroupByClause> groupBy;
@@ -217,10 +218,21 @@ namespace AST{
 
 			AggregateExpression(Token func,std::unique_ptr<Expression> arg,std::unique_ptr<Expression> arg2 = nullptr ,bool countAll = false) : function(func) , argument(std::move(arg)),argument2(std::move(arg2)),isCountAll(countAll){}
 			std::string toString() const override {
+				std::string result=function.lexeme+ "(";
+
 				if(isCountAll){
-					return function.lexeme + "(*)";
+					//return function.lexeme + "(*)";
+					result += "*";
+				}else if(argument){
+					result += argument->toString();
 				}
-				return function.lexeme + "(" + (argument ? argument-> toString() : "") + ")";
+				//return function.lexeme + "(" + (argument ? argument-> toString() : "") + ")";
+				result += ")";
+				//Add alias ifvargument 2 exists(Tpically an AS clause)
+				if(argument2){
+					result += "AS" + argument2->toString();
+				}
+				return result;
 			}
 	};
 
