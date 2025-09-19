@@ -289,8 +289,142 @@ std::string ESQLShell::get_current_time() const {
     ss << std::put_time(std::localtime(&time), "%H:%M");
     return ss.str();
 }
-
 std::string ESQLShell::colorize_sql(const std::string& input) {
+    std::string result;
+    bool in_string = false;
+    bool in_number = false;
+    bool in_identifier = false;
+    char string_delim = 0;
+    std::string current_word;
+    std::string current_number;
+
+    // Aggregate functions for special coloring
+    static const std::unordered_set<std::string> aggregate_functions = {
+        "COUNT", "SUM", "AVG", "MIN", "MAX"
+    };
+
+    // Operators for gray coloring
+    static const std::unordered_set<std::string> operators = {
+        "=", "!=", "<", ">", "<=", ">=", "+", "-", "*", "/", "AND", "OR", "NOT"
+    };
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        char c = input[i];
+
+        if (in_string) {
+            result += GRAY + std::string(1, c);
+            if (c == string_delim) {
+                in_string = false;
+                result += RESET;
+            }
+            continue;
+        }
+
+        if (in_number) {
+            if (std::isdigit(c) || c == '.' || c == '-' || c == '+') {
+                current_number += c;
+                continue;
+            } else {
+                result += BLUE + current_number + RESET;
+                current_number.clear();
+                in_number = false;
+                // Continue processing the current character
+            }
+        }
+
+        // Check for string literals
+        if (c == '"' || c == '\'') {
+            if (!current_word.empty()) {
+                process_word(current_word, result, aggregate_functions, operators);
+                current_word.clear();
+            }
+            in_string = true;
+            string_delim = c;
+            result += GRAY + std::string(1, c);
+            continue;
+        }
+
+        // Check for numbers
+        if (std::isdigit(c) || (c == '-' && i + 1 < input.size() && std::isdigit(input[i+1]))) {
+            if (!current_word.empty()) {
+                process_word(current_word, result, aggregate_functions, operators);
+                current_word.clear();
+            }
+            in_number = true;
+            current_number += c;
+            continue;
+        }
+
+        // Check for word boundaries
+        if (std::isspace(c) || c == ',' || c == ';' || c == '(' || c == ')' ||
+            c == '=' || c == '<' || c == '>' || c == '+' || c == '-' || c == '*' || c == '/' ||
+            c == '!' || c == '&' || c == '|') {
+            
+            if (!current_word.empty()) {
+                process_word(current_word, result, aggregate_functions, operators);
+                current_word.clear();
+            }
+            
+            // Colorize operators
+            if (c == '=' || c == '<' || c == '>' || c == '+' || c == '-' || c == '*' || c == '/' ||
+                c == '!' || c == '&' || c == '|') {
+                result += GRAY + std::string(1, c) + RESET;
+            } else {
+                result += std::string(1, c);
+            }
+            continue;
+        }
+
+        current_word += c;
+    }
+
+    // Process any remaining word
+    if (!current_word.empty()) {
+        process_word(current_word, result, aggregate_functions, operators);
+    }
+
+    // Process any remaining number
+    if (!current_number.empty()) {
+        result += BLUE + current_number + RESET;
+    }
+
+    return result;
+}
+
+// Helper function to process words
+void ESQLShell::process_word(const std::string& word, std::string& result, 
+                           const std::unordered_set<std::string>& aggregate_functions,
+                           const std::unordered_set<std::string>& operators) {
+    std::string upper_word = word;
+    std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
+
+    if (keywords.find(upper_word) != keywords.end()) {
+        result += MAGENTA + word + RESET;
+    } 
+    else if (datatypes.find(upper_word) != datatypes.end()) {
+        result += BLUE + word + RESET;
+    }
+    else if (conditionals.find(upper_word) != conditionals.end()) {
+        result += CYAN + word + RESET;
+    }
+    else if (aggregate_functions.find(upper_word) != aggregate_functions.end()) {
+        result += GREEN + word + RESET;
+    }
+    else if (operators.find(upper_word) != operators.end()) {
+        result += GRAY + word + RESET;
+    }
+    else {
+        // Check if it's a quoted identifier (table/column name)
+        if (word.size() >= 2 && ((word[0] == '"' && word[word.size()-1] == '"') ||
+                                (word[0] == '\'' && word[word.size()-1] == '\''))) {
+            result += YELLOW + word + RESET;
+        } else {
+            // Unquoted identifier (table/column name)
+            result += YELLOW + word + RESET;
+        }
+    }
+}
+/*std::string ESQLShell::colorize_sql(const std::string& input) {
     std::string result;
     bool in_string = false;
     char string_delim = 0;
@@ -371,7 +505,7 @@ std::string ESQLShell::colorize_sql(const std::string& input) {
     }
 
     return result;
-}
+}*/
 
 bool ESQLShell::is_termux() const {
     return current_platform == Platform::Termux;
@@ -507,7 +641,7 @@ void ESQLShell::add_to_history(const std::string& command) {
     }
 }
 
-void ESQLShell::execute_command(const std::string& command) {
+/*void ESQLShell::execute_command(const std::string& command) {
     if (command.empty()) return;
     
     add_to_history(command);
@@ -539,8 +673,60 @@ void ESQLShell::execute_command(const std::string& command) {
     }
     
     std::cout << "\n";
+}*/
+void ESQLShell::execute_command(const std::string& command) {
+    if (command.empty()) return;
+    
+    add_to_history(command);
+    
+    std::string upper_cmd = command;
+    std::transform(upper_cmd.begin(), upper_cmd.end(), upper_cmd.begin(), ::toupper);
+    
+    if (upper_cmd == "EXIT" || upper_cmd == "QUIT") {
+        db.shutdown();
+        disable_raw_mode();
+        exit(0);
+    } else if (upper_cmd == "HELP") {
+        show_help();
+    } else if (upper_cmd == "CLEAR") {
+        clear_screen();
+        print_banner();
+    } else {
+        try {
+            auto start = std::chrono::high_resolution_clock::now();
+            auto [result, duration] = db.executeQuery(command);
+            auto end = std::chrono::high_resolution_clock::now();
+            double actual_duration = std::chrono::duration<double>(end - start).count();
+            
+            // Check if this was a USE DATABASE command and update prompt
+            if (upper_cmd.find("USE ") == 0) {
+                // Extract database name from USE command
+                size_t use_pos = upper_cmd.find("USE ");
+                if (use_pos != std::string::npos) {
+                    std::string db_name = command.substr(use_pos + 4);
+                    // Remove trailing semicolon if present
+                    if (!db_name.empty() && db_name.back() == ';') {
+                        db_name.pop_back();
+                    }
+                    // Trim whitespace
+                    db_name.erase(0, db_name.find_first_not_of(" \t"));
+                    db_name.erase(db_name.find_last_not_of(" \t") + 1);
+                    
+                    if (!db_name.empty()) {
+                        current_db = db_name;
+                    }
+                }
+            }
+            
+            print_results(result, actual_duration);
+        } catch (const std::exception& e) {
+            std::cerr << (use_colors ? RED : "") << "Error: " << e.what() 
+                      << (use_colors ? RESET : "") << "\n";
+        }
+    }
+    
+    std::cout << "\n";
 }
-
 void ESQLShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
     if (result.columns.empty()) {
         std::cout << (use_colors ? GREEN : "") << "Query executed successfully.\n"

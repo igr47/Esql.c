@@ -49,9 +49,10 @@ private:
     //Methods for select statements
     ResultSet executeSelectWithAggregates(AST::SelectStatement& stmt);
     //std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::vector<std::unordered_map<std::string,std::string>>& group);
-    std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::unordered_map<std::string, std::string>>& groupData);
+    //std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::unordered_map<std::string, std::string>>& groupData);
+    std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData);
     bool evaluateHavingCondition(const AST::Expression* having, const std::unordered_map<std::string,std::string>& group);
-    std::vector<std::unordered_map<std::string,std::string>> groupRows(const std::vector<std::unordered_map<std::string,std::string>>& data,const std::vector<std::string>& groupColumns);
+    std::vector<std::vector<std::unordered_map<std::string,std::string>>> groupRows(const std::vector<std::unordered_map<std::string,std::string>>& data,const std::vector<std::string>& groupColumns);
     std::vector<std::unordered_map<std::string,std::string>> sortResult(const std::vector<std::unordered_map<std::string,std::string>>& result,AST::OrderByClause* orderBy);
     bool isAggregateFunction(const std::string& functionName);
     std::vector<std::vector<std::string>> applyDistinct(const std::vector<std::vector<std::string>>& rows);

@@ -21,7 +21,7 @@ private:
     // Platform detection
     enum class Platform { Linux, Windows, Termux, Unknown };
     Platform detect_platform();
-    
+    void process_word(const std::string& word, std::string& result,const std::unordered_set<std::string>& aggregate_functions,const std::unordered_set<std::string>& operators);
     // Terminal control
     void enable_raw_mode();
     void disable_raw_mode();
