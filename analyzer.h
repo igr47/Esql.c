@@ -34,7 +34,7 @@ class SematicAnalyzer{
 		void validateGroupByClause(AST::SelectStatement& selectStmt);
 		void validateHavingClause(AST::SelectStatement& selectStmt);
 		void validateOrderByClause(AST::SelectStatement& selectStmt);
-                bool isAggregateFunction(const std::string& functionName);
+                bool isAggregateFunction(const std::string& functionName) const;
 		void validateAggregateUsage(AST::SelectStatement& selectStmt);
 		void validateBetweenOperation(AST::BetweenOp& between, const DatabaseSchema::Table* table);
 		void validateInOperation(AST::InOp& inOp,const DatabaseSchema::Table* table);
@@ -47,6 +47,7 @@ class SematicAnalyzer{
 		void validateLiteral(const AST::Literal& literal, const DatabaseSchema::Table* table);
 		bool isValidOperation(Token::Type op,const AST::Expression& left,const AST::Expression& right);
 		bool isComparisonOperator(Token::Type type);
+		bool isAggregateExpression(const AST::Expression& expr) const;
 		//end of the child methods
 		//metod to analyze insert statement analysis
 		void analyzeInsert(AST::InsertStatement& insertStmt);
