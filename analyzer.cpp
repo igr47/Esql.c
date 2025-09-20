@@ -105,6 +105,23 @@ void SematicAnalyzer::validateHavingClause(AST::SelectStatement& selectStmt){
 	}
 
 	validateExpression(*selectStmt.having->condition, currentTable);
+
+	/*bool hasAggregate = isAggregateExpression(*selectStmt.having->condition);
+	bool referenceGroupBy = false;
+
+	if(!hasAggregate && !referenceGroupBy){
+		throw SematicError("Having clause must contain aggregate functions or reference  GROUP BY columns");
+	}*/
+}
+
+bool SematicAnalyzer::isAggregateExpression(const AST::Expression& expr) const{
+	if(dynamic_cast<const AST::AggregateExpression*>(&expr)){
+		return true;
+	}
+	if(auto* binaryOp = dynamic_cast<const AST::BinaryOp*>(&expr)){
+		return isAggregateFunction(binaryOp->op.lexeme);
+	}
+	return false;
 }
 
 void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
@@ -132,7 +149,7 @@ void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
 	}
 }
 
-bool SematicAnalyzer::isAggregateFunction(const std::string& functionName){
+bool SematicAnalyzer::isAggregateFunction(const std::string& functionName) const{
 	static const std::set<std::string> aggregateFunctions ={
 		"COUNT","SUM","AVG","MIN","MAX"
 	};
@@ -487,6 +504,14 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
         auto leftType = getValueType(left);
         auto rightType = getValueType(right);
         
+	if(dynamic_cast<const AST::AggregateExpression*>(&left) || dynamic_cast<const AST::AggregateExpression*>(&right)){
+		if(isComparisonOperator(op)){
+			bool leftIsNumeric = (leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT);
+			bool rightIsNumeric = (rightType == DatabaseSchema::Column::INTEGER ||  rightType == DatabaseSchema::Column::FLOAT);
+
+			return leftIsNumeric && rightIsNumeric;
+		}
+	}
         // Allow if both are explicitly boolean, or if they are comparison operations
         bool leftIsBoolean = (leftType == DatabaseSchema::Column::BOOLEAN) || 
                             (dynamic_cast<const AST::BinaryOp*>(&left) && isComparisonOperator(dynamic_cast<const AST::BinaryOp*>(&left)->op.type));
@@ -650,7 +675,14 @@ const DatabaseSchema::Column* SematicAnalyzer::findColumn(const std::string& nam
 }
 
 DatabaseSchema::Column::Type SematicAnalyzer::getValueType(const AST::Expression& expr) {
-    if(auto* binOp = dynamic_cast<const AST::BinaryOp*>(&expr)){
+    if(auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(&expr)){
+	    std::string functionName = aggregate-> function.lexeme;
+	    if(functionName == "COUNT"){
+		    return DatabaseSchema::Column::INTEGER;
+	    }else if(functionName == "SUM" || functionName == "AVG" || functionName == "MIN" || functionName == "MAX"){
+		    return DatabaseSchema::Column::FLOAT;
+	    }
+    }else if(auto* binOp = dynamic_cast<const AST::BinaryOp*>(&expr)){
 	    if(isComparisonOperator(binOp->op.type)){
 		    return DatabaseSchema::Column::BOOLEAN;
 	    }
