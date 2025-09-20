@@ -145,170 +145,6 @@ std::vector<std::vector<std::string>> ExecutionEngine::applyDistinct(const std::
 	return std::vector<std::vector<std::string>>(uniqueRows.begin(),uniqueRows.end());
 }
 
-/*ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
-    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
-    auto data = storage.getTableData(db.currentDatabase(), tableName);
-
-    ResultSet result;
-    result.distinct = stmt.distinct;
-
-    // Store mapping between display names and original column names
-    std::vector<std::pair<std::string, std::string>> columnMapping;
-    
-    // Determine columns to select and create mapping
-    if (stmt.columns.empty()) {
-        auto table = storage.getTable(db.currentDatabase(), tableName);
-        for (const auto& col : table->columns) {
-            result.columns.push_back(col.name);
-            columnMapping.emplace_back(col.name, col.name);
-        }
-    } else {
-        for (const auto& col : stmt.columns) {
-            std::string originalName;
-            std::string displayName;
-            
-            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
-                originalName = ident->token.lexeme;
-                displayName = ident->token.lexeme;
-            } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
-                if (isAggregateFunction(binaryOp->op.lexeme)) {
-                    if (auto leftIdent = dynamic_cast<AST::Identifier*>(binaryOp->left.get())) {
-                        originalName = leftIdent->token.lexeme;
-                    }
-                    displayName = binaryOp->op.lexeme + "(" + binaryOp->left->toString() + ")";
-                } else {
-                    originalName = col->toString();
-                    displayName = col->toString();
-                }
-            } else {
-                originalName = col->toString();
-                displayName = col->toString();
-            }
-            
-            result.columns.push_back(displayName);
-            columnMapping.emplace_back(displayName, originalName);
-        }
-    }
-
-    // Handle column aliases if present
-    if (!stmt.newCols.empty()) {
-        result.columns.clear();
-        columnMapping.clear();
-        
-        for (const auto& col : stmt.newCols) {
-            std::string originalName = col.first->toString();
-            std::string displayName = col.second.empty() ? originalName : col.second;
-            
-            result.columns.push_back(displayName);
-            columnMapping.emplace_back(displayName, originalName);
-        }
-    }
-
-    // Check if we need to handle aggregates
-    bool hasAggregates = false;
-    for (const auto& col : stmt.columns) {
-        if (auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())) {
-		hasAggregates = true;
-		break;
-	}else if(auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())){
-            if (isAggregateFunction(binaryOp->op.lexeme)) {
-                hasAggregates = true;
-                break;
-            }
-        }
-    }
-
-    if (hasAggregates || stmt.groupBy) {
-        return executeSelectWithAggregates(stmt);
-    }
-
-    // Regular non-aggregate query
-    for (const auto& row : data) {
-        bool include = true;
-        if (stmt.where) {
-            include = evaluateWhereClause(stmt.where.get(), row);
-        }
-
-        if (include) {
-            std::vector<std::string> resultRow;
-            for (const auto& [displayName, originalName] : columnMapping) {
-                try {
-                    resultRow.push_back(row.at(originalName));
-                } catch (const std::out_of_range&) {
-                    // If original column not found, try to evaluate expression
-                    //resultRow.push_back(evaluateExpression(col, row));
-                }
-            }
-            result.rows.push_back(resultRow);
-        }
-    }
-
-    // Apply ORDER BY if specified
-    if (stmt.orderBy) {
-        // Create a mapping for sorting
-        std::vector<std::unordered_map<std::string, std::string>> sortedData;
-        for (const auto& rowVec : result.rows) {
-            std::unordered_map<std::string, std::string> rowMap;
-            for (size_t i = 0; i < result.columns.size(); ++i) {
-                rowMap[result.columns[i]] = rowVec[i];
-            }
-            sortedData.push_back(rowMap);
-        }
-
-        sortedData = sortResult(sortedData, stmt.orderBy.get());
-
-        // Convert back to vector format
-        result.rows.clear();
-        for (const auto& rowMap : sortedData) {
-            std::vector<std::string> rowVec;
-            for (const auto& colName : result.columns) {
-                rowVec.push_back(rowMap.at(colName));
-            }
-            result.rows.push_back(rowVec);
-        }
-    }
-
-    if(stmt.distinct){
-	    result.rows = applyDistinct(result.rows);
-    }
-
-    if(stmt.limit || stmt.offset){
-	    size_t offset = 0;
-	    size_t limit = result.rows.size(); //Default to all rows
-	    
-	    if(stmt.offset){
-		    try{
-			    std::string offsetstr = evaluateExpression(stmt.offset.get(),{});
-			    offset= std::stoul(offsetstr);
-		    } catch(const std::exception& e){
-			    throw std::runtime_error("Invalid OFFSET valu: "+ std::string(e.what()));
-		    }
-	    }
-
-	    if(stmt.limit){
-		    try{
-			    std::string limitStr = evaluateExpression(stmt.limit.get(), {});
-			    limit = std::stoul(limitStr);
-		    } catch (const std::exception& e){
-			    throw std::runtime_error("Invalid LIMIT value: " + std::string(e.what()));
-		    }
-	    }
-
-	    //Apply offset and limit
-	    if(offset >= result.rows.size()){
-		    result.rows.clear();
-	    }else {
-		    size_t end = std::min(offset + limit,result.rows.size());
-		    result.rows = std::vector<std::vector<std::string>>(
-				    result.rows.begin() + offset,
-				    result.rows.begin() + end
-		    );
-	    }
-    }
-
-
-    return result;
-}*/
 
 
 ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
@@ -473,127 +309,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
 
     return result;
 }
-/*ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& stmt) {
-    auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
-    auto data = storage.getTableData(db.currentDatabase(), tableName);
 
-    ResultSet result;
-    std::vector<std::pair<std::string,std::string>> columnMapping;
-
-    // Determine columns to select
-    if (stmt.columns.empty()) {
-        auto table = storage.getTable(db.currentDatabase(), tableName);
-        for (const auto& col : table->columns) {
-            result.columns.push_back(col.name);
-	    columnMapping.emplace_back(col.name,col.name);
-        }
-    } else {
-        for (const auto& col : stmt.columns) {
-	    std::string originalName;
-	    std::string displayName;
-            if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
-                //result.columns.push_back(ident->token.lexeme);
-		//originalColumns.push_back(ident->token.lexeme);
-		originalName = ident->token.lexeme;
-		displayName = ident->token.lexeme;
-            } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
-                // Handle aggregate functions
-                if (isAggregateFunction(binaryOp->op.lexeme)) {
-		    if(auto leftIdent = dynamic_cast<AST::Identifier*>(binaryOp->left.get())){
-			    originalName = leftIdent->token.lexeme;
-		    }
-                    //result.columns.push_back(binaryOp->op.lexeme + "(" +
-                                           //binaryOp->left->toString() + ")");
-		    //riginalColumns.push_back(binaryOp->left->toString());
-		    displayName = binaryOp.op.lexeme + "(" + binaryOp->left->toString() + ")";
-
-
-                } else {
-                    //result.columns.push_back(col->toString());
-		    originalName = col->toString();
-		    //originalColumns.push_back(col->toString());
-		    displayNmae = col->toString();
-                }
-            } else {
-                result.columns.push_back(col->toString());
-		originalColumns.push_back(col->toString());
-            }
-        }
-    }
-
-    std::vector<std::string> displayColumns;
-    if(!stmt.newCols.empty()){
-	    //result.columns.clear();
-	    displayColumns.clear();
-	    for(const auto& col : stmt.newCols){
-		    if(!col.second.empty()){
-			    displayColumns.push_back(col.second);
-		     }else {
-			     displayColumns.push_back(col.first->toString());
-		     }
-	     }
-	    result.columns = displayColumns;
-    }
-
-
-    // Check if we need to handle aggregates
-    bool hasAggregates = false;
-    for (const auto& col : stmt.columns) {
-        if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
-            if (isAggregateFunction(binaryOp->op.lexeme)) {
-                hasAggregates = true;
-                break;
-            }
-        }
-    }
-
-    if (hasAggregates || stmt.groupBy) {
-        return executeSelectWithAggregates(stmt);
-    }
-
-    // Regular non-aggregate query
-    for (const auto& row : data) {
-        bool include = true;
-        if (stmt.where) {
-            include = evaluateWhereClause(stmt.where.get(), row);
-        }
-
-        if (include) {
-            std::vector<std::string> resultRow;
-            for (const auto& col : originalColumns) {
-                resultRow.push_back(row.at(col));
-            }
-            result.rows.push_back(resultRow);
-        }
-    }
-
-    // Apply ORDER BY if specified
-    if (stmt.orderBy) {
-        // Convert to map for sorting
-        std::vector<std::unordered_map<std::string, std::string>> sortedData;
-        for (const auto& rowVec : result.rows) {
-            std::unordered_map<std::string, std::string> rowMap;
-            for (size_t i = 0; i < result.columns.size(); ++i) {
-                rowMap[result.columns[i]] = rowVec[i];
-            }
-            sortedData.push_back(rowMap);
-        }
-
-        sortedData = sortResult(sortedData, stmt.orderBy.get());
-
-        // Convert back to vector format
-        result.rows.clear();
-        for (const auto& rowMap : sortedData) {
-            std::vector<std::string> rowVec;
-            for (const auto& col : result.columns) {
-                rowVec.push_back(rowMap.at(col));
-            }
-            result.rows.push_back(rowVec);
-        }
-    }
-
-    return result;
-}*/
 
 ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::SelectStatement& stmt) {
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
@@ -616,7 +332,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
 
 
     // Handle column aliases for aggregates
-    std::vector<std::pair<std::string, std::string>> columnMapping; // displayName -> originalExpression
+    std::vector<std::pair<std::string, std::string>> columnMapping; 
     
     // Process SELECT columns with aliases
     if (!stmt.newCols.empty()) {
@@ -767,158 +483,6 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
 }
 
 
-/*std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData) {
-
-    std::vector<std::string> result;
-
-    const std::vector<std::unordered_map<std::string,std::string>>* actualGroupData = nullptr;
-    for(const auto& group : groupedData){
-	    if(!group.empty() && group[0] == groupRow){
-		    bool match = true;
-		    for(const auto& [key , value] : groupRow){
-			    auto it = group[0].find(key);
-			    if(it == group[0].end() || it->second != value){
-				    match = false;
-				    break;
-			    }
-		    }
-		    if(match){
-			    actualGroupData = &group;
-			    break;
-		    }
-	    }
-    }
-
-    if(!actualGroupData){
-	    if(!groupedData.empty()){
-		    actualGroupData = &groupedData[0];
-	    }else{
-		    for(size_t i = 0; i < columns.size(); i++){
-			    result.push_back("NULL");
-		    }
-		    return result;
-	    }
-    }
-
-    const auto& groupData = *actualGroupData;
-
-    for (const auto& col : columns) {
-        if (auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(col.get())) {
-            std::string columnName;
-            if (aggregate->argument) {
-                if (auto* ident = dynamic_cast<const AST::Identifier*>(aggregate->argument.get())) {
-                    columnName = ident->token.lexeme;
-                }
-            }
-
-            std::string aggResult;
-            std::string functionName = aggregate->function.lexeme;
-
-            if (functionName == "COUNT") {
-                if (aggregate->isCountAll) {
-                    aggResult = std::to_string(groupData.size());
-                } else {
-                    // Count non-null values in the GROUP
-                    int count = 0;
-                    for (const auto& row : groupData) {
-                        auto it = row.find(columnName);
-                        if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
-                            count++;
-                        }
-                    }
-                    aggResult = std::to_string(count);
-                }
-            }
-            else if (functionName == "SUM") {
-                double sum = 0.0;
-                int valid_count = 0;
-                for (const auto& row : groupData) {
-                    auto it = row.find(columnName);
-                    if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
-                        try {
-                            sum += std::stod(it->second);
-                            valid_count++;
-                        } catch (...) {
-                            // Ignore non-numeric values
-                        }
-                    }
-                }
-                aggResult = valid_count > 0 ? std::to_string(sum) : "0";
-            }
-            else if (functionName == "AVG") {
-                double sum = 0.0;
-                int count = 0;
-                for (const auto& row : groupData) {
-                    auto it = row.find(columnName);
-                    if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
-                        try {
-                            sum += std::stod(it->second);
-                            count++;
-                        } catch (...) {
-                            // Ignore non-numeric values
-                        }
-                    }
-                }
-                aggResult = count > 0 ? std::to_string(sum / count) : "0";
-            }
-            else if (functionName == "MIN") {
-                double minVal = std::numeric_limits<double>::max();
-                bool found = false;
-                for (const auto& row : groupData) {
-                    auto it = row.find(columnName);
-                    if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
-                        try {
-                            double val = std::stod(it->second);
-                            if (val < minVal) {
-                                minVal = val;
-                                found = true;
-                            }
-                        } catch (...) {
-                            // Ignore non-numeric values
-                        }
-                    }
-                }
-                aggResult = found ? std::to_string(minVal) : "NULL";
-            }
-            else if (functionName == "MAX") {
-                double maxVal = std::numeric_limits<double>::lowest();
-                bool found = false;
-                for (const auto& row : groupData) {
-                    auto it = row.find(columnName);
-                    if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
-                        try {
-                            double val = std::stod(it->second);
-                            if (val > maxVal) {
-                                maxVal = val;
-                                found = true;
-                            }
-                        } catch (...) {
-                            // Ignore non-numeric values
-                        }
-                    }
-                }
-                aggResult = found ? std::to_string(maxVal) : "NULL";
-            }
-            else {
-                aggResult = "NULL";
-            }
-
-            result.push_back(aggResult);
-        }
-        else if (auto* ident = dynamic_cast<const AST::Identifier*>(col.get())) {
-            // For non-aggregate GROUP BY columns, use the representative row
-            auto it = groupRow.find(ident->token.lexeme);
-            result.push_back(it != groupRow.end() ? it->second : "NULL");
-        }
-        else {
-            // Handle other expressions
-            result.push_back(evaluateExpression(col.get(), groupRow));
-        }
-    }
-
-    return result;
-}*/
-
 std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
     const std::vector<std::unique_ptr<AST::Expression>>& columns,
     const std::unordered_map<std::string, std::string>& groupRow,
@@ -1065,7 +629,6 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
             result.push_back(it != groupRow.end() ? it->second : "NULL");
         }
         else {
-            // Handle other expressions
             result.push_back(evaluateExpression(col.get(), groupRow));
         }
     }
@@ -1083,34 +646,7 @@ bool ExecutionEngine::evaluateHavingCondition(const AST::Expression* having,
     return result == "true" || result == "1";
 }
 
-/*std::vector<std::unordered_map<std::string, std::string>> ExecutionEngine::groupRows(
-    const std::vector<std::unordered_map<std::string, std::string>>& data,
-    const std::vector<std::string>& groupColumns) {
 
-    if (groupColumns.empty()) {
-        return {data}; // Single group containing all rows
-    }
-
-    std::map<std::vector<std::string>, std::vector<std::unordered_map<std::string, std::string>>> groups;
-
-    for (const auto& row : data) {
-        std::vector<std::string> key;
-        for (const auto& col : groupColumns) {
-	    auto it = row.find(col);
-            key.push_back(row.at(col)it != row.end() ? it->second : "NULL");
-        }
-        groups[key].push_back(row);
-    }
-
-    std::vector<std::unordered_map<std::string, std::string>> result;
-    for (auto& [key, groupRows] : groups) {
-	if(!groupRows.empty()){
-                   result.push_back(groupRows[0]); // Store representative row for each group
-	}
-    }
-
-    return result;
-}*/
 
 std::vector<std::vector<std::unordered_map<std::string, std::string>>> ExecutionEngine::groupRows(
     const std::vector<std::unordered_map<std::string, std::string>>& data,
@@ -1131,7 +667,7 @@ std::vector<std::vector<std::unordered_map<std::string, std::string>>> Execution
         groups[key].push_back(row);
     }
 
-    // Return ALL rows for each group, not just representative rows
+    // Return ALL rows for each group
     std::vector<std::vector<std::unordered_map<std::string, std::string>>> result;
     for (auto& [key, groupRows] : groups) {
         result.push_back(groupRows);
@@ -1499,10 +1035,20 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
     if (!expr) {
         return "NULL";
     }
-
-    // Handle literals
-    if(auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(expr)){
-	    return "0";
+    if (auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(expr)) {
+	    std::string agg_name;
+	    if (aggregate->isCountAll) {
+		    agg_name = "COUNT(*)";
+	    } else if (aggregate->argument) {
+		    agg_name = aggregate->function.lexeme + "(" + aggregate->argument->toString() + ")";
+	    } else {
+		    agg_name = aggregate->function.lexeme + "()";
+	    }
+	    auto it = row.find(agg_name);
+	    if (it != row.end()) {
+		    return it->second;
+	    }
+	    return "0"; 
     }else if (auto lit = dynamic_cast<const AST::Literal*>(expr)) {
         if (lit->token.type == Token::Type::STRING_LITERAL ||
             lit->token.type == Token::Type::DOUBLE_QUOTED_STRING) {
