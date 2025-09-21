@@ -50,7 +50,9 @@ private:
     ResultSet executeSelectWithAggregates(AST::SelectStatement& stmt);
     //std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::vector<std::unordered_map<std::string,std::string>>& group);
     //std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::unordered_map<std::string, std::string>>& groupData);
-    std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData);
+   // std::vector<std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData);
+    
+    std::unordered_map<std::string, std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData);
     bool evaluateHavingCondition(const AST::Expression* having, const std::unordered_map<std::string,std::string>& group);
     std::vector<std::vector<std::unordered_map<std::string,std::string>>> groupRows(const std::vector<std::unordered_map<std::string,std::string>>& data,const std::vector<std::string>& groupColumns);
     std::vector<std::unordered_map<std::string,std::string>> sortResult(const std::vector<std::unordered_map<std::string,std::string>>& result,AST::OrderByClause* orderBy);
@@ -88,6 +90,9 @@ private:
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);
     std::string evaluateValue(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row);
+    bool isNumericString(const std::string& str);
+    
+    std::string calculateAggregate(const AST::AggregateExpression* aggregate,const std::vector<std::unordered_map<std::string, std::string>>& groupData);
 };
 
 #endif

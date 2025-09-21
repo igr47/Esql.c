@@ -346,10 +346,11 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         }
     } else {
         // Process regular columns without aliases
-        for (const auto& col : stmt.columns) {
-            std::string displayName;
-            std::string originalExpr;
-	    std::unique_ptr<AST::Expression> name;
+	for(const auto& col : stmt.columns){
+	     std::string displayName;
+	     std::string originalExpr;
+        
+	    //std::unique_ptr<AST::Expression> name;
             
             if (auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())) {
                 if (aggregate->isCountAll) {
@@ -380,6 +381,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
             columnMapping.emplace_back(displayName, originalExpr);
         }
     }
+    
 
     // Group data
     auto groupedData = groupRows(data, groupColumns);
@@ -388,17 +390,49 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     for (const auto& group : groupedData) {
         if(group.empty()) continue;
 
-         const auto& representativeRow = group[0];	
+         //const auto& representativeRow = group[0];	
+
+	auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group[0], groupedData);
+
+	/*std::unordered_map<std::string,std::string> combinedRow = group[0];
+	for(size_t i=0; i < stmt.columns.size(); i++){
+		if(i < aggregatedRow.size()){
+			combinedRow[result.columns[i]] = aggregatedRow[i];
+		}
+	}*/
+
     	// Apply HAVING clause if specified
         if (stmt.having) {
-            if (!evaluateHavingCondition(stmt.having->condition.get(), representativeRow)) {
+            if (!evaluateHavingCondition(stmt.having->condition.get(), aggregatedRow)) {
                 continue;
             }
         }
 
         // Evaluate aggregate functions for this group
-        auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, representativeRow, groupedData/*groupRows(data,groupColumns)*/);
-        result.rows.push_back(aggregatedRow);
+        //auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, representativeRow, groupedData/*groupRows(data,groupColumns)*);
+	//
+
+	std::vector<std::string> rowValues;
+	for(const auto& colName : result.columns){
+		auto it = aggregatedRow.find(colName);
+		if(it != aggregatedRow.end()){
+			rowValues.push_back(it->second);
+		}else{
+			for(const auto& [displayName , originalName] : columnMapping){
+				if ( displayName == colName){
+					auto exprIt = aggregatedRow.find(originalName);
+					if (exprIt != aggregatedRow.end()) {
+						rowValues.push_back(exprIt->second);
+						break;
+					}
+				}
+			}
+			if(rowValues.size() < result.columns.size()) {
+				rowValues.push_back("NULL");
+			}
+		}
+	}
+        result.rows.push_back(rowValues);
     }
 
     // Apply ORDER BY if specified
@@ -415,9 +449,31 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         result.rows.clear();
         for (const auto& group : sortedData) {
             auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group, groupedData);
-            result.rows.push_back(aggregatedRow);
+            //result.rows.push_back(aggregatedRow);
+	     std::vector<std::string> rowValues;
+	     for (const auto& colName : result.columns) {
+		     auto it = aggregatedRow.find(colName);
+		     if (it != aggregatedRow.end()) {
+			     rowValues.push_back(it->second);
+		     } else {
+			     for (const auto& [displayName, originalName] : columnMapping) {
+				     if (displayName == colName) {
+					     auto exprIt = aggregatedRow.find(originalName);
+					     if (exprIt != aggregatedRow.end()) {
+						     rowValues.push_back(exprIt->second);
+						     break;
+					     }
+				     }
+			     }
+			     if (rowValues.size() < result.columns.size()) {
+				     rowValues.push_back("NULL");
+			     }
+		     }
+	     }
+	     result.rows.push_back(rowValues);
         }
     }
+
 
     // Apply DISTINCT if specified
     if (stmt.distinct) {
@@ -482,8 +538,190 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     return result;
 }
 
+std::string ExecutionEngine::calculateAggregate(
+    const AST::AggregateExpression* aggregate,
+    const std::vector<std::unordered_map<std::string, std::string>>& groupData) {
+    
+    if (!aggregate) {
+        return "NULL";
+    }
+    
+    std::string functionName = aggregate->function.lexeme;
+    std::string columnName;
+    
+    // Get the column name for the aggregate argument
+    if (aggregate->isCountAll) {
+        columnName = "*";
+    } else if (aggregate->argument) {
+        if (auto* ident = dynamic_cast<const AST::Identifier*>(aggregate->argument.get())) {
+            columnName = ident->token.lexeme;
+        } else {
+            // Handle complex expressions - for now, return NULL
+            return "NULL";
+        }
+    }
+    
+    // Calculate the aggregate based on function type
+    if (functionName == "COUNT") {
+        if (aggregate->isCountAll) {
+            return std::to_string(groupData.size());
+        } else {
+            int count = 0;
+            for (const auto& row : groupData) {
+                auto it = row.find(columnName);
+                if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
+                    count++;
+                }
+            }
+            return std::to_string(count);
+        }
+    }
+    else if (functionName == "SUM") {
+        double sum = 0.0;
+        int valid_count = 0;
+        for (const auto& row : groupData) {
+            auto it = row.find(columnName);
+            if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
+                try {
+                    sum += std::stod(it->second);
+                    valid_count++;
+                } catch (...) {
+                    // Ignore non-numeric values
+                }
+            }
+        }
+        return valid_count > 0 ? std::to_string(sum) : "0";
+    }
+    else if (functionName == "AVG") {
+        double sum = 0.0;
+        int count = 0;
+        for (const auto& row : groupData) {
+            auto it = row.find(columnName);
+            if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
+                try {
+                    sum += std::stod(it->second);
+                    count++;
+                } catch (...) {
+                    // Ignore non-numeric values
+                }
+            }
+        }
+        return count > 0 ? std::to_string(sum / count) : "0";
+    }
+    else if (functionName == "MIN") {
+        double minVal = std::numeric_limits<double>::max();
+        bool found = false;
+        for (const auto& row : groupData) {
+            auto it = row.find(columnName);
+            if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
+                try {
+                    double val = std::stod(it->second);
+                    if (val < minVal) {
+                        minVal = val;
+                        found = true;
+                    }
+                } catch (...) {
+                    // Ignore non-numeric values
+                }
+            }
+        }
+        return found ? std::to_string(minVal) : "NULL";
+    }
+    else if (functionName == "MAX") {
+        double maxVal = std::numeric_limits<double>::lowest();
+        bool found = false;
+        for (const auto& row : groupData) {
+            auto it = row.find(columnName);
+            if (it != row.end() && it->second != "NULL" && !it->second.empty()) {
+                try {
+                    double val = std::stod(it->second);
+                    if (val > maxVal) {
+                        maxVal = val;
+                        found = true;
+                    }
+                } catch (...) {
+                    // Ignore non-numeric values
+                }
+            }
+        }
+        return found ? std::to_string(maxVal) : "NULL";
+    }
+    else {
+        return "NULL";
+    }
+}
 
-std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
+std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateFunctions(
+    const std::vector<std::unique_ptr<AST::Expression>>& columns,
+    const std::unordered_map<std::string, std::string>& groupRow,
+    const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData) {
+    
+    std::unordered_map<std::string, std::string> result;
+    
+    // Find the correct group data for this groupRow
+    const std::vector<std::unordered_map<std::string, std::string>>* actualGroupData = nullptr;
+    for (const auto& group : groupedData) {
+        if (!group.empty()) {
+            bool match = true;
+            for (const auto& [key, value] : groupRow) {
+                auto it = group[0].find(key);
+                if (it == group[0].end() || it->second != value) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                actualGroupData = &group;
+                break;
+            }
+        }
+    }
+
+    if (!actualGroupData) {
+        return result;
+    }
+
+    const auto& groupData = *actualGroupData;
+
+    // First, add all group by columns to the result
+    for (const auto& [key, value] : groupRow) {
+        result[key] = value;
+    }
+
+    // Then evaluate aggregates
+    for (const auto& col : columns) {
+        if (auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(col.get())) {
+            std::string aggColumnName;
+            if (aggregate->isCountAll) {
+                aggColumnName = "COUNT(*)";
+            } else if (aggregate->argument) {
+                aggColumnName = aggregate->function.lexeme + "(" + aggregate->argument->toString() + ")";
+            } else {
+                aggColumnName = aggregate->function.lexeme + "()";
+            }
+            
+            std::string aggValue = calculateAggregate(aggregate, groupData);
+            result[aggColumnName] = aggValue;
+            
+            // Also store with alias if available
+            if (aggregate->argument2) {
+                result[aggregate->argument2->toString()] = aggValue;
+            }
+        }
+        else if (auto* ident = dynamic_cast<const AST::Identifier*>(col.get())) {
+            // Group by column - already added above
+            continue;
+        }
+        else {
+            // Complex expressions
+            result[col->toString()] = evaluateExpression(col.get(), groupRow);
+        }
+    }
+    
+    return result;
+}
+
+/*std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
     const std::vector<std::unique_ptr<AST::Expression>>& columns,
     const std::unordered_map<std::string, std::string>& groupRow,
     const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData) {
@@ -634,7 +872,7 @@ std::vector<std::string> ExecutionEngine::evaluateAggregateFunctions(
     }
 
     return result;
-}
+}*/
 
 
 
@@ -642,8 +880,27 @@ bool ExecutionEngine::evaluateHavingCondition(const AST::Expression* having,
                                            const std::unordered_map<std::string, std::string>& group) {
     if (!having) return true;
 
-    std::string result = evaluateExpression(having, group);
-    return result == "true" || result == "1";
+    //std::string result = evaluateExpression(having, group);
+    std::cout<<"DEBUG: HAVING clause: " << having->toString() <<std::endl;
+    for(const auto& [key,value] : group){
+	    std::cout << " " << key << "=" << value << std::endl;
+    }
+    std::string result = evaluateExpression(having,group);
+    if(isNumericString(result)){
+	    try{
+		    double numericResult = std::stod(result);
+		    bool boolResult = numericResult != 0.0;
+		    std::cout<< "DEBUG: Numeric result: "<< numericResult << "->" << boolResult <<std::endl;
+		    return boolResult;
+	    }catch( ...){
+		    std::cout << "DEBUG: faile to parse numeric results" << std::endl;
+		    return false;
+	    }
+    }
+    bool boolResult = (result == "true" || result == "1" || result == "TRUE");
+    std::cout<< "DEBUG: Boolean result: " << result << "->" << boolResult <<std::endl;
+    return boolResult;
+
 }
 
 
@@ -1048,6 +1305,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 	    if (it != row.end()) {
 		    return it->second;
 	    }
+	    std::cout<<"DEBUG: Finished execution." <<std::endl;
 	    return "0"; 
     }else if (auto lit = dynamic_cast<const AST::Literal*>(expr)) {
         if (lit->token.type == Token::Type::STRING_LITERAL ||
@@ -1083,6 +1341,31 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
         std::string left = evaluateExpression(binOp->left.get(), row);
         std::string right = evaluateExpression(binOp->right.get(), row);
 
+	bool leftIsNumeric = isNumericString(left);
+	bool rightIsNumeric = isNumericString(right);
+
+	if(leftIsNumeric && rightIsNumeric){
+		double leftNum = std::stod(left);
+		double rightNum = std::stod(right);
+
+		switch(binOp ->op.type){
+			case Token::Type::GREATER:
+				return (leftNum > rightNum) ? "true" : "false";
+			case Token::Type::GREATER_EQUAL:
+				return (leftNum >= rightNum) ? "true" : "false";
+			case Token::Type::LESS:
+				return (leftNum < rightNum) ? "true" : "false";
+			case Token::Type::LESS_EQUAL:
+				return (leftNum <= rightNum) ? "true" : "false";
+			case Token::Type::EQUAL:
+				return (leftNum == rightNum) ? "true" : "false";
+			case Token::Type::NOT_EQUAL:
+				return (leftNum != rightNum) ? "true" : "false";
+			default:
+				break;
+		}
+	}
+        
         // Handle NULL values
         if (left == "NULL" || right == "NULL") {
             // For most operations, NULL results in NULL
@@ -1321,7 +1604,21 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 
     return "NULL";
 }*/
+bool ExecutionEngine::isNumericString(const std::string& str){
+	if(str.empty()) return false;
+	
+	if(str == "true" || str == "false" || str == "TRUE" || str=="FALSE"){
+		return false;
+	}
 
+	try{
+		std::stod(str);
+		return true;
+	}catch(...) {
+		return false;
+	}
+}
+	       
 
 
 std::string ExecutionEngine::evaluateValue(const AST::Expression* expr,const std::unordered_map<std::string,std::string>& row){

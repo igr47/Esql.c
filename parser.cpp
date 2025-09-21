@@ -970,6 +970,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 			expre = parseIdentifier();
 		}
 
+
 		return std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg),std::move(expre), isCountAll);
 	}else if(match(Token::Type::IDENTIFIER)){
 		return parseIdentifier();

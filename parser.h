@@ -39,11 +39,14 @@ namespace AST{
 	class HavingClause : public Expression{
 		public:
 			std::unique_ptr<Expression> condition;
+			//std::unique_ptr<Expression> operators;
+			//std::unique_ptr<Expression> values;
 			std::unique_ptr<Expression> clone() const override{
 				return std::make_unique<HavingClause>(condition->clone());
 			}
 
-			explicit HavingClause(std::unique_ptr<Expression> cond) : condition(std::move(cond)) {}
+			//explicit HavingClause(std::unique_ptr<Expression> cond) : condition(std::move(cond)) {}
+			HavingClause(std::unique_ptr<Expression> cond) : condition(std::move(cond)){}
 			std::string toString() const override {
 				return "HAVING "+ condition->toString();
 			}
