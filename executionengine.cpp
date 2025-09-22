@@ -339,10 +339,20 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         // Handle column aliases
         for (const auto& col : stmt.newCols) {
             std::string originalExpr = col.first->toString();
-            std::string displayName = col.second.empty() ? originalExpr : col.second;
+	    std::string displayName;
+	    if(col.second.empty()){
+		    if(auto aggregate = dynamic_cast<const AST::AggregateExpression*> (col.first.get())){
+			    displayName = aggregate->toString();
+		    }else{
+			    displayName = col.first->toString();
+		    }
+	    }else{
+		    displayName = col.second;
+	    }
+            //std::string displayName = col.second.empty() ? originalExpr : col.second;
             
             result.columns.push_back(displayName);
-            columnMapping.emplace_back(displayName, originalExpr);
+            columnMapping.emplace_back(displayName, /*originalExpr*/col.first->toString());
         }
     } else {
         // Process regular columns without aliases
@@ -516,7 +526,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     }
 
     
-    if (!stmt.newCols.empty()) {
+    /*if (!stmt.newCols.empty()) {
              result.columns.clear();
              for (const auto& col : stmt.newCols) {
                        result.columns.push_back(col.second.empty() ? col.first->toString() : col.second);
@@ -534,7 +544,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
 			    result.columns.push_back(col->toString());
 		    }
 	    }
-    }
+    }*/
     return result;
 }
 
