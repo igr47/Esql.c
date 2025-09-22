@@ -362,7 +362,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         
 	    //std::unique_ptr<AST::Expression> name;
             
-            if (auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())) {
+            /*if (auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())) {
                 if (aggregate->isCountAll) {
                     originalExpr = "COUNT(*)";
                     displayName = "COUNT(*)";
@@ -385,10 +385,22 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
             } else {
                 originalExpr = col->toString();
                 displayName = originalExpr;
-            }
-            
+            }*/
+            if(auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())){
+		    if(aggregate->argument2){
+			    displayName = aggregate->argument2->toString();
+		    }else if(aggregate->isCountAll){
+			    displayName = "COUNT(*)";
+		    }else{
+			    displayName = aggregate->function.lexeme + "(" + (aggregate->argument ? aggregate->argument->toString() : "") + ")";
+		    }
+	    }else if(auto ident = dynamic_cast<AST::Identifier*>(col.get())){
+		    displayName = ident->token.lexeme;
+	    }else{
+		    displayName = col->toString();
+	    }
             result.columns.push_back(displayName);
-            columnMapping.emplace_back(displayName, originalExpr);
+            columnMapping.emplace_back(displayName,/* originalExpr*/col->toString());
         }
     }
     
