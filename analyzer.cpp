@@ -593,7 +593,7 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
     }
 }
 //Method to analyze insert statement
-void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
+/*void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
     currentTable = storage.getTable(db.currentDatabase(), insertStmt.table);
     if (!currentTable) {
         throw SematicError("Tablename does not exist: " + insertStmt.table);
@@ -632,8 +632,71 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
             throw SematicError("Type mismatch for column: " + colName);
         }
     }
-}
+}*/
 
+void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
+    currentTable = storage.getTable(db.currentDatabase(), insertStmt.table);
+    if (!currentTable) {
+        throw SematicError("Table does not exist: " + insertStmt.table);
+    }
+
+    // Validate that all rows have the same number of values
+    size_t expected_value_count = insertStmt.columns.empty() ?
+                                 currentTable->columns.size() :
+                                 insertStmt.columns.size();
+
+    for (size_t i = 0; i < insertStmt.values.size(); ++i) {
+        if (insertStmt.values[i].size() != expected_value_count) {
+            throw SematicError("Row " + std::to_string(i + 1) +
+                             " has incorrect number of values. Expected " +
+                             std::to_string(expected_value_count) + ", got " +
+                             std::to_string(insertStmt.values[i].size()));
+        }
+    }
+
+    // Validate column names if specified
+    if (!insertStmt.columns.empty()) {
+        for (const std::string& colName : insertStmt.columns) {
+            auto* column = findColumn(colName);
+            if (!column) {
+                throw SematicError("Unknown column: " + colName);
+            }
+        }
+    }
+
+    // Validate each value against its corresponding column
+    for (size_t row_idx = 0; row_idx < insertStmt.values.size(); ++row_idx) {
+        for (size_t col_idx = 0; col_idx < insertStmt.values[row_idx].size(); ++col_idx) {
+            const std::string& colName = insertStmt.columns.empty() ?
+                                       currentTable->columns[col_idx].name :
+                                       insertStmt.columns[col_idx];
+
+            auto* column = findColumn(colName);
+            if (!column) {
+                throw SematicError("Unknown column: " + colName);
+            }
+
+            // Special handling for TEXT columns
+            if (column->type == DatabaseSchema::Column::TEXT) {
+                if (auto* literal = dynamic_cast<AST::Literal*>(insertStmt.values[row_idx][col_idx].get())) {
+                    if (literal->token.type != Token::Type::STRING_LITERAL &&
+                        literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
+                        throw SematicError("String values must be quoted for TEXT column: " + colName);
+                    }
+                } else {
+                    throw SematicError("Invalid value for TEXT column: " + colName);
+                }
+            }
+
+            // General type checking
+            DatabaseSchema::Column::Type valueType = getValueType(*insertStmt.values[row_idx][col_idx]);
+            if (!isTypeCompatible(column->type, valueType)) {
+                throw SematicError("Type mismatch for column '" + colName +
+                                 "' in row " + std::to_string(row_idx + 1));
+            }
+        }
+    }
+}
 
 void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
     if (storage.tableExists(db.currentDatabase(), createStmt.tablename)) {
