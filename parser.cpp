@@ -657,11 +657,8 @@ std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
     return stmt;
 }
 
-std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
+/*std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
     auto stmt = std::make_unique<AST::BulkUpdateStatement>();
-
-    //consume(Token::Type::BULK);
-    //consume(Token::Type::UPDATE);
 
     stmt->table = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
@@ -699,6 +696,151 @@ std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
 
     inValueContext = wasInValueContext;
     return stmt;
+}*/
+
+/*std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
+	auto stmt = std::make_unique<AST::BulkUpdateStatement>();
+
+	stmt->table = currentToken.lexeme;
+
+	consume(Token::Type::IDENTIFIER);
+	consume(Token::Type::SET);
+
+	bool wasInValueContext = inValueContext;
+	inValueContext = true;
+
+	do{
+		if(match(Token::Type::COMMA)){
+			consume(Token::Type::COMMA);
+		}
+
+		AST::BulkUpdateStatement::UpdateSpec updateSpec;
+
+		consume(Token::Type::ROW);
+
+		if(!match(Token::Type::NUMBER_LITERAL)){
+			throw ParseError(currentToken.line,currentToken.column,"Expected row number after ROW Keword");
+		}
+
+		try{
+			updateSpec.row_id = std::stoul(currentToken.lexeme);
+			consume(Token::Type::NUMBER_LITERAL);
+		}catch (const std::exception& e){
+			throw ParseError(currentToken.line,currentToken.column,"Invalid row number: "+ currentToken.lexeme);
+		}
+
+		consume(Token::Type::SET);
+		//Parse SET calusefor this row
+		bool firstClause = true;
+
+		while(true){
+			if(!firstClause && match(Token::Type::COMMA)){
+				consume(Token::Type::COMMA);
+			}
+			firstClause = false;
+			//Check if we have reached  the next ROW or END OF INPUT
+			Token nextToken = peekToken();
+			if(nextToken.type == Token::Type::ROW || nextToken.type == Token::Type::END_OF_INPUT){
+				break;
+			}
+			std::string column = currentToken.lexeme;
+			consume(Token::Type::IDENTIFIER);
+			consume(Token::Type::EQUAL);
+			updateSpec.setClauses.emplace_back(column,parseExpression());
+
+		}//while(match(Token::Type::COMMA));
+
+		stmt->updates.push_back(std::move(updateSpec));
+	}while(match(Token::Type::COMMA));
+
+	inValueContext = wasInValueContext;
+
+	return stmt;
+}*/
+
+
+void Parse::parseSingleRowUpdate(AST::BulkUpdateStatement& stmt) {
+    AST::BulkUpdateStatement::UpdateSpec updateSpec;
+
+    // Parse ROW <number>
+    consume(Token::Type::ROW);
+
+    if (!match(Token::Type::NUMBER_LITERAL)) {
+        throw ParseError(currentToken.line, currentToken.column, "Expected row number after ROW keyword");
+    }
+
+    try {
+        updateSpec.row_id = std::stoul(currentToken.lexeme);
+        consume(Token::Type::NUMBER_LITERAL);
+    } catch (const std::exception& e) {
+        throw ParseError(currentToken.line, currentToken.column, "Invalid row number: " + currentToken.lexeme);
+    }
+
+    // Parse SET clause
+    consume(Token::Type::SET);
+
+    // Parse first SET clause
+    parseSingleSetClause(updateSpec);
+
+    // Parse additional SET clauses for the same row
+    while (match(Token::Type::COMMA)) {
+        // Use peekToken to look ahead and check if the next token is ROW
+        Token nextToken = peekToken();
+        
+        // If the next token after comma is ROW, this comma separates row updates, not set clauses
+        if (nextToken.type == Token::Type::ROW) {
+            break; // Exit the loop to let the outer loop handle the next ROW
+        }
+        
+        // Otherwise, this comma separates set clauses within the same row
+        consume(Token::Type::COMMA);
+        parseSingleSetClause(updateSpec);
+    }
+
+    stmt.updates.push_back(std::move(updateSpec));
+}
+
+std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
+    auto stmt = std::make_unique<AST::BulkUpdateStatement>();
+    
+    stmt->table = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+    consume(Token::Type::SET);
+
+    bool wasInValueContext = inValueContext;
+    inValueContext = true;
+
+    // Parse first row update
+    parseSingleRowUpdate(*stmt);
+
+    // Parse additional row updates
+    while (match(Token::Type::COMMA)) {
+        // Use peekToken to confirm this comma is followed by ROW
+        Token nextToken = peekToken();
+        if (nextToken.type != Token::Type::ROW) {
+            throw ParseError(currentToken.line, currentToken.column, 
+                           "Expected ROW after comma in BULK UPDATE");
+        }
+        
+        consume(Token::Type::COMMA);
+        parseSingleRowUpdate(*stmt);
+    }
+
+    inValueContext = wasInValueContext;
+    return stmt;
+}
+
+void Parse::parseSingleSetClause(AST::BulkUpdateStatement::UpdateSpec& updateSpec) {
+    std::string column = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+    consume(Token::Type::EQUAL);
+    
+    bool wasInValueContext = inValueContext;
+    inValueContext = true;
+    
+    updateSpec.setClauses.emplace_back(column, parseExpression());
+    
+    inValueContext = wasInValueContext;
 }
 
 std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
