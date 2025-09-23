@@ -499,6 +499,15 @@ bool SematicAnalyzer::isComparisonOperator(Token::Type type) {
 }*/
 
 bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& left, const AST::Expression& right) {
+    if(op == Token::Type::PLUS || op == Token::Type::MINUS || op == Token::Type::ASTERIST || op == Token::Type::SLASH){
+	    auto leftType = getValueType(left);
+	    auto rightType = getValueType(right);
+
+	    bool leftIsNumeric = (leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT);
+	    bool rightIsNumeric = (rightType == DatabaseSchema::Column::INTEGER || rightType == DatabaseSchema::Column::FLOAT);
+
+	    return leftIsNumeric && rightIsNumeric;
+    }
     if (op == Token::Type::AND || op == Token::Type::OR) {
         // For AND/OR, check if both expressions can evaluate to boolean
         auto leftType = getValueType(left);
@@ -559,8 +568,20 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
         case Token::Type::GREATER:
         case Token::Type::GREATER_EQUAL:
             // Only allow numeric comparisons for inequality operators
-            return (leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT) && 
-                   (rightType == DatabaseSchema::Column::INTEGER || rightType == DatabaseSchema::Column::FLOAT);
+               if  ((leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT) && 
+                   (rightType == DatabaseSchema::Column::INTEGER || rightType == DatabaseSchema::Column::FLOAT)){
+			   return true;
+		   }
+	       //Also allow string to string comparison
+	       if((leftType == DatabaseSchema::Column::STRING || leftType == DatabaseSchema::Column::TEXT) &&
+		    (rightType == DatabaseSchema::Column::STRING ||rightType == DatabaseSchema::Column::TEXT)){
+		       return true;
+	       }
+	       //Date comparisons will use string for now
+	       if((leftType == DatabaseSchema::Column::STRING || leftType == DatabaseSchema::Column::TEXT) &&
+			       (rightType == DatabaseSchema::Column::STRING || rightType == DatabaseSchema::Column::TEXT)){
+		       return true;
+	       }
             
         case Token::Type::AND:
         case Token::Type::OR:
@@ -775,6 +796,12 @@ bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1, Databa
         return true;
     }
 
+    // DATE/TIME types (treated as strings for comparison)
+    if((t1 == DatabaseSchema::Column::STRING || t1 == DatabaseSchema::Column::TEXT) &&
+		    (t2 == DatabaseSchema::Column::STRING || t2 == DatabaseSchema::Column::TEXT)) {
+	    return true;
+    }
+
     // These are the basic comparable types
     static const std::set<DatabaseSchema::Column::Type> comparableTypes = {
         DatabaseSchema::Column::INTEGER,
@@ -826,7 +853,7 @@ void SematicAnalyzer::analyzeDrop(AST::DropStatement& dropStmt){
 	//schema.dropTable(dropStmt.tablename);
 }
 //method to analyze UPDATE statement
-void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt) {
+/*void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt) {
     currentTable = storage.getTable(db.currentDatabase(), updateStmt.table);
     if (!currentTable) {
         throw SematicError("Table does not exist: " + updateStmt.table);
@@ -841,14 +868,58 @@ void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt) {
 	validateExpression(*expr,currentTable);
 
         // Special handling for TEXT columns
-        /*if (column->type == DatabaseSchema::Column::TEXT) {
+        *if (column->type == DatabaseSchema::Column::TEXT) {
             if (auto* literal = dynamic_cast<AST::Literal*>(expr.get())) {
                 if (literal->token.type != Token::Type::STRING_LITERAL &&
                     literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
                     throw SematicError("String values must be quoted for TEXT column: " + colName);
                 }
             }
-        }*/
+        }/
+
+        DatabaseSchema::Column::Type valueType = getValueType(*expr);
+        if (!isTypeCompatible(column->type, valueType)) {
+            throw SematicError("Type mismatch for column: " + colName);
+        }
+    }
+
+    // Validate WHERE clause if present
+    if (updateStmt.where) {
+        validateExpression(*updateStmt.where, currentTable);
+    }
+}*/
+
+void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt) {
+    currentTable = storage.getTable(db.currentDatabase(), updateStmt.table);
+    if (!currentTable) {
+        throw SematicError("Table does not exist: " + updateStmt.table);
+    }
+
+    // Validate SET assignments with relaxed type checking for expressions
+    for (auto& [colName, expr] : updateStmt.setClauses) {
+        auto* column = findColumn(colName);
+        if (!column) {
+            throw SematicError("Unknown column: " + colName);
+        }
+
+        validateExpression(*expr, currentTable);
+
+        // For arithmetic operations, check if the result type is compatible
+        if (auto* binOp = dynamic_cast<AST::BinaryOp*>(expr.get())) {
+            if (binOp->op.type == Token::Type::PLUS || binOp->op.type == Token::Type::MINUS ||
+                binOp->op.type == Token::Type::ASTERIST || binOp->op.type == Token::Type::SLASH) {
+                // Allow arithmetic operations that produce numeric results
+                auto leftType = getValueType(*binOp->left);
+                auto rightType = getValueType(*binOp->right);
+
+                if (!(leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT) ||
+                    !(rightType == DatabaseSchema::Column::INTEGER || rightType == DatabaseSchema::Column::FLOAT)) {
+                    throw SematicError("Arithmetic operations require numeric operands for column: " + colName);
+                }
+                // Result will be numeric, which should be compatible with numeric columns
+                continue;
+            }
+        }
 
         DatabaseSchema::Column::Type valueType = getValueType(*expr);
         if (!isTypeCompatible(column->type, valueType)) {
