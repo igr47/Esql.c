@@ -349,6 +349,9 @@ class Parse{
 		std::unique_ptr<AST::CreateTableStatement> parseCreateTableStatement();
 		std::unique_ptr<AST::BulkInsertStatement> parseBulkInsertStatement();
 		std::unique_ptr<AST::BulkUpdateStatement> parseBulkUpdateStatement();
+		//Helper methods for ParseBulkStatement()
+		void parseSingleRowUpdate(AST::BulkUpdateStatement& stmt);
+		void parseSingleSetClause(AST::BulkUpdateStatement::UpdateSpec& updateSpec);
 		std::unique_ptr<AST::BulkDeleteStatement> parseBulkDeleteStatement();
 		void parseColumnDefinition(AST::CreateTableStatement& stmt);
 		std::unique_ptr<AST::AlterTableStatement> parseAlterTableStatement();
