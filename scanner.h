@@ -40,7 +40,7 @@ class Lexer{
 			saveLine = line;
 			saveCol = column;
 		}
-		void restoreState(size_t savePos,size_t& saveLine,size_t savecol){
+		void restoreState(size_t savePos,size_t saveLine,size_t savecol){
 			position = savePos;
 			line = saveLine;
 			column = savecol;

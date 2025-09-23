@@ -23,6 +23,8 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
                 return parseUpdateStatement();
         }else if (match(Token::Type::DELETE)) {
                 return parseDeleteStatement();
+	}else if (match(Token::Type::DROP)) {
+		return parseDropStatement();
         }else if (match(Token::Type::INSERT)) {
 		return parseInsertStatement();
 	}else if(match(Token::Type::BULK)){
@@ -327,8 +329,12 @@ std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement() {
         consume(Token::Type::IDENTIFIER);
         consume(Token::Type::EQUAL);
 
+	auto expr = parseExpression();
+
+	std::cout<<"DEBUG: Parsed expression:" << expr->toString()<<std::endl;
+
         // Use parseExpression() for strict value parsing
-        stmt->setClauses.emplace_back(column, parseExpression());
+        stmt->setClauses.emplace_back(column, std::move(expr)/*parseExpression()*/);
     } while (match(Token::Type::COMMA));
 
     //inValueContext = wasInValueContext;  // Restore context
@@ -910,6 +916,7 @@ std::unique_ptr<AST::Expression> Parse::parseExpression(){
 	return parseBinaryExpression(1);
 }
 
+
 std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence) {
     // Parse left side 
     std::unique_ptr<AST::Expression> left;
@@ -975,6 +982,8 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 
 std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 	std::cout<< "DEBUG: parsePrimarExpression() - current Token:" << static_cast<int>(currentToken.type) <<"'" <<currentToken.lexeme <<"'"<<std::endl;
+
+	std::unique_ptr<AST::Expression> left;
 	if(matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
 		std::cout<< "DEBUG: Foung aggregate function: " <<currentToken.lexeme<<std::endl;
 		Token funcToken = currentToken;
@@ -1015,17 +1024,26 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 
 		return std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg),std::move(expre), isCountAll);
 	}else if(match(Token::Type::IDENTIFIER)){
-		return parseIdentifier();
+		//return parseIdentifier();
+		left = parseIdentifier();
 	}else if(match(Token::Type::NUMBER_LITERAL) || match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING) || match(Token::Type::FALSE) || match(Token::Type::TRUE)){
-		return parseLiteral();
+		//return parseLiteral();
+		left = parseLiteral();
 	}else if(match(Token::Type::L_PAREN)){
 		consume(Token::Type::L_PAREN);
-		auto expr=parseExpression();
+		//auto expr=parseExpression();
+		left = parseExpression();
 		consume(Token::Type::R_PAREN);
-		return expr;
+		//return expr;
 	}else{
 		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
 	}
+
+	Token next = peekToken();
+	if(isBinaryOperator(next.type)){
+		return parseBinaryExpression(0);
+	}
+	return left;
 }
 
 std::unique_ptr<AST::Expression> Parse::parseIdentifier(){
@@ -1060,7 +1078,7 @@ std::unique_ptr<AST::Expression> Parse::parseLiteral() {
 		case Token::Type::OR: return 1;
 		case Token::Type::AND: return 2;
 	        case Token::Type::IN:
-		case Token::Type::BETWEEN: return 3;
+		ase Token::Type::BETWEEN: return 3;
 	        case Token::Type::NOT: return 4;
 		case Token::Type::EQUAL:
 		case Token::Type::NOT_EQUAL:

@@ -301,6 +301,15 @@ Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
         case '*':
             position++; column++;
             return Token(Token::Type::ASTERIST,"*",tokenline,tokencolumn);
+	case '+':
+	    position++; column++;
+	    return Token(Token::Type::PLUS,"+",tokenline,tokencolumn);
+        case '-':
+	    position++; column++;
+	    return Token(Token::Type::MINUS,"-",tokenline,tokencolumn);
+	case '/':
+	    position++; column++;
+	    return Token(Token::Type::SLASH,"/",tokenline,tokencolumn);
     }
 
     position++; column++;
