@@ -65,6 +65,7 @@ private:
         std::unordered_map<std::string, std::unique_ptr<FractalBPlusTree>> tables;
         std::unordered_map<std::string, std::vector<DatabaseSchema::Column>> table_schemas;
         std::unordered_map<std::string, uint32_t> root_page_ids;
+	std::unordered_map<std::string, std::string> primary_keys;
         uint32_t next_row_id = 1;
     };
 
