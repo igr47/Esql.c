@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 namespace AST{
 	class Node{
@@ -178,6 +179,12 @@ namespace AST{
 		        std::string name;
 		        std::string type;
 		        std::vector<std::string> constraints;
+			std::string defaultValue;
+			bool autoIncreament;
+
+			bool hasConstraint(const std::string& constraint) const {
+				return std::find(constraints.begin(),constraints.end(), constraint) != constraints.end();
+			}
 	};
 	class CreateDatabaseStatement:public Statement{
 		public:
