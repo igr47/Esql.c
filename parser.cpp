@@ -489,16 +489,64 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
     consume(currentToken.type);
 
     // Column constraints
-    if(matchAny({Token::Type::PRIMARY_KEY , Token::Type::NOT_NULL})){
-        do{
+    while(matchAny({Token::Type::PRIMARY_KEY , Token::Type::NOT_NULL,Token::Type::UNIQUE,Token::Type::CHECK,Token::Type::DEFAULT,Token::Type::AUTO_INCREAMENT})){
 	     if(match(Token::Type::PRIMARY_KEY)){
-                   col.constraints.push_back(currentToken.lexeme);
+                   col.constraints.push_back("PRIMARY_KEY");
 		   consume(Token::Type::PRIMARY_KEY);
-	     }else if(match(Token::Type::NOT_NULL)){
-		    col.constraints.push_back(currentToken.lexeme);
+
+		   //Handle PRIMARY KEY AUTOINCREAMENT combination
+		   if(match(Token::Type::AUTO_INCREAMENT)){
+			   col.autoIncreament = true;
+			   col.constraints.push_back("AUTO_INCREAMENT");
+			   consume(Token::Type::AUTO_INCREAMENT);
+		   }
+	     }else if(match(Token::Type::NOT_NULL)) {
+		    col.constraints.push_back("NOT_NULL");
 		    consume(Token::Type::NOT_NULL);
+	     } else if (match(Token::Type::UNIQUE)){
+		     col.constraints.push_back("UNIQUE");
+		     consume(Token::Type::UNIQUE);
+	     } else if(match(Token::Type::AUTO_INCREAMENT)){
+		     col.autoIncreament = true;
+		     col.constraints.push_back("AUTO_INCREAMENT");
+		     consume(Token::Type::AUTO_INCREAMENT);
+	     }else if (match(Token::Type::DEFAULT)){
+		     consume(Token::Type::DEFAULT);
+
+		     //Save the current state for proper default value parsing
+		     bool wasInValueContext = inValueContext;
+		     inValueContext = true;
+
+		     try {
+			     if(matchAny({Token::Type::STRING_LITERAL,Token::Type::NUMBER_LITERAL,Token::Type::TRUE,Token::Type::FALSE})){
+				     col.defaultValue = currentToken.lexeme;
+				     col.constraints.push_back("DEFAULT");
+				     consume(currentToken.type);
+			     }else if(match(Token::Type::NULL_TOKEN)) {
+				     col.defaultValue = "NULL";
+				     col.constraints.push_back("DEFAULT");
+				     consume(Token::Type::NULL_TOKEN);
+			     } else {
+				     throw std::runtime_error("Expected default value after DEFULT keword");
+			     }
+		     } catch (...){
+			     inValueContext = wasInValueContext;
+			     throw;
+		     }
+		     inValueContext = wasInValueContext;
+	     } else if (match(Token::Type::CHECK)){
+		     consume(Token::Type::CHECK);
+		     consume(Token::Type::L_PAREN);
+
+		     //Parse the expression using the existing expression Parser
+		     auto checkExpr = parseExpression();
+
+		     //Convert the expression into a string for storage in constrints
+		     std::string checkConstraint = "CHECK" + checkExpr->toString() + ")";
+		     col.constraints.push_back(checkConstraint);
+
+		     consume (Token::Type::R_PAREN);
 	     }
-	}while(match(Token::Type::PRIMARY_KEY) || match(Token::Type::NOT_NULL));
     }
 
     stmt.columns.push_back(std::move(col));
@@ -972,6 +1020,20 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
             left = std::make_unique<AST::InOp>(std::move(left), std::move(values));
             continue;
         }
+	else if (op.type == Token::Type::IS){
+		consume(Token::Type::IS);
+
+		if(match(Token::Type::NOT)){
+			consume(Token::Type::NOT);
+			auto right = parseBinaryExpression(precedence+1);
+			Token isNotToken = Token(Token::Type::IS_NOT, "IS NOT", op.line, op.column);
+			left = std::make_unique<AST::BinaryOp>(isNotToken, std::move(left), std::move(right));
+		}else {
+			auto right = parseBinaryExpression(precedence +1 );
+			left = std::make_unique<AST::BinaryOp>(op, std::move(left),std::move(right));
+		}
+		continue;
+	}
 
         // Handle regular binary operators
         if (isBinaryOperator(op.type)) {
@@ -1034,13 +1096,22 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		left = parseIdentifier();
 	}else if(match(Token::Type::NUMBER_LITERAL) || match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING) || match(Token::Type::FALSE) || match(Token::Type::TRUE)){
 		//return parseLiteral();
-		left = parseLiteral();
+		if(!inValueContext) {
+			left = std::make_unique<AST::ColumnReference>(currentToken.lexeme);
+			consume(Token::Type::IDENTIFIER);
+		} else {
+		        left = parseLiteral();
+		}
 	}else if(match(Token::Type::L_PAREN)){
 		consume(Token::Type::L_PAREN);
 		//auto expr=parseExpression();
 		left = parseExpression();
 		consume(Token::Type::R_PAREN);
 		//return expr;
+	}else if (match(Token::Type::NULL_TOKEN)){
+		auto nullLiteral = std::make_unique<AST::Literal>(currentToken);
+		consume(Token::Type::NULL_TOKEN);
+		left = std::move(nullLiteral);
 	}else{
 		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
 	}
@@ -1102,17 +1173,21 @@ int Parse::getPrecedence(Token::Type type) {
         case Token::Type::AND: return 2;
         case Token::Type::NOT: return 3;
         case Token::Type::EQUAL:
-        case Token::Type::NOT_EQUAL: return 4;
+        case Token::Type::NOT_EQUAL:
+	case Token::Type::IS: 
+	case Token::Type::IS_NOT: return 4;
         case Token::Type::LESS:
         case Token::Type::LESS_EQUAL:
         case Token::Type::GREATER:
         case Token::Type::GREATER_EQUAL: return 5;
         case Token::Type::BETWEEN:
-        case Token::Type::IN: return 6;
+	case Token::Type::IN:
+        case Token::Type::LIKE: return 6;
         case Token::Type::PLUS:
         case Token::Type::MINUS: return 7;
         case Token::Type::ASTERIST:
-        case Token::Type::SLASH: return 8;
+	case Token::Type::SLASH:
+        case Token::Type::MOD: return 8;
         default: return 0;
     }
 }
@@ -1134,6 +1209,10 @@ bool Parse::isBinaryOperator(Token::Type type) {
         case Token::Type::SLASH:
         case Token::Type::AND:
         case Token::Type::OR:
+	case Token::Type::LIKE:
+	case Token::Type::IS:
+	case Token::Type::IS_NOT:
+	case Token::Type::MOD:
             return true;
         case Token::Type::BETWEEN:
         case Token::Type::IN:

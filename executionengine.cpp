@@ -112,14 +112,50 @@ ExecutionEngine::ResultSet ExecutionEngine::executeCreateTable(AST::CreateTableS
         column.type = DatabaseSchema::Column::parseType(colDef.type);
         column.isNullable = true; // Default to nullable
         
+	//initialize constraint flags
+	column.isNullable = true;
+	column.hasDefault = false;
+	column.isPrimaryKey = false;
+	column.isUnique = false;
+	column.autoIncreament = false;
+	column.defaultValue = "";
+	column.constraints.clear();
         for (auto& constraint : colDef.constraints) {
-            if (constraint == "PRIMARY KEY") {
+	    DatabaseSchema::Constraint dbConstraint;
+            if (constraint == "PRIMARY_KEY") {
                 primaryKey = colDef.name;
+		column.isPrimaryKey = true;
                 column.isNullable = false;
-            }
-            else if (constraint == "NOT NULL") {
+		dbConstraint.type = DatabaseSchema::Constraint::PRIMARY_KEY;
+		dbConstraint.name = "PRIMARY_KEY";
+            } else if (constraint == "NOT_NULL") {
                 column.isNullable = false;
-            }
+		dbConstraint.type = DatabaseSchema::Constraint::NOT_NULL;
+		dbConstraint.name = "NOT_NULL";
+            } else if (constraint == "UNIQUE") {
+		column.isUnique = true;
+		dbConstraint.type = DatabaseSchema::Constraint::UNIQUE;
+		dbConstraint.name = "UNIQUE";
+	    } else if(constraint == "AUTO_INCREAMENT") {
+		column.autoIncreament = true;
+		//Auto increament implies not null
+		column.isNullable = false;
+		dbConstraint.type = DatabaseSchema::Constraint::AUTO_INCREAMENT;
+		dbConstraint.name = "AUTO_INCREAMENT";
+	    } else if (constraint == "DEFAULT") {
+		column.hasDefault = true;
+		column.defaultValue = colDef.defaultValue;
+		dbConstraint.type = DatabaseSchema::Constraint::DEFAULT;
+		dbConstraint.name = "DEFAULT";
+		dbConstraint.value = colDef.defaultValue;
+	    } else if (constraint.find("CHECK") == 0) {
+		//Extract the check condition from the constraint string
+		dbConstraint.type = DatabaseSchema::Constraint::CHECK;
+		dbConstraint.name = "CHECK";
+		//store the entire check condition
+		dbConstraint.value = constraint;
+	    }
+	    column.constraints.push_back(dbConstraint);
         }
         
         columns.push_back(column);
@@ -129,6 +165,98 @@ ExecutionEngine::ResultSet ExecutionEngine::executeCreateTable(AST::CreateTableS
     return ResultSet({"Status", {{"Table '" + stmt.tablename + "' created successfully"}}});
 }
 
+// Add this helper function at the top of executionengine.cpp
+/*void ExecutionEngine::debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints, const std::string& context) {
+    std::cout << "DEBUG_CONSTRAINTS [" << context << "]: Found " << constraints.size() << " constraints" << std::endl;
+    for (size_t i = 0; i < constraints.size(); i++) {
+        const auto& constraint = constraints[i];
+        std::cout << "  Constraint " << i << ": " << constraint.name
+                  << " (type: " << static_cast<int>(constraint.type)
+                  << ", value: '" << constraint.value << "'"
+                  << ", ref_table: '" << constraint.reference_table
+                  << "', ref_col: '" << constraint.reference_column << "')" << std::endl;
+    }
+}
+
+ExecutionEngine::ResultSet ExecutionEngine::executeCreateTable(AST::CreateTableStatement& stmt) {
+    std::cout << "=== CONSTRAINT FLOW: Starting CREATE TABLE " << stmt.tablename << " ===" << std::endl;
+
+    std::vector<DatabaseSchema::Column> columns;
+    std::string primaryKey;
+
+    for (auto& colDef : stmt.columns) {
+        std::cout << "DEBUG: Processing column '" << colDef.name << "' with "
+                  << colDef.constraints.size() << " constraints from parser" << std::endl;
+
+        DatabaseSchema::Column column;
+        column.name = colDef.name;
+        column.type = DatabaseSchema::Column::parseType(colDef.type);
+        column.isNullable = true; // Default to nullable
+
+        // Initialize constraint flags
+        column.isNullable = true;
+        column.hasDefault = false;
+        column.isPrimaryKey = false;
+        column.isUnique = false;
+        column.autoIncreament = false;
+        column.defaultValue = "";
+        column.constraints.clear();
+
+        for (auto& constraint : colDef.constraints) {
+            std::cout << "DEBUG: Processing constraint '" << constraint << "' for column '" << colDef.name << "'" << std::endl;
+
+            DatabaseSchema::Constraint dbConstraint;
+            if (constraint == "PRIMARY_KEY") {
+                std::cout << "DEBUG: Found PRIMARY_KEY constraint" << std::endl;
+                primaryKey = colDef.name;
+                column.isPrimaryKey = true;
+                column.isNullable = false;
+                dbConstraint.type = DatabaseSchema::Constraint::PRIMARY_KEY;
+                dbConstraint.name = "PRIMARY_KEY";
+            } else if (constraint == "NOT_NULL") {
+                std::cout << "DEBUG: Found NOT_NULL constraint" << std::endl;
+                column.isNullable = false;
+                dbConstraint.type = DatabaseSchema::Constraint::NOT_NULL;
+                dbConstraint.name = "NOT_NULL";
+            } else if (constraint == "UNIQUE") {
+                std::cout << "DEBUG: Found UNIQUE constraint" << std::endl;
+                column.isUnique = true;
+                dbConstraint.type = DatabaseSchema::Constraint::UNIQUE;
+                dbConstraint.name = "UNIQUE";
+            } else if (constraint == "AUTO_INCREAMENT") {
+                std::cout << "DEBUG: Found AUTO_INCREAMENT constraint" << std::endl;
+                column.autoIncreament = true;
+                column.isNullable = false;
+                dbConstraint.type = DatabaseSchema::Constraint::AUTO_INCREAMENT;
+                dbConstraint.name = "AUTO_INCREAMENT";
+            } else if (constraint == "DEFAULT") {
+                std::cout << "DEBUG: Found DEFAULT constraint with value: " << colDef.defaultValue << std::endl;
+                column.hasDefault = true;
+                column.defaultValue = colDef.defaultValue;
+                dbConstraint.type = DatabaseSchema::Constraint::DEFAULT;
+                dbConstraint.name = "DEFAULT";
+                dbConstraint.value = colDef.defaultValue;
+            } else if (constraint.find("CHECK") == 0) {
+                std::cout << "DEBUG: Found CHECK constraint: " << constraint << std::endl;
+                dbConstraint.type = DatabaseSchema::Constraint::CHECK;
+                dbConstraint.name = "CHECK";
+                dbConstraint.value = constraint;
+            }
+
+            column.constraints.push_back(dbConstraint);
+            std::cout << "DEBUG: Added constraint to column. Total constraints now: " << column.constraints.size() << std::endl;
+        }
+
+        columns.push_back(column);
+        debugConstraints(column.constraints, "After processing column " + colDef.name);
+    }
+
+    std::cout << "DEBUG: Calling storage.createTable with " << columns.size() << " columns" << std::endl;
+    storage.createTable(db.currentDatabase(), stmt.tablename, columns);
+
+    std::cout << "=== CONSTRAINT FLOW: Completed CREATE TABLE " << stmt.tablename << " ===" << std::endl;
+    return ResultSet({"Status", {{"Table '" + stmt.tablename + "' created successfully"}}});
+}*/
 ExecutionEngine::ResultSet ExecutionEngine::executeDropTable(AST::DropStatement& stmt) {
     storage.dropTable(db.currentDatabase(), stmt.tablename);
     return ResultSet({"Status", {{"Table '" + stmt.tablename + "' dropped successfully"}}});
