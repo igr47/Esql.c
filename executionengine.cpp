@@ -1501,9 +1501,19 @@ std::unordered_map<std::string, std::string> ExecutionEngine::buildRowFromValues
     return row;
 }
 
-void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,
-                                             const DatabaseSchema::Table* table) {
+void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table) {
+    //find primary key columns
+    std::vector<std::string> primaryKeyColumns;
     for (const auto& column : table->columns) {
+	if (column.isPrimaryKey) {
+		primaryKeyColumns.push_back(column.name);
+
+		//Check 1: Primary Key cannot be null
+		auto it = row.find(column.name);
+		if (it == row.end() || it->second.empty() || it->second == "NULL") {
+			throw std::runtime_error("Primary key  column '" + column.name + "' cannot be NULL");
+		}
+	}
         if (!column.isNullable) {
             auto it = row.find(column.name);
             if (it == row.end() || it->second.empty()) {
