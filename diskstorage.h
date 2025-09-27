@@ -59,6 +59,7 @@ public:
     void rebuildIndexes(const std::string& dbName, const std::string& tableName) override;
     void checkpoint() override;
     void debugDataFlow(const std::string& tableName,const std::unordered_map<std::string, std::string>& row,uint32_t row_id);
+    //void debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints, const std::string& context);
 
 private:
     struct Database {

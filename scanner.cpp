@@ -88,7 +88,11 @@ void Lexer::initializeKeyWords(){
 		{"SUM",Token::Type::SUM},
 		{"AVG",Token::Type::AVG},
 		{"MIN",Token::Type::MIN},
-		{"MAX",Token::Type::MAX}
+		{"MAX",Token::Type::MAX},
+		{"UNIQUE",Token::Type::UNIQUE},
+		{"DEFAULT",Token::Type::DEFAULT},
+		{"AUTO_INCREAMENT",Token::Type::AUTO_INCREAMENT},
+		{"IS",Token::Type::IS}
 
 	};
 }

@@ -725,23 +725,67 @@ void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
                     column.length = std::stoul(lengthStr);
                 }
             }
-            
+
         } catch (const std::runtime_error& e) {
             throw SematicError(e.what());
         }
+
+	column.isNullable = true; //Default to nullable
+	column.hasDefault = false;
+	column.isPrimaryKey = false;
+	column.isUnique = false;
+	column.defaultValue = "";
+	column.constraints.clear();
         
         // Handle constraints
         for (auto& constraint : colDef.constraints) {
-            if (constraint == "PRIMARY KEY") {
+	    DatabaseSchema::Constraint dbConstraint;
+            if (constraint == "PRIMARY_KEY") {
                 if (!primaryKey.empty()) {
                     throw SematicError("Multiple primary keys defined.");
                 }
                 primaryKey = colDef.name;
+		column.isPrimaryKey = true;
+		dbConstraint.type = DatabaseSchema::Constraint::PRIMARY_KEY;
+		dbConstraint.name = "PRIMARY_KEY";
                 column.isNullable = false;
-            } else if (constraint == "NOT NULL") {
-                column.isNullable = false;
-            }
+            } else if (constraint == "NOT_NULL") {
+		column.isNullable = false;
+		dbConstraint.type = DatabaseSchema::Constraint::NOT_NULL;
+		dbConstraint.name = "NOT_NULL";
+            } else if (constraint == "UNIQUE") {
+		column.isUnique = true;
+		dbConstraint.type = DatabaseSchema::Constraint::UNIQUE;
+		dbConstraint.name = "UNIQUE";
+	    } else if (constraint == "AUTO_INCREAMENT") {
+		column.autoIncreament = true;
+		//Auto-increament impliesNOT NULL and often used with PRIMARY KEY
+		column.isNullable = false;
+		dbConstraint.type = DatabaseSchema::Constraint::AUTO_INCREAMENT;
+		dbConstraint.name = "AUTO_INCREAMENT";
+	    } else if (constraint == "DEFAULT") {
+	        column.hasDefault = true;
+                column.defaultValue = colDef.defaultValue;
+                dbConstraint.type = DatabaseSchema::Constraint::DEFAULT;
+                dbConstraint.name = "DEFAULT";
+                dbConstraint.value = colDef.defaultValue;
+	    } else if (constraint.find("CHECK") == 0) {
+                dbConstraint.type = DatabaseSchema::Constraint::CHECK;
+                dbConstraint.name = "CHECK";
+                //Store the entire CHECK expression
+		dbConstraint.value = constraint;
+	    } else {
+		    throw SematicError("Unknown constraint: " + constraint);
+	    }
+	    column.constraints.push_back(dbConstraint);
         }
+	if(column.autoIncreament && !column.isPrimaryKey) {
+		std::cerr <<"Warning: AUTO_INCREAMENT is usually used with PRIMARY KE for column: " << column.name << std::endl;
+	}
+
+	if (column.isPrimaryKey && column.isNullable) {
+		throw SematicError("Primary Key column '" + column.name + "'cannot be nullable");
+	}
         
         columns.push_back(column);
     }

@@ -136,7 +136,53 @@ void DiskStorage::createTable(const std::string& dbName, const std::string& name
     db.root_page_ids[name] = root_id;
     writeSchema();
 }
+// Add this helper function at the top of executionengine.cpp
+/*void DiskStorage::debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints, const std::string& context) {
+    std::cout << "DEBUG_CONSTRAINTS [" << context << "]: Found " << constraints.size() << " constraints" << std::endl;
+    for (size_t i = 0; i < constraints.size(); i++) {
+        const auto& constraint = constraints[i];
+        std::cout << "  Constraint " << i << ": " << constraint.name 
+                  << " (type: " << static_cast<int>(constraint.type) 
+                  << ", value: '" << constraint.value << "'"
+                  << ", ref_table: '" << constraint.reference_table 
+                  << "', ref_col: '" << constraint.reference_column << "')" << std::endl;
+    }
+}
+void DiskStorage::createTable(const std::string& dbName, const std::string& name,
+                             const std::vector<DatabaseSchema::Column>& columns) {
+    std::cout << "=== DISKSTORAGE: Creating table " << name << " in database " << dbName << " ===" << std::endl;
+    
+    ensureDatabaseExists(dbName);
+    auto& db = databases.at(dbName);
+    if (db.tables.find(name) != db.tables.end()) {
+        throw std::runtime_error("Table already exists: " + name);
+    }
 
+    // Debug: Print all columns and constraints before creating the table
+    std::cout << "DEBUG: Table will have " << columns.size() << " columns:" << std::endl;
+    for (const auto& column : columns) {
+        std::cout << "  Column: " << column.name << " (type: " << static_cast<int>(column.type) 
+                  << ", nullable: " << column.isNullable 
+                  << ", primary: " << column.isPrimaryKey 
+                  << ", unique: " << column.isUnique 
+                  << ", auto_inc: " << column.autoIncreament << ")" << std::endl;
+        
+        debugConstraints(column.constraints, "DiskStorage createTable for column " + column.name);
+    }
+
+    uint32_t root_id = pager.allocate_page();
+    auto tree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, name, root_id);
+    tree->create();
+
+    db.tables[name] = std::move(tree);
+    db.table_schemas[name] = columns;
+    db.root_page_ids[name] = root_id;
+    
+    std::cout << "DEBUG: Calling writeSchema after table creation" << std::endl;
+    writeSchema();
+    
+    std::cout << "=== DISKSTORAGE: Table " << name << " created successfully ===" << std::endl;
+}*/
 void DiskStorage::dropTable(const std::string& dbName, const std::string& name) {
     ensureDatabaseSelected();
     auto& db = getCurrentDatabase();

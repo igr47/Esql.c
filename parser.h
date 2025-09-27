@@ -174,6 +174,19 @@ namespace AST{
 				return left->toString()+" "+op.lexeme+" "+right->toString();
 			}
 	};
+	class ColumnReference : public Expression {
+		public:
+			std::string columnName;
+
+			std::unique_ptr<Expression> clone() const override{
+				return std::make_unique<ColumnReference>(columnName);
+			}
+			explicit ColumnReference (const std::string& name) : columnName(name) {}
+
+			std::string toString() const override{
+				return columnName;
+			}
+	};
 	class ColumnDefination:public Node{
 		public:
 		        std::string name;
