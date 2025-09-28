@@ -1120,55 +1120,20 @@ bool ExecutionEngine::isAggregateFunction(const std::string& functionName) {
 }
 
 
-/*ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& stmt) {
-    auto table = storage.getTable(db.currentDatabase(), stmt.table);
-    if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
-    }
-   
-    //std::unordered_map<std::string, std::string> row;
-    if (stmt.columns.empty()) {
-        // Insert all columns in schema order
-	std::unordered_map<std::string,std::string> row;
-        for (size_t i = 0; i < stmt.values.size() && i < table->columns.size(); i++) {
-            const auto& column = table->columns[i];
-            std::string value = evaluateExpression(stmt.values[0][i].get(), {});
-            
-            if (value.empty() && !column.isNullable) {
-                throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
-            }
-            
-            row[column.name] = value;
-	    validateRowAgainstSchema(row,table);
-	    storage.insertRow(db.currentDatabase(), stmt.table, row);
-	    return ResultSet({"Status" , {{"1 row inserted into '"+ stmt.table + "'"}}});
-        }
-    } else {
-        // Insert specified columns
-	std::unordered_map<std::string, std::string> row;
-        for (size_t i = 0; i < stmt.columns.size(); i++) {
-            std::string value = evaluateExpression(stmt.values[0][i].get(), {});
-            row[stmt.columns[i]] = value;
-	    validateRowAgainstSchema(row, table);
-	    storage.insertRow(db.currentDatabase(), stmt.table, row);
-	    return ResultSet({"Status" ,{{"1 row inserrted into '" + stmt.table + "'"}}});
-        }
-    }
-    if(!stmt.columns.empty() && stmt.columns.size() < stmt.values.size()){
-	    std::vector<std::unordered_map<std::string,std::string>> rows;
-	    rows.reserve(stmt.values.size());
-	    for (const auto& row_values : stmt.values){
-		  auto row = buildRowFromValues(stmt.columns,row_values);
-		  validateRowAgainstSchema(row , table);
-		  rows.push_back(row);
-	    }
-	    storage.bulkInsert(db.currentDatabase() ,stmt.table , rows);
-	    return ResultSet({"Status" , {{std::to_string(stmt.values.size()) + "rows inserted into '" + stmt.table + "'"}}});
-     }
-    
-    return ResultSet({"Row added successfull"});
-}*/
- 
+void ExecutionEngine::applyDefaultValues(std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table) {
+	for (const auto& column : table->columns) {
+		auto it = row.find(column.name);
+
+		//If column is missing or Null and has a default value appl It
+		if ((it == row.end() || it->second.empty() || it->second == "NULL") && column.hasDefault && !column.defaultValue.empty()) {
+
+			//Apply the default value
+			row[column.name] = column.defaultValue;
+			std::cout << "DEBUG: Applied DEFAULT value '" << column.defaultValue << "'to column '" << column.name << "'" <<std::endl;
+		}
+	}
+}
+
 ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& stmt) {
     auto table = storage.getTable(db.currentDatabase(), stmt.table);
     if (!table) {
@@ -1217,12 +1182,14 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                     row[stmt.columns[i]] = value;
                 }
             }
-            
+	    //Apply DEFAULT VALUES before validation
+            applyDefaultValues(row, table);
+
             validateRowAgainstSchema(row, table);
             storage.insertRow(db.currentDatabase(), stmt.table, row);
             inserted_count = 1;
         } else {
-            // Multi-row insert - use bulk operations for efficiency
+            // Multi-row insert - used bulk operations for efficiency
             std::vector<std::unordered_map<std::string, std::string>> rows;
             rows.reserve(stmt.values.size());
             
@@ -1255,7 +1222,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                         row[stmt.columns[i]] = value;
                     }
                 }
-                
+                applyDefaultValues(row, table);
                 validateRowAgainstSchema(row, table);
                 rows.push_back(row);
             }
@@ -1510,6 +1477,10 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
     try {
 	    for (const auto& row_values : stmt.rows) {
 		    auto row = buildRowFromValues(stmt.columns, row_values);
+
+		    //Apply DEFAULT VALUES before validation
+		    applyDefaultValues(row, table);
+		    
 		    validateRowAgainstSchema(row, table);
 		    rows.push_back(row);
 	    }
@@ -1929,97 +1900,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 
     throw std::runtime_error("Unsupported expression type in evaluation");
 }
-/*std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
-                                              const std::unordered_map<std::string, std::string>& row) {
-    if (auto lit = dynamic_cast<const AST::Literal*>(expr)) {
-        if (lit->token.type == Token::Type::STRING_LITERAL || 
-            lit->token.type == Token::Type::DOUBLE_QUOTED_STRING) {
-            // Remove quotes from string literals
-            std::string value = lit->token.lexeme;
-            if (value.size() >= 2 && 
-                ((value[0] == '\'' && value[value.size()-1] == '\'') ||
-                 (value[0] == '"' && value[value.size()-1] == '"'))) {
-                return value.substr(1, value.size() - 2);
-            }
-            return value;
-        }
-        return lit->token.lexeme;
-    }
-    else if (auto ident = dynamic_cast<const AST::Identifier*>(expr)) {
-        auto it = row.find(ident->token.lexeme);
-        return it != row.end() ? it->second : "NULL";
-    }
-    else if (auto binOp = dynamic_cast<const AST::BinaryOp*>(expr)) {
-        std::string left = evaluateExpression(binOp->left.get(), row);
-        std::string right = evaluateExpression(binOp->right.get(), row);
 
-        switch (binOp->op.type) {
-            case Token::Type::EQUAL: 
-		    return left == right ? "true" : "false";
-            case Token::Type::NOT_EQUAL: 
-		    return left != right ? "true" : "false";
-            case Token::Type::LESS: 
-		    try {return std::stod(left) < std::stod(right) ? "true" : "false";}
-		    catch (...) {return left < right ? "true" : "false";}
-            case Token::Type::LESS_EQUAL: 
-		    try {return std::stod(left) <= std::stod(right) ? "true" : "false";}
-		    catch (...) {return left <= right ? "true" : "false";}
-            case Token::Type::GREATER: 
-		    try {return std::stod(left) > std::stod(right) ? "true" : "false";}
-		    catch (...) {return left > right ? "true" : "false";}
-            case Token::Type::GREATER_EQUAL: 
-		    try {return std::stod(left) >= std::stod(right) ? "true" : "false";}
-		    catch (...) {return left >= right ? "true" : "false";}
-	    case Token::Type::PLUS:
-		    try {return std::to_string(std::stod(left)+std::stod(right));}
-		    catch (...) {return left + right;}
-	    case Token::Type::MINUS:
-		    try {return std::to_string(std::stod(left)-std::stod(right));}
-		    catch (...) {throw std::runtime_error("Cannot subtract non numeric vaues");}
-	    case Token::Type::SLASH:
-		    try{
-			    double divisor = std::stod(right);
-			    if (divisor == 0) throw std::runtime_error ("Divosion b Zero");
-			    return std::to_string(std::stod(left) / divisor);
-		     }
-		    catch (...) {throw std::runtime_error("Cannot divide non-numeric values");
-		     return std::to_string(std::stod(left) + std::stod(right));}
-            case Token::Type::AND: return (left == "true" && right == "true") ? "true" : "false";
-            case Token::Type::OR: return (left == "true" || right == "true") ? "true" : "false";
-            default: return "false";
-        }
-    }else if (auto* between = dynamic_cast<const AST::BetweenOp*>(expr)){
-	    auto colval = evaluateExpression(between->column.get(), row);
-	    auto lowerval = evaluateExpression(between->lower.get(), row);
-	    auto upperval = evaluateExpression(between->upper.get(), row);
-
-	    try{
-		    //Try numeric comparison first
-		    double colNum = std::stod(colval);
-		    double lowerNum = std::stod(lowerval);
-		    double upperNum = std::stod(upperval);
-		    return (colNum >= lowerNum && colNum <=upperNum) ? "true" : "false";
-	    }catch (...){
-		    return (colval >= lowerval && colval <= upperval) ? "true" : "false";
-	    }
-      }else if (auto* inop = dynamic_cast<const AST::InOp*>(expr)){
-		    auto colval = evaluateExpression(inop->column.get(),row);
-		    for(const auto& value : inop->values){
-			    if (colval == evaluateExpression(value.get(),row)){
-				    return "true";
-			    }
-		     }
-		    return "false";
-	     
-      }else if(auto* notop = dynamic_cast<const AST::NotOp*>(expr)){
-		     std::string result = evaluateExpression(notop->expr.get(),row);
-		     bool boolResult = (result == "true" || result =="1");
-		     return (!boolResult) ? "true" : "false";
-	      }
-
-
-    return "NULL";
-}*/
 bool ExecutionEngine::isNumericString(const std::string& str){
 	if(str.empty()) return false;
 	
