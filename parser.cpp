@@ -317,8 +317,8 @@ std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement() {
     // Parse SET clause
     consume(Token::Type::SET);
 
-    //bool wasInValueContext = inValueContext;
-    //inValueContext = true;  // We're now parsing values
+    bool wasInValueContext = inValueContext;
+    inValueContext = true;  // We're now parsing values
 
     do {
         if (match(Token::Type::COMMA)) {
@@ -329,15 +329,15 @@ std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement() {
         consume(Token::Type::IDENTIFIER);
         consume(Token::Type::EQUAL);
 
-	auto expr = parseExpression();
+	//auto expr = parseExpression();
 
-	std::cout<<"DEBUG: Parsed expression:" << expr->toString()<<std::endl;
+	//std::cout<<"DEBUG: Parsed expression:" << expr->toString()<<std::endl;
 
         // Use parseExpression() for strict value parsing
-        stmt->setClauses.emplace_back(column, std::move(expr)/*parseExpression()*/);
+        stmt->setClauses.emplace_back(column, /*std::move(expr)*/parseExpression());
     } while (match(Token::Type::COMMA));
 
-    //inValueContext = wasInValueContext;  // Restore context
+    inValueContext = wasInValueContext;  // Restore context
 
     // Parse WHERE clause
     if (match(Token::Type::WHERE)) {
