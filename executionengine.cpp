@@ -1263,6 +1263,35 @@ void ExecutionEngine::validateUpdateAgainstPrimaryKey(const std::unordered_map<s
 	}
 }
 
+void ExecutionEngine::validateUpdateAgainstUniqueConstraints(const std::unordered_map<std::string, std::string>& updates,const DatabaseSchema::Table* table,uint32_t rowId){
+	auto existingData = storage.getTableData(db.currentDatabase(), table->name);
+
+	//Check each column beingupdated against unique constraint
+	for(const auto& column : table->columns) {
+		if(!column.isNullable) continue;
+
+		auto updateIt = updates.find(column.name);
+		if (updateIt == updates.end()) continue; //This column is not being updated
+
+		std::string newValue = updateIt->second;
+
+		//Skip NULL values(That is they are allowed in uique columns)
+		if (newValue.empty() || newValue == "NULL") continue;
+
+		//Check existing rows for duplicate values
+		for (uint32_t i = 0; i < existingData.size(); i++) {
+			if (rowId > 0 && (i+1) == rowId) continue;
+
+			const auto& existingRow = existingData[i];
+			auto existingIt = existingRow.find(column.name);
+
+			if (existingIt != existingRow.end() && existingIt->second == newValue) {
+				throw std::runtime_error("Duplicate value for unique column '" + column.name + "': '" + newValue + "'");
+			}
+		}
+	}
+}
+
 ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     bool wasInTransaction = inTransaction();
     if (!wasInTransaction) {
@@ -1299,6 +1328,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
 
 		//validate againwith actual values
 		validateUpdateAgainstPrimaryKey(actualUpdates, table);
+
+		//Validate UNIQUE constraint forupdates
+		validateUpdateAgainstUniqueConstraints(actualUpdates, table, i+1);
 
                 // Update the row (use 1-based row ID)
                 storage.updateTableData(db.currentDatabase(), stmt.table, i + 1, actualUpdates);
@@ -1538,6 +1570,55 @@ std::unordered_map<std::string, std::string> ExecutionEngine::buildRowFromValues
     return row;
 }
 
+//Method to validate unique ness of a column
+void ExecutionEngine::validateUniqueConstraints(const std::unordered_map<std::string, std::string>& newRow,const DatabaseSchema::Table* table,const std::vector<std::string>& uniqueColumns) {
+	auto existingData = storage.getTableData(db.currentDatabase(), table->name);
+
+	//Check each unique column
+	for (const auto& uniqueColumn : uniqueColumns) {
+		auto it = newRow.find(uniqueColumn);
+		if (it == newRow.end() || it->second.empty() || it->second == "NULL") {
+			continue;
+		}
+
+		std::string newValue = it->second;
+
+		//Check existing rows for duplicate values
+		for (const auto& existingRow : existingData) {
+			auto existingIt = existingRow.find(uniqueColumn);
+			if (existingIt != existingRow.end() && existingIt->second == newValue) {
+				throw std::runtime_error("Duplicate value for unique column '" + uniqueColumn + "': '" + newValue + "'");
+			}
+		}
+	}
+
+	//Also check against current batch
+	validateUniqueConstraintsInBatch(newRow, uniqueColumns);
+}
+
+void ExecutionEngine::validateUniqueConstraintsInBatch(const std::unordered_map<std::string, std::string>& newRow,const std::vector<std::string>& uniqueColumns) {
+	//Check against all previousl validated rows in the current batch
+	for (const auto& existingBatchRow : currentBatch) {
+		for (const auto& uniqueColumn : uniqueColumns) {
+			auto newIt = newRow.find(uniqueColumn);
+			auto existingIt = existingBatchRow.find(uniqueColumn);
+
+			//Skip if either value is NULL or empty
+			if (newIt == newRow.end() || newIt->second.empty() || newIt->second == "NULL") {
+				continue;
+			}
+			if (existingIt == existingBatchRow.end() || existingIt->second.empty() || existingIt->second == "NULL") {
+				continue;
+			}
+
+			//Check for duplicate
+			if (newIt->second == existingIt->second) {
+				throw std::runtime_error("Duplicate value for unique column '" + uniqueColumn + "' in current batch: '" + newIt->second + "'");
+			}
+		}
+	}
+}
+
 void ExecutionEngine::validatePrimaryKeyUniquenessInBatch(const std::unordered_map<std::string, std::string>& newRow,const std::vector<std::string>& primaryKeyColumns) {
 	//Extract primary key Values from the new row
 	std::vector<std::string> newPrimaryKeyValues;
@@ -1620,25 +1701,38 @@ void ExecutionEngine::validatePrimaryKeyUniqueness(const std::unordered_map<std:
 void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table) {
     //find primary key columns
     std::vector<std::string> primaryKeyColumns;
+    std::vector<std::string> uniqueColumns;
     for (const auto& column : table->columns) {
-	if (column.isPrimaryKey) {
-		primaryKeyColumns.push_back(column.name);
+	auto it = row.find(column.name);
 
-		//Check 1: Primary Key cannot be null
-		auto it = row.find(column.name);
-		if (it == row.end() || it->second.empty() || it->second == "NULL") {
-			throw std::runtime_error("Primary key  column '" + column.name + "' cannot be NULL");
+	if(it == row.end() || it->second.empty() || it->second == "NULL") {
+		if (column.isPrimaryKey) {
+			throw std::runtime_error("Primary key column '" + column.name + "' cannot be NULL");
+		}
+
+		//Hanle NOT NULL constraint
+		if (!column.isNullable) {
+			throw std::runtime_error("Non-nullable colun '" + column.name + "'must have a value");
+		}
+	} else {
+		//Column has a value so constraints apply
+		if(column.isPrimaryKey){
+			primaryKeyColumns.push_back(column.name);
+		}
+		
+		if (column.isUnique) {
+			uniqueColumns.push_back(column.name);
 		}
 	}
-        if (!column.isNullable) {
-            auto it = row.find(column.name);
-            if (it == row.end() || it->second.empty()) {
-                throw std::runtime_error("Non-nullable column '" + column.name + "' must have a value");
-            }
-        }
     }
+
     if(!primaryKeyColumns.empty()) {
 	    validatePrimaryKeyUniqueness(row, table, primaryKeyColumns);
+    }
+
+    //Validate unique constraints if we have unique columns with values
+    if (!uniqueColumns.empty()) {
+	    validateUniqueConstraints(row, table, uniqueColumns);
     }
 }
 
