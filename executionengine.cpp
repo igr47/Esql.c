@@ -1278,6 +1278,24 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
     }
 }
 
+//method to make sure UPDATE method does not update PRIMARY_KEY
+void ExecutionEngine::validateUpdateAgainstPrimaryKey(const std::unordered_map<std::string, std::string>& updates, const DatabaseSchema::Table* table) {
+	//Find primary key columns
+	std::vector<std::string> primaryKeyColumns;
+	for (const auto& column : table->columns) {
+		if (column.isPrimaryKey) {
+			primaryKeyColumns.push_back(column.name);
+		}
+	}
+
+	//Check if primary key column is being updated
+	for (const auto& pkColumn : primaryKeyColumns) {
+		if (updates.find(pkColumn) !=updates.end()) {
+                       throw std::runtime_error("Cannot update primary key column'" + pkColumn + "'. Primary Keys are immutable.");
+		}
+	}
+}
+
 ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     bool wasInTransaction = inTransaction();
     if (!wasInTransaction) {
@@ -1290,6 +1308,13 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
             throw std::runtime_error("Table not found: " + stmt.table);
         }
 
+        //Validate primary keys are not being updated
+	std::unordered_map<std::string, std::string> updates;
+	for (const auto& [col, expr] : stmt.setClauses) {
+		updates[col] = "";
+	}
+	validateUpdateAgainstPrimaryKey(updates, table);
+
         // Get ALL table data to find matching rows
         auto table_data = storage.getTableData(db.currentDatabase(), stmt.table);
         int updated_count = 0;
@@ -1300,13 +1325,16 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
             // Check if this row matches the WHERE clause
             if (!stmt.where || evaluateWhereClause(stmt.where.get(), current_row)) {
                 // Apply updates to this row
-                std::unordered_map<std::string, std::string> updates;
+                std::unordered_map<std::string, std::string> actualUpdates;
                 for (const auto& [col, expr] : stmt.setClauses) {
-                    updates[col] = evaluateExpression(expr.get(), current_row);
+                    actualUpdates[col] = evaluateExpression(expr.get(), current_row);
                 }
 
+		//validate againwith actual values
+		validateUpdateAgainstPrimaryKey(actualUpdates, table);
+
                 // Update the row (use 1-based row ID)
-                storage.updateTableData(db.currentDatabase(), stmt.table, i + 1, updates);
+                storage.updateTableData(db.currentDatabase(), stmt.table, i + 1, actualUpdates);
                 updated_count++;
             }
         }
@@ -1418,6 +1446,17 @@ ExecutionEngine::ResultSet ExecutionEngine::handleAlterAdd(AST::AlterTableStatem
 }
 
 ExecutionEngine::ResultSet ExecutionEngine::handleAlterDrop(AST::AlterTableStatement* stmt) {
+    auto table = storage.getTable(db.currentDatabase(), stmt->tablename);
+    if (!table) {
+	    throw std::runtime_error("Table not found: " + stmt->tablename);
+    }
+
+    //Check if the colum being dropped is a primary key
+    for (const auto& column : table->columns) {
+	    if (column.name == stmt->columnName && column.isPrimaryKey) {
+		    throw std::runtime_error("Cannot drop primary key column '" + stmt->columnName + "'. Use ALTER TABLE to modify primary key constraints instead.");
+	    }
+    }
     storage.alterTable(
         db.currentDatabase(),
         stmt->tablename,
@@ -1431,6 +1470,17 @@ ExecutionEngine::ResultSet ExecutionEngine::handleAlterDrop(AST::AlterTableState
 }
 
 ExecutionEngine::ResultSet ExecutionEngine::handleAlterRename(AST::AlterTableStatement* stmt) {
+    auto table = storage.getTable(db.currentDatabase(), stmt->tablename);
+    if (!table) {
+	    throw std::runtime_error("Table not found: " + stmt->tablename);
+    }
+
+    //Check if column being renamed is primary key
+    for (const auto& column : table->columns) {
+	    if (column.name == stmt->columnName && column.isPrimaryKey) {
+		    throw std::runtime_error("Cannot rename primary key column '" + stmt->columnName + "'. Primary Key column names cannot be changed.");
+	    }
+    }
     storage.alterTable(
         db.currentDatabase(),
         stmt->tablename,
