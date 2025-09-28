@@ -84,8 +84,8 @@ private:
         const std::vector<std::unique_ptr<AST::Expression>>& values,
         const std::unordered_map<std::string, std::string>& context = {});
     
-    void validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,
-                                 const DatabaseSchema::Table* table);
+    void validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table);
+    void validatePrimaryKeyUniqueness(const std::unordered_map<std::string, std::string>& newRow,const DatabaseSchema::Table* table,const std::vector<std::string>& primaryKeyColumns);
     void debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints, const std::string& context); 
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);

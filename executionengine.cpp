@@ -1501,6 +1501,49 @@ std::unordered_map<std::string, std::string> ExecutionEngine::buildRowFromValues
     return row;
 }
 
+void ExecutionEngine::validatePrimaryKeyUniqueness(const std::unordered_map<std::string, std::string>& newRow,const DatabaseSchema::Table* table,const std::vector<std::string>& primaryKeyColumns) {
+	//Get exising table data and checkfor duplicates
+	auto existingData = storage.getTableData(db.currentDatabase(), table->name);
+	//Extract the primary key values from the duplicates
+	std::vector<std::string> newPrimaryKeyValues;
+	for(const auto& pkColumn : primaryKeyColumns) {
+		auto it = newRow.find(pkColumn);
+		if(it != newRow.end()) {
+			newPrimaryKeyValues.push_back(it->second);
+		} else {
+			newPrimaryKeyValues.push_back("");
+		}
+	}
+
+	//Check existing rows
+	for(const auto& existingRow :existingData) {
+		bool match = true;
+
+		for(size_t i = 0; i < primaryKeyColumns.size(); i++){
+			const auto& pkColumn = primaryKeyColumns[i];
+			auto existingIt = existingRow.find(pkColumn);
+			auto newValue = newPrimaryKeyValues[i];
+
+			//If either value is missing or the don't match no duplicate
+			if(existingIt == existingRow.end() || existingIt->second != newValue) {
+				match = false;
+				break;
+			}
+		}
+
+		if(match) {
+			std::string pkDescribtion;
+			for (size_t i = 0; i < primaryKeyColumns.size(); i++) {
+				if(i > 0) pkDescribtion += ",";
+				pkDescribtion += primaryKeyColumns[i] + "=" + newPrimaryKeyValues[i] + "'";
+			}
+			throw std::runtime_error("Duplicate primary key value: " + pkDescribtion);
+		}
+	}
+		//Method call for bulk opeartions, also check within the current batch for duplicates
+
+}
+
 void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table) {
     //find primary key columns
     std::vector<std::string> primaryKeyColumns;
@@ -1520,6 +1563,9 @@ void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::str
                 throw std::runtime_error("Non-nullable column '" + column.name + "' must have a value");
             }
         }
+    }
+    if(!primaryKeyColumns.empty()) {
+	    validatePrimaryKeyUniqueness(row, table, primaryKeyColumns);
     }
 }
 
