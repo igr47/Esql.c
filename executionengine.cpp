@@ -1449,17 +1449,33 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
     if (!table) {
         throw std::runtime_error("Table not found: " + stmt.table);
     }
+
+    //Initialize btch tracking
+    currentBatch.clear();
+    currentBatchPrimaryKeys.clear();
     
     std::vector<std::unordered_map<std::string, std::string>> rows;
     rows.reserve(stmt.rows.size());
     
-    for (const auto& row_values : stmt.rows) {
-        auto row = buildRowFromValues(stmt.columns, row_values);
-        validateRowAgainstSchema(row, table);
-        rows.push_back(row);
-    }
+    try {
+	    for (const auto& row_values : stmt.rows) {
+		    auto row = buildRowFromValues(stmt.columns, row_values);
+		    validateRowAgainstSchema(row, table);
+		    rows.push_back(row);
+	    }
+	    
+	    storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
+
+	    //Clear batch tracking after successfull insertion
+	    currentBatch.clear();
+	    currentBatchPrimaryKeys.clear();
     
-    storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
+    } catch (const std::exception& e) {
+	    //Clear batch trcking on error
+	    currentBatch.clear();
+	    currentBatchPrimaryKeys.clear();
+	    throw;
+    }
     
     return ResultSet({"Status", {{std::to_string(rows.size()) + " rows bulk inserted into '" + stmt.table + "'"}}});
 }
@@ -1501,6 +1517,42 @@ std::unordered_map<std::string, std::string> ExecutionEngine::buildRowFromValues
     return row;
 }
 
+void ExecutionEngine::validatePrimaryKeyUniquenessInBatch(const std::unordered_map<std::string, std::string>& newRow,const std::vector<std::string>& primaryKeyColumns) {
+	//Extract primary key Values from the new row
+	std::vector<std::string> newPrimaryKeyValues;
+	for (const auto& pkColumn : primaryKeyColumns) {
+		auto it = newRow.find(pkColumn);
+		if(it != newRow.end()){
+			newPrimaryKeyValues.push_back(it->second);
+		} else {
+			newPrimaryKeyValues.push_back("");//Shoul not happen due to NULL checks
+		}
+	}
+
+		//Check againat all previously validated rows in the current batch
+	for(const auto& existingBatchRow : currentBatch) {
+		bool match = true;
+		for(size_t i = 0; i < primaryKeyColumns.size(); ++i){
+			const auto& pkColumn = primaryKeyColumns[i];
+			auto existingIt = existingBatchRow.find(pkColumn);
+			auto newValue = newPrimaryKeyValues[i];
+
+			if (existingIt == existingBatchRow.end() || existingIt->second != newValue) {
+				match = false;
+				break;
+			}
+		}
+		if(match) {
+			std::string pkDescribtion;
+			for(size_t i = 0; i < primaryKeyColumns.size(); i++) {
+				if (i > 0) pkDescribtion += ", ";
+				         pkDescribtion += primaryKeyColumns[i] + "='" + newPrimaryKeyValues[i] + "'";
+			}
+			throw std::runtime_error("Duplicate primary key value in current batch: " + pkDescribtion);
+		}
+	}
+	currentBatch.push_back(newRow);
+}
 void ExecutionEngine::validatePrimaryKeyUniqueness(const std::unordered_map<std::string, std::string>& newRow,const DatabaseSchema::Table* table,const std::vector<std::string>& primaryKeyColumns) {
 	//Get exising table data and checkfor duplicates
 	auto existingData = storage.getTableData(db.currentDatabase(), table->name);
@@ -1540,7 +1592,7 @@ void ExecutionEngine::validatePrimaryKeyUniqueness(const std::unordered_map<std:
 			throw std::runtime_error("Duplicate primary key value: " + pkDescribtion);
 		}
 	}
-		//Method call for bulk opeartions, also check within the current batch for duplicates
+	validatePrimaryKeyUniquenessInBatch(newRow, primaryKeyColumns);
 
 }
 

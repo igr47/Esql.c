@@ -9,6 +9,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <set>
 
 class ExecutionEngine {
 public:
@@ -34,6 +35,8 @@ public:
 private:
     Database& db;
     DiskStorage& storage;
+    std::vector<std::unordered_map<std::string, std::string>> currentBatch;
+    std::set<std::vector<std::string>> currentBatchPrimaryKeys;
     
     // Statement execution methods
     ResultSet executeCreateDatabase(AST::CreateDatabaseStatement& stmt);
@@ -86,6 +89,7 @@ private:
     
     void validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table);
     void validatePrimaryKeyUniqueness(const std::unordered_map<std::string, std::string>& newRow,const DatabaseSchema::Table* table,const std::vector<std::string>& primaryKeyColumns);
+    void validatePrimaryKeyUniquenessInBatch(const std::unordered_map<std::string, std::string>& newRow,const std::vector<std::string>& primaryKeyColumns);
     void debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints, const std::string& context); 
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);
