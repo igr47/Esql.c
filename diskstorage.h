@@ -32,15 +32,12 @@ public:
     void deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) override;
     std::vector<std::unordered_map<std::string, std::string>> getTableData(
         const std::string& dbName, const std::string& tableName) override;
-    void updateTableData(const std::string& dbName, const std::string& tableName,
-                        uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) override;
-    const DatabaseSchema::Table* getTable(const std::string& dbName,
-                                         const std::string& tableName) const override;
+    void updateTableData(const std::string& dbName, const std::string& tableName,uint32_t row_id, const std::unordered_map<std::string, std::string>& new_values) override;
+
+    const DatabaseSchema::Table* getTable(const std::string& dbName,const std::string& tableName) const override;
 
     // Alter table operations
-    void alterTable(const std::string& dbName, const std::string& tableName,
-                   const std::string& oldColumn, const std::string& newColumn,
-                   const std::string& newType, AST::AlterTableStatement::Action action) override;
+    void alterTable(const std::string& dbName, const std::string& tableName,const std::string& oldColumn, const std::string& newColumn,const std::string& newType, AST::AlterTableStatement::Action action) override;
 
     // Bulk operations
     void bulkInsert(const std::string& dbName, const std::string& tableName,const std::vector<std::unordered_map<std::string, std::string>>& rows) override;
@@ -53,6 +50,10 @@ public:
     void commitTransaction() override;
     void rollbackTransaction() override;
     uint64_t getCurrentTransactionId() const override;
+
+    //AUTO_INCREAMENT management
+    uint32_t getNextAutoIncreamentValue(const std::string& dbName, const std::string& tableName, const std::string& columnName);
+    void updateAutoIncreamentCounter(const std::string& dbName, const std::string& tableName,const std::string& columnName, uint32_t value);
 
     // Maintenance operations
     void compactDatabase(const std::string& dbName) override;
@@ -67,6 +68,7 @@ private:
         std::unordered_map<std::string, std::vector<DatabaseSchema::Column>> table_schemas;
         std::unordered_map<std::string, uint32_t> root_page_ids;
 	std::unordered_map<std::string, std::string> primary_keys;
+	std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>> auto_increament_counters; //table->column->counter
         uint32_t next_row_id = 1;
     };
 

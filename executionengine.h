@@ -95,7 +95,9 @@ private:
     void debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints, const std::string& context);
     void validateUniqueConstraints(const std::unordered_map<std::string, std::string>& newRow,const DatabaseSchema::Table* table, const std::vector<std::string>& uniqueColumns);
     void validateUniqueConstraintsInBatch(const std::unordered_map<std::string, std::string>& newRow,const std::vector<std::string>& uniqueColumn);
+    void handleAutoIncreament(std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table);
     void validateUpdateAgainstUniqueConstraints(const std::unordered_map<std::string, std::string>& updates,const DatabaseSchema::Table* , uint32_t rowId =0); 
+    std::vector<std::string> getPrimaryKeyColumns(const DatabaseSchema::Table* table);
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);
     std::string evaluateValue(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row);

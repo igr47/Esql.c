@@ -496,6 +496,9 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
 
 		   //Handle PRIMARY KEY AUTOINCREAMENT combination
 		   if(match(Token::Type::AUTO_INCREAMENT)){
+			   if (col.type != "INT" && col.type != "INTEGER") {
+				   throw std::runtime_error("AUTO_INCREAMENT can only be  applied to INT columns");
+			   }
 			   col.autoIncreament = true;
 			   col.constraints.push_back("AUTO_INCREAMENT");
 			   consume(Token::Type::AUTO_INCREAMENT);

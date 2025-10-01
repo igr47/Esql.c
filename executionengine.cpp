@@ -1142,12 +1142,198 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 
     int inserted_count = 0;
     bool wasInTransaction = inTransaction();
-    
+    bool isBulkOperation = (stmt.values.size() > 1);
+
     if (!wasInTransaction) {
         beginTransaction();
     }
 
     try {
+        // Initialize batch tracking ONLY for actual multi-row operations
+        if (isBulkOperation) {
+            currentBatch.clear();
+            currentBatchPrimaryKeys.clear();
+        }
+
+        // Handle single-row insert
+        if (stmt.values.size() == 1) {
+            // Single row insertion - don't use batch tracking
+            std::unordered_map<std::string, std::string> row;
+
+            if (stmt.columns.empty()) {
+                // INSERT INTO table VALUES (values) - use schema order
+                if (stmt.values[0].size() != table->columns.size()) {
+                    throw std::runtime_error("Column count doesn't match value count. Expected " +
+                                           std::to_string(table->columns.size()) + " values, got " +
+                                           std::to_string(stmt.values[0].size()));
+                }
+
+                for (size_t i = 0; i < stmt.values[0].size() && i < table->columns.size(); i++) {
+                    const auto& column = table->columns[i];
+                    std::string value = evaluateExpression(stmt.values[0][i].get(), {});
+
+                    // Skip AUTO_INCREMENT columns - they'll be handled automatically
+                    if (column.autoIncreament) {
+                        continue;
+                    }
+
+                    if (value.empty() && !column.isNullable) {
+                        throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
+                    }
+
+                    row[column.name] = value;
+                }
+            } else {
+                // INSERT INTO table (columns) VALUES (values) - use specified columns
+                if (stmt.columns.size() != stmt.values[0].size()) {
+                    throw std::runtime_error("Column count doesn't match value count");
+                }
+
+                for (size_t i = 0; i < stmt.columns.size(); i++) {
+                    const auto& column_name = stmt.columns[i];
+
+                    // Find the column in the table schema
+                    auto col_it = std::find_if(table->columns.begin(), table->columns.end(),
+                        [&](const DatabaseSchema::Column& col) { return col.name == column_name; });
+
+                    if (col_it != table->columns.end() && col_it->autoIncreament) {
+                        throw std::runtime_error("Cannot specify AUTO_INCREMENT column '" + column_name + "' in INSERT statement");
+                    }
+                    std::string value = evaluateExpression(stmt.values[0][i].get(), {});
+                    row[column_name] = value;
+                }
+            }
+
+            // Handle AUTO_INCREMENT before validation
+            handleAutoIncreament(row, table);
+
+            // Apply DEFAULT VALUES before validation
+            applyDefaultValues(row, table);
+
+            // For single-row inserts, validate without batch tracking
+            validateRowAgainstSchema(row, table);
+            storage.insertRow(db.currentDatabase(), stmt.table, row);
+            inserted_count = 1;
+        } else {
+            // Multi-row insert - use batch operations for efficiency
+            std::vector<std::unordered_map<std::string, std::string>> rows;
+            rows.reserve(stmt.values.size());
+
+            // Initialize batch tracking for bulk insert
+            currentBatch.clear();
+            currentBatchPrimaryKeys.clear();
+
+            for (const auto& row_values : stmt.values) {
+                std::unordered_map<std::string, std::string> row;
+
+                if (stmt.columns.empty()) {
+                    // INSERT INTO table VALUES (values1), (values2), ...
+                    if (row_values.size() != table->columns.size()) {
+                        throw std::runtime_error("Column count doesn't match value count in row " +
+                                               std::to_string(rows.size() + 1) + ". Expected " +
+                                               std::to_string(table->columns.size()) + " values, got " +
+                                               std::to_string(row_values.size()));
+                    }
+
+                    for (size_t i = 0; i < row_values.size() && i < table->columns.size(); i++) {
+                        const auto& column = table->columns[i];
+
+                        // Skip AUTO_INCREMENT columns
+                        if (column.autoIncreament) {
+                            continue;
+                        }
+
+                        std::string value = evaluateExpression(row_values[i].get(), {});
+                        row[column.name] = value;
+                    }
+                } else {
+                    // INSERT INTO table (columns) VALUES (values1), (values2), ...
+                    if (stmt.columns.size() != row_values.size()) {
+                        throw std::runtime_error("Column count doesn't match value count in row " +
+                                               std::to_string(rows.size() + 1));
+                    }
+
+                    for (size_t i = 0; i < stmt.columns.size(); i++) {
+                        const auto& column_name = stmt.columns[i];
+
+                        // Find the column in the table schema
+                        auto col_it = std::find_if(table->columns.begin(), table->columns.end(),
+                            [&](const DatabaseSchema::Column& col) { return col.name == column_name; });
+
+                        if (col_it != table->columns.end() && col_it->autoIncreament) {
+                            throw std::runtime_error("Cannot specify AUTO_INCREMENT column '" + column_name + "' in INSERT statement");
+                        }
+                        std::string value = evaluateExpression(row_values[i].get(), {});
+                        row[column_name] = value;
+                    }
+                }
+
+                handleAutoIncreament(row, table);
+                applyDefaultValues(row, table);
+                
+                // For batch operations, validate with batch tracking
+                validateRowAgainstSchema(row, table);
+                rows.push_back(row);
+                
+                // Add to current batch for subsequent uniqueness checks
+                currentBatch.push_back(row);
+            }
+
+            storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
+            inserted_count = rows.size();
+
+            // Clear batch tracking after successful insertion
+            currentBatch.clear();
+            currentBatchPrimaryKeys.clear();
+        }
+
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
+
+        return ResultSet({"Status", {{std::to_string(inserted_count) + " row(s) inserted into '" + stmt.table + "'"}}});
+
+    } catch (const std::exception& e) {
+        // Clear batch tracking on error
+        currentBatch.clear();
+        currentBatchPrimaryKeys.clear();
+
+        // Only rollback if we started the transaction
+        if (!wasInTransaction && inTransaction()) {
+            try {
+                rollbackTransaction();
+            } catch (const std::exception& rollback_error) {
+                // Log but don't throw - the original error is more important
+                std::cerr << "Warning: Failed to rollback transaction: " << rollback_error.what() << std::endl;
+            }
+        }
+        throw;
+    }
+}
+
+/*ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& stmt) {
+    auto table = storage.getTable(db.currentDatabase(), stmt.table);
+    if (!table) {
+        throw std::runtime_error("Table not found: " + stmt.table);
+    }
+
+    int inserted_count = 0;
+    bool wasInTransaction = inTransaction();
+    //bool isBulkOperation = (stmt.values.size() > 1);
+    
+    if (!wasInTransaction) {
+        beginTransaction();
+    }
+
+    bool isBulkOperation = (stmt.values.size() > 1);
+
+    try {
+	 //Initialize batch tracking only for unique bulk operations
+	 if (isBulkOperation) {
+		 currentBatch.clear();
+		 currentBatchPrimaryKeys.clear();
+	 }
+
         // Handle single-row insert
         if (stmt.values.size() == 1) {
             // Single row insertion
@@ -1165,6 +1351,11 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                     const auto& column = table->columns[i];
                     std::string value = evaluateExpression(stmt.values[0][i].get(), {});
                     
+		    //Skip AUTO_INCREAMENT columns - the'll be handled automatically
+		    if (column.autoIncreament) {
+			    continue;
+		    }
+
                     if (value.empty() && !column.isNullable) {
                         throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
                     }
@@ -1178,10 +1369,23 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                 }
                 
                 for (size_t i = 0; i < stmt.columns.size(); i++) {
+		    const auto& column_name = stmt.columns[i];
+
+		    //Find the columnin the table schema
+		    auto col_it = std::find_if(table->columns.begin(),table->columns.end(), [&](const DatabaseSchema::Column& col) { return col.name ==column_name; });
+
+		    if (col_it != table->columns.end() && col_it->autoIncreament) {
+			    throw std::runtime_error("Cannot specify AUTO_INCREAMENT column '" + column_name + "' in INSERT statement");
+		    }
                     std::string value = evaluateExpression(stmt.values[0][i].get(), {});
-                    row[stmt.columns[i]] = value;
+                    //row[stmt.columns[i]] = value;
+		    row[column_name]  = value;
                 }
             }
+
+	    //Handle AUTO_INCREAMENT before validation
+	    handleAutoIncreament(row, table);
+
 	    //Apply DEFAULT VALUES before validation
             applyDefaultValues(row, table);
 
@@ -1193,6 +1397,10 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
             std::vector<std::unordered_map<std::string, std::string>> rows;
             rows.reserve(stmt.values.size());
             
+	    //Initialize batch tracking for bulk insert
+	    currentBatch.clear();
+	    currentBatchPrimaryKeys.clear();
+
             for (const auto& row_values : stmt.values) {
                 std::unordered_map<std::string, std::string> row;
                 
@@ -1207,6 +1415,12 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                     
                     for (size_t i = 0; i < row_values.size() && i < table->columns.size(); i++) {
                         const auto& column = table->columns[i];
+
+			//Skip AUTO_INCREAMENT columns
+			if (column.autoIncreament) {
+				continue;
+			}
+
                         std::string value = evaluateExpression(row_values[i].get(), {});
                         row[column.name] = value;
                     }
@@ -1218,10 +1432,21 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                     }
                     
                     for (size_t i = 0; i < stmt.columns.size(); i++) {
+			const auto& column_name = stmt.columns[i];
+
+			//Find the column in the table schema
+			auto col_it = std::find_if(table->columns.begin(), table->columns.end(),[&](const DatabaseSchema::Column& col) { return col.name == column_name; });
+
+			if (col_it != table->columns.end() && col_it->autoIncreament) {
+				throw std::runtime_error("Cannot specify AUTO_INCREAMENT column '" + column_name + "' in INSERT statement");
+			}
                         std::string value = evaluateExpression(row_values[i].get(), {});
-                        row[stmt.columns[i]] = value;
+                        //row[stmt.columns[i]] = value;
+			row[column_name] = value;
                     }
                 }
+
+		handleAutoIncreament(row, table);
                 applyDefaultValues(row, table);
                 validateRowAgainstSchema(row, table);
                 rows.push_back(row);
@@ -1229,6 +1454,10 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
             
             storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
             inserted_count = rows.size();
+
+	    //Clear batch tracking after successfull insertion
+	    currentBatch.clear();
+	    currentBatchPrimaryKeys.clear();
         }
 
         if (!wasInTransaction) {
@@ -1238,12 +1467,16 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
         return ResultSet({"Status", {{std::to_string(inserted_count) + " row(s) inserted into '" + stmt.table + "'"}}});
 
     } catch (const std::exception& e) {
+	//Clear batch tracking on error
+	currentBatch.clear();
+	currentBatchPrimaryKeys.clear();
+	
         if (!wasInTransaction) {
             rollbackTransaction();
         }
         throw;
     }
-}
+}*/
 
 //method to make sure UPDATE method does not update PRIMARY_KEY
 void ExecutionEngine::validateUpdateAgainstPrimaryKey(const std::unordered_map<std::string, std::string>& updates, const DatabaseSchema::Table* table) {
@@ -1510,6 +1743,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
 	    for (const auto& row_values : stmt.rows) {
 		    auto row = buildRowFromValues(stmt.columns, row_values);
 
+		    //Handle AUTO_INCREAMENT before default values application and validation
+		    handleAutoIncreament(row, table);
+
 		    //Apply DEFAULT VALUES before validation
 		    applyDefaultValues(row, table);
 		    
@@ -1698,44 +1934,94 @@ void ExecutionEngine::validatePrimaryKeyUniqueness(const std::unordered_map<std:
 
 }
 
-void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table) {
-    //find primary key columns
-    std::vector<std::string> primaryKeyColumns;
-    std::vector<std::string> uniqueColumns;
-    for (const auto& column : table->columns) {
-	auto it = row.find(column.name);
+void ExecutionEngine::handleAutoIncreament(std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table) {
+	for (const auto& column : table->columns) {
+		if (column.autoIncreament) {
+			//Check if user tried to privide a value for the AUTO_INCREAMENT value
+			auto it = row.find(column.name);
+			if(it != row.end() && !it->second.empty() && it->second != "NULL") {
+				throw std::runtime_error("Cannot insert value into AUTO_INCREAMENT column '" + column.name + "', values are automaticaly generated");
+			}
 
-	if(it == row.end() || it->second.empty() || it->second == "NULL") {
-		if (column.isPrimaryKey) {
-			throw std::runtime_error("Primary key column '" + column.name + "' cannot be NULL");
-		}
+			//Get the next auto increament value
+			uint32_t next_id = storage.getNextAutoIncreamentValue(db.currentDatabase(), table->name, column.name);
+			row[column.name] = std::to_string(next_id);
 
-		//Hanle NOT NULL constraint
-		if (!column.isNullable) {
-			throw std::runtime_error("Non-nullable colun '" + column.name + "'must have a value");
-		}
-	} else {
-		//Column has a value so constraints apply
-		if(column.isPrimaryKey){
-			primaryKeyColumns.push_back(column.name);
-		}
-		
-		if (column.isUnique) {
-			uniqueColumns.push_back(column.name);
+			std::cout << "DEBUG: Applied AUTO_INCREAMENT value '" << row[column.name] << "'to column '" << column.name << "'" <<std::endl;
 		}
 	}
+}
+
+void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table) {
+    // Find primary key columns
+    std::vector<std::string> primaryKeyColumns;
+    std::vector<std::string> uniqueColumns;
+    std::vector<std::string> autoIncreamentColumns;
+    
+    for (const auto& column : table->columns) {
+        auto it = row.find(column.name);
+
+        if (column.autoIncreament) {
+            autoIncreamentColumns.push_back(column.name);
+
+            if (it != row.end() && !it->second.empty() && it->second != "NULL") {
+                bool isAutoGenerated = false;
+
+                if (!currentBatch.empty()) {
+                    isAutoGenerated = true;
+                }
+                if (isAutoGenerated) {
+                    throw std::runtime_error("Cannot provide value for AUTO_INCREAMENT column '" + column.name + "'. Values are automatically generated.");
+                }
+            }
+        }
+
+        if(it == row.end() || it->second.empty() || it->second == "NULL") {
+            if (column.isPrimaryKey && !column.autoIncreament) {
+                throw std::runtime_error("Primary key column '" + column.name + "' cannot be NULL");
+            }
+
+            // Handle NOT NULL constraint
+            if (!column.isNullable && !column.autoIncreament) {
+                throw std::runtime_error("Non-nullable column '" + column.name + "' must have a value");
+            }
+        } else {
+            // Column has a value so constraints apply
+            if(column.isPrimaryKey){
+                primaryKeyColumns.push_back(column.name);
+            }
+            
+            if (column.isUnique) {
+                uniqueColumns.push_back(column.name);
+            }
+        }
     }
 
     if(!primaryKeyColumns.empty()) {
-	    validatePrimaryKeyUniqueness(row, table, primaryKeyColumns);
+        validatePrimaryKeyUniqueness(row, table, primaryKeyColumns);
     }
 
-    //Validate unique constraints if we have unique columns with values
+    // Validate unique constraints if we have unique columns with values
     if (!uniqueColumns.empty()) {
-	    validateUniqueConstraints(row, table, uniqueColumns);
+        validateUniqueConstraints(row, table, uniqueColumns);
+
+        // Only use batch validation when we are in a MULTI-ROW batch operation
+        // For single-row inserts, currentBatch should be empty, so skip batch validation
+        if(!currentBatch.empty()) {
+            validateUniqueConstraintsInBatch(row, uniqueColumns);
+        }
     }
 }
 
+std::vector<std::string> ExecutionEngine::getPrimaryKeyColumns(const DatabaseSchema::Table* table) {
+	std::vector<std::string> primaryKeyColumns;
+	for (const auto& column : table->columns) {
+		if (column.isPrimaryKey) {
+			primaryKeyColumns.push_back(column.name);
+		}
+	}
+	return primaryKeyColumns;
+}
 std::vector<uint32_t> ExecutionEngine::findMatchingRowIds(const std::string& tableName,
                                                         const AST::Expression* whereClause) {
     std::vector<uint32_t> matching_ids;
