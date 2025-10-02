@@ -92,7 +92,8 @@ void Lexer::initializeKeyWords(){
 		{"UNIQUE",Token::Type::UNIQUE},
 		{"DEFAULT",Token::Type::DEFAULT},
 		{"AUTO_INCREAMENT",Token::Type::AUTO_INCREAMENT},
-		{"IS",Token::Type::IS}
+		{"IS",Token::Type::IS},
+		{"CHECK",Token::Type::CHECK}
 
 	};
 }

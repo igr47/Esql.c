@@ -101,6 +101,100 @@ ExecutionEngine::ResultSet ExecutionEngine::executeShow(AST::ShowDatabaseStateme
     return result;
 }
 
+
+void ExecutionEngine::validateCheckConstraints(const std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table) {
+	auto checkConstraints = parseCheckConstraints(table);
+
+	for (const auto& [constraintName, checkExpression] : checkConstraints) {
+		if (!evaluateCheckConstraint(checkExpression, row, constraintName)) {
+			throw std::runtime_error("CHECK constraint violation: " + constraintName + " - condition: " + checkExpression);
+		}
+	}
+}
+
+bool ExecutionEngine::evaluateCheckConstraint(const std::string& checkExpression, const std::unordered_map<std::string,std::string>& row, const std::string& constraintName) {
+	try {
+		auto checkExpr = parseStoredCheckExpression(checkExpression);
+		if(!checkExpr) {
+			std::cerr << "Warning: Failed to parse CHECK constraint: " << constraintName <<std::endl;
+			return true; //Permissive if parsing fails
+		}
+
+		//Evaluate the expression using our existing expression evaluation
+		std::string result = evaluateExpression(checkExpr.get(), row);
+
+		//Convert to boolean (same logic as WHERE clause)
+		bool isTrue = (result == "true" || result == "1" || result == "TRUE");
+
+		if(!isTrue) {
+			std::cout << "DEBUG: CHECK constraint '" <<constraintName << "'failed. Expression: " <<checkExpression << "evaluated to: " << result << std::endl;
+		}
+
+		return isTrue;
+
+	} catch (const std::exception& e) {
+		std::cerr << "Warning: Failed to evaluate check constraint '" << constraintName << "': " << e.what() << std::endl;
+		return true; //Permisive on evaluation errors
+	}
+}
+
+std::vector<std::pair<std::string, std::string>> ExecutionEngine::parseCheckConstraints(const DatabaseSchema::Table* table) {
+	std::vector<std::pair<std::string, std::string>> checkConstraints;
+
+	for (const auto& column :table->columns) {
+		for (const auto& constraint : column.constraints) {
+			if (constraint.type == DatabaseSchema::Constraint::CHECK) {
+				//Extract the expression part from the stored format
+				std::string rawExpression = constraint.value;
+
+				//Handle different storage formats that might be in the existing data
+				if (rawExpression.find("CHECK(") == 0 && rawExpression.back() == ')') {
+					rawExpression = rawExpression.substr(6, rawExpression.length() - 7);
+				}else if (rawExpression.find("CHECK:") == 0) {
+					rawExpression = rawExpression.substr(6);
+				}
+				//If it is alread just the expression use as-is
+
+				checkConstraints.emplace_back(constraint.name, rawExpression);
+			}
+		}
+	}
+
+	return checkConstraints;
+}
+
+std::unique_ptr<AST::Expression> ExecutionEngine::parseStoredCheckExpression(const std::string& storedCheckExpression) {
+	//Use caching to avoid repeated parsing of the same expression
+	auto cacheKey = storedCheckExpression;
+	auto it = checkExpressionCache.find(cacheKey);
+	if (it != checkExpressionCache.end()) {
+		return it->second->clone();
+	}
+
+	try {
+		std::cout << "DEBUG: Parsing CHECK expression: " << storedCheckExpression << std::endl;
+
+		//const std::istringstream stream(storedCheckExpression);
+		const std::string stream = storedCheckExpression;
+
+		Lexer lexer(stream);
+		Parse parser(lexer);
+
+		auto expression = parser.parseExpression();
+
+		checkExpressionCache[cacheKey] = expression->clone();
+
+		std::cout << "DEBUG: Successfully parsed CHECK expression: " << expression->toString() <<std::endl;
+
+		return expression;
+
+	} catch (const std::exception& e) {
+		std::cerr << "ERROR: Failed to parse CHECK expression '" << storedCheckExpression << "': " << e.what() << std::endl;
+
+		throw std::runtime_error("Invalid CHECK constraint expression: " + storedCheckExpression);
+	}
+}
+
 // Table operations
 ExecutionEngine::ResultSet ExecutionEngine::executeCreateTable(AST::CreateTableStatement& stmt) {
     std::vector<DatabaseSchema::Column> columns;
@@ -153,7 +247,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeCreateTable(AST::CreateTableS
 		dbConstraint.type = DatabaseSchema::Constraint::CHECK;
 		dbConstraint.name = "CHECK";
 		//store the entire check condition
-		dbConstraint.value = constraint;
+		//dbConstraint.value = constraint;
+		dbConstraint.value = colDef.checkExpression;
 	    }
 	    column.constraints.push_back(dbConstraint);
         }
@@ -1525,6 +1620,21 @@ void ExecutionEngine::validateUpdateAgainstUniqueConstraints(const std::unordere
 	}
 }
 
+void ExecutionEngine::validateUpdateWithCheckConstraints(const std::unordered_map<std::string, std::string>& updates,const DatabaseSchema::Table* table,uint32_t row_id) {
+	auto table_data = storage.getTableData(db.currentDatabase(), table->name);
+	if (row_id == 0 || row_id > table_data.size()) {
+		throw std::runtime_error("Invalid row Id for update validation" );
+	}
+
+	//create updated row by appling changes to current row
+	auto updated_row = table_data[row_id - 1];
+	for (const auto& [col, value] : updates) {
+		updated_row[col] = value;
+	}
+
+	validateCheckConstraints(updated_row, table);
+
+}
 ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& stmt) {
     bool wasInTransaction = inTransaction();
     if (!wasInTransaction) {
@@ -1564,6 +1674,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
 
 		//Validate UNIQUE constraint forupdates
 		validateUpdateAgainstUniqueConstraints(actualUpdates, table, i+1);
+
+		//Validate CHECK constraints for the updated row
+		validateUpdateWithCheckConstraints(actualUpdates, table, i+1);
 
                 // Update the row (use 1-based row ID)
                 storage.updateTableData(db.currentDatabase(), stmt.table, i + 1, actualUpdates);
@@ -1753,6 +1866,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
 		    rows.push_back(row);
 	    }
 	    
+	    for (auto& row : rows) {
+		    validateCheckConstraints(row,table);
+	    }
 	    storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
 
 	    //Clear batch tracking after successfull insertion
@@ -2011,6 +2127,9 @@ void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::str
             validateUniqueConstraintsInBatch(row, uniqueColumns);
         }
     }
+
+    validateCheckConstraints(row, table);
+    std::cout << "DEBUG: All CHECK constraintspassed for table: " << table->name << std::endl;
 }
 
 std::vector<std::string> ExecutionEngine::getPrimaryKeyColumns(const DatabaseSchema::Table* table) {

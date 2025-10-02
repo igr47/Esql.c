@@ -98,6 +98,12 @@ private:
     void handleAutoIncreament(std::unordered_map<std::string, std::string>& row,const DatabaseSchema::Table* table);
     void validateUpdateAgainstUniqueConstraints(const std::unordered_map<std::string, std::string>& updates,const DatabaseSchema::Table* , uint32_t rowId =0); 
     std::vector<std::string> getPrimaryKeyColumns(const DatabaseSchema::Table* table);
+    void validateCheckConstraints(const std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table);
+    bool evaluateCheckConstraint(const std::string& checkExpression, const std::unordered_map<std::string, std::string>& row,const std::string& constraintName="");
+    std::vector<std::pair<std::string, std::string>> parseCheckConstraints(const DatabaseSchema::Table* table);
+    std::unique_ptr<AST::Expression> parseStoredCheckExpression(const std::string& storedCheckExpression);
+    std::unordered_map<std::string, std::unique_ptr<AST::Expression>> checkExpressionCache;
+    void validateUpdateWithCheckConstraints(const std::unordered_map<std::string, std::string>& updates,const DatabaseSchema::Table* table,uint32_t row_id);
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);
     std::string evaluateValue(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row);
