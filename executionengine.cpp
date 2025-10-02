@@ -1257,27 +1257,43 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 
             if (stmt.columns.empty()) {
                 // INSERT INTO table VALUES (values) - use schema order
-                if (stmt.values[0].size() != table->columns.size()) {
+		// Count non-AUTO_INCREAMENT columns to determine expected value count
+		size_t expectedValueCount = 0;
+		for (const auto& column : table->columns) {
+			if (!column.autoIncreament) {
+				expectedValueCount++;
+			}
+		}
+
+                //if (stmt.values[0].size() != table->columns.size()) {
+		if (stmt.values[0].size() != expectedValueCount) {
                     throw std::runtime_error("Column count doesn't match value count. Expected " +
-                                           std::to_string(table->columns.size()) + " values, got " +
+                                           std::to_string(expectedValueCount) + " values (excluding AUTO_INCREAMENT columns), got " +
                                            std::to_string(stmt.values[0].size()));
                 }
 
-                for (size_t i = 0; i < stmt.values[0].size() && i < table->columns.size(); i++) {
+		//Map values to columns, skipping AUTO_INCREAMENT columns
+		size_t valueIndex = 0;
+                //for (size_t i = 0; i < stmt.values[0].size() && i < table->columns.size(); i++) {
+		for (size_t i = 0; i < table->columns.size(); i++) {
                     const auto& column = table->columns[i];
-                    std::string value = evaluateExpression(stmt.values[0][i].get(), {});
+                    //std::string value = evaluateExpression(stmt.values[0][i].get(), {});
 
                     // Skip AUTO_INCREMENT columns - they'll be handled automatically
                     if (column.autoIncreament) {
                         continue;
                     }
 
-                    if (value.empty() && !column.isNullable) {
-                        throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
-                    }
-
-                    row[column.name] = value;
-                }
+		    if (valueIndex < stmt.values[0].size()) {
+			    std::string value = evaluateExpression(stmt.values[0][valueIndex].get(),{});
+			    if (value.empty() && !column.isNullable) {
+				    throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
+			    }
+			    
+			    row[column.name] = value;
+			    valueIndex++;
+		    }
+		}
             } else {
                 // INSERT INTO table (columns) VALUES (values) - use specified columns
                 if (stmt.columns.size() != stmt.values[0].size()) {
@@ -1323,14 +1339,23 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 
                 if (stmt.columns.empty()) {
                     // INSERT INTO table VALUES (values1), (values2), ...
-                    if (row_values.size() != table->columns.size()) {
+		    // Count non-AUTO_INCREAMENT columns to determine expected value count
+		    size_t expectedValueCount = 0;
+		    for (const auto& column : table->columns) {
+			    if (!column.autoIncreament) {
+				    expectedValueCount++;
+			    }
+		    }
+                    if (row_values.size() != expectedValueCount) {
                         throw std::runtime_error("Column count doesn't match value count in row " +
                                                std::to_string(rows.size() + 1) + ". Expected " +
-                                               std::to_string(table->columns.size()) + " values, got " +
+                                               std::to_string(expectedValueCount) + " values (excluding AUTO_INCREAMENT columns), got " +
                                                std::to_string(row_values.size()));
                     }
 
-                    for (size_t i = 0; i < row_values.size() && i < table->columns.size(); i++) {
+		    //map values to columns, skipping AUTO_INCREAMENT columns
+		    size_t valueIndex = 0;
+                    for (size_t i = 0;  i < table->columns.size(); i++) {
                         const auto& column = table->columns[i];
 
                         // Skip AUTO_INCREMENT columns
@@ -1338,8 +1363,11 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                             continue;
                         }
 
-                        std::string value = evaluateExpression(row_values[i].get(), {});
-                        row[column.name] = value;
+			if (valueIndex < row_values.size()) {
+				std::string value = evaluateExpression(row_values[valueIndex].get(), {});
+				row[column.name] = value;
+				valueIndex++;
+			}
                     }
                 } else {
                     // INSERT INTO table (columns) VALUES (values1), (values2), ...

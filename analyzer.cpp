@@ -593,64 +593,31 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
     }
 }
 //Method to analyze insert statement
-/*void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
-    currentTable = storage.getTable(db.currentDatabase(), insertStmt.table);
-    if (!currentTable) {
-        throw SematicError("Tablename does not exist: " + insertStmt.table);
-    }
-
-    // Validate column count matches value count
-    if (!insertStmt.columns.empty() && insertStmt.columns.size() != insertStmt.values.size()) {
-        throw SematicError("Column count does not match value count");
-    }
-
-    for (size_t i = 0; i < insertStmt.columns.size(); ++i) {
-        const std::string& colName = insertStmt.columns.empty() ? 
-                                    currentTable->columns[i].name : 
-                                    insertStmt.columns[i];
-        auto* column = findColumn(colName);
-        if (!column) {
-            throw SematicError("Unknown column: " + colName);
-        }
-
-        // Special handling for TEXT columns
-        if (column->type == DatabaseSchema::Column::TEXT) {
-            if (auto* literal = dynamic_cast<AST::Literal*>(insertStmt.values[0][i].get())) {
-                if (literal->token.type != Token::Type::STRING_LITERAL && 
-                    literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
-                    throw SematicError("String values must be quoted for TEXT column: " + colName);
-                }
-                // Valid string literal - continue to type checking
-            } else {
-                throw SematicError("Invalid value for TEXT column: " + colName);
-            }
-        }
-
-        // General type checking
-        DatabaseSchema::Column::Type valueType = getValueType(*insertStmt.values[0][i]);
-        if (!isTypeCompatible(column->type, valueType)) {
-            throw SematicError("Type mismatch for column: " + colName);
-        }
-    }
-}*/
-
 void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
     currentTable = storage.getTable(db.currentDatabase(), insertStmt.table);
     if (!currentTable) {
         throw SematicError("Table does not exist: " + insertStmt.table);
     }
 
-    // Validate that all rows have the same number of values
-    size_t expected_value_count = insertStmt.columns.empty() ?
-                                 currentTable->columns.size() :
-                                 insertStmt.columns.size();
+    // Count non-AUTO_INCREMENT columns to determine expected value count
+    size_t expectedValueCount = 0;
+    for (const auto& column : currentTable->columns) {
+        if (!column.autoIncreament) {
+            expectedValueCount++;
+        }
+    }
 
-    for (size_t i = 0; i < insertStmt.values.size(); ++i) {
-        if (insertStmt.values[i].size() != expected_value_count) {
-            throw SematicError("Row " + std::to_string(i + 1) +
-                             " has incorrect number of values. Expected " +
-                             std::to_string(expected_value_count) + ", got " +
-                             std::to_string(insertStmt.values[i].size()));
+    // Validate column count matches value count (excluding AUTO_INCREMENT columns)
+    if (!insertStmt.columns.empty()) {
+        if (insertStmt.columns.size() != insertStmt.values[0].size()) {
+            throw SematicError("Column count does not match value count");
+        }
+    } else {
+        // For INSERT INTO table VALUES (...) - check against non-AUTO_INCREMENT columns
+        if (insertStmt.values[0].size() != expectedValueCount) {
+            throw SematicError("Column count doesn't match value count. Expected " +
+                             std::to_string(expectedValueCount) + " values (excluding AUTO_INCREMENT columns), got " +
+                             std::to_string(insertStmt.values[0].size()));
         }
     }
 
@@ -661,24 +628,44 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
             if (!column) {
                 throw SematicError("Unknown column: " + colName);
             }
+            // Check if user is trying to insert into an AUTO_INCREMENT column
+            if (column->autoIncreament) {
+                throw SematicError("Cannot specify AUTO_INCREMENT column '" + colName + "' in INSERT statement");
+            }
         }
     }
 
     // Validate each value against its corresponding column
     for (size_t row_idx = 0; row_idx < insertStmt.values.size(); ++row_idx) {
-        for (size_t col_idx = 0; col_idx < insertStmt.values[row_idx].size(); ++col_idx) {
+        size_t value_index = 0;
+        
+        for (size_t col_idx = 0; col_idx < currentTable->columns.size(); ++col_idx) {
+            const auto& column = currentTable->columns[col_idx];
+            
+            // Skip AUTO_INCREMENT columns - they're handled by execution engine
+            if (column.autoIncreament) {
+                continue;
+            }
+
+            // Get the column name for validation
             const std::string& colName = insertStmt.columns.empty() ?
                                        currentTable->columns[col_idx].name :
-                                       insertStmt.columns[col_idx];
+                                       insertStmt.columns[value_index];
 
-            auto* column = findColumn(colName);
-            if (!column) {
+            // Find the column in schema
+            auto* schemaColumn = findColumn(colName);
+            if (!schemaColumn) {
                 throw SematicError("Unknown column: " + colName);
             }
 
+            // Ensure we have enough values
+            if (value_index >= insertStmt.values[row_idx].size()) {
+                throw SematicError("Not enough values for row " + std::to_string(row_idx + 1));
+            }
+
             // Special handling for TEXT columns
-            if (column->type == DatabaseSchema::Column::TEXT) {
-                if (auto* literal = dynamic_cast<AST::Literal*>(insertStmt.values[row_idx][col_idx].get())) {
+            if (schemaColumn->type == DatabaseSchema::Column::TEXT) {
+                if (auto* literal = dynamic_cast<AST::Literal*>(insertStmt.values[row_idx][value_index].get())) {
                     if (literal->token.type != Token::Type::STRING_LITERAL &&
                         literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
                         throw SematicError("String values must be quoted for TEXT column: " + colName);
@@ -689,14 +676,23 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
             }
 
             // General type checking
-            DatabaseSchema::Column::Type valueType = getValueType(*insertStmt.values[row_idx][col_idx]);
-            if (!isTypeCompatible(column->type, valueType)) {
+            DatabaseSchema::Column::Type valueType = getValueType(*insertStmt.values[row_idx][value_index]);
+            if (!isTypeCompatible(schemaColumn->type, valueType)) {
                 throw SematicError("Type mismatch for column '" + colName +
                                  "' in row " + std::to_string(row_idx + 1));
             }
+
+            value_index++;
+        }
+
+        // Check if we have extra values
+        if (value_index < insertStmt.values[row_idx].size()) {
+            throw SematicError("Too many values for row " + std::to_string(row_idx + 1) +
+                             ". Expected " + std::to_string(value_index) + " values");
         }
     }
 }
+
 
 void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
     if (storage.tableExists(db.currentDatabase(), createStmt.tablename)) {
