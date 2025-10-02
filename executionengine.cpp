@@ -1406,172 +1406,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
     }
 }
 
-/*ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& stmt) {
-    auto table = storage.getTable(db.currentDatabase(), stmt.table);
-    if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
-    }
 
-    int inserted_count = 0;
-    bool wasInTransaction = inTransaction();
-    //bool isBulkOperation = (stmt.values.size() > 1);
-    
-    if (!wasInTransaction) {
-        beginTransaction();
-    }
-
-    bool isBulkOperation = (stmt.values.size() > 1);
-
-    try {
-	 //Initialize batch tracking only for unique bulk operations
-	 if (isBulkOperation) {
-		 currentBatch.clear();
-		 currentBatchPrimaryKeys.clear();
-	 }
-
-        // Handle single-row insert
-        if (stmt.values.size() == 1) {
-            // Single row insertion
-            std::unordered_map<std::string, std::string> row;
-            
-            if (stmt.columns.empty()) {
-                // INSERT INTO table VALUES (values) - use schema order
-                if (stmt.values[0].size() != table->columns.size()) {
-                    throw std::runtime_error("Column count doesn't match value count. Expected " + 
-                                           std::to_string(table->columns.size()) + " values, got " + 
-                                           std::to_string(stmt.values[0].size()));
-                }
-                
-                for (size_t i = 0; i < stmt.values[0].size() && i < table->columns.size(); i++) {
-                    const auto& column = table->columns[i];
-                    std::string value = evaluateExpression(stmt.values[0][i].get(), {});
-                    
-		    //Skip AUTO_INCREAMENT columns - the'll be handled automatically
-		    if (column.autoIncreament) {
-			    continue;
-		    }
-
-                    if (value.empty() && !column.isNullable) {
-                        throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
-                    }
-                    
-                    row[column.name] = value;
-                }
-            } else {
-                // INSERT INTO table (columns) VALUES (values) - use specified columns
-                if (stmt.columns.size() != stmt.values[0].size()) {
-                    throw std::runtime_error("Column count doesn't match value count");
-                }
-                
-                for (size_t i = 0; i < stmt.columns.size(); i++) {
-		    const auto& column_name = stmt.columns[i];
-
-		    //Find the columnin the table schema
-		    auto col_it = std::find_if(table->columns.begin(),table->columns.end(), [&](const DatabaseSchema::Column& col) { return col.name ==column_name; });
-
-		    if (col_it != table->columns.end() && col_it->autoIncreament) {
-			    throw std::runtime_error("Cannot specify AUTO_INCREAMENT column '" + column_name + "' in INSERT statement");
-		    }
-                    std::string value = evaluateExpression(stmt.values[0][i].get(), {});
-                    //row[stmt.columns[i]] = value;
-		    row[column_name]  = value;
-                }
-            }
-
-	    //Handle AUTO_INCREAMENT before validation
-	    handleAutoIncreament(row, table);
-
-	    //Apply DEFAULT VALUES before validation
-            applyDefaultValues(row, table);
-
-            validateRowAgainstSchema(row, table);
-            storage.insertRow(db.currentDatabase(), stmt.table, row);
-            inserted_count = 1;
-        } else {
-            // Multi-row insert - used bulk operations for efficiency
-            std::vector<std::unordered_map<std::string, std::string>> rows;
-            rows.reserve(stmt.values.size());
-            
-	    //Initialize batch tracking for bulk insert
-	    currentBatch.clear();
-	    currentBatchPrimaryKeys.clear();
-
-            for (const auto& row_values : stmt.values) {
-                std::unordered_map<std::string, std::string> row;
-                
-                if (stmt.columns.empty()) {
-                    // INSERT INTO table VALUES (values1), (values2), ...
-                    if (row_values.size() != table->columns.size()) {
-                        throw std::runtime_error("Column count doesn't match value count in row " + 
-                                               std::to_string(rows.size() + 1) + ". Expected " + 
-                                               std::to_string(table->columns.size()) + " values, got " + 
-                                               std::to_string(row_values.size()));
-                    }
-                    
-                    for (size_t i = 0; i < row_values.size() && i < table->columns.size(); i++) {
-                        const auto& column = table->columns[i];
-
-			//Skip AUTO_INCREAMENT columns
-			if (column.autoIncreament) {
-				continue;
-			}
-
-                        std::string value = evaluateExpression(row_values[i].get(), {});
-                        row[column.name] = value;
-                    }
-                } else {
-                    // INSERT INTO table (columns) VALUES (values1), (values2), ...
-                    if (stmt.columns.size() != row_values.size()) {
-                        throw std::runtime_error("Column count doesn't match value count in row " + 
-                                               std::to_string(rows.size() + 1));
-                    }
-                    
-                    for (size_t i = 0; i < stmt.columns.size(); i++) {
-			const auto& column_name = stmt.columns[i];
-
-			//Find the column in the table schema
-			auto col_it = std::find_if(table->columns.begin(), table->columns.end(),[&](const DatabaseSchema::Column& col) { return col.name == column_name; });
-
-			if (col_it != table->columns.end() && col_it->autoIncreament) {
-				throw std::runtime_error("Cannot specify AUTO_INCREAMENT column '" + column_name + "' in INSERT statement");
-			}
-                        std::string value = evaluateExpression(row_values[i].get(), {});
-                        //row[stmt.columns[i]] = value;
-			row[column_name] = value;
-                    }
-                }
-
-		handleAutoIncreament(row, table);
-                applyDefaultValues(row, table);
-                validateRowAgainstSchema(row, table);
-                rows.push_back(row);
-            }
-            
-            storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
-            inserted_count = rows.size();
-
-	    //Clear batch tracking after successfull insertion
-	    currentBatch.clear();
-	    currentBatchPrimaryKeys.clear();
-        }
-
-        if (!wasInTransaction) {
-            commitTransaction();
-        }
-
-        return ResultSet({"Status", {{std::to_string(inserted_count) + " row(s) inserted into '" + stmt.table + "'"}}});
-
-    } catch (const std::exception& e) {
-	//Clear batch tracking on error
-	currentBatch.clear();
-	currentBatchPrimaryKeys.clear();
-	
-        if (!wasInTransaction) {
-            rollbackTransaction();
-        }
-        throw;
-    }
-}*/
 
 //method to make sure UPDATE method does not update PRIMARY_KEY
 void ExecutionEngine::validateUpdateAgainstPrimaryKey(const std::unordered_map<std::string, std::string>& updates, const DatabaseSchema::Table* table) {
@@ -1948,9 +1783,25 @@ void ExecutionEngine::validateUniqueConstraints(const std::unordered_map<std::st
 	validateUniqueConstraintsInBatch(newRow, uniqueColumns);
 }
 
+
+
 void ExecutionEngine::validateUniqueConstraintsInBatch(const std::unordered_map<std::string, std::string>& newRow,const std::vector<std::string>& uniqueColumns) {
-	//Check against all previousl validated rows in the current batch
-	for (const auto& existingBatchRow : currentBatch) {
+	for (size_t i = 0; i < currentBatch.size(); i++) {
+		const auto& existingBatchRow = currentBatch[i];
+
+		//Skip comparing row with itself;
+		bool isSameRow = true;
+		for (const auto& [key, value] : newRow) {
+			auto existingIt = existingBatchRow.find(key);
+			if (existingIt == existingBatchRow.end() || existingIt->second != value) {
+				isSameRow = false;
+				break;
+			}
+		}
+		if (isSameRow) {
+			continue; //Skip self comparison
+		}
+
 		for (const auto& uniqueColumn : uniqueColumns) {
 			auto newIt = newRow.find(uniqueColumn);
 			auto existingIt = existingBatchRow.find(uniqueColumn);
@@ -1959,7 +1810,7 @@ void ExecutionEngine::validateUniqueConstraintsInBatch(const std::unordered_map<
 			if (newIt == newRow.end() || newIt->second.empty() || newIt->second == "NULL") {
 				continue;
 			}
-			if (existingIt == existingBatchRow.end() || existingIt->second.empty() || existingIt->second == "NULL") {
+			if (existingIt == existingBatchRow.end() ||existingIt->second.empty() || existingIt->second == "NULL") {
 				continue;
 			}
 
@@ -1970,6 +1821,7 @@ void ExecutionEngine::validateUniqueConstraintsInBatch(const std::unordered_map<
 		}
 	}
 }
+
 
 void ExecutionEngine::validatePrimaryKeyUniquenessInBatch(const std::unordered_map<std::string, std::string>& newRow,const std::vector<std::string>& primaryKeyColumns) {
 	//Extract primary key Values from the new row
