@@ -540,15 +540,31 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
 	     } else if (match(Token::Type::CHECK)){
 		     consume(Token::Type::CHECK);
 		     consume(Token::Type::L_PAREN);
+		     std::cout << "DEBUG: Consumed Token (. Moving to expression. " << std::endl;
 
-		     //Parse the expression using the existing expression Parser
-		     auto checkExpr = parseExpression();
+		     bool wasInValueContext = inValueContext;
+		     inValueContext = false;
 
-		     //Convert the expression into a string for storage in constrints
-		     std::string checkConstraint = "CHECK" + checkExpr->toString() + ")";
-		     col.constraints.push_back(checkConstraint);
+		     try {
+			     //Parse the expression using the existing expression Parser
+			     auto checkExpr = parseExpression();
+			     std::cout << "DEBUG: Parsed CHECK expression: " + checkExpr->toString() << std::endl;
+			     consume(Token::Type::R_PAREN);
+			     //Convert the expression into a string for storage in constrints
+			     std::string checkConstraint = "CHECK(" + checkExpr->toString() + ")";
+			     col.constraints.push_back(checkConstraint);
+			     //col.checkExpression = "CHECK(" + checkExpr->toString() + ")";
+			     col.checkExpression = checkExpr->toString();
+			     /*if (!match(Token::Type::R_PAREN)) {
+				     throw ParseError(currentToken.line, currentToken.column, "Expectedclosing parenthesis ')' after CHECK expression" );
+			     }*/
+			     std::cout << "DEBUG: Succssefully copleted CHECK constraint: " + checkConstraint << std::endl;
+		     } catch (...) {
+			     inValueContext = wasInValueContext;
+			     throw;
+		     }
 
-		     consume (Token::Type::R_PAREN);
+		     inValueContext = wasInValueContext;
 	     }
     }
 
@@ -1099,12 +1115,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		left = parseIdentifier();
 	}else if(match(Token::Type::NUMBER_LITERAL) || match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING) || match(Token::Type::FALSE) || match(Token::Type::TRUE)){
 		//return parseLiteral();
-		if(!inValueContext) {
-			left = std::make_unique<AST::ColumnReference>(currentToken.lexeme);
-			consume(Token::Type::IDENTIFIER);
-		} else {
-		        left = parseLiteral();
-		}
+		left = parseLiteral();
 	}else if(match(Token::Type::L_PAREN)){
 		consume(Token::Type::L_PAREN);
 		//auto expr=parseExpression();
@@ -1122,6 +1133,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 	Token next = peekToken();
 	if(isBinaryOperator(next.type)){
 		return parseBinaryExpression(0);
+		//return left;
 	}
 	return left;
 }

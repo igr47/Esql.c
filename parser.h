@@ -194,6 +194,7 @@ namespace AST{
 		        std::vector<std::string> constraints;
 			std::string defaultValue;
 			bool autoIncreament;
+			std::string checkExpression;
 
 			bool hasConstraint(const std::string& constraint) const {
 				return std::find(constraints.begin(),constraints.end(), constraint) != constraints.end();
@@ -340,6 +341,7 @@ class Parse{
 	public:
 		explicit Parse(Lexer& lexer);
 		std::unique_ptr<AST::Statement> parse();
+		std::unique_ptr<AST::Expression> parseExpression();
 	private:
 		Lexer& lexer;
 		Token currentToken;
@@ -378,7 +380,7 @@ class Parse{
 		std::vector<std::unique_ptr<AST::Expression>> parseColumnList();
 		std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> parseColumnListAs();
 		std::unique_ptr<AST::Expression> parseFromClause();
-		std::unique_ptr<AST::Expression> parseExpression();
+		//std::unique_ptr<AST::Expression> parseExpression();
 		std::unique_ptr<AST::Expression> parseBinaryExpression(int minPrecedence);
 		std::unique_ptr<AST::Expression> parsePrimaryExpression();
 		std::unique_ptr<AST::Expression> parseIdentifier();
