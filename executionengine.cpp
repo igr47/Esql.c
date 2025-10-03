@@ -1087,8 +1087,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
             rows.reserve(stmt.values.size());
 
             // Initialize batch tracking for bulk insert
-            currentBatch.clear();
-            currentBatchPrimaryKeys.clear();
+            //currentBatch.clear();
+            //currentBatchPrimaryKeys.clear();
 
             for (const auto& row_values : stmt.values) {
                 std::unordered_map<std::string, std::string> row;
@@ -1152,18 +1152,20 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                 
                 // For batch operations, validate with batch tracking
                 validateRowAgainstSchema(row, table);
-                rows.push_back(row);
+		storage.insertRow(db.currentDatabase(), stmt.table, row);
+		inserted_count++;
+                //rows.push_back(row);
                 
                 // Add to current batch for subsequent uniqueness checks
-                currentBatch.push_back(row);
+                //currentBatch.push_back(row);
             }
 
-            storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
-            inserted_count = rows.size();
+            //storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
+            //inserted_count = rows.size();
 
             // Clear batch tracking after successful insertion
-            currentBatch.clear();
-            currentBatchPrimaryKeys.clear();
+            //currentBatch.clear();
+            //currentBatchPrimaryKeys.clear();
         }
 
         if (!wasInTransaction) {
@@ -1174,8 +1176,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
 
     } catch (const std::exception& e) {
         // Clear batch tracking on error
-        currentBatch.clear();
-        currentBatchPrimaryKeys.clear();
+        //currentBatch.clear();
+        //currentBatchPrimaryKeys.clear();
 
         // Only rollback if we started the transaction
         if (!wasInTransaction && inTransaction()) {
@@ -1242,7 +1244,7 @@ void ExecutionEngine::validateUpdateAgainstUniqueConstraints(const std::unordere
 void ExecutionEngine::validateUpdateWithCheckConstraints(const std::unordered_map<std::string, std::string>& updates,const DatabaseSchema::Table* table,uint32_t row_id) {
 	auto table_data = storage.getTableData(db.currentDatabase(), table->name);
 	if (row_id == 0 || row_id > table_data.size()) {
-		throw std::runtime_error("Invalid row Id for update validation" );
+		throw std::runtime_error("Invalid row Id for update validation: " + std::to_string(row_id) + ", table has " + std::to_string(table_data.size()) + " rows" );
 	}
 
 	//create updated row by appling changes to current row
@@ -1277,6 +1279,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
         auto table_data = storage.getTableData(db.currentDatabase(), stmt.table);
         int updated_count = 0;
 
+	std::cout<< "DEBUG UPDATE: Processing" << table_data.size() << " rows in table " << stmt.table << std::endl;
+
         for (uint32_t i = 0; i < table_data.size(); i++) {
             auto& current_row = table_data[i];
 
@@ -1287,6 +1291,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
                 for (const auto& [col, expr] : stmt.setClauses) {
                     actualUpdates[col] = evaluateExpression(expr.get(), current_row);
                 }
+
+		std::cout << "DEBUG UPDATE: Updating row " << (i+1) << " with " << actualUpdates.size() << "changes" << std::endl;
 
 		//validate againwith actual values
 		validateUpdateAgainstPrimaryKey(actualUpdates, table);
@@ -1309,7 +1315,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
 
         return ResultSet({"Status", {{std::to_string(updated_count) + " rows updated in '" + stmt.table + "'"}}});
 
-    } catch (...) {
+    } catch (const std::exception& e) {
+	std::cerr << "UPDATE ERROR: " << e.what() << std::endl;
         if (!wasInTransaction) {
             rollbackTransaction();
         }
