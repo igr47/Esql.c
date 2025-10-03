@@ -627,53 +627,6 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
 }
 
 
-/*std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
-    auto stmt = std::make_unique<AST::BulkInsertStatement>();
-
-    //consume(Token::Type::BULK);
-    //consume(Token::Type::INSERT);
-    consume(Token::Type::INTO);
-
-    stmt->table = currentToken.lexeme;
-    consume(Token::Type::IDENTIFIER);
-
-    if (match(Token::Type::L_PAREN)) {
-        consume(Token::Type::L_PAREN);
-        do {
-            if (match(Token::Type::COMMA)) {
-                consume(Token::Type::COMMA);
-            }
-            stmt->columns.push_back(currentToken.lexeme);
-            consume(Token::Type::IDENTIFIER);
-        } while (match(Token::Type::COMMA));
-        consume(Token::Type::R_PAREN);
-    }
-
-    consume(Token::Type::VALUES);
-
-    bool wasInValueContext = inValueContext;
-    inValueContext = true;
-
-    do {
-        consume(Token::Type::L_PAREN);
-        std::vector<std::unique_ptr<AST::Expression>> rowValues;
-
-        do {
-            if (match(Token::Type::COMMA)) {
-                consume(Token::Type::COMMA);
-            }
-            rowValues.push_back(parseValue());
-        } while (match(Token::Type::COMMA));
-
-        stmt->rows.push_back(std::move(rowValues));
-        consume(Token::Type::R_PAREN);
-
-    } while (match(Token::Type::COMMA));
-
-    inValueContext = wasInValueContext;
-    return stmt;
-}*/
-
 std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
     auto stmt = std::make_unique<AST::BulkInsertStatement>();
 
@@ -852,61 +805,7 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     consume(Token::Type::R_PAREN);
     return stmt;
 }
-/*std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> Parse::parseColumnListAs(){
-	std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> newColumns;
-	
-	do{
-		if(match(Token::Type::COMMA)){
-			consume(Token::Type::COMMA);
-		}
-		std::unique_ptr<AST::Expression> expr;
-		if(matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
-			Token funcToken = currentToken;
-			consume(currentToken.type);
 
-			consume(Token::Type::L_PAREN);
-
-			std::unique_ptr<AST::Expression> arg = nullptr;
-			bool isCountAll = false;
-			if(funcToken.type == Token::Type::COUNT && match(Token::Type::ASTERIST)){
-				consume(Token::Type::ASTERIST);
-				isCountAll = true;
-			}else if(match(Token::Type::IDENTIFIER)){
-				arg = parseIdentifier();
-			}else if(match(Token::Type::ASTERIST)){
-				if(funcToken.type == Token::Type::COUNT){
-					consume(Token::Type::ASTERIST);
-					isCountAll = true;
-				} else {
-					throw ParseError(currentToken.line,currentToken.column,"Onl COUNT suports * argument");
-				}
-			}else {
-                                arg = parseExpression();
-                        }
-                        consume(Token::Type::R_PAREN);
-                        expr = std::make_unique<AST::AggregateExpression>(funcToken,std::move(arg),isCountAll);
-                }else{			
-			expr = parseExpression();
-		}
-		std::string alias;
-		if(match(Token::Type::AS)){
-			consume(Token::Type::AS);
-			if(match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)){
-				//remove quotes from alises
-				alias = currentToken.lexeme;
-				if(alias.size()>2 && ((alias[0] == '\'' && alias[alias.size()-1] == '\'' || (alias[0] == '"' && alias[alias.size() -1] == '"')))){
-					alias = alias.substr(1,alias.size() - 2);
-				}
-				consume(currentToken.type);
-			}else if(match(Token::Type::IDENTIFIER)){
-				alias= currentToken.lexeme;
-				consume(Token::Type::IDENTIFIER);
-			}
-		}
-		newColumns.emplace_back(std::move(expr),alias);
-	}while(match(Token::Type::COMMA));
-	return newColumns;
-}*/
 
 std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::parseColumnListAs() {
     std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> newColumns;
@@ -1165,22 +1064,6 @@ std::unique_ptr<AST::Expression> Parse::parseLiteral() {
     return literal;
 }
 
-/*int Parse::getPrecedence(Token::Type type){
-	switch(type){
-		case Token::Type::OR: return 1;
-		case Token::Type::AND: return 2;
-	        case Token::Type::IN:
-		ase Token::Type::BETWEEN: return 3;
-	        case Token::Type::NOT: return 4;
-		case Token::Type::EQUAL:
-		case Token::Type::NOT_EQUAL:
-		case Token::Type::LESS:
-		case Token::Type::LESS_EQUAL:
-		case Token::Type::GREATER:
-		case Token::Type::GREATER_EQUAL: return 3;
-		default: return 0;
-	}
-}*/
 
 int Parse::getPrecedence(Token::Type type) {
     switch(type) {
@@ -1206,9 +1089,7 @@ int Parse::getPrecedence(Token::Type type) {
         default: return 0;
     }
 }
-/*bool Parse::isBinaryOperator(Token::Type type){
-	return getPrecedence(type) >0; //|| type == Token::Type::BETWEEN;
-}*/
+
 
 bool Parse::isBinaryOperator(Token::Type type) {
     switch(type) {
