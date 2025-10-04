@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <thread>
 #include <sstream>
-
+#include <algorithm>
 // Cross-platform transactional memory detection
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
@@ -768,37 +768,70 @@ size_t FractalBPlusTree::calculate_actual_data_size(uint64_t transaction_id) {
     return total_data_size;
 }
 
-/*void FractalBPlusTree::compress_node(Node* node) {
+void FractalBPlusTree::compress_node(Node* node) {
     // Don't compress already compressed nodes or very small nodes
     if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
         return;
     }
 
     char temp[BPTREE_PAGE_SIZE];
-    uint64_t transaction_id= node-header.version;
-    size_t data_size=calculate_actual_data_size(transaction_id);
-    memcpy(temp, node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader)data_size);
+    
+    // SAFER: Only copy and compress the actual USED portion of the buffer
+    // Estimate used size conservatively
+    size_t estimated_used_size = node->header.num_keys * (MAX_KEY_PREFIX + sizeof(KeyValue)) +
+                                node->header.num_messages * sizeof(Message) +
+                                1024; // Safety margin
+    
+    size_t copy_size = std::min(estimated_used_size, BPTREE_PAGE_SIZE - sizeof(PageHeader));
+    memcpy(temp, node->data, copy_size);
 
     size_t compressed_size = ZSTD_compress(
         node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader),
-        temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        temp, copy_size,  // Only compress what we actually copied
         1
     );
-    size_t compressed_size = ZSTD_compress(node->data + sizeof(size_t),BPTREE_PAGE_SIZE - sizeof(PageHeader) - sizeof(size_t),temp, data_size,1);
-
 
     if (ZSTD_isError(compressed_size)) {
         // If compression fails, restore original data
-        memcpy(node->data, temp, BPTREE_PAGE_SIZE - sizeof(PageHeader));
+        memcpy(node->data, temp, copy_size);
         std::cerr << "Zstd node compression failed: " <<
             ZSTD_getErrorName(compressed_size) << ", keeping uncompressed" << std::endl;
     } else {
         node->header.num_keys |= (1U << 31);
     }
-}*/
-void FractalBPlusTree::compress_node(Node* node) {
+}
+
+void FractalBPlusTree::decompress_node(Node* node) {
+    if (!(node->header.num_keys & (1U << 31))) return;
+
+    char temp[BPTREE_PAGE_SIZE];
+    size_t decompressed_size = ZSTD_decompress(
+        temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader)
+    );
+
+    if (ZSTD_isError(decompressed_size)) {
+        throw std::runtime_error("Zstd node decompression failed: " +
+            std::string(ZSTD_getErrorName(decompressed_size)));
+    }
+
+    // SAFER: Only copy back the decompressed data, not the entire buffer
+    memcpy(node->data, temp, decompressed_size);
+    node->header.num_keys &= ~(1U << 31);
+}
+
+/*void FractalBPlusTree::compress_node(Node* node) {
     if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
         return;
+    }
+
+    //Only compresses if there is significant data
+    //But be conservative about what we compress
+    size_t estimated_data_size = node->header.num_keys * (MAX_KEY_PREFIX + sizeof(KeyValue)) + node->header.num_messages * sizeof(Message);
+
+    //Only compress if we have a substantial data and it is worth compressing
+    if (estimated_data_size < 1024 ) {
+	    return;
     }
 
     char temp[BPTREE_PAGE_SIZE];
@@ -826,23 +859,6 @@ void FractalBPlusTree::compress_node(Node* node) {
     memcpy(node->data, &compressed_size, sizeof(size_t));
     node->header.num_keys |= (1U << 31); // Mark as compressed
 }
-/*void FractalBPlusTree::decompress_node(Node* node) {
-    if (!(node->header.num_keys & (1U << 31))) return;
-
-    char temp[BPTREE_PAGE_SIZE];
-    size_t decompressed_size = ZSTD_decompress(
-        temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
-        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader)
-    );
-
-    if (ZSTD_isError(decompressed_size)) {
-        throw std::runtime_error("Zstd node decompression failed: " +
-            std::string(ZSTD_getErrorName(decompressed_size)));
-    }
-
-    memcpy(node->data, temp, decompressed_size);
-    node->header.num_keys &= ~(1U << 31);
-}*/
 
 void FractalBPlusTree::decompress_node(Node* node) {
     if (!(node->header.num_keys & (1U << 31))) return;
@@ -865,7 +881,7 @@ void FractalBPlusTree::decompress_node(Node* node) {
 
     memcpy(node->data, temp, decompressed_size);
     node->header.num_keys &= ~(1U << 31); // Mark as uncompressed
-}
+}*/
 
 bool FractalBPlusTree::is_node_full(const Node* node) {
     return node->header.num_keys >= BPTREE_ORDER || node->header.num_messages >= MAX_MESSAGES;
@@ -1117,6 +1133,158 @@ void FractalBPlusTree::merge_nodes(uint32_t page_id, Node* node, uint32_t parent
 }
 
 void FractalBPlusTree::flush_messages(Node* node, uint32_t page_id, uint64_t transaction_id) {
+    std::cout << "DEBUG flush_messages: Starting for page " << page_id
+              << ", num_messages=" << node->header.num_messages
+              << ", num_keys=" << node->header.num_keys << std::endl;
+
+    // Add null check
+    if (!node) {
+        std::cerr << "ERROR: flush_messages called with null node" << std::endl;
+        return;
+    }
+
+    std::cout << "DEBUG: Step 1 - Decompressing node..." << std::endl;
+    decompress_node_optimized(node);
+
+    std::cout << "DEBUG: Step 2 - Compacting messages..." << std::endl;
+    compact_messages(node);
+
+    if (node->header.type == PageType::LEAF) {
+        std::cout << "DEBUG: Step 3 - Processing leaf node messages..." << std::endl;
+
+        // Initialize with current key-value pairs
+        KeyValue kvs[BPTREE_ORDER];
+        uint32_t current_kv_count = node->header.num_keys;
+        
+        if (current_kv_count > 0) {
+            std::cout << "DEBUG: Copying " << current_kv_count << " key-value pairs..." << std::endl;
+            
+            // Add bounds checking
+            if (current_kv_count > BPTREE_ORDER) {
+                std::cerr << "ERROR: Too many keys: " << current_kv_count << std::endl;
+                current_kv_count = BPTREE_ORDER; // Cap it to prevent overflow
+            }
+
+            size_t kv_offset = node->header.num_keys * MAX_KEY_PREFIX;
+            if (kv_offset + sizeof(KeyValue) * current_kv_count > sizeof(node->data)) {
+                std::cerr << "ERROR: KV data exceeds node buffer" << std::endl;
+                return;
+            }
+
+            memcpy(kvs, node->data + kv_offset, sizeof(KeyValue) * current_kv_count);
+        }
+
+        // Get messages
+        Message messages[MAX_MESSAGES];
+        uint32_t message_count = node->header.num_messages;
+        
+        if (message_count > 0) {
+            std::cout << "DEBUG: Copying " << message_count << " messages..." << std::endl;
+            
+            // Add bounds checking
+            if (message_count > MAX_MESSAGES) {
+                std::cerr << "ERROR: Too many messages: " << message_count << std::endl;
+                message_count = MAX_MESSAGES; // Cap it
+            }
+
+            size_t msg_offset = node->header.num_keys * MAX_KEY_PREFIX + sizeof(KeyValue) * node->header.num_keys;
+            if (msg_offset + sizeof(Message) * message_count > sizeof(node->data)) {
+                std::cerr << "ERROR: Message data exceeds node buffer" << std::endl;
+                return;
+            }
+
+            memcpy(messages, node->data + msg_offset, sizeof(Message) * message_count);
+        }
+
+        std::cout << "DEBUG: Processing " << message_count << " messages" << std::endl;
+
+        // Create a map to track the final state of each key after applying all messages
+        std::map<int64_t, KeyValue> final_state;
+        
+        // First, add all existing key-value pairs to the final state
+        for (uint32_t i = 0; i < current_kv_count; ++i) {
+            // Skip invalid keys (like 32809 which appears corrupted)
+            if (kvs[i].key < 0 || kvs[i].key > 1000000) { // Reasonable key range
+                std::cerr << "WARNING: Skipping invalid key: " << kvs[i].key << std::endl;
+                continue;
+            }
+            final_state[kvs[i].key] = kvs[i];
+        }
+
+        // Process messages in reverse order (newest first)
+        for (int32_t i = message_count - 1; i >= 0; --i) {
+            // Skip invalid messages
+            if (i < 0 || i >= MAX_MESSAGES) {
+                std::cerr << "ERROR: Invalid message index: " << i << std::endl;
+                continue;
+            }
+
+            // Skip invalid keys in messages
+            if (messages[i].key < 0 || messages[i].key > 1000000) {
+                std::cerr << "WARNING: Skipping message with invalid key: " << messages[i].key << std::endl;
+                continue;
+            }
+
+            std::cout << "DEBUG: Processing message " << i << ", key=" << messages[i].key
+                      << ", type=" << static_cast<int>(messages[i].type) << std::endl;
+
+            if (messages[i].type == MessageType::DELETE) {
+                final_state.erase(messages[i].key);
+            } else if (messages[i].type == MessageType::UPDATE || messages[i].type == MessageType::INSERT) {
+                KeyValue kv;
+                kv.key = messages[i].key;
+                kv.value_offset = messages[i].value_offset;
+                kv.value_length = messages[i].value_length;
+                final_state[messages[i].key] = kv;
+            }
+        }
+
+        // Convert final state back to arrays
+        uint32_t new_kv_count = 0;
+        KeyValue new_kvs[BPTREE_ORDER];
+        int64_t new_keys[BPTREE_ORDER];
+        
+        for (const auto& [key, kv] : final_state) {
+            if (new_kv_count >= BPTREE_ORDER) {
+                std::cerr << "WARNING: Too many keys after message processing, truncating" << std::endl;
+                break;
+            }
+            new_keys[new_kv_count] = key;
+            new_kvs[new_kv_count] = kv;
+            new_kv_count++;
+        }
+
+        // Update node with new key count
+        node->header.num_keys = new_kv_count;
+
+        // Write back compressed keys
+        if (new_kv_count > 0) {
+            compress_keys_optimized(node->data, new_keys, new_kv_count);
+            
+            // Write back key-value pairs
+            size_t kv_offset = new_kv_count * MAX_KEY_PREFIX;
+            if (kv_offset + sizeof(KeyValue) * new_kv_count <= sizeof(node->data)) {
+                memcpy(node->data + kv_offset, new_kvs, sizeof(KeyValue) * new_kv_count);
+            } else {
+                std::cerr << "ERROR: Not enough space to write key-value pairs back" << std::endl;
+                return;
+            }
+        }
+
+        // Clear all messages
+        node->header.num_messages = 0;
+    }
+
+    std::cout << "DEBUG: Step 4 - Compressing node..." << std::endl;
+    compress_node_optimized(node);
+
+    std::cout << "DEBUG: Step 5 - Writing node..." << std::endl;
+    write_node(page_id, node, transaction_id);
+
+    std::cout << "DEBUG flush_messages: Completed successfully" << std::endl;
+}
+
+/*void FractalBPlusTree::flush_messages(Node* node, uint32_t page_id, uint64_t transaction_id) {
     decompress_node_optimized(node);
     compact_messages(node);
 
@@ -1175,7 +1343,7 @@ void FractalBPlusTree::flush_messages(Node* node, uint32_t page_id, uint64_t tra
 
     compress_node_optimized(node);
     write_node(page_id, node, transaction_id);
-}
+}*/
 
 
 void FractalBPlusTree::adaptive_flush(Node* node, uint32_t page_id, uint64_t transaction_id) {
@@ -1306,8 +1474,15 @@ void FractalBPlusTree::insert(int64_t key, const std::string& value, uint64_t tr
 
 void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t transaction_id,
                              const std::map<std::string, std::string>& secondary_keys) {
+    std::cout << "DEBUG FractalBPlusTree::update: Starting update for key=" << key 
+              << ", value_size=" << value.size() 
+              << ", txn=" << transaction_id << std::endl;
+
     uint64_t value_offset = pager.write_data_block(value);
     uint32_t value_length = value.size();
+
+    std::cout << "DEBUG: Value written to offset=" << value_offset 
+              << ", length=" << value_length << std::endl;
 
     bool use_tm = begin_transaction();
     if (!use_tm) {
@@ -1316,24 +1491,52 @@ void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t tr
 
     try {
         uint32_t current_page_id = root_page_id.load();
+        std::cout << "DEBUG: Root page ID=" << current_page_id << std::endl;
+
         Node* node = get_node(current_page_id);
+        if (!node) {
+            throw std::runtime_error("Failed to get root node for update");
+        }
 
         // Traverse to the leaf node containing the key
         while (node->header.type == PageType::INTERNAL) {
             uint32_t child_index = find_child_index(node, key);
             uint32_t children[BPTREE_ORDER + 1];
+            if (node->header.num_keys > BPTREE_ORDER) {
+                throw std::runtime_error("Corrupted node: too many keys");
+            }
             memcpy(children, node->data + node->header.num_keys * MAX_KEY_PREFIX,
                    sizeof(uint32_t) * (node->header.num_keys + 1));
             current_page_id = children[child_index];
             node = get_node(current_page_id);
+            if (!node) {
+                throw std::runtime_error("Failed to get child node during update traversal");
+            }
         }
+
+        std::cout << "DEBUG: Reached leaf node, page_id=" << current_page_id 
+                  << ", num_keys=" << node->header.num_keys 
+                  << ", num_messages=" << node->header.num_messages << std::endl;
 
         decompress_node_optimized(node);
 
+        // FOR UPDATE OPERATIONS: Always flush messages to make changes visible immediately
+        if (node->header.num_messages > 0) {
+            std::cout << "DEBUG: Flushing existing messages before update..." << std::endl;
+            flush_messages(node, current_page_id, transaction_id);
+            // Refresh node after flush
+            node = get_node(current_page_id);
+            decompress_node_optimized(node);
+        }
+
         // Check if we need to split due to too many messages
         if (is_node_full(node)) {
+            std::cout << "DEBUG: Node is full, splitting..." << std::endl;
             split_node(current_page_id, node, node->header.parent_page_id, transaction_id);
             node = get_node(current_page_id);
+            if (!node) {
+                throw std::runtime_error("Failed to get node after split");
+            }
             decompress_node_optimized(node);
         }
 
@@ -1344,13 +1547,143 @@ void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t tr
         msg.value_length = value_length;
         msg.version = transaction_id;
 
+        std::cout << "DEBUG: Created message for key=" << key 
+                  << ", offset=" << value_offset << ", length=" << value_length << std::endl;
+
         // Get existing messages
         Message messages[MAX_MESSAGES + 1];
+        size_t messages_offset = node->header.num_keys * MAX_KEY_PREFIX + sizeof(KeyValue) * node->header.num_keys;
+        
+        std::cout << "DEBUG: messages_offset=" << messages_offset 
+                  << ", num_messages=" << node->header.num_messages << std::endl;
+        
+        if (messages_offset + sizeof(Message) * (node->header.num_messages + 1) > sizeof(node->data)) {
+            std::cout << "DEBUG: Message buffer full, forcing flush..." << std::endl;
+            flush_messages(node, current_page_id, transaction_id);
+            // Refresh node and reset after flush
+            node = get_node(current_page_id);
+            decompress_node_optimized(node);
+            messages_offset = node->header.num_keys * MAX_KEY_PREFIX + sizeof(KeyValue) * node->header.num_keys;
+            node->header.num_messages = 0;
+        }
+        
+        memcpy(messages, node->data + messages_offset, 
+               sizeof(Message) * node->header.num_messages);
+
+        // Add new message
+        messages[node->header.num_messages] = msg;
+        node->header.num_messages++;
+
+        std::cout << "DEBUG: Writing " << node->header.num_messages << " messages to node" << std::endl;
+
+        // Write messages back to node
+        memcpy(node->data + messages_offset, messages, 
+               sizeof(Message) * node->header.num_messages);
+
+        // FOR UPDATE OPERATIONS: Always flush after adding the message to make changes visible
+        std::cout << "DEBUG: Flushing messages to apply update immediately..." << std::endl;
+        flush_messages(node, current_page_id, transaction_id);
+
+        // Update secondary indexes if any
+        for (const auto& sk : secondary_keys) {
+            update_secondary_index(sk.first, key, sk.second, transaction_id, MessageType::UPDATE);
+        }
+
+        std::cout << "DEBUG: FractalBPlusTree UPDATE completed successfully for key=" << key << std::endl;
+
+        if (use_tm) {
+            end_transaction();
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR in FractalBPlusTree::update: " << e.what() << std::endl;
+        if (use_tm) {
+            // Transaction would abort automatically on exception
+        }
+        throw;
+    }
+}
+/*void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t transaction_id,
+                             const std::map<std::string, std::string>& secondary_keys) {
+    std::cout << "DEBUG FractalBPlusTree ::Update: starting update for key=" << key << ", value_size=" << value.size() << ", txn=" << transaction_id << std::endl;
+    uint64_t value_offset = pager.write_data_block(value);
+    uint32_t value_length = value.size();
+
+    std::cout << "DEBUG: Valuewritten to offset=" << value_offset << ", length=" << value_length << std::endl;
+
+    bool use_tm = begin_transaction();
+    if (!use_tm) {
+        transaction_fallback();
+    }
+
+    try {
+        uint32_t current_page_id = root_page_id.load();
+        Node* node = get_node(current_page_id);
+	std::cout << "DEBUG: ROOT page id=" << current_page_id << std::endl;
+
+	if (!node) {
+		throw std::runtime_error("Failed to get root node for update");
+	}
+
+	std::cout << "DEBUG: Got root node, type= " << (node->header.type == PageType::LEAF ? "LEAF" : "INTERNAL") << ", num_keys=" << node->header.num_keys << std::endl;
+
+        // Traverse to the leaf node containing the key
+        while (node->header.type == PageType::INTERNAL) {
+            uint32_t child_index = find_child_index(node, key);
+	    std::cout << "DEBUG: Internal node traversal, child_index=" << child_index << std::endl;
+            uint32_t children[BPTREE_ORDER + 1];
+	    if (node->header.num_keys > BPTREE_ORDER) {
+		    throw std::runtime_error("Corrupted node: too many keys");
+	    }
+            memcpy(children, node->data + node->header.num_keys * MAX_KEY_PREFIX,
+                   sizeof(uint32_t) * (node->header.num_keys + 1));
+            current_page_id = children[child_index];
+            node = get_node(current_page_id);
+	    std::cout << "DEBUG: Movingto child page ID=" << current_page_id << std::endl;
+	    if (!node) {
+		    throw std::runtime_error("Failed to get child node during update traversal");
+	    }
+        }
+
+	std::cout << "DEBUG: Reached leaf node, page_id=" <<current_page_id << ", num_kes=" << node->header.num_keys << ",num_messages" <<node->header.num_messages << std::endl;
+        decompress_node_optimized(node);
+
+        // Check if we need to split due to too many messages
+        if (is_node_full(node)) {
+	    std::cout << "DEBUG: Node is full, splitting..." << std::endl;
+            split_node(current_page_id, node, node->header.parent_page_id, transaction_id);
+            node = get_node(current_page_id);
+	    if (!node) {
+		    throw std::runtime_error("Failed to get node after split");
+	    }
+            decompress_node_optimized(node);
+        }
+
+        Message msg;
+        msg.type = MessageType::UPDATE;
+        msg.key = key;
+        msg.value_offset = value_offset;
+        msg.value_length = value_length;
+        msg.version = transaction_id;
+
+	std::cout << "DEBUG: Created messagefor keys=" << key << ", offset=" << value_offset << ", length=" << value_length << std::endl;
+
+        // Get existing messages
+        Message messages[MAX_MESSAGES + 1];
+	size_t messages_offset = node->header.num_keys * MAX_KEY_PREFIX + sizeof(KeyValue) * node->header.num_keys;
+
+	std::cout << "DEBUG: Messages_offset=" << messages_offset << ", num_messages=" << node->header.num_messages << std::endl;
+	if (messages_offset + sizeof(Message) * node->header.num_messages > sizeof(node->data)) {
+		throw std::runtime_error("Message data exceeds node buffer");
+	}
         memcpy(messages, node->data + node->header.num_keys * MAX_KEY_PREFIX +
                sizeof(KeyValue) * node->header.num_keys, sizeof(Message) * node->header.num_messages);
 
         // Add new message
         messages[node->header.num_messages++] = msg;
+
+	if (messages_offset + sizeof(Message) * node->header.num_messages > sizeof(node->data)) {
+		throw std::runtime_error("Cannot write messages - buffer overflow");
+	}
         memcpy(node->data + node->header.num_keys * MAX_KEY_PREFIX +
                sizeof(KeyValue) * node->header.num_keys, messages, sizeof(Message) * node->header.num_messages);
 
@@ -1365,8 +1698,8 @@ void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t tr
         // Force flush to ensure update is applied immediately
         flush_messages(node, current_page_id, transaction_id);
 
-        //std::cout << "FractalBPlusTree UPDATE: key=" << key << ", value_size=" << value.size()
-                  //<< ", txn=" << transaction_id << std::endl;
+        std::cout << "FractalBPlusTree UPDATE: key=" << key << ", value_size=" << value.size()
+                  << ", txn=" << transaction_id << std::endl;
 
         if (use_tm) {
             end_transaction();
@@ -1377,7 +1710,7 @@ void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t tr
         }
         throw;
     }
-}
+}*/
 
 
 void FractalBPlusTree::remove(int64_t key, uint64_t transaction_id,

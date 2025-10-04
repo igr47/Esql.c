@@ -244,6 +244,10 @@ void DiskStorage::updateTableData(const std::string& dbName, const std::string& 
         throw std::runtime_error("Table not found: " + tableName);
     }
 
+    if (row_id == 0 || row_id > 1000000) {
+	    throw std::runtime_error("Suspicious row_id: " + std::to_string(row_id));
+    }
+
     // Get the current row data directly from the tree
     std::string old_data_str = table_it->second->select(row_id, getTransactionId());
     if (old_data_str.empty()) {
@@ -260,10 +264,10 @@ void DiskStorage::updateTableData(const std::string& dbName, const std::string& 
     auto old_row = deserializeRow(old_data_vec, schema_it->second);
 
 
-    //std::cout<<"DEBUG: updating row" <<row_id<< "in table" << tableName<<std::endl;
+    std::cout<<"DEBUG: updating row" <<row_id<< "in table" << tableName<<std::endl;
     for (const auto& [col, val] : new_values) {
         old_row[col] = val;
-	//std::cout<<" SET " <<col <<"="<<val<<"'"<<std::endl;
+	std::cout<<" SET " <<col <<"="<<val<<"'"<<std::endl;
     }
 
     // Serialize new data
@@ -271,6 +275,7 @@ void DiskStorage::updateTableData(const std::string& dbName, const std::string& 
     serializeRow(old_row, schema_it->second, new_buffer);
     std::string new_data(new_buffer.begin(), new_buffer.end());
 
+    std::cout << "DEBUG: Before FractalBplusTree::update call - row_id: " << row_id << ", table: " << tableName << ", txn: " << getTransactionId() << std::endl;
     // Update using FractalBPlusTree
     table_it->second->update(row_id, new_data, getTransactionId());
 }
