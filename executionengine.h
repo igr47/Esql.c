@@ -103,6 +103,7 @@ private:
     std::vector<std::pair<std::string, std::string>> parseCheckConstraints(const DatabaseSchema::Table* table);
     std::unique_ptr<AST::Expression> parseStoredCheckExpression(const std::string& storedCheckExpression);
     std::unordered_map<std::string, std::unique_ptr<AST::Expression>> checkExpressionCache;
+    void validateBulkUpdateConstraints(const std::vector<AST::BulkUpdateStatement::UpdateSpec>& updates, const DatabaseSchema::Table* table);
     void validateUpdateWithCheckConstraints(const std::unordered_map<std::string, std::string>& updates,const DatabaseSchema::Table* table,uint32_t row_id);
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);

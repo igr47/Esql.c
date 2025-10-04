@@ -1511,20 +1511,101 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
     return ResultSet({"Status", {{std::to_string(rows.size()) + " rows bulk inserted into '" + stmt.table + "'"}}});
 }
 
-ExecutionEngine::ResultSet ExecutionEngine::executeBulkUpdate(AST::BulkUpdateStatement& stmt) {
-    std::vector<std::pair<uint32_t, std::unordered_map<std::string, std::string>>> updates;
-    
-    for (const auto& update_spec : stmt.updates) {
-        std::unordered_map<std::string, std::string> new_values;
-        for (const auto& [col, expr] : update_spec.setClauses) {
-            new_values[col] = expr->toString();
+void ExecutionEngine::validateBulkUpdateConstraints(const std::vector<AST::BulkUpdateStatement::UpdateSpec>& updates, const DatabaseSchema::Table* table) {
+    auto table_data = storage.getTableData(db.currentDatabase(), table->name);
+
+    for (const auto& update_spec : updates) {
+        // Get current row data to evaluate expressions in context
+        if (update_spec.row_id == 0 || update_spec.row_id > table_data.size()) {
+            throw std::runtime_error("Invalid row ID: " + std::to_string(update_spec.row_id));
         }
-        updates.emplace_back(update_spec.row_id, new_values);
+
+        const auto& current_row = table_data[update_spec.row_id - 1];
+        
+        // Convert expressions to actual values
+        std::unordered_map<std::string, std::string> actual_values;
+        for (const auto& [col, expr] : update_spec.setClauses) {
+            actual_values[col] = evaluateExpression(expr.get(), current_row);
+        }
+
+	//Only valiadte primary key if primary key columns are being updated
+	bool updating_primary_key = false;
+	std::vector<std::string> primary_key_columns = getPrimaryKeyColumns(table);
+	for (const auto& pk_col : primary_key_columns) {
+		if (actual_values.find(pk_col) != actual_values.end()) {
+			updating_primary_key = true;
+			break;
+		}
+	}
+
+	if (updating_primary_key) {
+		validateUpdateAgainstPrimaryKey(actual_values, table);
+	}
+
+        // Validate with actual values
+        //validateUpdateAgainstPrimaryKey(actual_values, table);
+        validateUpdateAgainstUniqueConstraints(actual_values, table, update_spec.row_id);
+        validateUpdateWithCheckConstraints(actual_values, table, update_spec.row_id);
+
+        // Create updated row for additional validation
+        auto updated_row = table_data[update_spec.row_id - 1];
+        for (const auto& [col, value] : actual_values) {
+            updated_row[col] = value;
+        }
+
+        // Validate the complete row against schema
+        //validateRowAgainstSchema(updated_row, table);
     }
-    
-    storage.bulkUpdate(db.currentDatabase(), stmt.table, updates);
-    
-    return ResultSet({"Status", {{std::to_string(updates.size()) + " rows bulk updated in '" + stmt.table + "'"}}});
+}
+
+ExecutionEngine::ResultSet ExecutionEngine::executeBulkUpdate(AST::BulkUpdateStatement& stmt) {
+    bool wasInTransaction = inTransaction();
+    if (!wasInTransaction) {
+        beginTransaction();
+    }
+
+    try {
+        auto table = storage.getTable(db.currentDatabase(), stmt.table);
+        if (!table) {
+            throw std::runtime_error("Table not found: " + stmt.table);
+        }
+
+        // Get table data for expression evaluation context
+        auto table_data = storage.getTableData(db.currentDatabase(), stmt.table);
+
+        // Validate all constraints before applying updates
+        validateBulkUpdateConstraints(stmt.updates, table);
+
+        // Convert expressions to actual values and apply updates
+        std::vector<std::pair<uint32_t, std::unordered_map<std::string, std::string>>> actual_updates;
+        for (const auto& update_spec : stmt.updates) {
+            if (update_spec.row_id == 0 || update_spec.row_id > table_data.size()) {
+                throw std::runtime_error("Invalid row ID: " + std::to_string(update_spec.row_id));
+            }
+
+            const auto& current_row = table_data[update_spec.row_id - 1];
+            std::unordered_map<std::string, std::string> actual_values;
+            for (const auto& [col, expr] : update_spec.setClauses) {
+                actual_values[col] = evaluateExpression(expr.get(), current_row);
+            }
+
+            actual_updates.emplace_back(update_spec.row_id, actual_values);
+        }
+        
+        // Apply the updates
+        storage.bulkUpdate(db.currentDatabase(), stmt.table, actual_updates);
+
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
+        return ResultSet({"Status", {{std::to_string(actual_updates.size()) + " rows bulk updated in '" + stmt.table + "'"}}});
+    } catch (const std::exception& e) {
+        std::cerr << "BULK UPDATE ERROR: " << e.what() << std::endl;
+        if (!wasInTransaction) {
+            rollbackTransaction();
+        }
+        throw;
+    }
 }
 
 ExecutionEngine::ResultSet ExecutionEngine::executeBulkDelete(AST::BulkDeleteStatement& stmt) {
