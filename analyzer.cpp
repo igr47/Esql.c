@@ -602,7 +602,7 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
     // Count non-AUTO_INCREMENT columns to determine expected value count
     size_t expectedValueCount = 0;
     for (const auto& column : currentTable->columns) {
-        if (!column.autoIncreament) {
+        if (!column.autoIncreament && !column.hasDefault) {
             expectedValueCount++;
         }
     }
@@ -646,6 +646,10 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
             if (column.autoIncreament) {
                 continue;
             }
+
+	    if (column.hasDefault) {
+		    continue;
+	    }
 
             // Get the column name for validation
             const std::string& colName = insertStmt.columns.empty() ?
