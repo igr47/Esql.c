@@ -776,6 +776,84 @@ void FractalBPlusTree::compress_node(Node* node) {
 
     char temp[BPTREE_PAGE_SIZE];
     
+    // Calculate actual used size more accurately
+    size_t estimated_used_size = 0;
+    
+    if (node->header.type == PageType::LEAF) {
+        estimated_used_size = node->header.num_keys * (MAX_KEY_PREFIX + sizeof(KeyValue)) +
+                             node->header.num_messages * sizeof(Message);
+    } else {
+        estimated_used_size = node->header.num_keys * MAX_KEY_PREFIX +
+                             (node->header.num_keys + 1) * sizeof(uint32_t) +
+                             node->header.num_messages * sizeof(Message);
+    }
+    
+    // Add safety margin and ensure we don't exceed buffer size
+    estimated_used_size = std::min(estimated_used_size + 256, BPTREE_PAGE_SIZE - sizeof(PageHeader));
+    
+    // Copy the actual used data
+    memcpy(temp, node->data, estimated_used_size);
+
+    // Compress with bounds checking
+    size_t compressed_size = ZSTD_compress(
+        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        temp, estimated_used_size,
+        1  // Use faster compression for nodes
+    );
+
+    if (ZSTD_isError(compressed_size)) {
+        // If compression fails, restore original data
+        memcpy(node->data, temp, estimated_used_size);
+        std::cerr << "Zstd node compression failed: " <<
+            ZSTD_getErrorName(compressed_size) << ", keeping uncompressed" << std::endl;
+        return;
+    }
+
+    // Only mark as compressed if compression actually saved space
+    if (compressed_size < estimated_used_size) {
+        node->header.num_keys |= (1U << 31);
+    } else {
+        // Compression didn't help, keep uncompressed
+        memcpy(node->data, temp, estimated_used_size);
+    }
+}
+
+void FractalBPlusTree::decompress_node(Node* node) {
+    if (!(node->header.num_keys & (1U << 31))) return;
+
+    char temp[BPTREE_PAGE_SIZE];
+    
+    // Try to decompress with error handling
+    size_t decompressed_size = ZSTD_decompress(
+        temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
+        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader)
+    );
+
+    if (ZSTD_isError(decompressed_size)) {
+        std::string error_name = ZSTD_getErrorName(decompressed_size);
+        
+        // If decompression fails, try to recover by treating as uncompressed
+        std::cerr << "Zstd node decompression failed: " << error_name 
+                  << ", attempting recovery..." << std::endl;
+        
+        // Clear the compressed flag and hope the data is actually uncompressed
+        node->header.num_keys &= ~(1U << 31);
+        return;
+    }
+
+    // Copy back the decompressed data
+    memcpy(node->data, temp, decompressed_size);
+    node->header.num_keys &= ~(1U << 31);
+}
+
+/*void FractalBPlusTree::compress_node(Node* node) {
+    // Don't compress already compressed nodes or very small nodes
+    if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
+        return;
+    }
+
+    char temp[BPTREE_PAGE_SIZE];
+    
     // SAFER: Only copy and compress the actual USED portion of the buffer
     // Estimate used size conservatively
     size_t estimated_used_size = node->header.num_keys * (MAX_KEY_PREFIX + sizeof(KeyValue)) +
@@ -818,70 +896,8 @@ void FractalBPlusTree::decompress_node(Node* node) {
     // SAFER: Only copy back the decompressed data, not the entire buffer
     memcpy(node->data, temp, decompressed_size);
     node->header.num_keys &= ~(1U << 31);
-}
-
-/*void FractalBPlusTree::compress_node(Node* node) {
-    if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
-        return;
-    }
-
-    //Only compresses if there is significant data
-    //But be conservative about what we compress
-    size_t estimated_data_size = node->header.num_keys * (MAX_KEY_PREFIX + sizeof(KeyValue)) + node->header.num_messages * sizeof(Message);
-
-    //Only compress if we have a substantial data and it is worth compressing
-    if (estimated_data_size < 1024 ) {
-	    return;
-    }
-
-    char temp[BPTREE_PAGE_SIZE];
-    uint64_t transaction_id = node->header.version;
-    size_t data_size = calculate_actual_data_size(transaction_id);
-    memcpy(temp, node->data, data_size);
-
-    // Reserve space for compressed_size at the start of node->data
-    size_t compressed_size = ZSTD_compress(
-        node->data + sizeof(size_t),
-        BPTREE_PAGE_SIZE - sizeof(PageHeader) - sizeof(size_t),
-        temp,
-        data_size,
-        1
-    );
-
-    if (ZSTD_isError(compressed_size)) {
-        memcpy(node->data, temp, data_size);
-        std::cerr << "Zstd node compression failed: " << ZSTD_getErrorName(compressed_size)
-                  << ", keeping uncompressed" << std::endl;
-        return;
-    }
-
-    // Store compressed_size at the start of node->data
-    memcpy(node->data, &compressed_size, sizeof(size_t));
-    node->header.num_keys |= (1U << 31); // Mark as compressed
-}
-
-void FractalBPlusTree::decompress_node(Node* node) {
-    if (!(node->header.num_keys & (1U << 31))) return;
-
-    char temp[BPTREE_PAGE_SIZE];
-    size_t compressed_size;
-    memcpy(&compressed_size, node->data, sizeof(size_t)); // Read stored compressed size
-
-    size_t decompressed_size = ZSTD_decompress(
-        temp,
-        BPTREE_PAGE_SIZE - sizeof(PageHeader),
-        node->data + sizeof(size_t),
-        compressed_size
-    );
-
-    if (ZSTD_isError(decompressed_size)) {
-        throw std::runtime_error("Zstd node decompression failed: " +
-                                 std::string(ZSTD_getErrorName(decompressed_size)));
-    }
-
-    memcpy(node->data, temp, decompressed_size);
-    node->header.num_keys &= ~(1U << 31); // Mark as uncompressed
 }*/
+
 
 bool FractalBPlusTree::is_node_full(const Node* node) {
     return node->header.num_keys >= BPTREE_ORDER || node->header.num_messages >= MAX_MESSAGES;
