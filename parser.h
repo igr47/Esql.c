@@ -297,6 +297,15 @@ namespace AST{
 			std::string columnName;
 			std::string type;
 			std::string newColumnName;
+			//Support for constraints
+			std::vector<std::string> constraints;
+			std::string defaultValue;
+			bool autoIncreament = false;
+			std::string checkExpression;
+
+			bool hasConstraint(const std::string& constraint) const{
+				return std::find(constraints.begin(), constraints.end(), constraint) != constraints.end();
+			}
 	};
         class BulkInsertStatement : public Statement {
                 public:

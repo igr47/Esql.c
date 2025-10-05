@@ -1588,16 +1588,80 @@ ExecutionEngine::ResultSet ExecutionEngine::handleAlterAdd(AST::AlterTableStatem
         throw std::runtime_error("Invalid column type: " + stmt->type);
     }
     
-    storage.alterTable(
-        db.currentDatabase(),
-        stmt->tablename,
-        "",  // oldColumn not used for ADD
-        stmt->columnName,
-        stmt->type,
-        AST::AlterTableStatement::ADD
-    );
+    // Get the table to check existing structure
+    auto table = storage.getTable(db.currentDatabase(), stmt->tablename);
+    if (!table) {
+        throw std::runtime_error("Table not found: " + stmt->tablename);
+    }
+
+    // Check if column already exists
+    for (const auto& column : table->columns) {
+        if (column.name == stmt->columnName) {
+            throw std::runtime_error("Column already exists: " + stmt->columnName);
+        }
+    }
+
+    // Validate constraints
+    if (stmt->hasConstraint("PRIMARY_KEY")) {
+        // Check if table already has a primary key
+        for (const auto& column : table->columns) {
+            if (column.isPrimaryKey) {
+                throw std::runtime_error("Table already has a primary key column: " + column.name);
+            }
+        }
+    }
+
+    if (stmt->autoIncreament && stmt->type != "INT" && stmt->type != "INTEGER") {
+        throw std::runtime_error("AUTO_INCREMENT can only be applied to INT columns");
+    }
+
+    // Create column definition with constraints
+    DatabaseSchema::Column newCol;
+    newCol.name = stmt->columnName;
+    newCol.type = DatabaseSchema::Column::parseType(stmt->type);
+    newCol.isNullable = true; // Default to nullable
     
-    return ResultSet({"Status", {{"Column '" + stmt->columnName + "' added to table '" + stmt->tablename + "'"}}});
+    // Apply constraints
+    for (const auto& constraint : stmt->constraints) {
+        DatabaseSchema::Constraint dbConstraint;
+        
+        if (constraint == "PRIMARY_KEY") {
+            newCol.isPrimaryKey = true;
+            newCol.isNullable = false;
+            dbConstraint.type = DatabaseSchema::Constraint::PRIMARY_KEY;
+            dbConstraint.name = "PRIMARY_KEY";
+        } else if (constraint == "NOT_NULL") {
+            newCol.isNullable = false;
+            dbConstraint.type = DatabaseSchema::Constraint::NOT_NULL;
+            dbConstraint.name = "NOT_NULL";
+        } else if (constraint == "UNIQUE") {
+            newCol.isUnique = true;
+            dbConstraint.type = DatabaseSchema::Constraint::UNIQUE;
+            dbConstraint.name = "UNIQUE";
+        } else if (constraint == "AUTO_INCREAMENT") {
+            newCol.autoIncreament = true;
+            newCol.isNullable = false; // AUTO_INCREMENT implies NOT NULL
+            dbConstraint.type = DatabaseSchema::Constraint::AUTO_INCREAMENT;
+            dbConstraint.name = "AUTO_INCREAMENT";
+        } else if (constraint == "DEFAULT") {
+            newCol.hasDefault = true;
+            newCol.defaultValue = stmt->defaultValue;
+            dbConstraint.type = DatabaseSchema::Constraint::DEFAULT;
+            dbConstraint.name = "DEFAULT";
+            dbConstraint.value = stmt->defaultValue;
+        } else if (constraint.find("CHECK") == 0) {
+            dbConstraint.type = DatabaseSchema::Constraint::CHECK;
+            dbConstraint.name = "CHECK";
+            dbConstraint.value = stmt->checkExpression;
+        }
+        
+        newCol.constraints.push_back(dbConstraint);
+    }
+
+    // Use the new alterTable method that supports constraints
+    storage.alterTable(db.currentDatabase(), stmt->tablename, newCol);
+    
+    return ResultSet({"Status", {{"Column '" + stmt->columnName + "' added to table '" + stmt->tablename + "' with constraints"}}});
 }
 
 ExecutionEngine::ResultSet ExecutionEngine::handleAlterDrop(AST::AlterTableStatement* stmt) {

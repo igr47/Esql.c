@@ -295,8 +295,218 @@ const DatabaseSchema::Table* DiskStorage::getTable(const std::string& dbName,
     return &tableInfo;
 }
 
-// Alter table operations
+// Add this new method to handle adding columns with constraints
 void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,
+                           const DatabaseSchema::Column& newColumn) {
+    bool wasInTransaction = in_transaction;
+    if (!wasInTransaction) {
+        beginTransaction();
+    }
+
+    try {
+        ensureDatabaseExists(dbName);
+        auto& db = databases.at(dbName);
+        
+        if (db.tables.find(tableName) == db.tables.end()) {
+            throw std::runtime_error("Table not found: " + tableName);
+        }
+
+        auto& columns = db.table_schemas.at(tableName);
+        
+        // Check if column already exists
+        for (const auto& col : columns) {
+            if (col.name == newColumn.name) {
+                throw std::runtime_error("Column already exists: " + newColumn.name);
+            }
+        }
+
+        // Validate PRIMARY KEY constraint
+        if (newColumn.isPrimaryKey) {
+            // Check if table already has a primary key
+            for (const auto& col : columns) {
+                if (col.isPrimaryKey) {
+                    throw std::runtime_error("Table already has a primary key column: " + col.name);
+                }
+            }
+        }
+
+        // Validate AUTO_INCREMENT constraint
+        /*if (newColumn.autoIncreament && 
+            newColumn.type != "INT" && 
+            newColumn.type != "INTEGER") {
+            throw std::runtime_error("AUTO_INCREMENT can only be applied to INT columns");
+        }*/
+
+        // Create new schema with the added column
+        std::vector<DatabaseSchema::Column> newColumns = columns;
+        newColumns.push_back(newColumn);
+
+        // Store rename mapping (empty for ADD operations)
+        std::unordered_map<std::string, std::string> renameMapping;
+
+        // Rebuild table with new schema
+        auto old_data_count = getTableData(dbName, tableName).size();
+        rebuildTableWithNewSchema(dbName, tableName, newColumns, renameMapping);
+        auto new_data_count = getTableData(dbName, tableName).size();
+        
+        if (new_data_count != old_data_count) {
+            throw std::runtime_error("Data loss detected during ALTER TABLE ADD: had " +
+                                   std::to_string(old_data_count) + " rows, now " +
+                                   std::to_string(new_data_count) + " rows");
+        }
+
+        // Update AUTO_INCREMENT counter if needed
+        if (newColumn.autoIncreament) {
+            db.auto_increament_counters[tableName][newColumn.name] = 1;
+        }
+
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
+
+    } catch (const std::exception& e) {
+        if (!wasInTransaction) {
+            rollbackTransaction();
+        }
+        throw;
+    }
+}
+
+// Modify the existing alterTable method to call the new one for ADD operations
+void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,
+                           const std::string& oldColumn, const std::string& newColumn,
+                           const std::string& newType, AST::AlterTableStatement::Action action) {
+    
+    // For ADD operations, we need a different approach with constraints
+    if (action == AST::AlterTableStatement::ADD) {
+        // This method doesn't support constraints, so we'll use the basic version
+        // The ExecutionEngine should use the new alterTable method with Column parameter
+        bool wasInTransaction = in_transaction;
+        if (!wasInTransaction) {
+            beginTransaction();
+        }
+
+        try {
+            ensureDatabaseExists(dbName);
+            auto& db = databases.at(dbName);
+            
+            if (db.tables.find(tableName) == db.tables.end()) {
+                throw std::runtime_error("Table not found: " + tableName);
+            }
+
+            auto& columns = db.table_schemas.at(tableName);
+            
+            // Validate the column doesn't already exist
+            for (const auto& col : columns) {
+                if (col.name == newColumn) {
+                    throw std::runtime_error("Column already exists: " + newColumn);
+                }
+            }
+            
+            // Create basic column without constraints
+            DatabaseSchema::Column newCol;
+            newCol.name = newColumn;
+            newCol.type = DatabaseSchema::Column::parseType(newType);
+            newCol.isNullable = true;
+            
+            std::vector<DatabaseSchema::Column> newColumns = columns;
+            newColumns.push_back(newCol);
+
+            // Rebuild table with new schema
+            std::unordered_map<std::string, std::string> renameMapping;
+            rebuildTableWithNewSchema(dbName, tableName, newColumns, renameMapping);
+            
+            if (!wasInTransaction) {
+                commitTransaction();
+            }
+
+        } catch (const std::exception& e) {
+            if (!wasInTransaction) {
+                rollbackTransaction();
+            }
+            throw;
+        }
+    } else {
+        // Handle DROP and RENAME operations with the original logic
+        bool wasInTransaction = in_transaction;
+        if (!wasInTransaction) {
+            beginTransaction();
+        }
+
+        try {
+            ensureDatabaseExists(dbName);
+            auto& db = databases.at(dbName);
+            
+            if (db.tables.find(tableName) == db.tables.end()) {
+                throw std::runtime_error("Table not found: " + tableName);
+            }
+
+            auto& columns = db.table_schemas.at(tableName);
+            std::vector<DatabaseSchema::Column> newColumns = columns;
+            bool schemaChanged = false;
+            std::unordered_map<std::string, std::string> renameMapping;
+
+            switch (action) {
+                case AST::AlterTableStatement::DROP: {
+                    auto it = std::remove_if(newColumns.begin(), newColumns.end(),
+                        [&oldColumn](const DatabaseSchema::Column& col) {
+                            return col.name == oldColumn;
+                        });
+                    if (it != newColumns.end()) {
+                        newColumns.erase(it, newColumns.end());
+                        schemaChanged = true;
+                    } else {
+                        throw std::runtime_error("Column not found: " + oldColumn);
+                    }
+                    break;
+                }
+                case AST::AlterTableStatement::RENAME: {
+                    bool found = false;
+                    for (auto& col : newColumns) {
+                        if (col.name == oldColumn) {
+                            renameMapping[oldColumn] = newColumn;
+                            col.name = newColumn;
+                            schemaChanged = true;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        throw std::runtime_error("Column not found: " + oldColumn);
+                    }
+                    break;
+                }
+                default:
+                    throw std::runtime_error("Unsupported ALTER TABLE operation");
+            }
+
+            if (schemaChanged) {
+                auto old_data_count = getTableData(dbName, tableName).size();
+                rebuildTableWithNewSchema(dbName, tableName, newColumns, renameMapping);
+                auto new_data_count = getTableData(dbName, tableName).size();
+                
+                if (new_data_count != old_data_count) {
+                    throw std::runtime_error("Data loss detected during ALTER TABLE: had " +
+                                           std::to_string(old_data_count) + " rows, now " +
+                                           std::to_string(new_data_count) + " rows");
+                }
+            }
+            
+            if (!wasInTransaction) {
+                commitTransaction();
+            }
+
+        } catch (const std::exception& e) {
+            if (!wasInTransaction) {
+                rollbackTransaction();
+            }
+            throw;
+        }
+    }
+}
+
+// Alter table operations
+/*void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,
                            const std::string& oldColumn, const std::string& newColumn,
                            const std::string& newType, AST::AlterTableStatement::Action action) {
     bool wasInTransaction = in_transaction;
@@ -315,6 +525,8 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
         auto& columns = db.table_schemas.at(tableName);
         std::vector<DatabaseSchema::Column> newColumns = columns;
         bool schemaChanged = false;
+	//Store rename mapping for RENAME operations
+	std::unordered_map<std::string,std::string> renameMapping;
 
         switch (action) {
             case AST::AlterTableStatement::ADD: {
@@ -350,6 +562,8 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
                 bool found = false;
                 for (auto& col : newColumns) {
                     if (col.name == oldColumn) {
+			//Store the rename mapping
+			renameMapping[oldColumn] = newColumn;
                         col.name = newColumn;
                         schemaChanged = true;
                         found = true;
@@ -368,11 +582,14 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
         if (schemaChanged) {
 	    auto old_data_count = getTableData(dbName, tableName).size();
 
-            rebuildTableWithNewSchema(dbName, tableName, newColumns);
+            rebuildTableWithNewSchema(dbName, tableName, newColumns,renameMapping);
 	    auto new_data_count = getTableData(dbName, tableName).size();
             if (new_data_count != old_data_count) {
                 throw std::runtime_error("Data loss detected during ALTER TABLE: had " +std::to_string(old_data_count) + " rows, now " +std::to_string(new_data_count) + " rows");
             }
+
+	    db.table_schemas[tableName] = newColumns;
+	    std::cout <<"DEBUG: Schema updated for table'" << tableName << "' - new column will have constraits enforced:" << std::endl;
 
         }
         
@@ -386,7 +603,7 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
         }
         throw;
     }
-}
+}*/
 
 // Bulk operations
 void DiskStorage::bulkInsert(const std::string& dbName, const std::string& tableName,
@@ -657,6 +874,114 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
 
 
 void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
+                                          const std::vector<DatabaseSchema::Column>& newSchema,
+                                          const std::unordered_map<std::string, std::string>& renameMapping) {
+    auto& db = databases.at(dbName);
+    auto& oldSchema = db.table_schemas.at(tableName);
+    
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end() || !table_it->second) {
+        throw std::runtime_error("Table not initialized: " + tableName);
+    }
+    
+    // Get all data with their actual row IDs from the original tree
+    auto all_data_with_ids = table_it->second->select_range(1, UINT32_MAX, getTransactionId());
+    
+    // Create new tree with new schema 
+    uint32_t new_root_id = pager.allocate_page();
+    auto newTree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
+    newTree->create();
+    
+    // Reinsert all rows with their original row IDs and new schema
+    std::vector<std::pair<int64_t, std::string>> bulk_data;
+    bulk_data.reserve(all_data_with_ids.size());
+    
+    for (const auto& [actual_row_id, old_serialized_data] : all_data_with_ids) {
+        // Deserialize old data with OLD schema
+        std::vector<uint8_t> old_buffer(old_serialized_data.begin(), old_serialized_data.end());
+        auto old_row = deserializeRow(old_buffer, oldSchema);
+        
+        std::unordered_map<std::string, std::string> newRow;
+        
+        // Copy all data from old row to new row, handling renames and new columns
+        for (const auto& newCol : newSchema) {
+            bool dataCopied = false;
+            
+            // Case 1: Direct name match (no rename)
+            auto oldIt = old_row.find(newCol.name);
+            if (oldIt != old_row.end()) {
+                newRow[newCol.name] = oldIt->second;
+                dataCopied = true;
+            }
+            
+            // Case 2: Check if this is a renamed column (using the explicit mapping)
+            if (!dataCopied && !renameMapping.empty()) {
+                for (const auto& [oldName, newName] : renameMapping) {
+                    if (newName == newCol.name) {
+                        auto renamedIt = old_row.find(oldName);
+                        if (renamedIt != old_row.end()) {
+                            newRow[newCol.name] = renamedIt->second;
+                            dataCopied = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Case 3: New column with DEFAULT constraint
+            if (!dataCopied && newCol.hasDefault) {
+                newRow[newCol.name] = newCol.defaultValue;
+                dataCopied = true;
+            }
+            
+            // Case 4: New column without default - remains NULL
+            if (!dataCopied) {
+                newRow[newCol.name] = "NULL";
+            }
+        }
+        
+        // Serialize with NEW schema
+        std::vector<uint8_t> buffer;
+        try {
+            serializeRow(newRow, newSchema, buffer);
+            bulk_data.emplace_back(actual_row_id, std::string(buffer.begin(), buffer.end()));
+        } catch (const std::exception& e) {
+            std::cerr << "MIGRATING: Failed to serialize row ID " << actual_row_id << ": " << e.what() << std::endl;
+            throw;
+        }
+    }
+    
+    // Bulk load with original row IDs
+    if (!bulk_data.empty()) {
+        try {
+            auto transaction_id = getTransactionId();
+            newTree->bulk_load(bulk_data, transaction_id);
+        } catch (const std::exception& e) {
+            std::cerr << "ERROR: Bulk load failed: " << e.what() << std::endl;
+            throw std::runtime_error("Bulk load failed: " + std::string(e.what()));
+        }
+    }
+    
+    // Verify the migration worked
+    auto verify_data = newTree->select_range(1, UINT32_MAX, getTransactionId());
+    if (verify_data.size() != all_data_with_ids.size()) {
+        throw std::runtime_error("Data loss detected during ALTER TABLE: had " +
+            std::to_string(all_data_with_ids.size()) + " rows, now " +
+            std::to_string(verify_data.size()) + " rows");
+    }
+    
+    // Replace old tree and update schema
+    db.tables[tableName] = std::move(newTree);
+    db.table_schemas[tableName] = newSchema;
+    db.root_page_ids[tableName] = new_root_id;
+    
+    // Preserve the row ID counter
+    updateRowIdCounter(tableName, db.next_row_id);
+    
+    writeSchema();
+}
+
+/*void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
                                           const std::vector<DatabaseSchema::Column>& newSchema) {
     auto& db = databases.at(dbName);
     auto& oldSchema = db.table_schemas.at(tableName);
@@ -767,9 +1092,9 @@ void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std
     auto verify_data = newTree->select_range(1, UINT32_MAX, transaction_id);
     //std::cout << "VERIFICATION: Using transaction ID " << transaction_id << " - New table has " << verify_data.size() << " rows" << std::endl;
     
-    /*for (const auto& [row_id, data] : verify_data) {
+    *for (const auto& [row_id, data] : verify_data) {
         std::cout << "VERIFY: Row ID " << row_id << " - Data size: " << data.size() << " bytes" << std::endl;
-    }*/
+    }*
     
     if (verify_data.size() != oldData.size()) {
         std::stringstream error_msg;
@@ -796,7 +1121,7 @@ void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std
     writeSchema();
     
     //std::cout << "SCHEMA_MIGRATION: Completed successfully for table " << tableName << std::endl;
-}
+}*/
 std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableDataWithSchema(const std::string& dbName, const std::string& tableName,const std::vector<DatabaseSchema::Column>& schema){
     
     ensureDatabaseSelected();

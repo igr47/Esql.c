@@ -570,24 +570,25 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
 
     stmt.columns.push_back(std::move(col));
 }
+
 std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
     auto stmt = std::make_unique<AST::AlterTableStatement>();
-    
+
     consume(Token::Type::ALTER);
     consume(Token::Type::TABLE);
-    
+
     // Get table name
     stmt->tablename = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
-    
+
     if (match(Token::Type::ADD)) {
         consume(Token::Type::ADD);
         stmt->action = AST::AlterTableStatement::ADD;
-        
+
         // Get column name
         stmt->columnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
-        
+
         // Get column type
         if (matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT})) {
             stmt->type = currentToken.lexeme;
@@ -595,26 +596,108 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
         } else {
             throw std::runtime_error("Expected column type after ADD COLUMN");
         }
-    } 
+
+        // Parse constraints (same as in CREATE TABLE)
+        while (matchAny({Token::Type::PRIMARY_KEY, Token::Type::NOT_NULL,
+                        Token::Type::UNIQUE, Token::Type::CHECK,
+                        Token::Type::DEFAULT, Token::Type::AUTO_INCREAMENT})) {
+
+            if (match(Token::Type::PRIMARY_KEY)) {
+                stmt->constraints.push_back("PRIMARY_KEY");
+                consume(Token::Type::PRIMARY_KEY);
+
+                // Handle PRIMARY KEY AUTOINCREMENT combination
+                if (match(Token::Type::AUTO_INCREAMENT)) {
+                    if (stmt->type != "INT" && stmt->type != "INTEGER") {
+                        throw std::runtime_error("AUTO_INCREMENT can only be applied to INT columns");
+                    }
+                    stmt->autoIncreament = true;
+                    stmt->constraints.push_back("AUTO_INCREAMENT");
+                    consume(Token::Type::AUTO_INCREAMENT);
+                }
+            } else if (match(Token::Type::NOT_NULL)) {
+                stmt->constraints.push_back("NOT_NULL");
+                consume(Token::Type::NOT_NULL);
+            } else if (match(Token::Type::UNIQUE)) {
+                stmt->constraints.push_back("UNIQUE");
+                consume(Token::Type::UNIQUE);
+            } else if (match(Token::Type::AUTO_INCREAMENT)) {
+                if (stmt->type != "INT" && stmt->type != "INTEGER") {
+                    throw std::runtime_error("AUTO_INCREMENT can only be applied to INT columns");
+                }
+                stmt->autoIncreament = true;
+                stmt->constraints.push_back("AUTO_INCREAMENT");
+                consume(Token::Type::AUTO_INCREAMENT);
+            } else if (match(Token::Type::DEFAULT)) {
+                consume(Token::Type::DEFAULT);
+
+                bool wasInValueContext = inValueContext;
+                inValueContext = true;
+
+                try {
+                    if (matchAny({Token::Type::STRING_LITERAL, Token::Type::NUMBER_LITERAL,
+                                 Token::Type::TRUE, Token::Type::FALSE})) {
+                        stmt->defaultValue = currentToken.lexeme;
+                        stmt->constraints.push_back("DEFAULT");
+                        consume(currentToken.type);
+                    } else if (match(Token::Type::NULL_TOKEN)) {
+                        stmt->defaultValue = "NULL";
+                        stmt->constraints.push_back("DEFAULT");
+                        consume(Token::Type::NULL_TOKEN);
+                    } else {
+                        throw std::runtime_error("Expected default value after DEFAULT keyword");
+                    }
+                } catch (...) {
+                    inValueContext = wasInValueContext;
+                    throw;
+                }
+                inValueContext = wasInValueContext;
+            } else if (match(Token::Type::CHECK)) {
+                consume(Token::Type::CHECK);
+                consume(Token::Type::L_PAREN);
+
+                bool wasInValueContext = inValueContext;
+                inValueContext = false;
+
+                try {
+                    // Parse the expression using the existing expression parser
+                    auto checkExpr = parseExpression();
+                    std::cout << "DEBUG: Parsed CHECK expression: " + checkExpr->toString() << std::endl;
+                    consume(Token::Type::R_PAREN);
+
+                    // Convert the expression into a string for storage
+                    std::string checkConstraint = "CHECK(" + checkExpr->toString() + ")";
+                    stmt->constraints.push_back(checkConstraint);
+                    stmt->checkExpression = checkExpr->toString();
+
+                    std::cout << "DEBUG: Successfully completed CHECK constraint: " + checkConstraint << std::endl;
+                } catch (...) {
+                    inValueContext = wasInValueContext;
+                    throw;
+                }
+                inValueContext = wasInValueContext;
+            }
+        }
+    }
     else if (match(Token::Type::DROP)) {
         consume(Token::Type::DROP);
         stmt->action = AST::AlterTableStatement::DROP;
-        
+
         // Get column name
         stmt->columnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
-    } 
+    }
     else if (match(Token::Type::RENAME)) {
         consume(Token::Type::RENAME);
         stmt->action = AST::AlterTableStatement::RENAME;
-        
+
         // Get old column name
         stmt->columnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
-        
+
         // Consume TO keyword
         consume(Token::Type::TO);
-        
+
         // Get new column name
         stmt->newColumnName = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
@@ -622,7 +705,7 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
     else {
         throw std::runtime_error("Expected ADD, DROP, or RENAME after ALTER TABLE");
     }
-    
+
     return stmt;
 }
 

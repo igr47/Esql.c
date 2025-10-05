@@ -54,6 +54,7 @@ public:
     //AUTO_INCREAMENT management
     uint32_t getNextAutoIncreamentValue(const std::string& dbName, const std::string& tableName, const std::string& columnName);
     void updateAutoIncreamentCounter(const std::string& dbName, const std::string& tableName,const std::string& columnName, uint32_t value);
+    void alterTable(const std::string& dbName, const std::string& tableName,const DatabaseSchema::Column& newColumn);
 
     // Maintenance operations
     void compactDatabase(const std::string& dbName) override;
@@ -93,7 +94,8 @@ private:
     // Schema management
     std::vector<std::unordered_map<std::string, std::string>> getTableDataWithSchema(const std::string& dbName, const std::string& tableName,const std::vector<DatabaseSchema::Column>& schema);
     void rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
-                                  const std::vector<DatabaseSchema::Column>& newSchema);
+                                  const std::vector<DatabaseSchema::Column>& newSchema,const std::unordered_map<std::string, std::string>& renameMapping);
+    //void alterTable(const std::string& dbName, const std::string& tableName,const DatabaseSchema::Column& newColumn);
     void writeSchema();
     void readSchema();
 
