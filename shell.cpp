@@ -22,7 +22,7 @@
 const std::unordered_set<std::string> ESQLShell::keywords = {
     "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
     "DELETE", "CREATE", "TABLE", "DATABASE", "DROP", "ALTER", "ADD", "RENAME",
-    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", "DATABASES","BY","ORDER","GROUP","HAVING",
+    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", "DATABASES","BY","ORDER","GROUP","HAVING","BULK","ROW"
 };
 
 const std::unordered_set<std::string> ESQLShell::datatypes = {
@@ -30,7 +30,7 @@ const std::unordered_set<std::string> ESQLShell::datatypes = {
 };
 
 const std::unordered_set<std::string> ESQLShell::conditionals = {
-    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT","AS","PRIMARY_KEY","UNIQUE","DEFAULT","AUTO_INCREAMENT","CHECK","NOT_NULL"
+    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT","AS","PRIMARY_KEY","UNIQUE","DEFAULT","AUTO_INCREAMENT","CHECK","NOT_NULL","TO"
 };
 
 ESQLShell::ESQLShell(Database& db) : db(db), current_db("default") {
@@ -300,12 +300,12 @@ std::string ESQLShell::colorize_sql(const std::string& input) {
 
     // Aggregate functions for special coloring
     static const std::unordered_set<std::string> aggregate_functions = {
-        "COUNT", "SUM", "AVG", "MIN", "MAX"
+        "COUNT", "SUM", "AVG", "MIN", "MAX","DESC","ASC"
     };
 
     // Operators for gray coloring
     static const std::unordered_set<std::string> operators = {
-        "=", "!=", "<", ">", "<=", ">=", "+", "-", "*", "/", "AND", "OR", "NOT"
+        "=", "!=", "<", ">", "<=", ">=", "+", "-", "*", "/", "AND", "OR", "NOT","(",")",","
     };
 
     for (size_t i = 0; i < input.size(); ++i) {
@@ -367,7 +367,7 @@ std::string ESQLShell::colorize_sql(const std::string& input) {
             
             // Colorize operators
             if (c == '=' || c == '<' || c == '>' || c == '+' || c == '-' || c == '*' || c == '/' ||
-                c == '!' || c == '&' || c == '|') {
+                c == '!' || c == '&' || c == '|' || '(' || ')' || ',') {
                 result += GRAY + std::string(1, c) + RESET;
             } else {
                 result += std::string(1, c);
@@ -424,88 +424,7 @@ void ESQLShell::process_word(const std::string& word, std::string& result,
         }
     }
 }
-/*std::string ESQLShell::colorize_sql(const std::string& input) {
-    std::string result;
-    bool in_string = false;
-    char string_delim = 0;
-    std::string current_word;
 
-    for (size_t i = 0; i < input.size(); ++i) {
-        char c = input[i];
-
-        if (in_string) {
-            result += GREEN + std::string(1, c);
-            if (c == string_delim) {
-                in_string = false;
-                result += RESET;
-            }
-            continue;
-        }
-
-        if (c == '"' || c == '\'') {
-            if (!current_word.empty()) {
-                std::string upper_word = current_word;
-                std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
-
-                if (keywords.find(upper_word) != keywords.end()) {
-                    result += MAGENTA + current_word + RESET;
-                } else if (datatypes.find(upper_word) != datatypes.end()) {
-                    result += BLUE + current_word + RESET;
-                } else if (conditionals.find(upper_word) != conditionals.end()) {
-                    result += CYAN + current_word + RESET;
-                } else {
-                    result += current_word;
-                }
-                current_word.clear();
-            }
-
-            in_string = true;
-            string_delim = c;
-            result += GREEN + std::string(1, c);
-            continue;
-        }
-
-        if (std::isspace(c) || c == ',' || c == ';' || c == '(' || c == ')' ||
-            c == '=' || c == '<' || c == '>' || c == '+' || c == '-' || c == '*' || c == '/') {
-            if (!current_word.empty()) {
-                std::string upper_word = current_word;
-                std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
-
-                if (keywords.find(upper_word) != keywords.end()) {
-                    result += MAGENTA + current_word + RESET;
-                } else if (datatypes.find(upper_word) != datatypes.end()) {
-                    result += BLUE + current_word + RESET;
-                } else if (conditionals.find(upper_word) != conditionals.end()) {
-                    result += CYAN + current_word + RESET;
-                } else {
-                    result += current_word;
-                }
-                current_word.clear();
-            }
-            result += std::string(1, c);
-            continue;
-        }
-
-        current_word += c;
-    }
-
-    if (!current_word.empty()) {
-        std::string upper_word = current_word;
-        std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
-
-        if (keywords.find(upper_word) != keywords.end()) {
-            result += MAGENTA + current_word + RESET;
-        } else if (datatypes.find(upper_word) != datatypes.end()) {
-            result += BLUE + current_word + RESET;
-        } else if (conditionals.find(upper_word) != conditionals.end()) {
-            result += CYAN + current_word + RESET;
-        } else {
-            result += current_word;
-        }
-    }
-
-    return result;
-}*/
 
 bool ESQLShell::is_termux() const {
     return current_platform == Platform::Termux;
