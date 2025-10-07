@@ -1279,14 +1279,15 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                 }
             }
 
-            // Handle AUTO_INCREMENT before validation
-            handleAutoIncreament(row, table);
 
             // Apply DEFAULT VALUES before validation
             applyDefaultValues(row, table);
 
             // For single-row inserts, validate without batch tracking
             validateRowAgainstSchema(row, table);
+
+	    //Handle AUTO_INCREAMENT after validation to prevent addind of id before rows have been validated
+	    handleAutoIncreament(row, table);
             storage.insertRow(db.currentDatabase(), stmt.table, row);
             inserted_count = 1;
         } else {
@@ -1351,9 +1352,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                     }
                 }
 
-                handleAutoIncreament(row, table);
                 applyDefaultValues(row, table);
                 validateRowAgainstSchema(row, table);
+		handleAutoIncreament(row,table);
                 storage.insertRow(db.currentDatabase(), stmt.table, row);
                 inserted_count++;
             }
@@ -1730,13 +1731,13 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
 	    for (const auto& row_values : stmt.rows) {
 		    auto row = buildRowFromValues(stmt.columns, row_values);
 
-		    //Handle AUTO_INCREAMENT before default values application and validation
-		    handleAutoIncreament(row, table);
 
 		    //Apply DEFAULT VALUES before validation
 		    applyDefaultValues(row, table);
 		    
 		    validateRowAgainstSchema(row, table);
+
+		    handleAutoIncreament(row,table);
 		    rows.push_back(row);
 	    }
 	    
