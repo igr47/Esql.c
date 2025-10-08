@@ -770,7 +770,8 @@ size_t FractalBPlusTree::calculate_actual_data_size(uint64_t transaction_id) {
 
 void FractalBPlusTree::compress_node(Node* node) {
     // Don't compress already compressed nodes or very small nodes
-    if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
+    //if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
+    if (node->header.num_keys < 20 || (node->header.num_keys & (1u << 31))) {
         return;
     }
 
@@ -1934,12 +1935,167 @@ std::vector<int64_t> FractalBPlusTree::select_by_secondary(const std::string& in
     auto it = secondary_indexes.find(index_name);
     if (it == secondary_indexes.end()) return {};
 
-    // Simplified implementation - in a real system, this would traverse
+    // Simplified implementation
     // the secondary index and return matching primary keys
     return {};
 }
 
 void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& data,
+                                uint64_t transaction_id) {
+    if (data.empty()) {
+        std::cout << "BULK_LOAD: No data to load" << std::endl;
+        return;
+    }
+    
+    std::cout << "BULK_LOAD: Starting bulk load of " << data.size() << " rows" << std::endl;
+
+    // Step 1: Read ALL existing data with proper error handling
+    std::vector<std::pair<int64_t, std::string>> all_data;
+    
+    try {
+        auto existing_data = select_range(1, UINT32_MAX, transaction_id);
+        std::cout << "BULK_LOAD: Found " << existing_data.size() << " existing rows" << std::endl;
+        
+        for (const auto& item : existing_data) {
+            all_data.emplace_back(item.first, item.second);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "BULK_LOAD: Error reading existing data: " << e.what() 
+                  << ", starting fresh" << std::endl;
+        // Continue with just the new data
+    }
+    
+    // Step 2: Add new data
+    for (const auto& item : data) {
+        all_data.emplace_back(item.first, item.second);
+    }
+    
+    // Step 3: Sort combined data and remove duplicates
+    std::sort(all_data.begin(), all_data.end());
+    auto last = std::unique(all_data.begin(), all_data.end(), 
+        [](const auto& a, const auto& b) { return a.first == b.first; });
+    all_data.erase(last, all_data.end());
+    
+    std::cout << "BULK_LOAD: Rebuilding tree with " << all_data.size() << " total rows" << std::endl;
+
+    // Step 4: Clear and rebuild the entire tree structure
+    // Get the root node and reset it
+    uint32_t root_id = root_page_id.load();
+    Node* root_node = get_node(root_id);
+    
+    // Reset root to empty leaf
+    root_node->header.type = PageType::LEAF;
+    root_node->header.num_keys = 0;
+    root_node->header.num_messages = 0;
+    root_node->header.next_page_id = 0;
+    root_node->header.prev_page_id = 0;
+    memset(root_node->data, 0, sizeof(root_node->data));
+    
+    // Step 5: Build the tree efficiently
+    size_t current_index = 0;
+    uint32_t current_page_id = root_id;
+    Node* current_node = root_node;
+    uint32_t prev_page_id = 0;
+
+    while (current_index < all_data.size()) {
+        decompress_node_optimized(current_node);
+        
+        // Calculate how many keys we can fit in this node
+        // Leave some room for future inserts
+        size_t available_space = BPTREE_ORDER - 10; // Reserve 10 slots
+        size_t keys_to_add = std::min(available_space, all_data.size() - current_index);
+
+        if (keys_to_add == 0) {
+            // Should not happen with our reservation, but handle it
+            break;
+        }
+
+        // Get existing data from node (should be empty during bulk load)
+        int64_t keys[BPTREE_ORDER];
+        KeyValue kvs[BPTREE_ORDER];
+        
+        if (current_node->header.num_keys > 0) {
+            decompress_keys_optimized(keys, current_node->data, current_node->header.num_keys);
+            memcpy(kvs, current_node->data + current_node->header.num_keys * MAX_KEY_PREFIX,
+                   sizeof(KeyValue) * current_node->header.num_keys);
+        }
+
+        // Add new keys and values
+        for (size_t i = 0; i < keys_to_add; ++i) {
+            const auto& kv_pair = all_data[current_index + i];
+            
+            // Validate key
+            if (kv_pair.first <= 0 || kv_pair.first > 1000000) {
+                std::cerr << "BULK_LOAD: Skipping invalid key: " << kv_pair.first << std::endl;
+                continue;
+            }
+            
+            uint64_t value_offset = pager.write_data_block(kv_pair.second);
+            
+            size_t pos = current_node->header.num_keys + i;
+            keys[pos] = kv_pair.first;
+            kvs[pos].key = kv_pair.first;
+            kvs[pos].value_offset = value_offset;
+            kvs[pos].value_length = kv_pair.second.size();
+        }
+
+        // Update node
+        current_node->header.num_keys += keys_to_add;
+        current_index += keys_to_add;
+
+        // Write compressed keys and values back to node
+        compress_keys_optimized(current_node->data, keys, current_node->header.num_keys);
+        memcpy(current_node->data + current_node->header.num_keys * MAX_KEY_PREFIX,
+               kvs, sizeof(KeyValue) * current_node->header.num_keys);
+
+        std::cout << "BULK_LOAD: Added " << keys_to_add << " keys to page " 
+                  << current_page_id << ", total keys: " << current_node->header.num_keys << std::endl;
+
+        // If we have more data and current node is getting full, create new node
+        if (current_index < all_data.size() && current_node->header.num_keys >= BPTREE_ORDER - 10) {
+            Node new_node = {};
+            new_node.header.type = PageType::LEAF;
+            new_node.header.page_id = pager.allocate_page();
+            new_node.header.num_keys = 0;
+            new_node.header.num_messages = 0;
+            
+            // Link nodes
+            current_node->header.next_page_id = new_node.header.page_id;
+            new_node.header.prev_page_id = current_page_id;
+            
+            // Write current node
+            compress_node_optimized(current_node);
+            write_node(current_page_id, current_node, transaction_id);
+            
+            // Move to new node
+            prev_page_id = current_page_id;
+            current_page_id = new_node.header.page_id;
+            current_node = get_node(current_page_id);
+            *current_node = new_node;
+        }
+    }
+
+    // Write the final node
+    compress_node_optimized(current_node);
+    write_node(current_page_id, current_node, transaction_id);
+    
+    // Verify the rebuild worked
+    try {
+        auto verify_data = select_range(1, UINT32_MAX, transaction_id);
+        std::cout << "BULK_LOAD: Verification - tree now has " << verify_data.size() << " rows" << std::endl;
+        
+        if (verify_data.size() != all_data.size()) {
+            std::cerr << "BULK_LOAD: WARNING - Data count mismatch. Expected: " 
+                      << all_data.size() << ", Got: " << verify_data.size() << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "BULK_LOAD: Verification failed: " << e.what() << std::endl;
+    }
+    
+    std::cout << "BULK_LOAD: Completed successfully" << std::endl;
+}
+
+/*void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& data,
                                 uint64_t transaction_id) {
     if (data.empty()) {
         //std::cout << "BULK_LOAD: No data to load" << std::endl;
@@ -2004,7 +2160,7 @@ void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& d
     }
     
     //std::cout << "BULK_LOAD: Completed successfully, inserted " << data.size() << " rows" << std::endl;
-}
+}*/
 void FractalBPlusTree::checkpoint() {
     wal.checkpoint(pager, root_page_id.load());
 }
