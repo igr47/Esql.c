@@ -1734,10 +1734,12 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
 
 		    //Apply DEFAULT VALUES before validation
 		    applyDefaultValues(row, table);
+
+		    handleAutoIncreament(row,table);
 		    
 		    validateRowAgainstSchema(row, table);
 
-		    handleAutoIncreament(row,table);
+		    //handleAutoIncreament(row,table);
 		    rows.push_back(row);
 	    }
 	    

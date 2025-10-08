@@ -8,7 +8,7 @@
 #include <iostream>
 
 
-DiskStorage::DiskStorage(const std::string& filename)
+/*DiskStorage::DiskStorage(const std::string& filename)
     : pager(filename + ".db"), buffer_pool(1000), wal(filename + ".wal") {
     try {
 	std::cout<<"INITIALIZING DISKSTORAGE: "<<filename <<std::endl;
@@ -71,32 +71,373 @@ DiskStorage::DiskStorage(const std::string& filename)
         }
         throw std::runtime_error("Failed to initialize DiskStorage: " + std::string(e.what()));
     }
+}*/
+
+DiskStorage::DiskStorage(const std::string& filename) : pager(filename + ".db"), buffer_pool(1000),wal(filename + ".wal") {
+	try {
+		std::cout << "INITIALIZING DISKSTORAGE: " << filename << std::endl;
+
+		//Test compression
+		try {
+			pager.test_zstd();
+		} catch (const std::exception& e) {
+			std::cerr << "Warning: Zstd test failed: " << e.what() << std::endl;
+		}
+
+		databases.clear();
+		database_metadata_pages.clear();
+		current_db.clear();
+		next_transaction_id = 1;
+		in_transaction = false;
+
+		//Initialize or read gloabla metadata
+		try {
+			readGlobalMetadata();
+
+			//If no databases exist, initialize fresh
+			if (databases.empty()) {
+				std::cout << "No existing database found, initilizing fresh" << std::endl;
+				global_metadata_page = pager.allocate_page();
+				writeGlobalMetadata();
+			} else {
+				for (const auto& dbName : listDatabases()) {
+					try {
+						readDatabaseSchema(dbName);
+					} catch (const std::exception& e) {
+						std::cerr << "Warning: Failed to load database '" << dbName << "': " << e.what() << std::endl;
+
+						//Remove corrupted database from global list
+						databases.erase(dbName);
+						database_metadata_pages.erase(dbName);
+					}
+				}
+
+				//Set current database if available
+				if ( !databases.empty()) {
+					current_db = databases.begin()->first;
+				}
+			}
+		} catch (const std::exception& e) {
+			std::cerr << "Warnin: Failed to read gloabal metadata: " << e.what() << std::endl;
+
+			//Initialize fresh
+			global_metadata_page = pager.allocate_page();
+			writeGlobalMetadata();
+		}
+
+	} catch (const std::exception& e) {
+		throw std::runtime_error("Failed to initiaize DiskStorage: " + std::string(e.what()));
+	}
 }
 
 DiskStorage::~DiskStorage() {
     try {
+	std::cout << "DiskStorage Shutdown: Persisting all data.... " << std::endl;
         writeSchema();
         buffer_pool.flush_all();
-        wal.checkpoint(pager, 0); // Checkpoint with metadata page 0
+        wal.checkpoint(pager, /*0*/global_metadata_page); // Checkpoint with metadata page 0
+	std::cout << "Shutdown completed successfully." << std::endl;
     } catch (const std::exception& e) {
         // Log error but don't throw in destructor
         std::cerr << "Error in DiskStorage destructor: " << e.what() << std::endl;
     }
 }
 
+//Methods for database metadata initialisation
+uint32_t DiskStorage::getDatabaseMetadataPage(const std::string& dbName) {
+    auto it = database_metadata_pages.find(dbName);
+    if (it != database_metadata_pages.end()) {
+        return it->second;
+    }
+    
+    // Allocate new metadata page for this database
+    uint32_t metadata_page = pager.allocate_page();
+    database_metadata_pages[dbName] = metadata_page;
+    
+    // Initialize the metadata page
+    Node metadata_node = {};
+    metadata_node.header.type = PageType::METADATA;
+    metadata_node.header.page_id = metadata_page;
+    pager.write_page(metadata_page, &metadata_node);
+    
+    return metadata_page;
+}
+
+void DiskStorage::writeGlobalMetadata() {
+    try {
+	if (global_metadata_page != 0) {
+		std::cerr << "CRITICAL ERROR: Attempting to write  gloabala metadata to page "  << global_metadata_page << "instead of page 0| Correcting to page 0." << std::endl;
+		global_metadata_page = 0;
+	}
+        Node global_node = {};
+        global_node.header.type = PageType::METADATA;
+        global_node.header.page_id = global_metadata_page;
+        
+        uint8_t* data = reinterpret_cast<uint8_t*>(global_node.data);
+        uint32_t offset = 0;
+        size_t data_size = BPTREE_PAGE_SIZE - sizeof(PageHeader);
+
+        // Write global schema version
+        const uint32_t GLOBAL_SCHEMA_VERSION = 2;
+        std::memcpy(data + offset, &GLOBAL_SCHEMA_VERSION, sizeof(GLOBAL_SCHEMA_VERSION));
+        offset += sizeof(GLOBAL_SCHEMA_VERSION);
+
+        // Write number of databases
+        uint32_t num_databases = databases.size();
+        std::memcpy(data + offset, &num_databases, sizeof(num_databases));
+        offset += sizeof(num_databases);
+
+        // Write database list with their metadata page IDs - THIS IS CRITICAL
+        for (const auto& [dbName, db] : databases) {
+            // Write database name
+            uint32_t name_length = dbName.size();
+            std::memcpy(data + offset, &name_length, sizeof(name_length));
+            offset += sizeof(name_length);
+            std::memcpy(data + offset, dbName.data(), name_length);
+            offset += name_length;
+
+            // Write metadata page ID for this database - PERSIST THE MAPPING
+            uint32_t metadata_page = database_metadata_pages.at(dbName);
+            std::memcpy(data + offset, &metadata_page, sizeof(metadata_page));
+            offset += sizeof(metadata_page);
+
+            std::cout << "Global metadata: database '" << dbName << "' -> page " << metadata_page << std::endl;
+        }
+
+        // Write current database
+        uint32_t current_db_length = current_db.size();
+        std::memcpy(data + offset, &current_db_length, sizeof(current_db_length));
+        offset += sizeof(current_db_length);
+        if (current_db_length > 0) {
+            std::memcpy(data + offset, current_db.data(), current_db_length);
+            offset += current_db_length;
+        }
+
+        // Write next transaction ID
+        std::memcpy(data + offset, &next_transaction_id, sizeof(next_transaction_id));
+        offset += sizeof(next_transaction_id);
+
+        pager.write_page(global_metadata_page, &global_node);
+        std::cout << "Global metadata written to page " << global_metadata_page 
+                  << " with " << num_databases << " databases" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error writing global metadata: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+void DiskStorage::readGlobalMetadata() {
+    try {
+        // Always use page 0 for global metadata (like the old system)
+        global_metadata_page = 0;
+        
+        Node global_node;
+        try {
+            pager.read_page(global_metadata_page, &global_node);
+            
+            if (global_node.header.type != PageType::METADATA) {
+                std::cout << "Page 0 is not a metadata page, initializing fresh" << std::endl;
+                //initializeFreshGlobalMetadata();
+		forceInitializePage0();
+                return;
+            }
+        } catch (const std::exception& e) {
+            std::cout << "No existing global metadata found: " << e.what() << std::endl;
+            //initializeFreshGlobalMetadata();
+	    forceInitializePage0();
+            return;
+        }
+
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(global_node.data);
+        uint32_t offset = 0;
+        size_t data_size = BPTREE_PAGE_SIZE - sizeof(PageHeader);
+
+        // Read global schema version
+        uint32_t schema_version;
+        if (offset + sizeof(schema_version) > data_size) {
+            std::cout << "No global schema version found, initializing fresh" << std::endl;
+            initializeFreshGlobalMetadata();
+            return;
+        }
+        std::memcpy(&schema_version, data + offset, sizeof(schema_version));
+        offset += sizeof(schema_version);
+
+        // Handle version 1 (old format) migration
+        if (schema_version == 1) {
+            std::cout << "Migrating from old schema version 1 to version 2" << std::endl;
+            //migrateFromVersion1();
+            return;
+        } else if (schema_version != 2) {
+            std::cout << "Unsupported schema version " << schema_version << ", initializing fresh" << std::endl;
+            initializeFreshGlobalMetadata();
+            return;
+        }
+
+        // Read number of databases
+        uint32_t num_databases;
+        if (offset + sizeof(num_databases) > data_size) {
+            throw std::runtime_error("Corrupted global metadata: insufficient data for database count");
+        }
+        std::memcpy(&num_databases, data + offset, sizeof(num_databases));
+        offset += sizeof(num_databases);
+
+        std::cout << "Loading " << num_databases << " databases from global metadata" << std::endl;
+
+        // Clear existing data
+        databases.clear();
+        database_metadata_pages.clear();
+
+        // Read database list and their metadata page mappings
+        for (uint32_t i = 0; i < num_databases; i++) {
+            // Read database name
+            if (offset + sizeof(uint32_t) > data_size) {
+                throw std::runtime_error("Corrupted global metadata: insufficient data for database name length");
+            }
+            uint32_t name_length;
+            std::memcpy(&name_length, data + offset, sizeof(name_length));
+            offset += sizeof(name_length);
+            
+            if (offset + name_length > data_size) {
+                throw std::runtime_error("Corrupted global metadata: insufficient data for database name");
+            }
+            std::string dbName(reinterpret_cast<const char*>(data + offset), name_length);
+            offset += name_length;
+
+            // Read metadata page ID - THIS IS CRITICAL FOR PERSISTENCE
+            if (offset + sizeof(uint32_t) > data_size) {
+                throw std::runtime_error("Corrupted global metadata: insufficient data for metadata page ID");
+            }
+            uint32_t metadata_page;
+            std::memcpy(&metadata_page, data + offset, sizeof(metadata_page));
+            offset += sizeof(metadata_page);
+
+            // Store the mapping
+            database_metadata_pages[dbName] = metadata_page;
+            databases[dbName] = Database(); // Initialize empty database
+
+            std::cout << "Found database '" << dbName << "' with metadata page " << metadata_page << std::endl;
+        }
+
+        // Read current database
+        if (offset + sizeof(uint32_t) <= data_size) {
+            uint32_t current_db_length;
+            std::memcpy(&current_db_length, data + offset, sizeof(current_db_length));
+            offset += sizeof(current_db_length);
+            
+            if (current_db_length > 0 && offset + current_db_length <= data_size) {
+                current_db.assign(reinterpret_cast<const char*>(data + offset), current_db_length);
+                offset += current_db_length;
+            }
+        }
+
+        // Read next transaction ID
+        if (offset + sizeof(uint64_t) <= data_size) {
+            std::memcpy(&next_transaction_id, data + offset, sizeof(next_transaction_id));
+        }
+
+        std::cout << "Global metadata loaded: " << databases.size() << " databases" << std::endl;
+        
+        // Now load each database's schema
+        for (const auto& [dbName, _] : databases) {
+            try {
+                readDatabaseSchema(dbName);
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Failed to load database '" << dbName << "': " << e.what() << std::endl;
+                // Remove corrupted database
+                databases.erase(dbName);
+                database_metadata_pages.erase(dbName);
+            }
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error reading global metadata: " << e.what() << std::endl;
+        initializeFreshGlobalMetadata();
+    }
+}
+
+void DiskStorage::forceInitializePage0() {
+	std::cout << "Force initializing gloabal metadata on PAGE 0" << std::endl;
+
+	//ALWAYS use page 0
+	global_metadata_page = 0;
+	databases.clear();
+	database_metadata_pages.clear();
+	current_db.clear();
+	next_transaction_id = 1;
+
+	//Initialize to page o directly
+	Node metadata_page = {};
+	metadata_page.header.type = PageType::METADATA;
+	metadata_page.header.page_id = 0;
+
+	//Write the page first
+	pager.write_page(0, &metadata_page);
+
+	writeGlobalMetadata();
+
+	std::cout << "Gloabal metadata forcefully initialized on page 0" << std::endl;
+}
+
+void DiskStorage::initializeFreshGlobalMetadata() {
+    std::cout << "Initializing fresh global metadata" << std::endl;
+    
+    global_metadata_page = 0;
+    databases.clear();
+    database_metadata_pages.clear();
+    current_db.clear();
+    next_transaction_id = 1;
+    
+    // Write initial global metadata
+    writeGlobalMetadata();
+}
+
 // Database operations
+/*void DiskStorage::createDatabase(const std::string& dbName) {
+    if (databases.find(dbName) != databases.end()) {
+        throw std::runtime_error("Database already exists: " + dbName);
+    }
+    //databases[dbName] = Database();
+    //databases[dbName].next_row_id = 1;
+    //writeSchema();
+    initializeNewDatabase(dbName);
+    writeGlobalMetadata();
+}*/
+
 void DiskStorage::createDatabase(const std::string& dbName) {
     if (databases.find(dbName) != databases.end()) {
         throw std::runtime_error("Database already exists: " + dbName);
     }
+
+    std::cout << "Creating new database: " << dbName << std::endl;
+
+    // Initialize the database structure
     databases[dbName] = Database();
     databases[dbName].next_row_id = 1;
-    writeSchema();
+
+    // Allocate and store metadata page for this database
+    uint32_t metadata_page = pager.allocate_page();
+    database_metadata_pages[dbName] = metadata_page;
+
+    // Initialize the metadata page
+    Node metadata_node = {};
+    metadata_node.header.type = PageType::METADATA;
+    metadata_node.header.page_id = metadata_page;
+    pager.write_page(metadata_page, &metadata_node);
+
+    // Write initial schema for the new database
+    writeDatabaseSchema(dbName);
+
+    // UPDATE GLOBAL METADATA 
+    writeGlobalMetadata();
+
+    std::cout << "Database '" << dbName << "' created with metadata page " << metadata_page << std::endl;
 }
 
 void DiskStorage::useDatabase(const std::string& dbName) {
     ensureDatabaseExists(dbName);
     current_db = dbName;
+    writeGlobalMetadata();
 }
 
 std::vector<std::string> DiskStorage::listDatabases() const {
@@ -134,7 +475,8 @@ void DiskStorage::createTable(const std::string& dbName, const std::string& name
     db.tables[name] = std::move(tree);
     db.table_schemas[name] = columns;
     db.root_page_ids[name] = root_id;
-    writeSchema();
+    //writeSchema();
+    writeDatabaseSchema(dbName);
 }
 
 void DiskStorage::dropTable(const std::string& dbName, const std::string& name) {
@@ -146,7 +488,8 @@ void DiskStorage::dropTable(const std::string& dbName, const std::string& name) 
     db.tables.erase(name);
     db.table_schemas.erase(name);
     db.root_page_ids.erase(name);
-    writeSchema();
+    //writeSchema();
+    writeDatabaseSchema(dbName);
 }
 
 void DiskStorage::insertRow(const std::string& dbName, const std::string& tableName,
@@ -606,6 +949,58 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
 }*/
 
 // Bulk operations
+/*void DiskStorage::bulkInsert(const std::string& dbName, const std::string& tableName,
+                           const std::vector<std::unordered_map<std::string, std::string>>& rows) {
+    ensureDatabaseSelected();
+    auto& db = getCurrentDatabase();
+    auto schema_it = db.table_schemas.find(tableName);
+    if (schema_it == db.table_schemas.end()) {
+        throw std::runtime_error("Table not found: " + tableName);
+    }
+    auto table_it = db.tables.find(tableName);
+    if (table_it == db.tables.end() || !table_it->second) {
+        throw std::runtime_error("Table not initialized: " + tableName);
+    }
+
+    std::cout << "DEBUG BULK_INSERT: Inserting " << rows.size() << " rows into " << tableName << std::endl;
+
+    std::vector<std::pair<uint32_t, std::string>> bulk_data;
+    prepareBulkData(tableName, rows, bulk_data);
+
+    // Convert to format expected by FractalBPlusTree
+    std::vector<std::pair<int64_t, std::string>> fractal_data;
+    fractal_data.reserve(bulk_data.size());
+    for (const auto& [row_id, data] : bulk_data) {
+	std::cout << "DEBUG BULK_INSERT: Row ID " << row_id << ", data size: " << data.size() << "bytes" << std::endl;
+        fractal_data.emplace_back(row_id, data);
+    }
+
+    bool wasInTransaction = in_transaction;
+    if (!wasInTransaction) {
+	    beginTransaction();
+    }
+
+    try {
+	    table_it->second->bulk_load(fractal_data, getTransactionId());
+	    updateRowIdCounter(tableName, bulk_data.back().first + 1);
+
+	    writeDatabaseSchema(dbName);
+
+	    if (!wasInTransaction) {
+		    commitTransaction();
+	    }
+
+	    std::cout << "DEBUG BULK_INSERT: Successfully inserted " << bulk_data.size() << " rows " << std::endl;
+    } catch (const std::exception& e) {
+	    if (!wasInTransaction) {
+		    rollbackTransaction();
+	    }
+
+	    std::cerr << "Error in bulkInsert: " << e.what() <<std::endl;
+	    throw;
+    }
+}*/
+
 void DiskStorage::bulkInsert(const std::string& dbName, const std::string& tableName,
                            const std::vector<std::unordered_map<std::string, std::string>>& rows) {
     ensureDatabaseSelected();
@@ -619,18 +1014,54 @@ void DiskStorage::bulkInsert(const std::string& dbName, const std::string& table
         throw std::runtime_error("Table not initialized: " + tableName);
     }
 
-    std::vector<std::pair<uint32_t, std::string>> bulk_data;
-    prepareBulkData(tableName, rows, bulk_data);
+    std::cout << "DEBUG BULK_INSERT: Inserting " << rows.size() << " rows into " << tableName << std::endl;
 
-    // Convert to format expected by FractalBPlusTree
-    std::vector<std::pair<int64_t, std::string>> fractal_data;
-    fractal_data.reserve(bulk_data.size());
-    for (const auto& [row_id, data] : bulk_data) {
-        fractal_data.emplace_back(row_id, data);
+    // Prepare data for bulk load
+    std::vector<std::pair<int64_t, std::string>> bulk_data;
+    uint32_t start_id = db.next_row_id;
+    
+    for (size_t i = 0; i < rows.size(); ++i) {
+        std::vector<uint8_t> buffer;
+        try {
+            serializeRow(rows[i], schema_it->second, buffer);
+            uint32_t row_id = start_id + i;
+            bulk_data.emplace_back(row_id, std::string(buffer.begin(), buffer.end()));
+            std::cout << "DEBUG BULK_INSERT: Prepared row ID " << row_id 
+                      << ", data size: " << buffer.size() << " bytes" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "PREPARE_BULK: Failed to serialize row " << i << ": " << e.what() << std::endl;
+            throw;
+        }
     }
 
-    table_it->second->bulk_load(fractal_data, getTransactionId());
-    updateRowIdCounter(tableName, bulk_data.back().first + 1);
+    bool wasInTransaction = in_transaction;
+    if (!wasInTransaction) {
+        beginTransaction();
+    }
+
+    try {
+        // Use bulk_load with the prepared data
+        table_it->second->bulk_load(bulk_data, getTransactionId());
+        
+        // Update row ID counter
+        updateRowIdCounter(tableName, start_id + rows.size());
+        
+        // Force immediate persistence
+        writeDatabaseSchema(dbName);
+        
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
+
+        std::cout << "DEBUG BULK_INSERT: Successfully inserted " << bulk_data.size() << " rows" << std::endl;
+        
+    } catch (const std::exception& e) {
+        if (!wasInTransaction) {
+            rollbackTransaction();
+        }
+        std::cerr << "Error in bulkInsert: " << e.what() << std::endl;
+        throw;
+    }
 }
 
 void DiskStorage::bulkUpdate(const std::string& dbName, const std::string& tableName,
@@ -793,7 +1224,7 @@ void DiskStorage::checkpoint() {
 }
 
 
-uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
+/*uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
                                   const std::vector<DatabaseSchema::Column>& columns,
                                   std::vector<uint8_t>& buffer) {
     buffer.clear();
@@ -825,9 +1256,108 @@ uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::st
     std::cout << "DEBUG SERIALIZE: serialized " << buffer.size() << " btes for " << columns.size() << " columns" << std::endl;
 
     return buffer.size();
+}*/
+
+uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
+                                  const std::vector<DatabaseSchema::Column>& columns,
+                                  std::vector<uint8_t>& buffer) {
+    buffer.clear();
+    size_t initial_size = buffer.size();
+
+    for (const auto& column : columns) {
+        auto it = row.find(column.name);
+        
+        if (it == row.end() || it->second.empty() || it->second == "NULL") {
+            if (!column.isNullable) {
+                throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be NULL");
+            }
+            // Write NULL marker (0xFFFFFFFF)
+            uint32_t null_marker = 0xFFFFFFFF;
+            uint8_t* marker_bytes = reinterpret_cast<uint8_t*>(&null_marker);
+            buffer.insert(buffer.end(), marker_bytes, marker_bytes + sizeof(null_marker));
+        } else {
+            const std::string& value = it->second;
+            uint32_t length = static_cast<uint32_t>(value.size());
+            
+            // Write length
+            uint8_t* length_bytes = reinterpret_cast<uint8_t*>(&length);
+            buffer.insert(buffer.end(), length_bytes, length_bytes + sizeof(length));
+            
+            // Write value
+            buffer.insert(buffer.end(), value.begin(), value.end());
+        }
+    }
+
+    std::cout << "DEBUG SERIALIZE: serialized " << (buffer.size() - initial_size) 
+              << " bytes for " << columns.size() << " columns" << std::endl;
+
+    return buffer.size();
 }
 
 std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
+    const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
+    std::unordered_map<std::string, std::string> row;
+    
+    /*if (data.empty()) {
+        throw std::runtime_error("Empty data buffer during deserialization");
+    }*/
+    
+    const uint8_t* ptr = data.data();
+    size_t remaining = data.size();
+
+    std::cout << "DEBUG DESERIALIZE: Processing " << remaining << " bytes for " 
+              << columns.size() << " columns" << std::endl;
+
+    for (size_t i = 0; i < columns.size(); i++) {
+        const auto& column = columns[i];
+        
+        if (remaining < sizeof(uint32_t)) {
+            std::stringstream error;
+            error << "Corrupted data: insufficient buffer for column '" << column.name 
+                  << "' (column " << i << " of " << columns.size() 
+                  << "). Remaining: " << remaining << " bytes, need: " 
+                  << sizeof(uint32_t) << " bytes. Total buffer: " << data.size() << " bytes";
+            throw std::runtime_error(error.str());
+        }
+
+        uint32_t length_or_marker;
+        memcpy(&length_or_marker, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        remaining -= sizeof(uint32_t);
+
+        // Check for NULL marker
+        if (length_or_marker == 0xFFFFFFFF) {
+            row[column.name] = "NULL";
+            continue;
+        }
+
+        // Regular value
+        uint32_t length = length_or_marker;
+
+        if (remaining < length) {
+            std::stringstream error;
+            error << "Corrupted data: invalid length for column '" << column.name 
+                  << "', expected " << length << " bytes, but only " << remaining 
+                  << " remaining. Column " << i << " of " << columns.size();
+            throw std::runtime_error(error.str());
+        }
+
+        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
+        ptr += length;
+        remaining -= length;
+        
+        std::cout << "DEBUG DESERIALIZE: Column '" << column.name << "' = '" 
+                  << row[column.name] << "' (" << length << " bytes)" << std::endl;
+    }
+
+    if (remaining > 0) {
+        std::cout << "WARNING: " << remaining << " bytes remaining after deserialization" << std::endl;
+    }
+
+    return row;
+}
+
+/*std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
     std::unordered_map<std::string, std::string> row;
     const uint8_t* ptr = data.data();
@@ -870,7 +1400,7 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     }
 
     return row;
-}
+}*/
 
 
 void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
@@ -1287,786 +1817,610 @@ void DiskStorage::updateAutoIncreamentCounter(const std::string& dbName, const s
 }
 
 
-void DiskStorage::writeSchema() {
+void DiskStorage::writeDatabaseSchema(const std::string& dbName) {
+    ensureDatabaseExists(dbName);
+    
     try {
-        size_t estimated_size = sizeof(uint32_t) * 3; // version, num_dbs, etc.
-
-        for (const auto& [dbName, db] : databases) {
-            estimated_size += sizeof(uint32_t) + dbName.size();
-            estimated_size += sizeof(uint32_t); // next_row_id
-            estimated_size += sizeof(uint32_t); // num_tables
-
-            for (const auto& [tableName, columns] : db.table_schemas) {
-                estimated_size += sizeof(uint32_t) + tableName.size();
-                estimated_size += sizeof(uint32_t); // root_page_id
-                estimated_size += sizeof(uint32_t); // num_columns
-
-                for (const auto& column : columns) {
-                    estimated_size += sizeof(uint32_t) + column.name.size();
-                    estimated_size += sizeof(DatabaseSchema::Column::Type);
-                    estimated_size += sizeof(uint16_t); // constraints bitmap
-
-                    if (column.hasDefault) {
-                        estimated_size += sizeof(uint32_t) + column.defaultValue.size();
-                    }
-
-                    // Constraints - only if they exist
-                    estimated_size += sizeof(uint32_t); // num_constraints
-                    for (const auto& constraint : column.constraints) {
-                        estimated_size += sizeof(DatabaseSchema::Constraint::Type);
-                        estimated_size += sizeof(uint32_t) + constraint.name.size();
-
-                        if (constraint.type == DatabaseSchema::Constraint::CHECK ||
-                            constraint.type == DatabaseSchema::Constraint::DEFAULT) {
-                            estimated_size += sizeof(uint32_t) + constraint.value.size();
-                        }
-
-                        if (constraint.type == DatabaseSchema::Constraint::FOREIGN_KEY) {
-                            estimated_size += sizeof(uint32_t) + constraint.reference_table.size();
-                            estimated_size += sizeof(uint32_t) + constraint.reference_column.size();
-                        }
-                    }
-                }
-            }
-
-            // Estimate AUTO_INCREMENT counters size
-            estimated_size += sizeof(uint32_t); // num_auto_increment_tables
-            for (const auto& [tableName, columnCounters] : db.auto_increament_counters) {
-                estimated_size += sizeof(uint32_t) + tableName.size();
-                estimated_size += sizeof(uint32_t); // num_columns
-                for (const auto& [columnName, counter] : columnCounters) {
-                    estimated_size += sizeof(uint32_t) + columnName.size();
-                    estimated_size += sizeof(uint32_t); // counter value
-                }
-            }
-        }
-
-        estimated_size += sizeof(uint32_t) + current_db.size();
-        estimated_size += sizeof(uint64_t); // next_transaction_id
-
-        if (estimated_size > (BPTREE_PAGE_SIZE - sizeof(PageHeader))) {
-            throw std::runtime_error("Schema too large - multi-page schema not implemented");
-        }
-
-        try {
-            Node test_node = {};
-            memset(&test_node, 0, sizeof(Node));
-            test_node.header.type = PageType::METADATA;
-            test_node.header.page_id = 0;
-            pager.write_page(0, &test_node);
-        } catch (const std::exception& e) {
-            uint32_t new_page_id = pager.allocate_page();
-            if (new_page_id != 0) {
-                throw std::runtime_error("Cannot allocate page 0 for metadata");
-            }
-        }
-
-        // Create schema page
-        Node schema_node = {};
-        schema_node.header.type = PageType::METADATA;
-        schema_node.header.page_id = 0;
-        schema_node.header.num_keys = 0;
-
-        uint8_t* data = reinterpret_cast<uint8_t*>(schema_node.data);
+        uint32_t metadata_page = getDatabaseMetadataPage(dbName);
+        auto& db = databases.at(dbName);
+        
+        Node db_node = {};
+        db_node.header.type = PageType::METADATA;
+        db_node.header.page_id = metadata_page;
+        
+        uint8_t* data = reinterpret_cast<uint8_t*>(db_node.data);
         uint32_t offset = 0;
         size_t data_size = BPTREE_PAGE_SIZE - sizeof(PageHeader);
 
-        // Write schema version
-        const uint32_t SCHEMA_VERSION = 1;
-        if (offset + sizeof(SCHEMA_VERSION) > data_size) {
-            throw std::runtime_error("Insufficient space for schema version");
-        }
-        std::memcpy(data + offset, &SCHEMA_VERSION, sizeof(SCHEMA_VERSION));
-        offset += sizeof(SCHEMA_VERSION);
+        // Write database schema version
+        std::memcpy(data + offset, &DATABASE_SCHEMA_VERSION, sizeof(DATABASE_SCHEMA_VERSION));
+        offset += sizeof(DATABASE_SCHEMA_VERSION);
 
-        // Write number of databases
-        uint32_t num_databases = databases.size();
-        if (offset + sizeof(num_databases) > data_size) {
-            throw std::runtime_error("Insufficient space for database count");
-        }
-        std::memcpy(data + offset, &num_databases, sizeof(num_databases));
-        offset += sizeof(num_databases);
+        // Write next_row_id
+        std::memcpy(data + offset, &db.next_row_id, sizeof(db.next_row_id));
+        offset += sizeof(db.next_row_id);
 
-        for (const auto& [dbName, db] : databases) {
-            // Write database name
-            uint32_t name_length = dbName.size();
-            if (offset + sizeof(name_length) + name_length > data_size) {
-                throw std::runtime_error("Insufficient space for database name");
+        // Write number of tables
+        uint32_t num_tables = db.table_schemas.size();
+        std::memcpy(data + offset, &num_tables, sizeof(num_tables));
+        offset += sizeof(num_tables);
+
+        // Write each table schema
+        for (const auto& [tableName, columns] : db.table_schemas) {
+            // Check available space before writing table
+            if (offset + sizeof(uint32_t) * 4 > data_size) {
+                throw std::runtime_error("Insufficient space for table metadata: " + tableName);
             }
-            std::memcpy(data + offset, &name_length, sizeof(name_length));
-            offset += sizeof(name_length);
-            std::memcpy(data + offset, dbName.data(), name_length);
-            offset += name_length;
 
-            // Write next_row_id
-            if (offset + sizeof(db.next_row_id) > data_size) {
-                throw std::runtime_error("Insufficient space for next_row_id");
+            // Write table name
+            uint32_t table_name_length = tableName.size();
+            std::memcpy(data + offset, &table_name_length, sizeof(table_name_length));
+            offset += sizeof(table_name_length);
+            
+            if (offset + table_name_length > data_size) {
+                throw std::runtime_error("Insufficient space for table name: " + tableName);
             }
-            std::memcpy(data + offset, &db.next_row_id, sizeof(db.next_row_id));
-            offset += sizeof(db.next_row_id);
+            std::memcpy(data + offset, tableName.data(), table_name_length);
+            offset += table_name_length;
 
-            // Write number of tables
-            uint32_t num_tables = db.table_schemas.size();
-            if (offset + sizeof(num_tables) > data_size) {
-                throw std::runtime_error("Insufficient space for table count");
+            // Write root page ID
+            uint32_t root_page_id = db.root_page_ids.at(tableName);
+            std::memcpy(data + offset, &root_page_id, sizeof(root_page_id));
+            offset += sizeof(root_page_id);
+
+            // Write primary key
+            std::string primaryKey;
+            auto pk_it = db.primary_keys.find(tableName);
+            if (pk_it != db.primary_keys.end()) {
+                primaryKey = pk_it->second;
             }
-            std::memcpy(data + offset, &num_tables, sizeof(num_tables));
-            offset += sizeof(num_tables);
-
-            for (const auto& [tableName, columns] : db.table_schemas) {
-                // Write table name
-                uint32_t table_name_length = tableName.size();
-                if (offset + sizeof(table_name_length) + table_name_length > data_size) {
-                    throw std::runtime_error("Insufficient space for table name");
+            
+            uint32_t pk_length = primaryKey.size();
+            std::memcpy(data + offset, &pk_length, sizeof(pk_length));
+            offset += sizeof(pk_length);
+            
+            if (pk_length > 0) {
+                if (offset + pk_length > data_size) {
+                    throw std::runtime_error("Insufficient space for primary key: " + tableName);
                 }
-                std::memcpy(data + offset, &table_name_length, sizeof(table_name_length));
-                offset += sizeof(table_name_length);
-                std::memcpy(data + offset, tableName.data(), table_name_length);
-                offset += table_name_length;
+                std::memcpy(data + offset, primaryKey.data(), pk_length);
+                offset += pk_length;
+            }
 
-                // Write root page ID
-                uint32_t root_page_id = db.root_page_ids.at(tableName);
-                if (offset + sizeof(root_page_id) > data_size) {
-                    throw std::runtime_error("Insufficient space for root page ID");
-                }
-                std::memcpy(data + offset, &root_page_id, sizeof(root_page_id));
-                offset += sizeof(root_page_id);
+            // Write number of columns
+            uint32_t num_columns = columns.size();
+            std::memcpy(data + offset, &num_columns, sizeof(num_columns));
+            offset += sizeof(num_columns);
 
-                // Write the primary key (if exists)
-                std::string primaryKey;
-                auto pk_it = db.primary_keys.find(tableName);
-                if (pk_it != db.primary_keys.end()) {
-                    primaryKey = pk_it->second;
+            // Write each column with full constraint support
+            for (const auto& column : columns) {
+                // Check space for column header
+                if (offset + sizeof(uint32_t) * 3 + sizeof(DatabaseSchema::Column::Type) + sizeof(uint16_t) > data_size) {
+                    throw std::runtime_error("Insufficient space for column header: " + column.name);
                 }
 
-                uint32_t pk_length = primaryKey.size();
-                if (offset + sizeof(pk_length) + pk_length > data_size) {
-                    throw std::runtime_error("Insufficient space for primary key");
+                // Write column name
+                uint32_t col_name_length = column.name.size();
+                std::memcpy(data + offset, &col_name_length, sizeof(col_name_length));
+                offset += sizeof(col_name_length);
+                
+                if (offset + col_name_length > data_size) {
+                    throw std::runtime_error("Insufficient space for column name: " + column.name);
                 }
-                std::memcpy(data + offset, &pk_length, sizeof(pk_length));
-                offset += sizeof(pk_length);
-                if (pk_length > 0) {
-                    std::memcpy(data + offset, primaryKey.data(), pk_length);
-                    offset += pk_length;
-                }
+                std::memcpy(data + offset, column.name.data(), col_name_length);
+                offset += col_name_length;
 
-                // Write number of columns
-                uint32_t num_columns = columns.size();
-                if (offset + sizeof(num_columns) > data_size) {
-                    throw std::runtime_error("Insufficient space for column count");
-                }
-                std::memcpy(data + offset, &num_columns, sizeof(num_columns));
-                offset += sizeof(num_columns);
+                // Write column type
+                DatabaseSchema::Column::Type type = column.type;
+                std::memcpy(data + offset, &type, sizeof(type));
+                offset += sizeof(type);
 
-                for (const auto& column : columns) {
-                    // Write column name
-                    uint32_t col_name_length = column.name.size();
-                    if (offset + sizeof(col_name_length) + col_name_length > data_size) {
-                        throw std::runtime_error("Insufficient space for column name");
+                // Write constraints bitmap
+                uint16_t constraints = 0;
+                if (!column.isNullable) constraints |= 0x01;
+                if (column.hasDefault) constraints |= 0x02;
+                if (column.isPrimaryKey) constraints |= 0x04;
+                if (column.isUnique) constraints |= 0x08;
+                if (column.autoIncreament) constraints |= 0x10;
+                std::memcpy(data + offset, &constraints, sizeof(constraints));
+                offset += sizeof(constraints);
+
+                // Write default value if exists
+                if (column.hasDefault) {
+                    uint32_t default_length = column.defaultValue.size();
+                    std::memcpy(data + offset, &default_length, sizeof(default_length));
+                    offset += sizeof(default_length);
+                    
+                    if (offset + default_length > data_size) {
+                        throw std::runtime_error("Insufficient space for default value: " + column.name);
                     }
-                    std::memcpy(data + offset, &col_name_length, sizeof(col_name_length));
-                    offset += sizeof(col_name_length);
-                    std::memcpy(data + offset, column.name.data(), col_name_length);
-                    offset += col_name_length;
+                    std::memcpy(data + offset, column.defaultValue.data(), default_length);
+                    offset += default_length;
+                }
 
-                    // Write column type
-                    DatabaseSchema::Column::Type type = column.type;
-                    if (offset + sizeof(type) > data_size) {
-                        throw std::runtime_error("Insufficient space for column type");
+                // Write individual constraints
+                uint32_t num_constraints = column.constraints.size();
+                std::memcpy(data + offset, &num_constraints, sizeof(num_constraints));
+                offset += sizeof(num_constraints);
+
+                // Write each constraint
+                for (const auto& constraint : column.constraints) {
+                    // Check space for constraint header
+                    if (offset + sizeof(DatabaseSchema::Constraint::Type) + sizeof(uint32_t) > data_size) {
+                        throw std::runtime_error("Insufficient space for constraint header");
                     }
-                    std::memcpy(data + offset, &type, sizeof(type));
-                    offset += sizeof(type);
 
-                    // Write constraints bitmap
-                    uint16_t constraints = 0;
-                    if (!column.isNullable) constraints |= 0x01;
-                    if (column.hasDefault) constraints |= 0x02;
-                    if (column.isPrimaryKey) constraints |= 0x04;
-                    if (column.isUnique) constraints |= 0x08;
-                    if (column.autoIncreament) constraints |= 0x10;
-                    if (offset + sizeof(constraints) > data_size) {
-                        throw std::runtime_error("Insufficient space for constraints bitmap");
+                    // Write constraint type
+                    DatabaseSchema::Constraint::Type constr_type = constraint.type;
+                    std::memcpy(data + offset, &constr_type, sizeof(constr_type));
+                    offset += sizeof(constr_type);
+
+                    // Write constraint name
+                    uint32_t constr_name_length = constraint.name.size();
+                    std::memcpy(data + offset, &constr_name_length, sizeof(constr_name_length));
+                    offset += sizeof(constr_name_length);
+                    
+                    if (offset + constr_name_length > data_size) {
+                        throw std::runtime_error("Insufficient space for constraint name");
                     }
-                    std::memcpy(data + offset, &constraints, sizeof(constraints));
-                    offset += sizeof(constraints);
+                    std::memcpy(data + offset, constraint.name.data(), constr_name_length);
+                    offset += constr_name_length;
 
-                    // Write default value if exists
-                    if (column.hasDefault) {
-                        uint32_t default_length = column.defaultValue.size();
-                        if (offset + sizeof(default_length) + default_length > data_size) {
-                            throw std::runtime_error("Insufficient space for default value");
+                    // Write constraint-specific data
+                    switch (constraint.type) {
+                        case DatabaseSchema::Constraint::CHECK:
+                        case DatabaseSchema::Constraint::DEFAULT: {
+                            if (!constraint.value.empty()) {
+                                uint32_t value_length = constraint.value.size();
+                                std::memcpy(data + offset, &value_length, sizeof(value_length));
+                                offset += sizeof(value_length);
+                                
+                                if (offset + value_length > data_size) {
+                                    throw std::runtime_error("Insufficient space for constraint value");
+                                }
+                                std::memcpy(data + offset, constraint.value.data(), value_length);
+                                offset += value_length;
+                            } else {
+                                // Write zero length for empty value
+                                uint32_t value_length = 0;
+                                std::memcpy(data + offset, &value_length, sizeof(value_length));
+                                offset += sizeof(value_length);
+                            }
+                            break;
                         }
-                        std::memcpy(data + offset, &default_length, sizeof(default_length));
-                        offset += sizeof(default_length);
-                        std::memcpy(data + offset, column.defaultValue.data(), default_length);
-                        offset += default_length;
-                    }
-
-                    // Write individual constraints (only if they exist)
-                    uint32_t num_constraints = column.constraints.size();
-                    if (offset + sizeof(num_constraints) > data_size) {
-                        throw std::runtime_error("Insufficient space for constraint count");
-                    }
-                    std::memcpy(data + offset, &num_constraints, sizeof(num_constraints));
-                    offset += sizeof(num_constraints);
-
-                    for (const auto& constraint : column.constraints) {
-                        // Write constraint type
-                        DatabaseSchema::Constraint::Type constr_type = constraint.type;
-                        if (offset + sizeof(constr_type) > data_size) break;
-                        std::memcpy(data + offset, &constr_type, sizeof(constr_type));
-                        offset += sizeof(constr_type);
-
-                        // Write constraint name
-                        uint32_t constr_name_length = constraint.name.size();
-                        if (offset + sizeof(constr_name_length) + constr_name_length > data_size) break;
-                        std::memcpy(data + offset, &constr_name_length, sizeof(constr_name_length));
-                        offset += sizeof(constr_name_length);
-                        std::memcpy(data + offset, constraint.name.data(), constr_name_length);
-                        offset += constr_name_length;
-
-                        // Write constraint value for CHECK and DEFAULT (if exists)
-                        if ((constr_type == DatabaseSchema::Constraint::CHECK ||
-                            constr_type == DatabaseSchema::Constraint::DEFAULT) &&
-                            !constraint.value.empty()) {
-
-                            uint32_t value_length = constraint.value.size();
-                            if (offset + sizeof(value_length) + value_length > data_size) break;
-                            std::memcpy(data + offset, &value_length, sizeof(value_length));
-                            offset += sizeof(value_length);
-                            std::memcpy(data + offset, constraint.value.data(), value_length);
-                            offset += value_length;
-                        }
-
-                        // Write foreign key references if applicable (if they exist)
-                        if (constr_type == DatabaseSchema::Constraint::FOREIGN_KEY) {
-                            if (!constraint.reference_table.empty()) {
-                                uint32_t ref_table_length = constraint.reference_table.size();
-                                if (offset + sizeof(ref_table_length) + ref_table_length > data_size) break;
-                                std::memcpy(data + offset, &ref_table_length, sizeof(ref_table_length));
-                                offset += sizeof(ref_table_length);
+                        case DatabaseSchema::Constraint::FOREIGN_KEY: {
+                            // Write reference table
+                            uint32_t ref_table_length = constraint.reference_table.size();
+                            std::memcpy(data + offset, &ref_table_length, sizeof(ref_table_length));
+                            offset += sizeof(ref_table_length);
+                            
+                            if (ref_table_length > 0) {
+                                if (offset + ref_table_length > data_size) {
+                                    throw std::runtime_error("Insufficient space for foreign key table");
+                                }
                                 std::memcpy(data + offset, constraint.reference_table.data(), ref_table_length);
                                 offset += ref_table_length;
                             }
 
-                            if (!constraint.reference_column.empty()) {
-                                uint32_t ref_col_length = constraint.reference_column.size();
-                                if (offset + sizeof(ref_col_length) + ref_col_length > data_size) break;
-                                std::memcpy(data + offset, &ref_col_length, sizeof(ref_col_length));
-                                offset += sizeof(ref_col_length);
+                            // Write reference column
+                            uint32_t ref_col_length = constraint.reference_column.size();
+                            std::memcpy(data + offset, &ref_col_length, sizeof(ref_col_length));
+                            offset += sizeof(ref_col_length);
+                            
+                            if (ref_col_length > 0) {
+                                if (offset + ref_col_length > data_size) {
+                                    throw std::runtime_error("Insufficient space for foreign key column");
+                                }
                                 std::memcpy(data + offset, constraint.reference_column.data(), ref_col_length);
                                 offset += ref_col_length;
                             }
+                            break;
                         }
+                        case DatabaseSchema::Constraint::PRIMARY_KEY:
+                        case DatabaseSchema::Constraint::UNIQUE:
+                        case DatabaseSchema::Constraint::NOT_NULL:
+			case DatabaseSchema::Constraint::AUTO_INCREAMENT:
+                            // No additional data needed for these constraint types
+                            break;
                     }
                 }
             }
+        }
 
-            // Write AUTO_INCREMENT counters
-            uint32_t num_auto_increment_tables = db.auto_increament_counters.size();
-            if (offset + sizeof(num_auto_increment_tables) > data_size) {
-                throw std::runtime_error("Insufficient space for auto-increment table count");
+        // Write AUTO_INCREMENT counters
+        uint32_t num_auto_increment_tables = db.auto_increament_counters.size();
+        std::memcpy(data + offset, &num_auto_increment_tables, sizeof(num_auto_increment_tables));
+        offset += sizeof(num_auto_increment_tables);
+
+        for (const auto& [tableName, columnCounters] : db.auto_increament_counters) {
+            // Check space for table name
+            if (offset + sizeof(uint32_t) > data_size) {
+                break; // No more space for auto-increment counters
             }
-            std::memcpy(data + offset, &num_auto_increment_tables, sizeof(num_auto_increment_tables));
-            offset += sizeof(num_auto_increment_tables);
 
-            for (const auto& [tableName, columnCounters] : db.auto_increament_counters) {
-                // Write table name
-                uint32_t table_name_length = tableName.size();
-                if (offset + sizeof(table_name_length) + table_name_length > data_size) {
-                    throw std::runtime_error("Insufficient space for auto-increment table name");
+            uint32_t table_name_length = tableName.size();
+            std::memcpy(data + offset, &table_name_length, sizeof(table_name_length));
+            offset += sizeof(table_name_length);
+            
+            if (offset + table_name_length > data_size) {
+                break;
+            }
+            std::memcpy(data + offset, tableName.data(), table_name_length);
+            offset += table_name_length;
+
+            uint32_t num_columns = columnCounters.size();
+            std::memcpy(data + offset, &num_columns, sizeof(num_columns));
+            offset += sizeof(num_columns);
+
+            for (const auto& [columnName, counter] : columnCounters) {
+                // Check space for column name and counter
+                if (offset + sizeof(uint32_t) * 2 > data_size) {
+                    break;
                 }
-                std::memcpy(data + offset, &table_name_length, sizeof(table_name_length));
-                offset += sizeof(table_name_length);
-                std::memcpy(data + offset, tableName.data(), table_name_length);
-                offset += table_name_length;
 
-                // Write number of columns with auto-increment
-                uint32_t num_columns = columnCounters.size();
-                if (offset + sizeof(num_columns) > data_size) {
-                    throw std::runtime_error("Insufficient space for auto-increment column count");
+                uint32_t col_name_length = columnName.size();
+                std::memcpy(data + offset, &col_name_length, sizeof(col_name_length));
+                offset += sizeof(col_name_length);
+                
+                if (offset + col_name_length > data_size) {
+                    break;
                 }
-                std::memcpy(data + offset, &num_columns, sizeof(num_columns));
-                offset += sizeof(num_columns);
+                std::memcpy(data + offset, columnName.data(), col_name_length);
+                offset += col_name_length;
 
-                for (const auto& [columnName, counter] : columnCounters) {
-                    // Write column name
-                    uint32_t col_name_length = columnName.size();
-                    if (offset + sizeof(col_name_length) + col_name_length > data_size) {
-                        throw std::runtime_error("Insufficient space for auto-increment column name");
-                    }
-                    std::memcpy(data + offset, &col_name_length, sizeof(col_name_length));
-                    offset += sizeof(col_name_length);
-                    std::memcpy(data + offset, columnName.data(), col_name_length);
-                    offset += col_name_length;
-
-                    // Write counter value
-                    if (offset + sizeof(counter) > data_size) {
-                        throw std::runtime_error("Insufficient space for auto-increment counter");
-                    }
-                    std::memcpy(data + offset, &counter, sizeof(counter));
-                    offset += sizeof(counter);
-                }
+                std::memcpy(data + offset, &counter, sizeof(counter));
+                offset += sizeof(counter);
             }
         }
 
-        // Write current database
-        uint32_t current_db_length = current_db.size();
-        if (offset + sizeof(current_db_length) + current_db_length > data_size) {
-            throw std::runtime_error("Insufficient space for current database");
-        }
-        std::memcpy(data + offset, &current_db_length, sizeof(current_db_length));
-        offset += sizeof(current_db_length);
-        std::memcpy(data + offset, current_db.data(), current_db_length);
-        offset += current_db_length;
-
-        // Write next transaction ID
-        if (offset + sizeof(next_transaction_id) > data_size) {
-            throw std::runtime_error("Insufficient space for next transaction ID");
-        }
-        std::memcpy(data + offset, &next_transaction_id, sizeof(next_transaction_id));
-        offset += sizeof(next_transaction_id);
-
-        // Write the schema page
-        try {
-            pager.write_page(0, &schema_node);
-            std::cout << "Schema successfully written to page 0" << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "Failed to write schema page: " << e.what() << std::endl;
-            throw;
-        }
-
-    } catch (const std::runtime_error& e) {
-        std::cerr << "Error writing schema (space issue): " << e.what() << std::endl;
-        throw;
+        // Write the page
+        pager.write_page(metadata_page, &db_node);
+        
+        std::cout << "Database schema written for '" << dbName << "' to page " << metadata_page 
+                  << " (" << offset << " bytes used)" << std::endl;
+        
     } catch (const std::exception& e) {
-        std::cerr << "Warning: Failed to write schema: " << e.what() << std::endl;
+        std::cerr << "Error writing database schema for '" << dbName << "': " << e.what() << std::endl;
+        throw;
     }
 }
 
+void DiskStorage::readDatabaseSchema(const std::string& dbName) {
+    ensureDatabaseExists(dbName);
 
-void DiskStorage::readSchema() {
     try {
-        std::cout << "Attempting to read schema from disk...." << std::endl;
+        uint32_t metadata_page = database_metadata_pages.at(dbName);
+        auto& db = databases.at(dbName);
 
-        // Try to read schema page
-        Node schema_node;
-        try {
-            pager.read_page(0, &schema_node);
-            std::cout << "Schema read successfully from page 0" << std::endl;
-        } catch (const std::exception& e) {
-            std::cout << "No existing schema found, initializing fresh database: " << e.what() << std::endl;
-            databases.clear();
-            current_db.clear();
-            next_transaction_id = 1;
-            return;
+        Node db_node;
+        pager.read_page(metadata_page, &db_node);
+
+        if (db_node.header.type != PageType::METADATA) {
+            throw std::runtime_error("Page " + std::to_string(metadata_page) + " is not a database metadata page");
         }
 
-        // Verify it's a metadata page
-        if (schema_node.header.type != PageType::METADATA) {
-            std::cerr << "Warning: Page 0 is not a metadata page, initializing fresh database" << std::endl;
-            databases.clear();
-            current_db.clear();
-            next_transaction_id = 1;
-            return;
-        }
-
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(schema_node.data);
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(db_node.data);
         uint32_t offset = 0;
         size_t data_size = BPTREE_PAGE_SIZE - sizeof(PageHeader);
 
-        // Read schema version
-        if (offset + sizeof(uint32_t) > data_size) {
-            std::cerr << "Schema data corrupted: insufficient data for version" << std::endl;
-            databases.clear();
-            current_db.clear();
-            next_transaction_id = 1;
-            return;
-        }
-
+        // Read database schema version
         uint32_t schema_version;
+        if (offset + sizeof(schema_version) > data_size) {
+            throw std::runtime_error("Corrupted database schema: insufficient data for version");
+        }
         std::memcpy(&schema_version, data + offset, sizeof(schema_version));
         offset += sizeof(schema_version);
 
-	if (schema_version == 0) {
-		std::cout << "Found uninitialized schema (version 0), initializing fresh database" << std::endl;
-		databases.clear();
-		current_db.clear();
-		next_transaction_id = 1;
-		return;
-	}
-
-        if (schema_version != 1) {
-            std::cerr << "Unsupported schema version: " << schema_version << std::endl;
-            databases.clear();
-            current_db.clear();
-            next_transaction_id = 1;
-            return;
+        if (schema_version != DATABASE_SCHEMA_VERSION) {
+            std::cerr << "Warning: Database schema version mismatch for '" << dbName
+                      << "': expected " << DATABASE_SCHEMA_VERSION << ", got " << schema_version << std::endl;
         }
 
-        // Read number of databases
-        if (offset + sizeof(uint32_t) > data_size) {
-            std::cerr << "Schema data corrupted: insufficient data for database count" << std::endl;
-            databases.clear();
-            current_db.clear();
-            next_transaction_id = 1;
-            return;
+        // Read next_row_id
+        if (offset + sizeof(db.next_row_id) > data_size) {
+            throw std::runtime_error("Corrupted database schema: insufficient data for next_row_id");
         }
+        std::memcpy(&db.next_row_id, data + offset, sizeof(db.next_row_id));
+        offset += sizeof(db.next_row_id);
 
-        uint32_t num_databases;
-        std::memcpy(&num_databases, data + offset, sizeof(num_databases));
-        offset += sizeof(num_databases);
+        // Read number of tables
+        uint32_t num_tables;
+        if (offset + sizeof(num_tables) > data_size) {
+            throw std::runtime_error("Corrupted database schema: insufficient data for table count");
+        }
+        std::memcpy(&num_tables, data + offset, sizeof(num_tables));
+        offset += sizeof(num_tables);
 
-        databases.clear();
-        for (uint32_t i = 0; i < num_databases; i++) {
-            // Read database name
+        // Clear existing tables to avoid duplication
+        db.tables.clear();
+        db.table_schemas.clear();
+        db.root_page_ids.clear();
+        db.primary_keys.clear();
+        db.auto_increament_counters.clear();
+
+        // Read each table schema
+        for (uint32_t i = 0; i < num_tables; i++) {
+            // Read table name
             if (offset + sizeof(uint32_t) > data_size) {
-                std::cerr << "Schema data corrupted: insufficient data for database name length" << std::endl;
-                break;
+                throw std::runtime_error("Corrupted database schema: insufficient data for table name length");
             }
+            uint32_t table_name_length;
+            std::memcpy(&table_name_length, data + offset, sizeof(table_name_length));
+            offset += sizeof(table_name_length);
 
-            uint32_t name_length;
-            std::memcpy(&name_length, data + offset, sizeof(name_length));
-            offset += sizeof(name_length);
-
-            if (offset + name_length > data_size) {
-                std::cerr << "Schema data corrupted: insufficient data for database name" << std::endl;
-                break;
+            if (offset + table_name_length > data_size) {
+                throw std::runtime_error("Corrupted database schema: insufficient data for table name");
             }
+            std::string table_name(reinterpret_cast<const char*>(data + offset), table_name_length);
+            offset += table_name_length;
 
-            std::string dbName(reinterpret_cast<const char*>(data + offset), name_length);
-            offset += name_length;
-
-            Database db;
-
-            // Read next_row_id
+            // Read root page ID
             if (offset + sizeof(uint32_t) > data_size) {
-                std::cerr << "Schema data corrupted: insufficient data for next_row_id" << std::endl;
-                break;
+                throw std::runtime_error("Corrupted database schema: insufficient data for root page ID");
             }
-            std::memcpy(&db.next_row_id, data + offset, sizeof(db.next_row_id));
-            offset += sizeof(db.next_row_id);
+            uint32_t root_page_id;
+            std::memcpy(&root_page_id, data + offset, sizeof(root_page_id));
+            offset += sizeof(root_page_id);
+            db.root_page_ids[table_name] = root_page_id;
 
-            // Read number of tables
+            // Read primary key
+            std::string primaryKey;
+            if (offset + sizeof(uint32_t) <= data_size) {
+                uint32_t pk_length;
+                std::memcpy(&pk_length, data + offset, sizeof(pk_length));
+                offset += sizeof(pk_length);
+
+                if (pk_length > 0 && offset + pk_length <= data_size) {
+                    primaryKey.assign(reinterpret_cast<const char*>(data + offset), pk_length);
+                    offset += pk_length;
+                }
+            }
+            db.primary_keys[table_name] = primaryKey;
+
+            // Read number of columns
             if (offset + sizeof(uint32_t) > data_size) {
-                std::cerr << "Schema data corrupted: insufficient data for table count" << std::endl;
-                break;
+                throw std::runtime_error("Corrupted database schema: insufficient data for column count");
             }
+            uint32_t num_columns;
+            std::memcpy(&num_columns, data + offset, sizeof(num_columns));
+            offset += sizeof(num_columns);
 
-            uint32_t num_tables;
-            std::memcpy(&num_tables, data + offset, sizeof(num_tables));
-            offset += sizeof(num_tables);
+            std::vector<DatabaseSchema::Column> columns;
+            for (uint32_t j = 0; j < num_columns; j++) {
+                DatabaseSchema::Column column;
 
-            for (uint32_t j = 0; j < num_tables; j++) {
-                // Read table name
+                // Read column name
                 if (offset + sizeof(uint32_t) > data_size) {
-                    std::cerr << "Schema data corrupted: insufficient data for table name length" << std::endl;
-                    break;
+                    throw std::runtime_error("Corrupted database schema: insufficient data for column name length");
                 }
+                uint32_t col_name_length;
+                std::memcpy(&col_name_length, data + offset, sizeof(col_name_length));
+                offset += sizeof(col_name_length);
 
-                uint32_t table_name_length;
-                std::memcpy(&table_name_length, data + offset, sizeof(table_name_length));
-                offset += sizeof(table_name_length);
-
-                if (offset + table_name_length > data_size) {
-                    std::cerr << "Schema data corrupted: insufficient data for table name" << std::endl;
-                    break;
+                if (offset + col_name_length > data_size) {
+                    throw std::runtime_error("Corrupted database schema: insufficient data for column name");
                 }
+                column.name.assign(reinterpret_cast<const char*>(data + offset), col_name_length);
+                offset += col_name_length;
 
-                std::string table_name(reinterpret_cast<const char*>(data + offset), table_name_length);
-                offset += table_name_length;
-
-                // Read root page ID
-                if (offset + sizeof(uint32_t) > data_size) {
-                    std::cerr << "Schema data corrupted: insufficient data for root page ID" << std::endl;
-                    break;
+                // Read column type
+                if (offset + sizeof(DatabaseSchema::Column::Type) > data_size) {
+                    throw std::runtime_error("Corrupted database schema: insufficient data for column type");
                 }
+                DatabaseSchema::Column::Type type;
+                std::memcpy(&type, data + offset, sizeof(type));
+                offset += sizeof(type);
+                column.type = type;
 
-                uint32_t root_page_id;
-                std::memcpy(&root_page_id, data + offset, sizeof(root_page_id));
-                offset += sizeof(root_page_id);
-
-                // Read PRIMARY KEY (if exists)
-                std::string primaryKey;
-                if (offset + sizeof(uint32_t) <= data_size) {
-                    uint32_t pk_length;
-                    std::memcpy(&pk_length, data + offset, sizeof(pk_length));
-                    offset += sizeof(pk_length);
-
-                    if (pk_length > 0 && offset + pk_length <= data_size) {
-                        primaryKey.assign(reinterpret_cast<const char*>(data + offset), pk_length);
-                        offset += pk_length;
-                    }
+                // Read constraints bitmap
+                if (offset + sizeof(uint16_t) > data_size) {
+                    throw std::runtime_error("Corrupted database schema: insufficient data for constraints");
                 }
-                db.primary_keys[table_name] = primaryKey;
+                uint16_t constraints;
+                std::memcpy(&constraints, data + offset, sizeof(constraints));
+                offset += sizeof(constraints);
 
-                // Read number of columns
-                if (offset + sizeof(uint32_t) > data_size) {
-                    std::cerr << "Schema data corrupted: insufficient data for column count" << std::endl;
-                    break;
-                }
+                column.isNullable = !(constraints & 0x01);
+                column.hasDefault = (constraints & 0x02);
+                column.isPrimaryKey = (constraints & 0x04);
+                column.isUnique = (constraints & 0x08);
+                column.autoIncreament = (constraints & 0x10);
 
-                uint32_t num_columns;
-                std::memcpy(&num_columns, data + offset, sizeof(num_columns));
-                offset += sizeof(num_columns);
+                // Read default value if exists
+                if (column.hasDefault && offset + sizeof(uint32_t) <= data_size) {
+                    uint32_t default_length;
+                    std::memcpy(&default_length, data + offset, sizeof(default_length));
+                    offset += sizeof(default_length);
 
-                std::vector<DatabaseSchema::Column> columns;
-                columns.reserve(num_columns);
-                for (uint32_t k = 0; k < num_columns; k++) {
-                    DatabaseSchema::Column column;
-
-                    // Read column name
-                    if (offset + sizeof(uint32_t) > data_size) {
-                        std::cerr << "Schema data corrupted: insufficient data for column name length" << std::endl;
-                        break;
-                    }
-
-                    uint32_t col_name_length;
-                    std::memcpy(&col_name_length, data + offset, sizeof(col_name_length));
-                    offset += sizeof(col_name_length);
-
-                    if (offset + col_name_length > data_size) {
-                        std::cerr << "Schema data corrupted: insufficient data for column name" << std::endl;
-                        break;
-                    }
-
-                    column.name.assign(reinterpret_cast<const char*>(data + offset), col_name_length);
-                    offset += col_name_length;
-
-                    // Read column type
-                    if (offset + sizeof(DatabaseSchema::Column::Type) > data_size) {
-                        std::cerr << "Schema data corrupted: insufficient data for column type" << std::endl;
-                        break;
-                    }
-
-                    DatabaseSchema::Column::Type type;
-                    std::memcpy(&type, data + offset, sizeof(type));
-                    offset += sizeof(type);
-                    column.type = type;
-
-                    // Read enhanced constraints
-                    if (offset + sizeof(uint16_t) > data_size) {
-                        std::cerr << "Schema data corrupted: insufficient data for constraints" << std::endl;
-                        break;
-                    }
-
-                    uint16_t constraints;
-                    std::memcpy(&constraints, data + offset, sizeof(constraints));
-                    offset += sizeof(constraints);
-
-                    column.isNullable = !(constraints & 0x01);
-                    column.hasDefault = (constraints & 0x02);
-                    column.isPrimaryKey = (constraints & 0x04);
-                    column.isUnique = (constraints & 0x08);
-                    column.autoIncreament = (constraints & 0x10);
-
-                    // Read default value if exists
-                    if (column.hasDefault) {
-                        if (offset + sizeof(uint32_t) > data_size) {
-                            std::cerr << "Schema data corrupted: insufficient data for default value length" << std::endl;
-                            break;
-                        }
-
-                        uint32_t default_length;
-                        std::memcpy(&default_length, data + offset, sizeof(default_length));
-                        offset += sizeof(default_length);
-
-                        if (offset + default_length > data_size) {
-                            std::cerr << "Schema data corrupted: insufficient data for default value" << std::endl;
-                            break;
-                        }
-
+                    if (default_length > 0 && offset + default_length <= data_size) {
                         column.defaultValue.assign(reinterpret_cast<const char*>(data + offset), default_length);
                         offset += default_length;
                     }
+                }
 
-                    // Read individual constraints (only if they exist and we have space)
-                    if (offset + sizeof(uint32_t) <= data_size) {
-                        uint32_t num_constraints;
-                        std::memcpy(&num_constraints, data + offset, sizeof(num_constraints));
-                        offset += sizeof(num_constraints);
+                // Read individual constraints
+                if (offset + sizeof(uint32_t) <= data_size) {
+                    uint32_t num_constraints;
+                    std::memcpy(&num_constraints, data + offset, sizeof(num_constraints));
+                    offset += sizeof(num_constraints);
 
-                        for (uint32_t c = 0; c < num_constraints && offset < data_size; c++) {
-                            DatabaseSchema::Constraint constraint;
+                    for (uint32_t k = 0; k < num_constraints && offset < data_size; k++) {
+                        DatabaseSchema::Constraint constraint;
 
-                            // Read constraint type
-                            if (offset + sizeof(DatabaseSchema::Constraint::Type) > data_size) break;
-                            DatabaseSchema::Constraint::Type constr_type;
-                            std::memcpy(&constr_type, data + offset, sizeof(constr_type));
-                            offset += sizeof(constr_type);
-                            constraint.type = constr_type;
+                        // Read constraint type
+                        if (offset + sizeof(DatabaseSchema::Constraint::Type) > data_size) break;
+                        DatabaseSchema::Constraint::Type constr_type;
+                        std::memcpy(&constr_type, data + offset, sizeof(constr_type));
+                        offset += sizeof(constr_type);
+                        constraint.type = constr_type;
 
-                            // Read constraint name
-                            if (offset + sizeof(uint32_t) > data_size) break;
-                            uint32_t constr_name_length;
-                            std::memcpy(&constr_name_length, data + offset, sizeof(constr_name_length));
-                            offset += sizeof(constr_name_length);
+                        // Read constraint name
+                        if (offset + sizeof(uint32_t) > data_size) break;
+                        uint32_t constr_name_length;
+                        std::memcpy(&constr_name_length, data + offset, sizeof(constr_name_length));
+                        offset += sizeof(constr_name_length);
 
-                            if (offset + constr_name_length > data_size) break;
-                            constraint.name.assign(reinterpret_cast<const char*>(data + offset), constr_name_length);
-                            offset += constr_name_length;
+                        if (offset + constr_name_length > data_size) break;
+                        constraint.name.assign(reinterpret_cast<const char*>(data + offset), constr_name_length);
+                        offset += constr_name_length;
 
-                            // Read constraint value for CHECK and DEFAULT (only if it exists)
-                            if ((constr_type == DatabaseSchema::Constraint::CHECK ||
-                                 constr_type == DatabaseSchema::Constraint::DEFAULT) &&
-                                offset + sizeof(uint32_t) <= data_size) {
+                        // Read constraint-specific data
+                        switch (constr_type) {
+                            case DatabaseSchema::Constraint::CHECK:
+                            case DatabaseSchema::Constraint::DEFAULT: {
+                                if (offset + sizeof(uint32_t) <= data_size) {
+                                    uint32_t value_length;
+                                    std::memcpy(&value_length, data + offset, sizeof(value_length));
+                                    offset += sizeof(value_length);
 
-                                uint32_t value_length;
-                                std::memcpy(&value_length, data + offset, sizeof(value_length));
-                                offset += sizeof(value_length);
-
-                                if (offset + value_length <= data_size) {
-                                    constraint.value.assign(reinterpret_cast<const char*>(data + offset), value_length);
-                                    offset += value_length;
+                                    if (value_length > 0 && offset + value_length <= data_size) {
+                                        constraint.value.assign(reinterpret_cast<const char*>(data + offset), value_length);
+                                        offset += value_length;
+                                    }
                                 }
+                                break;
                             }
-
-                            // Read foreign key references if applicable (only if they exist)
-                            if (constr_type == DatabaseSchema::Constraint::FOREIGN_KEY) {
-                                // Read reference table (if exists)
+                            case DatabaseSchema::Constraint::FOREIGN_KEY: {
+                                // Read reference table
                                 if (offset + sizeof(uint32_t) <= data_size) {
                                     uint32_t ref_table_length;
                                     std::memcpy(&ref_table_length, data + offset, sizeof(ref_table_length));
                                     offset += sizeof(ref_table_length);
 
-                                    if (offset + ref_table_length <= data_size) {
+                                    if (ref_table_length > 0 && offset + ref_table_length <= data_size) {
                                         constraint.reference_table.assign(reinterpret_cast<const char*>(data + offset), ref_table_length);
                                         offset += ref_table_length;
                                     }
                                 }
 
-                                // Read reference column (if exists)
+                                // Read reference column
                                 if (offset + sizeof(uint32_t) <= data_size) {
                                     uint32_t ref_col_length;
                                     std::memcpy(&ref_col_length, data + offset, sizeof(ref_col_length));
                                     offset += sizeof(ref_col_length);
 
-                                    if (offset + ref_col_length <= data_size) {
+                                    if (ref_col_length > 0 && offset + ref_col_length <= data_size) {
                                         constraint.reference_column.assign(reinterpret_cast<const char*>(data + offset), ref_col_length);
                                         offset += ref_col_length;
                                     }
                                 }
+                                break;
                             }
-
-                            column.constraints.push_back(constraint);
+                            case DatabaseSchema::Constraint::PRIMARY_KEY:
+                            case DatabaseSchema::Constraint::UNIQUE:
+                            case DatabaseSchema::Constraint::NOT_NULL:
+			    case DatabaseSchema::Constraint::AUTO_INCREAMENT:
+                                // No additional data needed
+                                break;
                         }
-                    }
 
-                    columns.push_back(column);
-                }
-
-                db.table_schemas[table_name] = columns;
-
-                // Create FractalBPlusTree instance
-                try {
-                    db.tables[table_name] = std::make_unique<FractalBPlusTree>(
-                        pager, wal, buffer_pool, table_name, root_page_id);
-                    db.root_page_ids[table_name] = root_page_id;
-                } catch (const std::exception& e) {
-                    std::cerr << "Warning: Failed to initialize table '" << table_name
-                              << "' with root page " << root_page_id << ": " << e.what() << std::endl;
-                }
-            }
-
-            // Read AUTO_INCREMENT counters if they exist
-            if (offset + sizeof(uint32_t) <= data_size) {
-                uint32_t num_auto_increment_tables;
-                std::memcpy(&num_auto_increment_tables, data + offset, sizeof(num_auto_increment_tables));
-                offset += sizeof(num_auto_increment_tables);
-
-                for (uint32_t j = 0; j < num_auto_increment_tables && offset < data_size; j++) {
-                    // Read table name
-                    if (offset + sizeof(uint32_t) > data_size) break;
-                    uint32_t table_name_length;
-                    std::memcpy(&table_name_length, data + offset, sizeof(table_name_length));
-                    offset += sizeof(table_name_length);
-
-                    if (offset + table_name_length > data_size) break;
-                    std::string table_name(reinterpret_cast<const char*>(data + offset), table_name_length);
-                    offset += table_name_length;
-
-                    // Read number of columns
-                    if (offset + sizeof(uint32_t) > data_size) break;
-                    uint32_t num_columns;
-                    std::memcpy(&num_columns, data + offset, sizeof(num_columns));
-                    offset += sizeof(num_columns);
-
-                    for (uint32_t k = 0; k < num_columns && offset < data_size; k++) {
-                        // Read column name
-                        if (offset + sizeof(uint32_t) > data_size) break;
-                        uint32_t col_name_length;
-                        std::memcpy(&col_name_length, data + offset, sizeof(col_name_length));
-                        offset += sizeof(col_name_length);
-
-                        if (offset + col_name_length > data_size) break;
-                        std::string column_name(reinterpret_cast<const char*>(data + offset), col_name_length);
-                        offset += col_name_length;
-
-                        // Read counter value
-                        if (offset + sizeof(uint32_t) > data_size) break;
-                        uint32_t counter;
-                        std::memcpy(&counter, data + offset, sizeof(counter));
-                        offset += sizeof(counter);
-
-                        db.auto_increament_counters[table_name][column_name] = counter;
+                        column.constraints.push_back(constraint);
                     }
                 }
+
+                columns.push_back(column);
             }
 
-            databases[dbName] = std::move(db);
+            db.table_schemas[table_name] = columns;
+
+            // Initialize FractalBPlusTree for the table
+            try {
+                db.tables[table_name] = std::make_unique<FractalBPlusTree>(
+                    pager, wal, buffer_pool, dbName + "." + table_name, root_page_id);
+
+                std::cout << "Initialized table '" << table_name << "' in database '" << dbName
+                          << "' with root page " << root_page_id << std::endl;
+
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Failed to initialize table '" << table_name
+                          << "' in database '" << dbName << "': " << e.what() << std::endl;
+                // Continue with other tables
+            }
         }
 
-        // Read current database (if exists)
+        // Read AUTO_INCREMENT counters
         if (offset + sizeof(uint32_t) <= data_size) {
-            uint32_t current_db_length;
-            std::memcpy(&current_db_length, data + offset, sizeof(current_db_length));
-            offset += sizeof(current_db_length);
+            uint32_t num_auto_increment_tables;
+            std::memcpy(&num_auto_increment_tables, data + offset, sizeof(num_auto_increment_tables));
+            offset += sizeof(num_auto_increment_tables);
 
-            if (offset + current_db_length <= data_size) {
-                current_db.assign(reinterpret_cast<const char*>(data + offset), current_db_length);
-                offset += current_db_length;
-            }
-        }
+            for (uint32_t i = 0; i < num_auto_increment_tables && offset < data_size; i++) {
+                if (offset + sizeof(uint32_t) > data_size) break;
+                uint32_t table_name_length;
+                std::memcpy(&table_name_length, data + offset, sizeof(table_name_length));
+                offset += sizeof(table_name_length);
 
-        // Read next transaction ID (if exists)
-        if (offset + sizeof(uint64_t) <= data_size) {
-            std::memcpy(&next_transaction_id, data + offset, sizeof(next_transaction_id));
-            offset += sizeof(next_transaction_id);
-        }
+                if (offset + table_name_length > data_size) break;
+                std::string table_name(reinterpret_cast<const char*>(data + offset), table_name_length);
+                offset += table_name_length;
 
-        // Verify we have valid databases
-        if (!databases.empty() && databases.find(current_db) == databases.end()) {
-            current_db = databases.begin()->first;
-        }
+                if (offset + sizeof(uint32_t) > data_size) break;
+                uint32_t num_columns;
+                std::memcpy(&num_columns, data + offset, sizeof(num_columns));
+                offset += sizeof(num_columns);
 
-        // Validate tables
-        for (auto& [dbName, db] : databases) {
-            for (auto& [tableName, _] : db.table_schemas) {
-                try {
-                    auto table_ptr = db.tables[tableName].get();
-                    if (table_ptr) {
-                        // Test reading to verify the tree is accessible
-                        table_ptr->select(1, 0);
-                    }
-                } catch (const std::exception& e) {
-                    std::cerr << "Warning: Table " << tableName << " in database " << dbName
-                              << " appears corrupted: " << e.what() << std::endl;
-                    try {
-                        rebuildIndexes(dbName, tableName);
-                    } catch (const std::exception& rebuild_error) {
-                        std::cerr << "Failed to rebuild table " << tableName << ": " << rebuild_error.what() << std::endl;
-                    }
+                for (uint32_t j = 0; j < num_columns && offset < data_size; j++) {
+                    if (offset + sizeof(uint32_t) > data_size) break;
+                    uint32_t col_name_length;
+                    std::memcpy(&col_name_length, data + offset, sizeof(col_name_length));
+                    offset += sizeof(col_name_length);
+
+                    if (offset + col_name_length > data_size) break;
+                    std::string column_name(reinterpret_cast<const char*>(data + offset), col_name_length);
+                    offset += col_name_length;
+
+                    if (offset + sizeof(uint32_t) > data_size) break;
+                    uint32_t counter;
+                    std::memcpy(&counter, data + offset, sizeof(counter));
+                    offset += sizeof(counter);
+
+                    db.auto_increament_counters[table_name][column_name] = counter;
                 }
             }
         }
 
-        std::cout << "Schema loaded successfully: " << databases.size() << " databases, current: " << current_db << std::endl;
+        std::cout << "Database '" << dbName << "' schema loaded successfully: "
+                  << db.table_schemas.size() << " tables, " << offset << " bytes read" << std::endl;
 
     } catch (const std::exception& e) {
-        std::cerr << "Critical error reading schema: " << e.what() << std::endl;
-        std::cerr << "Initializing fresh database due to schema corruption" << std::endl;
-        databases.clear();
-        current_db.clear();
-        next_transaction_id = 1;
+        std::cerr << "Error reading database schema for '" << dbName << "': " << e.what() << std::endl;
+        // Clear the database to avoid partial state
+        databases.erase(dbName);
+        database_metadata_pages.erase(dbName);
+        throw;
     }
 }
+
+void DiskStorage::initializeNewDatabase(const std::string& dbName) {
+	databases[dbName] = Database();
+	databases[dbName].next_row_id = 1;
+
+	getDatabaseMetadataPage(dbName);
+
+	writeDatabaseSchema(dbName);
+}
+
+void DiskStorage::writeSchema() {
+    try {
+        std::cout << "Writing complete schema (global + all databases)" << std::endl;
+        
+        // write global metadata (database list and mappings)
+        writeGlobalMetadata();
+        
+        // Then write each database's schema
+        for (const auto& [dbName, _] : databases) {
+            try {
+                writeDatabaseSchema(dbName);
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Failed to write schema for database '" << dbName << "': " << e.what() << std::endl;
+            }
+        }
+        
+        std::cout << "Schema writing completed" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error writing schema: " << e.what() << std::endl;
+        throw;
+    }
+}
+

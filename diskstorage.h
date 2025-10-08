@@ -96,8 +96,25 @@ private:
     void rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
                                   const std::vector<DatabaseSchema::Column>& newSchema,const std::unordered_map<std::string, std::string>& renameMapping);
     //void alterTable(const std::string& dbName, const std::string& tableName,const DatabaseSchema::Column& newColumn);
+    uint32_t getDatabaseMetadataPage(const std::string& dbName);
+    void writeDatabaseSchema(const std::string& dbName);
+    void readDatabaseSchema(const std::string& dbName);
+    void initializeNewDatabase(const std::string& dbName);
+
+    //Global metatdata management
+    void writeGlobalMetadata();
+    void readGlobalMetadata();
+    void initializeFreshGlobalMetadata();
+    void forceInitializePage0();
+
+    //Database isolation
+    std::unordered_map<std::string,uint32_t> database_metadata_pages; // dbName -> metadata_page_id
+    uint32_t global_metadata_page{0};
+    //static constexpr uint32_t GLOBAL_SCHEMA_VERSION = 2;
+    static constexpr uint32_t DATABASE_SCHEMA_VERSION = 1;
+    //void initializeNewDatabase(const std::string& dbName);
     void writeSchema();
-    void readSchema();
+    //void readSchema();
 
     // Helper methods
     void ensureDatabaseSelected() const;
