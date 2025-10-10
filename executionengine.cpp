@@ -463,7 +463,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         for (const auto& col : stmt.groupBy->columns) {
             if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
                 groupColumns.push_back(ident->token.lexeme);
-                result.columns.push_back(ident->token.lexeme);
+                //result.columns.push_back(ident->token.lexeme);
             }
         }
     }
