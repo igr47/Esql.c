@@ -446,6 +446,14 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     auto tableName = dynamic_cast<AST::Identifier*>(stmt.from.get())->token.lexeme;
     auto data = storage.getTableData(db.currentDatabase(), tableName);
 
+    // Apply WHERE clause filtering FIRST, before grouping and aggregation
+    std::vector<std::unordered_map<std::string, std::string>> filteredData;
+    for (const auto& row : data) {
+	    if (!stmt.where || evaluateWhereClause(stmt.where.get(), row)) {
+			    filteredData.push_back(row);
+	    }
+    }
+
     ResultSet result;
     result.distinct = stmt.distinct;
 
@@ -537,7 +545,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     
 
     // Group data
-    auto groupedData = groupRows(data, groupColumns);
+    //auto groupedData = groupRows(data, groupColumns);
+    auto groupedData = groupRows(filteredData, groupColumns);
 
     // Process each group
     for (const auto& group : groupedData) {
