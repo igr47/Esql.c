@@ -1793,9 +1793,20 @@ void ExecutionEngine::validateBulkUpdateConstraints(const std::vector<AST::BulkU
 		validateUpdateAgainstPrimaryKey(actual_values, table);
 	}
 
+	bool updating_unique_columns = false;
+	std::vector<std::string> unique_columns = getUniqueColumns(table);
+	for (const auto& un_col : unique_columns) {
+		if (actual_values.find(un_col) != actual_values.end()) {
+			updating_unique_columns = true;
+			break;
+		}
+	}
+
+	if (updating_primary_key) {
+		validateUpdateAgainstUniqueConstraints(actual_values, table, update_spec.row_id);
+	}
         // Validate with actual values
-        //validateUpdateAgainstPrimaryKey(actual_values, table);
-        validateUpdateAgainstUniqueConstraints(actual_values, table, update_spec.row_id);
+        //validateUpdateAgainstUniqueConstraints(actual_values, table, update_spec.row_id);
         validateUpdateWithCheckConstraints(actual_values, table, update_spec.row_id);
 
         // Create updated row for additional validation
@@ -2115,6 +2126,15 @@ std::vector<std::string> ExecutionEngine::getPrimaryKeyColumns(const DatabaseSch
 		}
 	}
 	return primaryKeyColumns;
+}
+std::vector<std::string> ExecutionEngine::getUniqueColumns(const DatabaseSchema::Table* table) {
+	std::vector<std::string> uniqueColumns;
+	for (const auto& column : table->columns) {
+		if (column.isUnique) {
+			uniqueColumns.push_back(column.name);
+		}
+	}
+	return uniqueColumns;
 }
 std::vector<uint32_t> ExecutionEngine::findMatchingRowIds(const std::string& tableName,
                                                         const AST::Expression* whereClause) {
