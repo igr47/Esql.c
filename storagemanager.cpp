@@ -771,7 +771,7 @@ size_t FractalBPlusTree::calculate_actual_data_size(uint64_t transaction_id) {
 void FractalBPlusTree::compress_node(Node* node) {
     // Don't compress already compressed nodes or very small nodes
     //if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
-    if (node->header.num_keys < 20 || (node->header.num_keys & (1u << 31))) {
+    /*if (node->header.num_keys < 20 || (node->header.num_keys & (1u << 31))) {
         return;
     }
 
@@ -816,11 +816,11 @@ void FractalBPlusTree::compress_node(Node* node) {
     } else {
         // Compression didn't help, keep uncompressed
         memcpy(node->data, temp, estimated_used_size);
-    }
+    }*/
 }
 
 void FractalBPlusTree::decompress_node(Node* node) {
-    if (!(node->header.num_keys & (1U << 31))) return;
+    /*if (!(node->header.num_keys & (1U << 31))) return;
 
     char temp[BPTREE_PAGE_SIZE];
     
@@ -844,7 +844,7 @@ void FractalBPlusTree::decompress_node(Node* node) {
 
     // Copy back the decompressed data
     memcpy(node->data, temp, decompressed_size);
-    node->header.num_keys &= ~(1U << 31);
+    node->header.num_keys &= ~(1U << 31);*/
 }
 
 /*void FractalBPlusTree::compress_node(Node* node) {

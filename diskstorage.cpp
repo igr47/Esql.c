@@ -1014,7 +1014,7 @@ void DiskStorage::bulkInsert(const std::string& dbName, const std::string& table
         throw std::runtime_error("Table not initialized: " + tableName);
     }
 
-    std::cout << "DEBUG BULK_INSERT: Inserting " << rows.size() << " rows into " << tableName << std::endl;
+    //std::cout << "DEBUG BULK_INSERT: Inserting " << rows.size() << " rows into " << tableName << std::endl;
 
     // Prepare data for bulk load
     std::vector<std::pair<int64_t, std::string>> bulk_data;
@@ -1026,10 +1026,10 @@ void DiskStorage::bulkInsert(const std::string& dbName, const std::string& table
             serializeRow(rows[i], schema_it->second, buffer);
             uint32_t row_id = start_id + i;
             bulk_data.emplace_back(row_id, std::string(buffer.begin(), buffer.end()));
-            std::cout << "DEBUG BULK_INSERT: Prepared row ID " << row_id 
-                      << ", data size: " << buffer.size() << " bytes" << std::endl;
+            //std::cout << "DEBUG BULK_INSERT: Prepared row ID " << row_id 
+                      //<< ", data size: " << buffer.size() << " bytes" << std::endl;
         } catch (const std::exception& e) {
-            std::cerr << "PREPARE_BULK: Failed to serialize row " << i << ": " << e.what() << std::endl;
+            //std::cerr << "PREPARE_BULK: Failed to serialize row " << i << ": " << e.what() << std::endl;
             throw;
         }
     }
@@ -1288,8 +1288,8 @@ uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::st
         }
     }
 
-    std::cout << "DEBUG SERIALIZE: serialized " << (buffer.size() - initial_size) 
-              << " bytes for " << columns.size() << " columns" << std::endl;
+    //std::cout << "DEBUG SERIALIZE: serialized " << (buffer.size() - initial_size) 
+              //<< " bytes for " << columns.size() << " columns" << std::endl;
 
     return buffer.size();
 }
@@ -1305,8 +1305,8 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     const uint8_t* ptr = data.data();
     size_t remaining = data.size();
 
-    std::cout << "DEBUG DESERIALIZE: Processing " << remaining << " bytes for " 
-              << columns.size() << " columns" << std::endl;
+    //std::cout << "DEBUG DESERIALIZE: Processing " << remaining << " bytes for " 
+              //<< columns.size() << " columns" << std::endl;
 
     for (size_t i = 0; i < columns.size(); i++) {
         const auto& column = columns[i];
@@ -1346,8 +1346,8 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         ptr += length;
         remaining -= length;
         
-        std::cout << "DEBUG DESERIALIZE: Column '" << column.name << "' = '" 
-                  << row[column.name] << "' (" << length << " bytes)" << std::endl;
+        //std::cout << "DEBUG DESERIALIZE: Column '" << column.name << "' = '" 
+                  //<< row[column.name] << "' (" << length << " bytes)" << std::endl;
     }
 
     if (remaining > 0) {
