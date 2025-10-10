@@ -127,7 +127,7 @@ bool ExecutionEngine::evaluateCheckConstraint(const std::string& checkExpression
 		bool isTrue = (result == "true" || result == "1" || result == "TRUE");
 
 		if(!isTrue) {
-			std::cout << "DEBUG: CHECK constraint '" <<constraintName << "'failed. Expression: " <<checkExpression << "evaluated to: " << result << std::endl;
+			//std::cout << "DEBUG: CHECK constraint '" <<constraintName << "'failed. Expression: " <<checkExpression << "evaluated to: " << result << std::endl;
 		}
 
 		return isTrue;
@@ -172,7 +172,7 @@ std::unique_ptr<AST::Expression> ExecutionEngine::parseStoredCheckExpression(con
 	}
 
 	try {
-		std::cout << "DEBUG: Parsing CHECK expression: " << storedCheckExpression << std::endl;
+		//std::cout << "DEBUG: Parsing CHECK expression: " << storedCheckExpression << std::endl;
 
 		//const std::istringstream stream(storedCheckExpression);
 		const std::string stream = storedCheckExpression;
@@ -463,7 +463,6 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         for (const auto& col : stmt.groupBy->columns) {
             if (auto ident = dynamic_cast<AST::Identifier*>(col.get())) {
                 groupColumns.push_back(ident->token.lexeme);
-                //result.columns.push_back(ident->token.lexeme);
             }
         }
     }
@@ -488,43 +487,16 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
 	    }else{
 		    displayName = col.second;
 	    }
-            //std::string displayName = col.second.empty() ? originalExpr : col.second;
             
             result.columns.push_back(displayName);
-            columnMapping.emplace_back(displayName, /*originalExpr*/col.first->toString());
+            columnMapping.emplace_back(displayName,col.first->toString());
         }
     } else {
         // Process regular columns without aliases
 	for(const auto& col : stmt.columns){
 	     std::string displayName;
 	     std::string originalExpr;
-        
-	    //std::unique_ptr<AST::Expression> name;
-            
-            /*if (auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())) {
-                if (aggregate->isCountAll) {
-                    originalExpr = "COUNT(*)";
-                    displayName = "COUNT(*)";
-                } else {
-                    originalExpr = aggregate->function.lexeme + "(" + 
-                                 (aggregate->argument ? aggregate->argument->toString() : "") + ")";
-                    displayName = originalExpr;
-                }
-		if(aggregate->argument2){
-			displayName = aggregate->argument2->toString();
-		}
-            } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
-                if (isAggregateFunction(binaryOp->op.lexeme)) {
-                    originalExpr = binaryOp->op.lexeme + "(" + binaryOp->left->toString() + ")";
-                    displayName = originalExpr;
-                } else {
-                    originalExpr = col->toString();
-                    displayName = originalExpr;
-                }
-            } else {
-                originalExpr = col->toString();
-                displayName = originalExpr;
-            }*/
+
             if(auto aggregate = dynamic_cast<AST::AggregateExpression*>(col.get())){
 		    if(aggregate->argument2){
 			    displayName = aggregate->argument2->toString();
@@ -545,23 +517,13 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
     
 
     // Group data
-    //auto groupedData = groupRows(data, groupColumns);
     auto groupedData = groupRows(filteredData, groupColumns);
 
     // Process each group
     for (const auto& group : groupedData) {
         if(group.empty()) continue;
 
-         //const auto& representativeRow = group[0];	
-
 	auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, group[0], groupedData);
-
-	/*std::unordered_map<std::string,std::string> combinedRow = group[0];
-	for(size_t i=0; i < stmt.columns.size(); i++){
-		if(i < aggregatedRow.size()){
-			combinedRow[result.columns[i]] = aggregatedRow[i];
-		}
-	}*/
 
     	// Apply HAVING clause if specified
         if (stmt.having) {
@@ -569,10 +531,6 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
                 continue;
             }
         }
-
-        // Evaluate aggregate functions for this group
-        //auto aggregatedRow = evaluateAggregateFunctions(stmt.columns, representativeRow, groupedData/*groupRows(data,groupColumns)*);
-	//
 
 	std::vector<std::string> rowValues;
 	for(const auto& colName : result.columns){
@@ -677,26 +635,6 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
         }
     }
 
-    
-    /*if (!stmt.newCols.empty()) {
-             result.columns.clear();
-             for (const auto& col : stmt.newCols) {
-                       result.columns.push_back(col.second.empty() ? col.first->toString() : col.second);
-	     }
-    } else {
-	    result.columns.clear();
-	    for (const auto& col : stmt.columns) {
-		    if (auto aggregate = dynamic_cast<const AST::AggregateExpression*>(col.get())) {
-			    if (aggregate->argument2) {
-				    result.columns.push_back(aggregate->argument2->toString());
-			    } else {
-				    result.columns.push_back(aggregate->toString());
-			    }
-		    } else {
-			    result.columns.push_back(col->toString());
-		    }
-	    }
-    }*/
     return result;
 }
 
@@ -845,7 +783,7 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
 
     const auto& groupData = *actualGroupData;
 
-    // First, add all group by columns to the result
+    // Add dd all group by columns to the result
     for (const auto& [key, value] : groupRow) {
         result[key] = value;
     }
@@ -865,7 +803,7 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
             std::string aggValue = calculateAggregate(aggregate, groupData);
             result[aggColumnName] = aggValue;
             
-            // Also store with alias if available
+            // Store with alias if available
             if (aggregate->argument2) {
                 result[aggregate->argument2->toString()] = aggValue;
             }
@@ -875,7 +813,6 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
             continue;
         }
         else {
-            // Complex expressions
             result[col->toString()] = evaluateExpression(col.get(), groupRow);
         }
     }
@@ -891,24 +828,24 @@ bool ExecutionEngine::evaluateHavingCondition(const AST::Expression* having,
     if (!having) return true;
 
     //std::string result = evaluateExpression(having, group);
-    std::cout<<"DEBUG: HAVING clause: " << having->toString() <<std::endl;
+    /*std::cout<<"DEBUG: HAVING clause: " << having->toString() <<std::endl;
     for(const auto& [key,value] : group){
 	    std::cout << " " << key << "=" << value << std::endl;
-    }
+    }*/
     std::string result = evaluateExpression(having,group);
     if(isNumericString(result)){
 	    try{
 		    double numericResult = std::stod(result);
 		    bool boolResult = numericResult != 0.0;
-		    std::cout<< "DEBUG: Numeric result: "<< numericResult << "->" << boolResult <<std::endl;
+		    //std::cout<< "DEBUG: Numeric result: "<< numericResult << "->" << boolResult <<std::endl;
 		    return boolResult;
 	    }catch( ...){
-		    std::cout << "DEBUG: faile to parse numeric results" << std::endl;
+		    //std::cout << "DEBUG: faile to parse numeric results" << std::endl;
 		    return false;
 	    }
     }
     bool boolResult = (result == "true" || result == "1" || result == "TRUE");
-    std::cout<< "DEBUG: Boolean result: " << result << "->" << boolResult <<std::endl;
+    //std::cout<< "DEBUG: Boolean result: " << result << "->" << boolResult <<std::endl;
     return boolResult;
 
 }
@@ -989,217 +926,11 @@ void ExecutionEngine::applyDefaultValues(std::unordered_map<std::string, std::st
 
 			//Apply the default value
 			row[column.name] = column.defaultValue;
-			std::cout << "DEBUG: Applied DEFAULT value '" << column.defaultValue << "'to column '" << column.name << "'" <<std::endl;
+			//std::cout << "DEBUG: Applied DEFAULT value '" << column.defaultValue << "'to column '" << column.name << "'" <<std::endl;
 		}
 	}
 }
 
-/*ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& stmt) {
-    auto table = storage.getTable(db.currentDatabase(), stmt.table);
-    if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
-    }
-
-    int inserted_count = 0;
-    bool wasInTransaction = inTransaction();
-    bool isBulkOperation = (stmt.values.size() > 1);
-
-    if (!wasInTransaction) {
-        beginTransaction();
-    }
-
-    try {
-        // Initialize batch tracking ONLY for actual multi-row operations
-        if (isBulkOperation) {
-            currentBatch.clear();
-            currentBatchPrimaryKeys.clear();
-        }
-
-        // Handle single-row insert
-        if (stmt.values.size() == 1) {
-            // Single row insertion - don't use batch tracking
-            std::unordered_map<std::string, std::string> row;
-
-            if (stmt.columns.empty()) {
-                // INSERT INTO table VALUES (values) - use schema order
-		// Count non-AUTO_INCREAMENT columns to determine expected value count
-		size_t expectedValueCount = 0;
-		for (const auto& column : table->columns) {
-			if (!column.autoIncreament) {
-				expectedValueCount++;
-			}
-		}
-
-                //if (stmt.values[0].size() != table->columns.size()) {
-		if (stmt.values[0].size() != expectedValueCount) {
-                    throw std::runtime_error("Column count doesn't match value count. Expected " +
-                                           std::to_string(expectedValueCount) + " values (excluding AUTO_INCREAMENT columns), got " +
-                                           std::to_string(stmt.values[0].size()));
-                }
-
-		//Map values to columns, skipping AUTO_INCREAMENT columns
-		size_t valueIndex = 0;
-                //for (size_t i = 0; i < stmt.values[0].size() && i < table->columns.size(); i++) {
-		for (size_t i = 0; i < table->columns.size(); i++) {
-                    const auto& column = table->columns[i];
-                    //std::string value = evaluateExpression(stmt.values[0][i].get(), {});
-
-                    // Skip AUTO_INCREMENT columns - they'll be handled automatically
-                    if (column.autoIncreament) {
-                        continue;
-                    }
-
-		    if (valueIndex < stmt.values[0].size()) {
-			    std::string value = evaluateExpression(stmt.values[0][valueIndex].get(),{});
-			    if (value.empty() && !column.isNullable) {
-				    throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty");
-			    }
-			    
-			    row[column.name] = value;
-			    valueIndex++;
-		    }
-		}
-            } else {
-                // INSERT INTO table (columns) VALUES (values) - use specified columns
-                if (stmt.columns.size() != stmt.values[0].size()) {
-                    throw std::runtime_error("Column count doesn't match value count");
-                }
-
-                for (size_t i = 0; i < stmt.columns.size(); i++) {
-                    const auto& column_name = stmt.columns[i];
-
-                    // Find the column in the table schema
-                    auto col_it = std::find_if(table->columns.begin(), table->columns.end(),
-                        [&](const DatabaseSchema::Column& col) { return col.name == column_name; });
-
-                    if (col_it != table->columns.end() && col_it->autoIncreament) {
-                        throw std::runtime_error("Cannot specify AUTO_INCREMENT column '" + column_name + "' in INSERT statement");
-                    }
-                    std::string value = evaluateExpression(stmt.values[0][i].get(), {});
-                    row[column_name] = value;
-                }
-            }
-
-            // Handle AUTO_INCREMENT before validation
-            handleAutoIncreament(row, table);
-
-            // Apply DEFAULT VALUES before validation
-            applyDefaultValues(row, table);
-
-            // For single-row inserts, validate without batch tracking
-            validateRowAgainstSchema(row, table);
-            storage.insertRow(db.currentDatabase(), stmt.table, row);
-            inserted_count = 1;
-        } else {
-            // Multi-row insert - use batch operations for efficiency
-            std::vector<std::unordered_map<std::string, std::string>> rows;
-            rows.reserve(stmt.values.size());
-
-            // Initialize batch tracking for bulk insert
-            //currentBatch.clear();
-            //currentBatchPrimaryKeys.clear();
-
-            for (const auto& row_values : stmt.values) {
-                std::unordered_map<std::string, std::string> row;
-
-                if (stmt.columns.empty()) {
-                    // INSERT INTO table VALUES (values1), (values2), ...
-		    // Count non-AUTO_INCREAMENT columns to determine expected value count
-		    size_t expectedValueCount = 0;
-		    for (const auto& column : table->columns) {
-			    if (!column.autoIncreament) {
-				    expectedValueCount++;
-			    }
-		    }
-                    if (row_values.size() != expectedValueCount) {
-                        throw std::runtime_error("Column count doesn't match value count in row " +
-                                               std::to_string(rows.size() + 1) + ". Expected " +
-                                               std::to_string(expectedValueCount) + " values (excluding AUTO_INCREAMENT columns), got " +
-                                               std::to_string(row_values.size()));
-                    }
-
-		    //map values to columns, skipping AUTO_INCREAMENT columns
-		    size_t valueIndex = 0;
-                    for (size_t i = 0;  i < table->columns.size(); i++) {
-                        const auto& column = table->columns[i];
-
-                        // Skip AUTO_INCREMENT columns
-                        if (column.autoIncreament) {
-                            continue;
-                        }
-
-			if (valueIndex < row_values.size()) {
-				std::string value = evaluateExpression(row_values[valueIndex].get(), {});
-				row[column.name] = value;
-				valueIndex++;
-			}
-                    }
-                } else {
-                    // INSERT INTO table (columns) VALUES (values1), (values2), ...
-                    if (stmt.columns.size() != row_values.size()) {
-                        throw std::runtime_error("Column count doesn't match value count in row " +
-                                               std::to_string(rows.size() + 1));
-                    }
-
-                    for (size_t i = 0; i < stmt.columns.size(); i++) {
-                        const auto& column_name = stmt.columns[i];
-
-                        // Find the column in the table schema
-                        auto col_it = std::find_if(table->columns.begin(), table->columns.end(),
-                            [&](const DatabaseSchema::Column& col) { return col.name == column_name; });
-
-                        if (col_it != table->columns.end() && col_it->autoIncreament) {
-                            throw std::runtime_error("Cannot specify AUTO_INCREMENT column '" + column_name + "' in INSERT statement");
-                        }
-                        std::string value = evaluateExpression(row_values[i].get(), {});
-                        row[column_name] = value;
-                    }
-                }
-
-                handleAutoIncreament(row, table);
-                applyDefaultValues(row, table);
-                
-                // For batch operations, validate with batch tracking
-                validateRowAgainstSchema(row, table);
-		storage.insertRow(db.currentDatabase(), stmt.table, row);
-		inserted_count++;
-                //rows.push_back(row);
-                
-                // Add to current batch for subsequent uniqueness checks
-                //currentBatch.push_back(row);
-            }
-
-            //storage.bulkInsert(db.currentDatabase(), stmt.table, rows);
-            //inserted_count = rows.size();
-
-            // Clear batch tracking after successful insertion
-            //currentBatch.clear();
-            //currentBatchPrimaryKeys.clear();
-        }
-
-        if (!wasInTransaction) {
-            commitTransaction();
-        }
-
-        return ResultSet({"Status", {{std::to_string(inserted_count) + " row(s) inserted into '" + stmt.table + "'"}}});
-
-    } catch (const std::exception& e) {
-        // Clear batch tracking on error
-        //currentBatch.clear();
-        //currentBatchPrimaryKeys.clear();
-
-        // Only rollback if we started the transaction
-        if (!wasInTransaction && inTransaction()) {
-            try {
-                rollbackTransaction();
-            } catch (const std::exception& rollback_error) {
-                // Log but don't throw - the original error is more important
-                std::cerr << "Warning: Failed to rollback transaction: " << rollback_error.what() << std::endl;
-            }
-        }
-        throw;
-    }
-}*/
 
 ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& stmt) {
     auto table = storage.getTable(db.currentDatabase(), stmt.table);
@@ -1221,7 +952,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
             std::unordered_map<std::string, std::string> row;
 
             if (stmt.columns.empty()) {
-                // INSERT INTO table VALUES (values) - use schema order
+                // INSERT INTO table VALUES (values) - uses schema order
                 // Count columns that are NOT AUTO_INCREMENT and don't have DEFAULT
                 size_t expectedValueCount = 0;
                 for (const auto& column : table->columns) {
@@ -1259,7 +990,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
                     }
                 }
             } else {
-                // INSERT INTO table (columns) VALUES (values) - use specified columns
+                // INSERT INTO table (columns) VALUES (values) - uses specified columns
                 if (stmt.columns.size() != stmt.values[0].size()) {
                     throw std::runtime_error("Column count doesn't match value count");
                 }
@@ -1473,7 +1204,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
         auto table_data = storage.getTableData(db.currentDatabase(), stmt.table);
         int updated_count = 0;
 
-	std::cout<< "DEBUG UPDATE: Processing" << table_data.size() << " rows in table " << stmt.table << std::endl;
+	//std::cout<< "DEBUG UPDATE: Processing" << table_data.size() << " rows in table " << stmt.table << std::endl;
 
         for (uint32_t i = 0; i < table_data.size(); i++) {
             auto& current_row = table_data[i];
@@ -1486,7 +1217,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeUpdate(AST::UpdateStatement& 
                     actualUpdates[col] = evaluateExpression(expr.get(), current_row);
                 }
 
-		std::cout << "DEBUG UPDATE: Updating row " << (i+1) << " with " << actualUpdates.size() << "changes" << std::endl;
+		//std::cout << "DEBUG UPDATE: Updating row " << (i+1) << " with " << actualUpdates.size() << "changes" << std::endl;
 
 		//validate againwith actual values
 		validateUpdateAgainstPrimaryKey(actualUpdates, table);
@@ -1539,7 +1270,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeDelete(AST::DeleteStatement& 
 ExecutionEngine::ResultSet ExecutionEngine::executeAlterTable(AST::AlterTableStatement& stmt) {
     // EMERGENCY: Backup current data first
     auto backup_data = storage.getTableData(db.currentDatabase(), stmt.tablename);
-    std::cout << "SAFETY: Backed up " << backup_data.size() << " rows before ALTER TABLE" << std::endl;
+    //std::cout << "SAFETY: Backed up " << backup_data.size() << " rows before ALTER TABLE" << std::endl;
     
     bool wasInTransaction = inTransaction();
     if (!wasInTransaction) {
@@ -2058,7 +1789,7 @@ void ExecutionEngine::handleAutoIncreament(std::unordered_map<std::string, std::
 			uint32_t next_id = storage.getNextAutoIncreamentValue(db.currentDatabase(), table->name, column.name);
 			row[column.name] = std::to_string(next_id);
 
-			std::cout << "DEBUG: Applied AUTO_INCREAMENT value '" << row[column.name] << "'to column '" << column.name << "'" <<std::endl;
+			//std::cout << "DEBUG: Applied AUTO_INCREAMENT value '" << row[column.name] << "'to column '" << column.name << "'" <<std::endl;
 		}
 	}
 }
@@ -2124,7 +1855,7 @@ void ExecutionEngine::validateRowAgainstSchema(const std::unordered_map<std::str
     }
 
     validateCheckConstraints(row, table);
-    std::cout << "DEBUG: All CHECK constraintspassed for table: " << table->name << std::endl;
+    //std::cout << "DEBUG: All CHECK constraintspassed for table: " << table->name << std::endl;
 }
 
 std::vector<std::string> ExecutionEngine::getPrimaryKeyColumns(const DatabaseSchema::Table* table) {
@@ -2195,7 +1926,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 	    if (it != row.end()) {
 		    return it->second;
 	    }
-	    std::cout<<"DEBUG: Finished execution." <<std::endl;
+	    //std::cout<<"DEBUG: Finished execution." <<std::endl;
 	    return "0"; 
     }else if (auto lit = dynamic_cast<const AST::Literal*>(expr)) {
         if (lit->token.type == Token::Type::STRING_LITERAL ||
