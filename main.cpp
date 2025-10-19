@@ -20,7 +20,7 @@ int main() {
 
 	//std::signal(SIGINT,signalHandler);
 	//std::signal(SIGINT,signalHandler);
-        Database db("mydb");
+        Database db("./databases/mydb");
         std::cout << "Database initialized successfully\n";
         std::cout << "Starting interactive shell...\n";
         db.startInteractive();

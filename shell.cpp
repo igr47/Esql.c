@@ -30,7 +30,7 @@ const std::unordered_set<std::string> ESQLShell::datatypes = {
 };
 
 const std::unordered_set<std::string> ESQLShell::conditionals = {
-    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT","AS","PRIMARY_KEY","UNIQUE","DEFAULT","AUTO_INCREAMENT","CHECK","NOT_NULL","TO"
+    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT","AS","PRIMARY_KEY","UNIQUE","DEFAULT","AUTO_INCREAMENT","CHECK","NOT_NULL","TO","TRUE","FALSE"
 };
 
 ESQLShell::ESQLShell(Database& db) : db(db), current_db("default") {

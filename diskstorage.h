@@ -3,7 +3,8 @@
 #define DISK_STORAGE_H
 
 #include "storage.h"
-#include "storagemanager.h"
+//#include "storagemanager.h"
+#include "multifilepager.h"
 //#include "database_schema.h"
 #include <vector>
 #include <unordered_map>
@@ -13,7 +14,7 @@
 
 class DiskStorage : public StorageManager {
 public:
-    explicit DiskStorage(const std::string& filename);
+    explicit DiskStorage(const std::string& base_path = "databases/");
     ~DiskStorage() override;
 
     // Database operations
@@ -71,13 +72,19 @@ private:
 	std::unordered_map<std::string, std::string> primary_keys;
 	std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>> auto_increament_counters; //table->column->counter
         uint32_t next_row_id = 1;
+
+	// Per-database WAL and BufferPool
+	std::unique_ptr<WriteAheadLog> wal;
+	std::unique_ptr<BufferPool> buffer_pool;
     };
 
-    Pager pager;
-    BufferPool buffer_pool;
-    WriteAheadLog wal;
+    //Pager pager;
+    //BufferPool buffer_pool;
+    //WriteAheadLog wal;
+    MultiFilePager multi_pager; 
     std::unordered_map<std::string, Database> databases;
     std::string current_db;
+    void recoverDatabase(const std::string& dbName);
     std::atomic<uint64_t> next_transaction_id{1};
     uint64_t current_transaction_id{0};
     bool in_transaction{false};
@@ -96,20 +103,20 @@ private:
     void rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
                                   const std::vector<DatabaseSchema::Column>& newSchema,const std::unordered_map<std::string, std::string>& renameMapping);
     //void alterTable(const std::string& dbName, const std::string& tableName,const DatabaseSchema::Column& newColumn);
-    uint32_t getDatabaseMetadataPage(const std::string& dbName);
+    //uint32_t getDatabaseMetadataPage(const std::string& dbName);
     void writeDatabaseSchema(const std::string& dbName);
     void readDatabaseSchema(const std::string& dbName);
     void initializeNewDatabase(const std::string& dbName);
 
     //Global metatdata management
-    void writeGlobalMetadata();
-    void readGlobalMetadata();
-    void initializeFreshGlobalMetadata();
-    void forceInitializePage0();
+    //void writeGlobalMetadata();
+    //void readGlobalMetadata();
+    //void initializeFreshGlobalMetadata();
+    //void forceInitializePage0();
 
     //Database isolation
-    std::unordered_map<std::string,uint32_t> database_metadata_pages; // dbName -> metadata_page_id
-    uint32_t global_metadata_page{0};
+    //std::unordered_map<std::string,uint32_t> database_metadata_pages; // dbName -> metadata_page_id
+    //uint32_t global_metadata_page{0};
     //static constexpr uint32_t GLOBAL_SCHEMA_VERSION = 2;
     static constexpr uint32_t DATABASE_SCHEMA_VERSION = 1;
     //void initializeNewDatabase(const std::string& dbName);
