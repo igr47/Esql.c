@@ -8,134 +8,76 @@
 #include <iostream>
 
 
-/*DiskStorage::DiskStorage(const std::string& filename)
-    : pager(filename + ".db"), buffer_pool(1000), wal(filename + ".wal") {
-    try {
-	std::cout<<"INITIALIZING DISKSTORAGE: "<<filename <<std::endl;
+
+
+DiskStorage::DiskStorage(const std::string& base_path) : multi_pager(base_path) {
+    std::cout << "Using independent file per database" << std::endl;
+
+    auto db_list = multi_pager.list_databases();
+    std::cout << "Found " << db_list.size() << " existing databases " << std::endl;
+
+    for (const auto& db_name : db_list) {
         try {
-		pager.test_zstd();
-	}catch (const std::exception& e){
-		std::cerr<<"Warning: Zstd test failed: "<<e.what() <<std::endl;
-	}
-        databases.clear();
-        current_db.clear();
-        next_transaction_id = 1;
-        in_transaction = false;
+            std::cout << "Attempting to load database: " << db_name << std::endl;
 
-	//Check if database file exists and has data
-	
-	bool file_exists = false;
+            // Try to open the database file
+            if (multi_pager.get_database_file(db_name) != nullptr) {
+                // File exists and can be opened, now try to read schema
+                try {
+                    readDatabaseSchema(db_name);
 
-        // Try to create page 0 if it doesn't exist
-        try {
-            Node test_node = {};
-            //memset(&test_node, 0, sizeof(Node));
-            //test_node.header.type = PageType::METADATA;
-            //test_node.header.page_id = 0;
-            //pager.write_page(0, &test_node);
-	    pager.read_page(0,&test_node);
-	    file_exists = true;
-	    std::cout<<"Existing database file found " <<std::endl;
-        } catch (const std::exception& e) {
-	    std::cout<<"No existing database file, creating new one" <<std::endl;
-            // If writing page 0 fails, try to allocate it
-            uint32_t new_page_id = pager.allocate_page();
-            if (new_page_id != 0) {
-                // We need page 0 specifically for metadata
-                throw std::runtime_error("Cannot allocate page 0 for metadata");
-            }
-            Node metadata_page = {};
-            metadata_page.header.type = PageType::METADATA;
-            metadata_page.header.page_id = 0;
-            pager.write_page(0, &metadata_page);
-        }
-
-
-        // Now try to read existing schema
-        try {
-            uint32_t metadata_page_id = 0;
-            wal.recover(pager, metadata_page_id);
-            readSchema();
-
-            if (!databases.empty()) {
-                current_db = databases.begin()->first;
+                    recoverDatabase(db_name);
+                    std::cout << "Successfully loaded database: " << db_name << std::endl;
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Schema loading failed for '" << db_name
+                              << "': " << e.what() << std::endl;
+                    // Don't remove from databases map, keep it for potential recovery
+                    if (databases.find(db_name) == databases.end()) {
+                        databases[db_name] = Database(); // Initialize empty
+                    }
+                }
+            } else {
+                std::cerr << "Failed to open database file for: " << db_name << std::endl;
+                // Initialize empty database structure anyway
+                databases[db_name] = Database();
             }
         } catch (const std::exception& e) {
-            std::cerr << "Warning: Failed to read schema, using empty: " << e.what() << std::endl;
-            // Continue with empty databases
+            std::cerr << "Error loading database '" << db_name << "': " << e.what() << std::endl;
+            // Initialize empty database to keep it in the list
+            databases[db_name] = Database();
         }
-    } catch (const std::exception& e) {
-	if (std::string(e.what()).find("Failed to create") != std::string::npos ||
-            std::string(e.what()).find("Failed to open") != std::string::npos) {
-            throw std::runtime_error("Failed to initialize DiskStorage: File access error - check permissions for " + filename);
-        }
-        throw std::runtime_error("Failed to initialize DiskStorage: " + std::string(e.what()));
     }
-}*/
 
-DiskStorage::DiskStorage(const std::string& filename) : pager(filename + ".db"), buffer_pool(1000),wal(filename + ".wal") {
-	try {
-		std::cout << "INITIALIZING DISKSTORAGE: " << filename << std::endl;
-
-		//Test compression
-		try {
-			pager.test_zstd();
-		} catch (const std::exception& e) {
-			std::cerr << "Warning: Zstd test failed: " << e.what() << std::endl;
-		}
-
-		databases.clear();
-		database_metadata_pages.clear();
-		current_db.clear();
-		next_transaction_id = 1;
-		in_transaction = false;
-
-		//Initialize or read gloabla metadata
-		try {
-			readGlobalMetadata();
-
-			//If no databases exist, initialize fresh
-			if (databases.empty()) {
-				std::cout << "No existing database found, initilizing fresh" << std::endl;
-				global_metadata_page = pager.allocate_page();
-				writeGlobalMetadata();
-			} else {
-				for (const auto& dbName : listDatabases()) {
-					try {
-						readDatabaseSchema(dbName);
-					} catch (const std::exception& e) {
-						std::cerr << "Warning: Failed to load database '" << dbName << "': " << e.what() << std::endl;
-
-						//Remove corrupted database from global list
-						databases.erase(dbName);
-						database_metadata_pages.erase(dbName);
-					}
-				}
-
-				//Set current database if available
-				if ( !databases.empty()) {
-					current_db = databases.begin()->first;
-				}
-			}
-		} catch (const std::exception& e) {
-			std::cerr << "Warnin: Failed to read gloabal metadata: " << e.what() << std::endl;
-
-			//Initialize fresh
-			global_metadata_page = pager.allocate_page();
-			writeGlobalMetadata();
-		}
-
-	} catch (const std::exception& e) {
-		throw std::runtime_error("Failed to initiaize DiskStorage: " + std::string(e.what()));
-	}
+    // Set current database
+    if (databases.find("default") != databases.end()) {
+        current_db = "default";
+        std::cout << "Current database set to: default" << std::endl;
+    } else if (!db_list.empty()) {
+        // Use first available database as default
+        current_db = db_list[0];
+        std::cout << "Current database set to: " << current_db << std::endl;
+    } else {
+        std::cout << "No databases found. Use CREATE DATABASE to create one." << std::endl;
+    }
 }
 
 DiskStorage::~DiskStorage() {
     try {
 	std::cout << "DiskStorage Shutdown: Persisting all data.... " << std::endl;
         writeSchema();
-        buffer_pool.flush_all();
-        wal.checkpoint(pager, /*0*/global_metadata_page); // Checkpoint with metadata page 0
+        //buffer_pool.flush_all();
+        //wal.checkpoint(pager, /*0global_metadata_page); // Checkpoint with metadata page 0
+	// Flush each databases buffer pool
+	for (auto& [dbName, db] : databases) {
+		if (db.buffer_pool) {
+			db.buffer_pool->flush_all();
+		}
+        if (db.wal) {
+            db.wal->checkpoint(multi_pager,dbName,0);
+        }
+	}
+	multi_pager.flush_all();
+    multi_pager.checkpoint_all();
 	std::cout << "Shutdown completed successfully." << std::endl;
     } catch (const std::exception& e) {
         // Log error but don't throw in destructor
@@ -143,266 +85,33 @@ DiskStorage::~DiskStorage() {
     }
 }
 
-//Methods for database metadata initialisation
-uint32_t DiskStorage::getDatabaseMetadataPage(const std::string& dbName) {
-    auto it = database_metadata_pages.find(dbName);
-    if (it != database_metadata_pages.end()) {
-        return it->second;
-    }
-    
-    // Allocate new metadata page for this database
-    uint32_t metadata_page = pager.allocate_page();
-    database_metadata_pages[dbName] = metadata_page;
-    
-    // Initialize the metadata page
-    Node metadata_node = {};
-    metadata_node.header.type = PageType::METADATA;
-    metadata_node.header.page_id = metadata_page;
-    pager.write_page(metadata_page, &metadata_node);
-    
-    return metadata_page;
-}
+void DiskStorage::recoverDatabase(const std::string& dbName) {
+    std::cout << "RECOVERY: Scanning database '" << dbName << "' for corrupted pages..." << std::endl;
 
-void DiskStorage::writeGlobalMetadata() {
-    try {
-	if (global_metadata_page != 0) {
-		std::cerr << "CRITICAL ERROR: Attempting to write  gloabala metadata to page "  << global_metadata_page << "instead of page 0| Correcting to page 0." << std::endl;
-		global_metadata_page = 0;
-	}
-        Node global_node = {};
-        global_node.header.type = PageType::METADATA;
-        global_node.header.page_id = global_metadata_page;
-        
-        uint8_t* data = reinterpret_cast<uint8_t*>(global_node.data);
-        uint32_t offset = 0;
-        size_t data_size = BPTREE_PAGE_SIZE - sizeof(PageHeader);
+    auto& db = databases.at(dbName);
 
-        // Write global schema version
-        const uint32_t GLOBAL_SCHEMA_VERSION = 2;
-        std::memcpy(data + offset, &GLOBAL_SCHEMA_VERSION, sizeof(GLOBAL_SCHEMA_VERSION));
-        offset += sizeof(GLOBAL_SCHEMA_VERSION);
-
-        // Write number of databases
-        uint32_t num_databases = databases.size();
-        std::memcpy(data + offset, &num_databases, sizeof(num_databases));
-        offset += sizeof(num_databases);
-
-        // Write database list with their metadata page IDs - THIS IS CRITICAL
-        for (const auto& [dbName, db] : databases) {
-            // Write database name
-            uint32_t name_length = dbName.size();
-            std::memcpy(data + offset, &name_length, sizeof(name_length));
-            offset += sizeof(name_length);
-            std::memcpy(data + offset, dbName.data(), name_length);
-            offset += name_length;
-
-            // Write metadata page ID for this database - PERSIST THE MAPPING
-            uint32_t metadata_page = database_metadata_pages.at(dbName);
-            std::memcpy(data + offset, &metadata_page, sizeof(metadata_page));
-            offset += sizeof(metadata_page);
-
-            std::cout << "Global metadata: database '" << dbName << "' -> page " << metadata_page << std::endl;
-        }
-
-        // Write current database
-        uint32_t current_db_length = current_db.size();
-        std::memcpy(data + offset, &current_db_length, sizeof(current_db_length));
-        offset += sizeof(current_db_length);
-        if (current_db_length > 0) {
-            std::memcpy(data + offset, current_db.data(), current_db_length);
-            offset += current_db_length;
-        }
-
-        // Write next transaction ID
-        std::memcpy(data + offset, &next_transaction_id, sizeof(next_transaction_id));
-        offset += sizeof(next_transaction_id);
-
-        pager.write_page(global_metadata_page, &global_node);
-        std::cout << "Global metadata written to page " << global_metadata_page 
-                  << " with " << num_databases << " databases" << std::endl;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Error writing global metadata: " << e.what() << std::endl;
-        throw;
-    }
-}
-
-void DiskStorage::readGlobalMetadata() {
-    try {
-        // Always use page 0 for global metadata (like the old system)
-        global_metadata_page = 0;
-        
-        Node global_node;
+    for (const auto& [tableName, root_page_id] : db.root_page_ids) {
         try {
-            pager.read_page(global_metadata_page, &global_node);
-            
-            if (global_node.header.type != PageType::METADATA) {
-                std::cout << "Page 0 is not a metadata page, initializing fresh" << std::endl;
-                //initializeFreshGlobalMetadata();
-		forceInitializePage0();
-                return;
+            Node root_node;
+            multi_pager.read_page(dbName, root_page_id, &root_node);
+
+            // Fix page type if corrupted
+            if (root_node.header.type == PageType::METADATA) {
+                std::cout << "RECOVERY: Fixing root page " << root_page_id
+                          << " for table '" << tableName << "' from METADATA to LEAF" << std::endl;
+                root_node.header.type = PageType::LEAF;
+                multi_pager.write_page(dbName, root_page_id, &root_node);
+
+                // Reinitialize the table
+                db.tables[tableName] = std::make_unique<FractalBPlusTree>(
+                    multi_pager, *db.wal, *db.buffer_pool, dbName, dbName + "." + tableName, root_page_id);
             }
+
         } catch (const std::exception& e) {
-            std::cout << "No existing global metadata found: " << e.what() << std::endl;
-            //initializeFreshGlobalMetadata();
-	    forceInitializePage0();
-            return;
+            std::cerr << "RECOVERY_ERROR: " << e.what() << std::endl;
         }
-
-        const uint8_t* data = reinterpret_cast<const uint8_t*>(global_node.data);
-        uint32_t offset = 0;
-        size_t data_size = BPTREE_PAGE_SIZE - sizeof(PageHeader);
-
-        // Read global schema version
-        uint32_t schema_version;
-        if (offset + sizeof(schema_version) > data_size) {
-            std::cout << "No global schema version found, initializing fresh" << std::endl;
-            initializeFreshGlobalMetadata();
-            return;
-        }
-        std::memcpy(&schema_version, data + offset, sizeof(schema_version));
-        offset += sizeof(schema_version);
-
-        // Handle version 1 (old format) migration
-        if (schema_version == 1) {
-            std::cout << "Migrating from old schema version 1 to version 2" << std::endl;
-            //migrateFromVersion1();
-            return;
-        } else if (schema_version != 2) {
-            std::cout << "Unsupported schema version " << schema_version << ", initializing fresh" << std::endl;
-            initializeFreshGlobalMetadata();
-            return;
-        }
-
-        // Read number of databases
-        uint32_t num_databases;
-        if (offset + sizeof(num_databases) > data_size) {
-            throw std::runtime_error("Corrupted global metadata: insufficient data for database count");
-        }
-        std::memcpy(&num_databases, data + offset, sizeof(num_databases));
-        offset += sizeof(num_databases);
-
-        std::cout << "Loading " << num_databases << " databases from global metadata" << std::endl;
-
-        // Clear existing data
-        databases.clear();
-        database_metadata_pages.clear();
-
-        // Read database list and their metadata page mappings
-        for (uint32_t i = 0; i < num_databases; i++) {
-            // Read database name
-            if (offset + sizeof(uint32_t) > data_size) {
-                throw std::runtime_error("Corrupted global metadata: insufficient data for database name length");
-            }
-            uint32_t name_length;
-            std::memcpy(&name_length, data + offset, sizeof(name_length));
-            offset += sizeof(name_length);
-            
-            if (offset + name_length > data_size) {
-                throw std::runtime_error("Corrupted global metadata: insufficient data for database name");
-            }
-            std::string dbName(reinterpret_cast<const char*>(data + offset), name_length);
-            offset += name_length;
-
-            // Read metadata page ID - THIS IS CRITICAL FOR PERSISTENCE
-            if (offset + sizeof(uint32_t) > data_size) {
-                throw std::runtime_error("Corrupted global metadata: insufficient data for metadata page ID");
-            }
-            uint32_t metadata_page;
-            std::memcpy(&metadata_page, data + offset, sizeof(metadata_page));
-            offset += sizeof(metadata_page);
-
-            // Store the mapping
-            database_metadata_pages[dbName] = metadata_page;
-            databases[dbName] = Database(); // Initialize empty database
-
-            std::cout << "Found database '" << dbName << "' with metadata page " << metadata_page << std::endl;
-        }
-
-        // Read current database
-        if (offset + sizeof(uint32_t) <= data_size) {
-            uint32_t current_db_length;
-            std::memcpy(&current_db_length, data + offset, sizeof(current_db_length));
-            offset += sizeof(current_db_length);
-            
-            if (current_db_length > 0 && offset + current_db_length <= data_size) {
-                current_db.assign(reinterpret_cast<const char*>(data + offset), current_db_length);
-                offset += current_db_length;
-            }
-        }
-
-        // Read next transaction ID
-        if (offset + sizeof(uint64_t) <= data_size) {
-            std::memcpy(&next_transaction_id, data + offset, sizeof(next_transaction_id));
-        }
-
-        std::cout << "Global metadata loaded: " << databases.size() << " databases" << std::endl;
-        
-        // Now load each database's schema
-        for (const auto& [dbName, _] : databases) {
-            try {
-                readDatabaseSchema(dbName);
-            } catch (const std::exception& e) {
-                std::cerr << "Warning: Failed to load database '" << dbName << "': " << e.what() << std::endl;
-                // Remove corrupted database
-                databases.erase(dbName);
-                database_metadata_pages.erase(dbName);
-            }
-        }
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Error reading global metadata: " << e.what() << std::endl;
-        initializeFreshGlobalMetadata();
     }
 }
-
-void DiskStorage::forceInitializePage0() {
-	std::cout << "Force initializing gloabal metadata on PAGE 0" << std::endl;
-
-	//ALWAYS use page 0
-	global_metadata_page = 0;
-	databases.clear();
-	database_metadata_pages.clear();
-	current_db.clear();
-	next_transaction_id = 1;
-
-	//Initialize to page o directly
-	Node metadata_page = {};
-	metadata_page.header.type = PageType::METADATA;
-	metadata_page.header.page_id = 0;
-
-	//Write the page first
-	pager.write_page(0, &metadata_page);
-
-	writeGlobalMetadata();
-
-	std::cout << "Gloabal metadata forcefully initialized on page 0" << std::endl;
-}
-
-void DiskStorage::initializeFreshGlobalMetadata() {
-    std::cout << "Initializing fresh global metadata" << std::endl;
-    
-    global_metadata_page = 0;
-    databases.clear();
-    database_metadata_pages.clear();
-    current_db.clear();
-    next_transaction_id = 1;
-    
-    // Write initial global metadata
-    writeGlobalMetadata();
-}
-
-// Database operations
-/*void DiskStorage::createDatabase(const std::string& dbName) {
-    if (databases.find(dbName) != databases.end()) {
-        throw std::runtime_error("Database already exists: " + dbName);
-    }
-    //databases[dbName] = Database();
-    //databases[dbName].next_row_id = 1;
-    //writeSchema();
-    initializeNewDatabase(dbName);
-    writeGlobalMetadata();
-}*/
 
 void DiskStorage::createDatabase(const std::string& dbName) {
     if (databases.find(dbName) != databases.end()) {
@@ -410,34 +119,22 @@ void DiskStorage::createDatabase(const std::string& dbName) {
     }
 
     std::cout << "Creating new database: " << dbName << std::endl;
-
-    // Initialize the database structure
-    databases[dbName] = Database();
-    databases[dbName].next_row_id = 1;
-
-    // Allocate and store metadata page for this database
-    uint32_t metadata_page = pager.allocate_page();
-    database_metadata_pages[dbName] = metadata_page;
-
-    // Initialize the metadata page
-    Node metadata_node = {};
-    metadata_node.header.type = PageType::METADATA;
-    metadata_node.header.page_id = metadata_page;
-    pager.write_page(metadata_page, &metadata_node);
-
-    // Write initial schema for the new database
-    writeDatabaseSchema(dbName);
-
-    // UPDATE GLOBAL METADATA 
-    writeGlobalMetadata();
-
-    std::cout << "Database '" << dbName << "' created with metadata page " << metadata_page << std::endl;
+    multi_pager.create_database_file(dbName);
+    initializeNewDatabase(dbName);
 }
 
 void DiskStorage::useDatabase(const std::string& dbName) {
-    ensureDatabaseExists(dbName);
-    current_db = dbName;
-    writeGlobalMetadata();
+	ensureDatabaseExists(dbName);
+
+	try {
+		readDatabaseSchema(dbName);
+	} catch (const std::exception& e) {
+		std::cerr << "Database schema load warning: " << e.what() << std::endl;
+		throw std::runtime_error("Can't use database " + dbName + ": " + e.what());
+	}
+
+	current_db = dbName;
+	std::cout << "Switched to database: " << dbName << std::endl;
 }
 
 std::vector<std::string> DiskStorage::listDatabases() const {
@@ -460,25 +157,38 @@ bool DiskStorage::tableExists(const std::string& dbName, const std::string& tabl
 }
 
 // Table operations
-void DiskStorage::createTable(const std::string& dbName, const std::string& name,
-                             const std::vector<DatabaseSchema::Column>& columns) {
-    ensureDatabaseExists(dbName);
-    auto& db = databases.at(dbName);
-    if (db.tables.find(name) != db.tables.end()) {
-        throw std::runtime_error("Table already exists: " + name);
+void DiskStorage::createTable(const std::string& dbName, const std::string& name, const std::vector<DatabaseSchema::Column>& columns) {
+	ensureDatabaseExists(dbName);
+	auto& db = databases.at(dbName);
+
+	if (db.tables.find(name) != db.tables.end()) {
+		throw std::runtime_error("Table alredy exists: " + name);
+	}
+
+	// Initialize per-database WAL and BufferPool if not exists
+	if (!db.wal) {
+		db.wal = std::make_unique<WriteAheadLog>("databases/" + dbName + "_wal");
+	}
+
+	if (!db.buffer_pool) {
+		db.buffer_pool = std::make_unique<BufferPool>(1000);
+	}
+
+	uint32_t root_id = multi_pager.allocate_page(dbName);
+     
+    if (root_id == 0) {
+        root_id = multi_pager.allocate_page(dbName);
     }
 
-    uint32_t root_id = pager.allocate_page();
-    auto tree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, name, root_id);
-    tree->create();
+	auto tree = std::make_unique<FractalBPlusTree>(multi_pager,*db.wal,*db.buffer_pool, dbName, dbName + "." +name, root_id);
+	tree->create();
 
-    db.tables[name] = std::move(tree);
-    db.table_schemas[name] = columns;
-    db.root_page_ids[name] = root_id;
-    //writeSchema();
-    writeDatabaseSchema(dbName);
+	db.tables[name] = std::move(tree);
+	db.table_schemas[name] = columns;
+	db.root_page_ids[name] = root_id;
+
+	writeDatabaseSchema(dbName);
 }
-
 void DiskStorage::dropTable(const std::string& dbName, const std::string& name) {
     ensureDatabaseSelected();
     auto& db = getCurrentDatabase();
@@ -495,7 +205,8 @@ void DiskStorage::dropTable(const std::string& dbName, const std::string& name) 
 void DiskStorage::insertRow(const std::string& dbName, const std::string& tableName,
                            const std::unordered_map<std::string, std::string>& row) {
     ensureDatabaseSelected();
-    auto& db = getCurrentDatabase();
+    //auto& db = getCurrentDatabase();
+    auto& db = databases.at(dbName);
     auto schema_it = db.table_schemas.find(tableName);
     if (schema_it == db.table_schemas.end()) {
         throw std::runtime_error("Table not found: " + tableName);
@@ -512,9 +223,25 @@ void DiskStorage::insertRow(const std::string& dbName, const std::string& tableN
     uint32_t row_id = getNextRowId(tableName);
     //debugDataFlow(tableName,row,row_id);
     std::string value(buffer.begin(), buffer.end());
+
+    // Get transaction id and make sure we are in transaction
+    uint64_t txn_id = getTransactionId();
     
     table_it->second->insert(row_id, value, getTransactionId());
     updateRowIdCounter(tableName, row_id + 1);
+
+    //FORCE IMEDIATE PERSISTANCE 
+    if (db.buffer_pool) {
+        db.buffer_pool->flush_all();
+    }
+    if (db.wal) {
+        db.wal->checkpoint(multi_pager,dbName,0);
+    }
+
+    //Write database schema
+    writeDatabaseSchema(dbName);
+
+    std::cout << "DEBUG: Inserted row " << row_id << " into" << tableName << " in database " << dbName << std::endl;
 }
 
 void DiskStorage::deleteRow(const std::string& dbName, const std::string& tableName, uint32_t row_id) {
@@ -531,6 +258,12 @@ void DiskStorage::deleteRow(const std::string& dbName, const std::string& tableN
 std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableData(
     const std::string& dbName, const std::string& tableName) {
     ensureDatabaseSelected();
+
+    // Verify we are in the correct database context
+    if (current_db != dbName) {
+	    throw std::runtime_error("Database constext mismatch. Use USE " + dbName + " first.");
+    }
+
     auto& db = getCurrentDatabase();
     auto schema_it = db.table_schemas.find(tableName);
     if (schema_it == db.table_schemas.end()) {
@@ -538,17 +271,35 @@ std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableD
     }
     auto table_it = db.tables.find(tableName);
     if (table_it == db.tables.end() || !table_it->second) {
-        throw std::runtime_error("Table not initialized: " + tableName);
+	//Try to recover the table
+	try {
+		readDatabaseSchema(dbName);
+		table_it = db.tables.find(tableName);
+		if (table_it == db.tables.end() || !table_it->second) {
+			throw std::runtime_error("Table not initialized: " + tableName);
+		}
+	} catch (const std::exception& e) {
+		throw std::runtime_error("Table recovery failed: " + std::string(e.what()));
+	}
     }
 
     std::vector<std::unordered_map<std::string, std::string>> result;
-    
-    // Use range query to get all data (0 to max uint32)
-    auto data = table_it->second->select_range(0, UINT32_MAX, getTransactionId());
-    
-    for (const auto& [row_id, serialized_data] : data) {
-        std::vector<uint8_t> buffer(serialized_data.begin(), serialized_data.end());
-        result.push_back(deserializeRow(buffer, schema_it->second));
+
+    try {
+	    // Use range query to get all data (0 to max uint32)
+	    auto data = table_it->second->select_range(0, UINT32_MAX, getTransactionId());
+	    
+	    for (const auto& [row_id, serialized_data] : data) {
+		    try {
+			    std::vector<uint8_t> buffer(serialized_data.begin(), serialized_data.end());
+			    result.push_back(deserializeRow(buffer, schema_it->second));
+		    } catch (const std::exception& e) {
+			    std::cerr << "Warning: Failed to desirialize row " << row_id << " in table " << tableName << ": " << e.what() << std::endl;
+		    }
+	    }
+    } catch (const std::exception& e) {
+	    std::cerr << "Error reading table data from " << tableName << ": " << e.what() << std::endl;
+	    throw;
     }
     
     return result;
@@ -848,158 +599,6 @@ void DiskStorage::alterTable(const std::string& dbName, const std::string& table
     }
 }
 
-// Alter table operations
-/*void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName,
-                           const std::string& oldColumn, const std::string& newColumn,
-                           const std::string& newType, AST::AlterTableStatement::Action action) {
-    bool wasInTransaction = in_transaction;
-    if (!wasInTransaction) {
-        beginTransaction();
-    }
-
-    try {
-        ensureDatabaseExists(dbName);
-        auto& db = databases.at(dbName);
-        
-        if (db.tables.find(tableName) == db.tables.end()) {
-            throw std::runtime_error("Table not found: " + tableName);
-        }
-
-        auto& columns = db.table_schemas.at(tableName);
-        std::vector<DatabaseSchema::Column> newColumns = columns;
-        bool schemaChanged = false;
-	//Store rename mapping for RENAME operations
-	std::unordered_map<std::string,std::string> renameMapping;
-
-        switch (action) {
-            case AST::AlterTableStatement::ADD: {
-                // Validate the column doesn't already exist
-                for (const auto& col : columns) {
-                    if (col.name == newColumn) {
-                        throw std::runtime_error("Column already exists: " + newColumn);
-                    }
-                }
-                
-                DatabaseSchema::Column newCol;
-                newCol.name = newColumn;
-                newCol.type = DatabaseSchema::Column::parseType(newType);
-                newCol.isNullable = true;
-                newColumns.push_back(newCol);
-                schemaChanged = true;
-                break;
-            }
-            case AST::AlterTableStatement::DROP: {
-                auto it = std::remove_if(newColumns.begin(), newColumns.end(),
-                    [&oldColumn](const DatabaseSchema::Column& col) {
-                        return col.name == oldColumn;
-                    });
-                if (it != newColumns.end()) {
-                    newColumns.erase(it, newColumns.end());
-                    schemaChanged = true;
-                } else {
-                    throw std::runtime_error("Column not found: " + oldColumn);
-                }
-                break;
-            }
-            case AST::AlterTableStatement::RENAME: {
-                bool found = false;
-                for (auto& col : newColumns) {
-                    if (col.name == oldColumn) {
-			//Store the rename mapping
-			renameMapping[oldColumn] = newColumn;
-                        col.name = newColumn;
-                        schemaChanged = true;
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    throw std::runtime_error("Column not found: " + oldColumn);
-                }
-                break;
-            }
-            default:
-                throw std::runtime_error("Unsupported ALTER TABLE operation");
-        }
-
-        if (schemaChanged) {
-	    auto old_data_count = getTableData(dbName, tableName).size();
-
-            rebuildTableWithNewSchema(dbName, tableName, newColumns,renameMapping);
-	    auto new_data_count = getTableData(dbName, tableName).size();
-            if (new_data_count != old_data_count) {
-                throw std::runtime_error("Data loss detected during ALTER TABLE: had " +std::to_string(old_data_count) + " rows, now " +std::to_string(new_data_count) + " rows");
-            }
-
-	    db.table_schemas[tableName] = newColumns;
-	    std::cout <<"DEBUG: Schema updated for table'" << tableName << "' - new column will have constraits enforced:" << std::endl;
-
-        }
-        
-        if (!wasInTransaction) {
-            commitTransaction();
-        }
-
-    } catch (const std::exception& e) {
-        if (!wasInTransaction) {
-            rollbackTransaction();
-        }
-        throw;
-    }
-}*/
-
-// Bulk operations
-/*void DiskStorage::bulkInsert(const std::string& dbName, const std::string& tableName,
-                           const std::vector<std::unordered_map<std::string, std::string>>& rows) {
-    ensureDatabaseSelected();
-    auto& db = getCurrentDatabase();
-    auto schema_it = db.table_schemas.find(tableName);
-    if (schema_it == db.table_schemas.end()) {
-        throw std::runtime_error("Table not found: " + tableName);
-    }
-    auto table_it = db.tables.find(tableName);
-    if (table_it == db.tables.end() || !table_it->second) {
-        throw std::runtime_error("Table not initialized: " + tableName);
-    }
-
-    std::cout << "DEBUG BULK_INSERT: Inserting " << rows.size() << " rows into " << tableName << std::endl;
-
-    std::vector<std::pair<uint32_t, std::string>> bulk_data;
-    prepareBulkData(tableName, rows, bulk_data);
-
-    // Convert to format expected by FractalBPlusTree
-    std::vector<std::pair<int64_t, std::string>> fractal_data;
-    fractal_data.reserve(bulk_data.size());
-    for (const auto& [row_id, data] : bulk_data) {
-	std::cout << "DEBUG BULK_INSERT: Row ID " << row_id << ", data size: " << data.size() << "bytes" << std::endl;
-        fractal_data.emplace_back(row_id, data);
-    }
-
-    bool wasInTransaction = in_transaction;
-    if (!wasInTransaction) {
-	    beginTransaction();
-    }
-
-    try {
-	    table_it->second->bulk_load(fractal_data, getTransactionId());
-	    updateRowIdCounter(tableName, bulk_data.back().first + 1);
-
-	    writeDatabaseSchema(dbName);
-
-	    if (!wasInTransaction) {
-		    commitTransaction();
-	    }
-
-	    std::cout << "DEBUG BULK_INSERT: Successfully inserted " << bulk_data.size() << " rows " << std::endl;
-    } catch (const std::exception& e) {
-	    if (!wasInTransaction) {
-		    rollbackTransaction();
-	    }
-
-	    std::cerr << "Error in bulkInsert: " << e.what() <<std::endl;
-	    throw;
-    }
-}*/
 
 void DiskStorage::bulkInsert(const std::string& dbName, const std::string& tableName,
                            const std::vector<std::unordered_map<std::string, std::string>>& rows) {
@@ -1133,9 +732,23 @@ void DiskStorage::commitTransaction() {
         throw std::runtime_error("No transaction in progress");
     }
     std::cout << "DEBUG: Commiting transaction: " << current_transaction_id <<std::endl;
-    buffer_pool.flush_all();
-    checkpoint();
+    //buffer_pool.flush_all();
+    for (auto&  [dbName,db] : databases) {
+	    if(db.buffer_pool) {
+		    db.buffer_pool->flush_all();
+            std::cout <<"DEBUG: Flushed buffer pool for database: " << dbName << std::endl;
+	    }
+        if (db.wal) {
+            db.wal->checkpoint(multi_pager,dbName,0);
+            std::cout << "DEBUG: CheckPOinted WAL for database: " << dbName << std::endl;
+        }
+    }
+    multi_pager.flush_all();
+    //checkpoint();
+    writeSchema();
     in_transaction = false;
+
+    std::cout << "DEBUG: Transaction " << current_transaction_id << " commited successfullt" << std::endl;
 }
 
 /*void DiskStorage::rollbackTransaction() {
@@ -1155,7 +768,13 @@ void DiskStorage::rollbackTransaction() {
     }
     std::cout << "DEBUG: Rolling back transaction: " << current_transaction_id << std::endl;
     try {
-        buffer_pool.flush_all(); // Discard changes by flushing clean pages
+        //buffer_pool.flush_all(); // Discard changes by flushing clean pages
+	for (auto& [dbName, db] : databases) {
+		if (db.buffer_pool) {
+			db.buffer_pool->flush_all();
+		}
+	}
+	multi_pager.flush_all();
         in_transaction = false;
         current_transaction_id = 0;
     } catch (const std::exception& e) {
@@ -1177,7 +796,7 @@ void DiskStorage::compactDatabase(const std::string& dbName) {
     for (auto& [tableName, table] : db.tables) {
         table->checkpoint();
     }
-    buffer_pool.flush_all();
+    db.buffer_pool->flush_all();
 }
 
 void DiskStorage::rebuildIndexes(const std::string& dbName, const std::string& tableName) {
@@ -1193,8 +812,8 @@ void DiskStorage::rebuildIndexes(const std::string& dbName, const std::string& t
     auto& schema = db.table_schemas.at(tableName);
     
     // Create new tree
-    uint32_t new_root_id = pager.allocate_page();
-    auto new_tree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
+    uint32_t new_root_id = multi_pager.allocate_page(dbName);
+    auto new_tree = std::make_unique<FractalBPlusTree>(multi_pager, *db.wal, *db.buffer_pool, dbName, tableName, new_root_id);
     new_tree->create();
     
     // Reinsert all data
@@ -1219,44 +838,16 @@ void DiskStorage::rebuildIndexes(const std::string& dbName, const std::string& t
 }
 
 void DiskStorage::checkpoint() {
-    wal.checkpoint(pager, 0); // Use page 0 for metadata
-    buffer_pool.flush_all();
-}
-
-
-/*uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
-                                  const std::vector<DatabaseSchema::Column>& columns,
-                                  std::vector<uint8_t>& buffer) {
-    buffer.clear();
-
-    for (const auto& column : columns) {
-        auto it = row.find(column.name);
-        
-        if (it == row.end() || it->second.empty() || it->second == "NULL") {
-            if (!column.isNullable) {
-                throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be NULL");
-            }
-            // Write NULL marker (0xFFFFFFFF)
-            uint32_t null_marker = 0xFFFFFFFF;
-            buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&null_marker), 
-                         reinterpret_cast<uint8_t*>(&null_marker) + sizeof(null_marker));
-        } else {
-            const std::string& value = it->second;
-            uint32_t length = static_cast<uint32_t>(value.size());
-            
-            // Write length
-            buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&length), 
-                         reinterpret_cast<uint8_t*>(&length) + sizeof(length));
-            
-            // Write value
-            buffer.insert(buffer.end(), value.begin(), value.end());
-        }
+    //wal.checkpoint(pager, 0); // Use page 0 for metadata
+    //buffer_pool.flush_all();
+    for (auto& [dbName, db] : databases) {
+	    if(db.wal && db.buffer_pool) {
+		    db.wal->checkpoint(multi_pager, dbName, 0);
+		    db.buffer_pool->flush_all();
+	    }
     }
-
-    std::cout << "DEBUG SERIALIZE: serialized " << buffer.size() << " btes for " << columns.size() << " columns" << std::endl;
-
-    return buffer.size();
-}*/
+    multi_pager.flush_all();
+}
 
 uint32_t DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
                                   const std::vector<DatabaseSchema::Column>& columns,
@@ -1357,50 +948,6 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     return row;
 }
 
-/*std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
-    const std::vector<uint8_t>& data, const std::vector<DatabaseSchema::Column>& columns) {
-    std::unordered_map<std::string, std::string> row;
-    const uint8_t* ptr = data.data();
-    size_t remaining = data.size();
-
-    //for (const auto& column : columns) {
-    for (size_t i = 0; i<columns.size(); i++) {
-	const auto& column = columns[i];
-        if (remaining < sizeof(uint32_t)) {
-            throw std::runtime_error("Corrupted data: insufficient buffer size for column '" + column.name + "' (column " + std::to_string(i) + " of " + std::to_string(columns.size()) + "). Remaining: " + std::to_string(remaining) + " btes, need: " + std::to_string(sizeof(uint32_t)) + " bytes");
-        }
-
-        uint32_t length_or_marker;
-        memcpy(&length_or_marker, ptr, sizeof(uint32_t));
-        ptr += sizeof(uint32_t);
-        remaining -= sizeof(uint32_t);
-
-        // Check for NULL marker
-        if (length_or_marker == 0xFFFFFFFF) {
-            row[column.name] = "NULL";
-            continue;
-        }
-
-        // Regular value
-        uint32_t length = length_or_marker;
-
-        if (remaining < length) {
-            throw std::runtime_error("Corrupted data: invalid length for column " + column.name + 
-                                   ", expected " + std::to_string(length) + 
-                                   " bytes, but only " + std::to_string(remaining) + " remaining");
-        }
-
-        row[column.name] = std::string(reinterpret_cast<const char*>(ptr), length);
-        ptr += length;
-        remaining -= length;
-    }
-
-    if (remaining > 0) {
-        std::cerr << "WARNING: " << remaining << " bytes remaining after deserialization" << std::endl;
-    }
-
-    return row;
-}*/
 
 
 void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
@@ -1416,10 +963,14 @@ void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std
     
     // Get all data with their actual row IDs from the original tree
     auto all_data_with_ids = table_it->second->select_range(1, UINT32_MAX, getTransactionId());
+
+    // Get all data and rebuild the tree
+    //auto data = getTableData(dbName, tableName);
+    //auto& schema = db.table_schemas.at(table_name);
     
     // Create new tree with new schema 
-    uint32_t new_root_id = pager.allocate_page();
-    auto newTree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
+    uint32_t new_root_id = multi_pager.allocate_page(dbName);
+    auto newTree = std::make_unique<FractalBPlusTree>(multi_pager, *db.wal, *db.buffer_pool, dbName, tableName, new_root_id);
     newTree->create();
     
     // Reinsert all rows with their original row IDs and new schema
@@ -1511,147 +1062,6 @@ void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std
     writeSchema();
 }
 
-/*void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName,
-                                          const std::vector<DatabaseSchema::Column>& newSchema) {
-    auto& db = databases.at(dbName);
-    auto& oldSchema = db.table_schemas.at(tableName);
-    
-    //std::cout << "BACKUP: Saving current data for table " << tableName << std::endl;
-    
-    // Read data using OLD schema
-    auto oldData = getTableDataWithSchema(dbName, tableName, oldSchema);
-    //std::cout << "BACKUP: Found " << oldData.size() << " rows to migrate" << std::endl;
-    
-    // Get the actual row IDs and serialized data from the original table
-    auto table_it = db.tables.find(tableName);
-    if (table_it == db.tables.end() || !table_it->second) {
-        throw std::runtime_error("Table not initialized: " + tableName);
-    }
-    
-    // Get all data with their actual row IDs from the original tree
-    auto all_data_with_ids = table_it->second->select_range(1, UINT32_MAX, getTransactionId());
-    //std::cout << "BACKUP: Retrieved " << all_data_with_ids.size() << " rows with IDs from original table" << std::endl;
-    
-    // Data consistency check
-    if (all_data_with_ids.size() != oldData.size()) {
-        std::stringstream error_msg;
-        error_msg << "Data inconsistency: retrieved " << all_data_with_ids.size() 
-                  << " row IDs but have " << oldData.size() << " data rows";
-        throw std::runtime_error(error_msg.str());
-    }
-    
-    // Create new tree with new schema 
-    uint32_t new_root_id = pager.allocate_page();
-    auto newTree = std::make_unique<FractalBPlusTree>(pager, wal, buffer_pool, tableName, new_root_id);
-    newTree->create();
-    
-    // Reinsert all rows with their original row IDs and new schema
-    std::vector<std::pair<int64_t, std::string>> bulk_data;
-    bulk_data.reserve(oldData.size());
-    
-    uint32_t row_index = 0;
-    for (const auto& [actual_row_id, old_serialized_data] : all_data_with_ids) {
-        if (row_index >= oldData.size()) {
-            std::cerr << "WARNING: More row IDs than data rows found" << std::endl;
-            break;
-        }
-        
-        const auto& old_row = oldData[row_index++];
-        std::unordered_map<std::string, std::string> newRow;
-        
-        // Copy all existing data from the old row
-        for (const auto& [col_name, value] : old_row) {
-            newRow[col_name] = value;
-        }
-        
-        // Add NULL values for new columns
-        for (const auto& newCol : newSchema) {
-            if (newRow.find(newCol.name) == newRow.end()) {
-                newRow[newCol.name] = "NULL";
-            }
-        }
-        
-        // Serialize with NEW schema
-        std::vector<uint8_t> buffer;
-        try {
-            serializeRow(newRow, newSchema, buffer);
-            bulk_data.emplace_back(actual_row_id, std::string(buffer.begin(), buffer.end()));
-            //std::cout << "MIGRATING: Row ID " << actual_row_id << " with " << newRow.size() << " columns" << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "MIGRATING: Failed to serialize row ID " << actual_row_id << ": " << e.what() << std::endl;
-            throw;
-        }
-    }
-    
-    //std::cout << "MIGRATION: Prepared " << bulk_data.size() << " rows for bulk load" << std::endl;
-    
-    // Bulk load with original row IDs
-    if (!bulk_data.empty()) {
-        try {
-            auto transaction_id = getTransactionId();
-            //std::cout << "BULK_LOAD: Starting bulk load of " << bulk_data.size() << " rows with transaction ID " << transaction_id << std::endl;
-            newTree->bulk_load(bulk_data, transaction_id);
-            //std::cout << "SUCCESS: Migrated " << bulk_data.size() << " rows to new schema" << std::endl;
-            
-            // Immediate verification - read directly from the tree
-            //std::cout << "IMMEDIATE_VERIFICATION: Reading data directly from new tree" << std::endl;
-            auto immediate_data = newTree->select_range(1, UINT32_MAX, transaction_id);
-            //std::cout << "IMMEDIATE_VERIFICATION: Found " << immediate_data.size() << " rows" << std::endl;
-            
-            for (const auto& [row_id, data] : immediate_data) {
-                //std::cout << "IMMEDIATE_VERIFICATION: Row ID " << row_id << " - Data size: " << data.size() << " bytes" << std::endl;
-                // Try to deserialize to verify data integrity
-                try {
-                    auto row = deserializeRow(std::vector<uint8_t>(data.begin(), data.end()), newSchema);
-                    //std::cout << "IMMEDIATE_VERIFICATION: Row " << row_id << " deserialized successfully" << std::endl;
-                } catch (const std::exception& e) {
-                    std::cerr << "IMMEDIATE_VERIFICATION: Failed to deserialize row " << row_id << ": " << e.what() << std::endl;
-                }
-            }
-            
-        } catch (const std::exception& e) {
-            std::cerr << "ERROR: Bulk load failed: " << e.what() << std::endl;
-            throw std::runtime_error("Bulk load failed: " + std::string(e.what()));
-        }
-    } else {
-        std::cout << "WARNING: No data to migrate" << std::endl;
-    }
-    
-    // Verify the migration worked by reading back from the new tree
-    auto transaction_id = getTransactionId();
-    auto verify_data = newTree->select_range(1, UINT32_MAX, transaction_id);
-    //std::cout << "VERIFICATION: Using transaction ID " << transaction_id << " - New table has " << verify_data.size() << " rows" << std::endl;
-    
-    *for (const auto& [row_id, data] : verify_data) {
-        std::cout << "VERIFY: Row ID " << row_id << " - Data size: " << data.size() << " bytes" << std::endl;
-    }*
-    
-    if (verify_data.size() != oldData.size()) {
-        std::stringstream error_msg;
-        error_msg << "Data loss detected during ALTER TABLE: had " 
-                  << oldData.size() << " rows, now " << verify_data.size() << " rows";
-        
-        // Additional debug info
-        //error_msg << "\nOriginal data count: " << oldData.size();
-        //error_msg << "\nRow IDs retrieved: " << all_data_with_ids.size();
-        //error_msg << "\nBulk data prepared: " << bulk_data.size();
-        //error_msg << "\nNew tree verification: " << verify_data.size();
-        
-        throw std::runtime_error(error_msg.str());
-    }
-    
-    // Replace old tree and update schema
-    db.tables[tableName] = std::move(newTree);
-    db.table_schemas[tableName] = newSchema;
-    db.root_page_ids[tableName] = new_root_id;
-    
-    // Preserve the row ID counter
-    updateRowIdCounter(tableName, db.next_row_id);
-    
-    writeSchema();
-    
-    //std::cout << "SCHEMA_MIGRATION: Completed successfully for table " << tableName << std::endl;
-}*/
 std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableDataWithSchema(const std::string& dbName, const std::string& tableName,const std::vector<DatabaseSchema::Column>& schema){
     
     ensureDatabaseSelected();
@@ -1690,9 +1100,22 @@ void DiskStorage::ensureDatabaseSelected() const {
         throw std::runtime_error("No database selected");
     }
 }
-void DiskStorage::ensureDatabaseExists(const std::string& dbName) const {
+/*void DiskStorage::ensureDatabaseExists(const std::string& dbName) const {
     if (!databaseExists(dbName)) {
         throw std::runtime_error("Database does not exist: " + dbName);
+    }
+}*/
+
+void DiskStorage::ensureDatabaseExists(const std::string& dbName) const {
+    if (databases.find(dbName) == databases.end()) {
+        // Check if file exists on disk even if not in memory
+        if (multi_pager.database_exists(dbName)) {
+            // This is unusual - file exists but not in memory
+            // We should add it to databases map
+            const_cast<DiskStorage*>(this)->databases[dbName] = Database();
+        } else {
+            throw std::runtime_error("Database does not exist: " + dbName);
+        }
     }
 }
 
@@ -1719,16 +1142,25 @@ void DiskStorage::shutdown(){
 		writeSchema();
 
 		//Flush bufferpool
-		buffer_pool.flush_all();
+		for (auto& [dbName, db] : databases) {
+			if(db.buffer_pool) {
+				db.buffer_pool->flush_all();
+			} if (db.wal) {
+                db.wal->checkpoint(multi_pager, dbName, 0);
+            }
+		}
+		multi_pager.flush_all();
 
 		//Create checkpoint
-		checkpoint();
+		//multi_pager.checkpoint();
+        writeSchema();
 
 		std::cout<<"Storage shutdown complete" <<std::endl;
 	}catch (const std::exception& e){
 		std::cerr<<"Error during shutdown: "<< e.what() <<std::endl;
 	}
 }
+
 void DiskStorage::emergencyDataRecovery(const std::string& dbName, const std::string& tableName) {
     std::cout << "EMERGENCY DATA RECOVERY for table: " << tableName << std::endl;
 
@@ -1821,9 +1253,10 @@ void DiskStorage::writeDatabaseSchema(const std::string& dbName) {
     ensureDatabaseExists(dbName);
     
     try {
-        uint32_t metadata_page = getDatabaseMetadataPage(dbName);
+        //uint32_t metadata_page = getDatabaseMetadataPage(dbName);
         auto& db = databases.at(dbName);
         
+        uint32_t metadata_page = 0;
         Node db_node = {};
         db_node.header.type = PageType::METADATA;
         db_node.header.page_id = metadata_page;
@@ -2074,10 +1507,9 @@ void DiskStorage::writeDatabaseSchema(const std::string& dbName) {
         }
 
         // Write the page
-        pager.write_page(metadata_page, &db_node);
+        multi_pager.write_page(dbName, metadata_page, &db_node);
         
-        std::cout << "Database schema written for '" << dbName << "' to page " << metadata_page 
-                  << " (" << offset << " bytes used)" << std::endl;
+        std::cout << "Database schema written for '" << dbName << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "Error writing database schema for '" << dbName << "': " << e.what() << std::endl;
@@ -2089,15 +1521,31 @@ void DiskStorage::readDatabaseSchema(const std::string& dbName) {
     ensureDatabaseExists(dbName);
 
     try {
-        uint32_t metadata_page = database_metadata_pages.at(dbName);
+        //uint32_t metadata_page = database_metadata_pages.at(dbName);
         auto& db = databases.at(dbName);
 
-        Node db_node;
-        pager.read_page(metadata_page, &db_node);
-
-        if (db_node.header.type != PageType::METADATA) {
-            throw std::runtime_error("Page " + std::to_string(metadata_page) + " is not a database metadata page");
+        if (!db.wal) {
+            db.wal = std::make_unique<WriteAheadLog>("databases/" + dbName + "_wal");
         }
+
+        if (!db.buffer_pool) {
+            db.buffer_pool = std::make_unique<BufferPool>(1000);
+        }
+
+        Node db_node;
+        //pager.read_page(metadata_page, &db_node);
+	     multi_pager.read_page(dbName, 0, &db_node);
+
+         if (db_node.header.type != PageType::METADATA) {
+             std::cout << " SCHEMA_WARNING: Page 0 is not a metadata type, Initializing fresh schema" << std::endl;
+         }
+
+	//Verify this is actually a metadatpage for expected database
+	    std::string page_info(reinterpret_cast<const char*>(db_node.data));
+
+        /*if (db_node.header.type != PageType::METADATA) {
+            throw std::runtime_error("Page " + std::to_string(metadata_page) + " is not a database metadata page");
+        }*/
 
         const uint8_t* data = reinterpret_cast<const uint8_t*>(db_node.data);
         uint32_t offset = 0;
@@ -2325,8 +1773,12 @@ void DiskStorage::readDatabaseSchema(const std::string& dbName) {
 
             // Initialize FractalBPlusTree for the table
             try {
+                std::cout << "Loading table '" << table_name << "' with root page " << root_page_id << std::endl;
+                Node test_node;
+                multi_pager.read_page(dbName,root_page_id,&test_node);
+                std::cout << "Root page " << root_page_id << " has type: " << static_cast<int>(test_node.header.type) << ", keys: " << test_node.header.num_keys << ", messages:  " << test_node.header.num_messages << std::endl;
                 db.tables[table_name] = std::make_unique<FractalBPlusTree>(
-                    pager, wal, buffer_pool, dbName + "." + table_name, root_page_id);
+                    multi_pager, *db.wal, *db.buffer_pool,dbName, dbName + "." + table_name, root_page_id);
 
                 std::cout << "Initialized table '" << table_name << "' in database '" << dbName
                           << "' with root page " << root_page_id << std::endl;
@@ -2386,7 +1838,8 @@ void DiskStorage::readDatabaseSchema(const std::string& dbName) {
         std::cerr << "Error reading database schema for '" << dbName << "': " << e.what() << std::endl;
         // Clear the database to avoid partial state
         databases.erase(dbName);
-        database_metadata_pages.erase(dbName);
+        //auto& db  = databases.at(db_name);
+        //database_metadata_pages.erase(dbName);
         throw;
     }
 }
@@ -2395,9 +1848,19 @@ void DiskStorage::initializeNewDatabase(const std::string& dbName) {
 	databases[dbName] = Database();
 	databases[dbName].next_row_id = 1;
 
-	getDatabaseMetadataPage(dbName);
+	//getDatabaseMetadataPage(dbName);
+    
+    Node metadata_page = {};
+    metadata_page.header.type = PageType::METADATA;
+    metadata_page.header.page_id = 0;
+    multi_pager.write_page(dbName, 0, &metadata_page);
+
+    //Initialize per-database WAL and BufferPool
+    databases[dbName].wal = std::make_unique<WriteAheadLog>("databases/" + dbName + "_WAL");
+    databases[dbName].buffer_pool = std::make_unique<BufferPool>(1000);
 
 	writeDatabaseSchema(dbName);
+    std::cout << "DB_SAFE: Initialized database '" << dbName << "' with metadata on page" << std::endl;
 }
 
 void DiskStorage::writeSchema() {
@@ -2405,7 +1868,7 @@ void DiskStorage::writeSchema() {
         std::cout << "Writing complete schema (global + all databases)" << std::endl;
         
         // write global metadata (database list and mappings)
-        writeGlobalMetadata();
+        //writeGlobalMetadata();
         
         // Then write each database's schema
         for (const auto& [dbName, _] : databases) {

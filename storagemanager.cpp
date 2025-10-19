@@ -1,4 +1,5 @@
 #include "storagemanager.h"
+#include "multifilepager.h"
 #include <stdexcept>
 #include <thread>
 #include <sstream>
@@ -32,6 +33,10 @@ namespace {
     }
 }
 
+//const uint32_t FREE_PAGE_MAGIC = 0x46524545; //"FREE"
+const uint32_t MAX_DATABASE_PAGES = 100000; //100k pges per database
+const uint32_t DATABASE_PAGE_RANGE_SIZE = 1000; //Allocate in chuncks of 1000 pages
+
 // Pager implementation
 Pager::Pager(const std::string& fname) : filename(fname) {
     // Try to open existing file first
@@ -60,7 +65,15 @@ Pager::Pager(const std::string& fname) : filename(fname) {
         Node metadata_page = {};
         metadata_page.header.type = PageType::METADATA;
         metadata_page.header.page_id = 0;
+	metadata_page.header.database_id = 0;//system database
+	metadata_page.header.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         write_page(0, &metadata_page);
+
+	//Initialize free page management
+	initialize_free_page_management();
+    } else {
+	    //Recover existing free list
+	    recover();
     }
 
     try {
@@ -75,7 +88,22 @@ Pager::~Pager() {
     file.close();
 }
 
-void Pager::read_page(uint32_t page_id, Node* node) {
+void Pager::initialize_free_page_management() {
+	std::lock_guard<std::mutex> lock(page_mutex);
+
+	//Page 0 is always used for gloabal metadata
+	// Start free list from page 1
+	free_list_head = 1;
+	free_list_tail = 1;
+
+	//nitialize first free page header
+	write_free_page_header(1, 0, 0, 0); //0 region size means we'll discover it
+	
+	std::cout << "Free page management initialized" << std::endl;
+}
+
+
+void Pager::read_page(uint32_t page_id, Node* node) const{
     file.seekg(page_id * BPTREE_PAGE_SIZE, std::ios::beg);
     file.read(reinterpret_cast<char*>(node), BPTREE_PAGE_SIZE);
     if (!file) throw std::runtime_error("Failed to read page " + std::to_string(page_id));
@@ -122,8 +150,17 @@ void Pager::write_page(uint32_t page_id, const Node* node) {
 
 
 uint32_t Pager::allocate_page() {
+    std::lock_guard<std::mutex> lock(page_mutex);
+
+    //First try o allocate from free list
+    uint32_t page_id = allocate_from_free_list();
+    if(page_id != 0) {
+	    return page_id;
+    }
+
+    //If no free pages, allocate new page at the end of the file
     file.seekp(0, std::ios::end);
-    uint32_t page_id = file.tellp() / BPTREE_PAGE_SIZE;
+    page_id = file.tellp() / BPTREE_PAGE_SIZE;
     
     // Create the new page by extending the file
     uint64_t new_size = (page_id + 1) * BPTREE_PAGE_SIZE;
@@ -134,11 +171,370 @@ uint32_t Pager::allocate_page() {
     // Initialize the new page
     Node node = {};
     node.header.page_id = page_id;
+    node.header.database_id = 0; //Will be set by caller
+    node.header.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch()).count();
     write_page(page_id, &node);
-    
+
+    std::cout <<"Allocated new page: " << page_id <<std::endl;
     return page_id;
 }
 
+uint32_t Pager::allocate_high_page() {
+	return allocate_page(); //For now iuse same mechanism
+}
+
+uint32_t Pager::allocate_page_for_database(const std::string& db_name) {
+	std::lock_guard<std::mutex> lock(page_mutex);
+
+	auto it = database_ranges.find(db_name);
+	if (it == database_ranges.end()) {
+		throw std::runtime_error("Database not registered: " + db_name);
+	}
+
+	auto& range = it->second;
+
+	//Firs try database's own free pages
+	if (!range.free_pages.empty()) {
+		uint32_t page_id = range.free_pages.back();
+		range.free_pages.pop_back();
+		return page_id;
+	}
+
+	//Then try from global free list
+	uint32_t page_id = allocate_from_free_list();
+	if (page_id != 0) {
+		return page_id;
+	}
+
+	//Allocate new page and assign to database range
+	if (range.current_page >= range.end_page) {
+		//Extend database range
+		range.end_page += DATABASE_PAGE_RANGE_SIZE;
+	}
+
+	page_id = range.current_page++;
+
+	//Extend file if necessary
+	uint64_t required_size = (page_id + 1) * BPTREE_PAGE_SIZE;
+	file.seekp(0, std::ios::end);
+	uint64_t current_size = file.tellp();
+
+	if (required_size > current_size) {
+		file.seekp(required_size - 1,std::ios::beg);
+		file.put('\0');
+		file.flush();
+	}
+
+	//Initiallize the page with database onership
+	Node node = {};
+	node.header.page_id = page_id;
+	node.header.database_id = range.database_id;
+	node.header.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	write_page(page_id, &node);
+
+	// Update ownership mapping
+	update_page_ownership(page_id, db_name);
+
+	return page_id;
+}
+
+uint32_t Pager::allocate_from_free_list() {
+	if (free_list_head == 0) {
+		return 0; //No freepages
+	}
+
+	//Read the free page header
+	FreePageHeader header = read_free_page_header(free_list_head);
+
+	uint32_t allocated_page = free_list_head;
+
+	if (header.free_region_size > 1) {
+		//Allocate from contagious region
+		free_list_head++;
+		header.free_region_size--;
+
+		// Update the free region header
+		write_free_page_header(free_list_head, header.next_free_page,header.prev_free_page, header.free_region_size);
+
+		if (header.prev_free_page != 0) {
+			FreePageHeader prev_header = read_free_page_header(header.prev_free_page);
+			prev_header.next_free_page = free_list_head;
+			write_free_page_header(header.prev_free_page,prev_header.next_free_page, prev_header.prev_free_page,prev_header.free_region_size);
+		}
+	} else {
+		//Alocate single page
+		free_list_head = header.next_free_page;
+
+		if (free_list_head != 0) {
+			FreePageHeader new_head = read_free_page_header(free_list_head);
+			new_head.prev_free_page = 0;
+
+			write_free_page_header(free_list_head, new_head.next_free_page, new_head.prev_free_page, new_head.free_region_size);
+		}
+
+		if (free_list_tail == allocated_page) {
+			free_list_tail = header.prev_free_page;
+		}
+	}
+
+	free_pages.erase(allocated_page);
+	return allocated_page;
+}
+
+void Pager::release_page(uint32_t page_id) {
+	std::lock_guard<std::mutex> lock(page_mutex);
+	add_to_free_list(page_id);
+}
+
+void Pager::release_pages(const std::vector<uint32_t>& page_ids) {
+	std::lock_guard<std::mutex> lock(page_mutex);
+
+	//sort pages to potentially create contigious regions
+	std::vector<uint32_t> sorted_pages = page_ids;
+	std::sort(sorted_pages.begin(),sorted_pages.end());
+
+	for (uint32_t page_id : sorted_pages) {
+		add_to_free_list(page_id);
+	}
+
+	//Try to merge contigious free regions
+	defragment_free_space();
+}
+
+void Pager::add_to_free_list(uint32_t page_id) {
+	//Write free page header
+	write_free_page_header(page_id, free_list_head,0,1);
+
+	if (free_list_head != 0) {
+		FreePageHeader old_head = read_free_page_header(free_list_head);
+		old_head.prev_free_page = page_id;
+		write_free_page_header(free_list_head, old_head.next_free_page,old_head.prev_free_page, old_head.free_region_size);
+	}
+
+	free_list_head = page_id;
+	if (free_list_tail == 0) {
+		free_list_tail = page_id;
+	}
+
+	free_pages.insert(page_id);
+}
+
+void Pager::defragment_free_space() {
+	if (free_list_head == 0) return;
+
+	std::vector<uint32_t> free_list;
+	uint32_t current = free_list_head;
+
+	//Build sorted list of free pages
+	while (current != 0) {
+		free_list.push_back(current);
+		FreePageHeader header = read_free_page_header(current);
+		current = header.next_free_page;
+	}
+
+	std::sort(free_list.begin(),free_list.end());
+
+	//Rebild free list with merged contiguos regions
+	free_list_head = 0;
+	free_list_tail = 0;
+	
+	size_t i = 0;
+	while (i < free_list.size()) {
+		uint32_t start_page = free_list[1];
+		uint32_t region_size = 1;
+
+		//Find contagious region
+		while (i + region_size < free_list.size() && free_list[i + region_size] == start_page + region_size) {
+			region_size++;
+		}
+
+		//Add merged region to free list
+		if (free_list_head == 0) {
+			free_list_head = start_page;
+			free_list_tail = start_page;
+		} else {
+			FreePageHeader tail_header = read_free_page_header(free_list_tail);
+			tail_header.next_free_page = start_page;
+			write_free_page_header(free_list_tail, tail_header.next_free_page,tail_header.prev_free_page,tail_header.free_region_size);
+			free_list_tail = start_page;
+		}
+
+		write_free_page_header(start_page,0,free_list_tail,region_size);
+		i += region_size;
+	}
+}
+
+void Pager::register_database(const std::string& db_name, uint32_t start_page) {
+	std::lock_guard<std::mutex> lock(page_mutex);
+
+	if (database_ranges.find(db_name) != database_ranges.end()) {
+		throw std::runtime_error("Database already registered: " + db_name);
+	}
+
+	DatabasePageRange range;
+	range.database_id = next_database_id++;
+	range.database_name = db_name;
+	if (start_page == 0) {
+		//Auto assign page range
+		file.seekp(0, std::ios::end);
+		range.start_page = (file.tellp() / BPTREE_PAGE_SIZE) + 1000; //Start after current end + buffer
+	} else {
+		range.start_page = start_page;
+	}
+
+	range.end_page = range.start_page + DATABASE_PAGE_RANGE_SIZE;
+	range.current_page = range.start_page;
+
+	database_ranges[db_name] = range;
+
+	std::cout << "Registered database '" <<db_name << "'  with page range [" << range.start_page << "-" <<range.end_page << "]" << std::endl;
+}
+
+void Pager::unregister_database(const std::string& db_name) {
+	std::lock_guard<std::mutex> lock(page_mutex);
+
+	auto it = database_ranges.find(db_name);
+	if (it == database_ranges.end()) {
+		throw std::runtime_error("Database not registered: " + db_name);
+	}
+
+	//Release all pages owned b this database
+	const auto& range = it->second;
+	std::vector<uint32_t> pages_to_free;
+
+	//For now just remove range reistration
+	database_ranges.erase(it);
+
+	std::cout << "Unregistered database: " << db_name <<std::endl;
+}
+
+void Pager::update_page_ownership(uint32_t page_id,const std::string& db_name) {
+	page_to_database_map[page_id] = db_name;
+}
+
+bool Pager::validate_page_ownership(uint32_t page_id, const std::string& expected_db) const{
+	if (page_id == 0) return true; //Gloabal metadata page
+	
+	try {
+		auto it = page_to_database_map.find(page_id);
+		if (it != page_to_database_map.end()) {
+			return it->second == expected_db;
+		}
+
+		Node node;
+		read_page(page_id, &node);
+
+		//Find which dtabase owns this page
+		for (const auto& [db_name, range] : database_ranges) {
+			if (node.header.database_id == range.database_id) {
+				// Cache this mapping
+				const_cast<Pager*>(this)->page_to_database_map[page_id] = db_name;
+				return db_name == expected_db;
+			}
+		}
+
+		//Page not owned b any registered database 
+		//return false;
+		return expected_db == "system" || expected_db.empty();
+
+	} catch (...) {
+		return false;
+	}
+}
+
+uint32_t Pager::get_database_id(const std::string& db_name) const{
+	auto it = database_ranges.find(db_name);
+	if (it != database_ranges.end()) {
+		return it->second.database_id;
+	}
+	return 0; //0 = sstem database
+}
+
+void Pager::write_free_page_header(uint32_t page_id,uint32_t next_free,uint32_t prev_free, uint32_t region_size) {
+	Node node = {};
+	node.header.page_id = page_id;
+	node.header.type = PageType::METADATA;//Special type for free pages
+	
+	FreePageHeader free_header;
+	free_header.magic_number = FREE_PAGE_MAGIC;
+	free_header.next_free_page = next_free;
+	free_header.prev_free_page = prev_free;
+	free_header.free_region_size = region_size;
+
+	memcpy(node.data, &free_header, sizeof(FreePageHeader));
+	write_page(page_id, &node);
+}
+
+FreePageHeader Pager::read_free_page_header(uint32_t page_id) {
+	Node node;
+	read_page(page_id,&node);
+
+	FreePageHeader header;
+	memcpy(&header, node.data, sizeof(FreePageHeader));
+
+	if (header.magic_number != FREE_PAGE_MAGIC) {
+		throw std::runtime_error("Invalid freepage header at apge " + std::to_string(page_id));
+	}
+
+	return header;
+}
+
+void Pager::recover() {
+	std::cout << "Recovering free page list..." << std::endl;
+
+	//Scan the file to rebuild free list
+	file.seekg(0,std::ios::end);
+	uint32_t total_pages = file.tellg() / BPTREE_PAGE_SIZE;
+
+	free_list_head = 0;
+	free_list_tail = 0;
+	free_pages.clear(); 
+
+	for (uint32_t page_id = 1; page_id < total_pages; ++page_id) {
+		try {
+			Node node;
+			read_page(page_id, &node);
+
+			if (node.header.type == PageType::METADATA) {
+				//Check if it is a free page
+				FreePageHeader free_header;
+				memcpy(&free_header, node.data, sizeof(FreePageHeader));
+
+				if (free_header.magic_number == FREE_PAGE_MAGIC) {
+					add_to_free_list(page_id);
+				}
+			}
+		}catch (...) {
+			//Page might be corrupted skip
+			continue;
+		}
+	}
+
+	std::cout << "Recovery complete. Free pages: " << free_pages.size() <<std::endl;
+}
+
+std::string Pager::get_database_stats() const {
+	std::stringstream ss;
+	ss<< "Database Page Allocation Statistics:\n";
+	ss << "Total free pages: " << free_pages.size() << "\n";
+	ss << "Free list head: " << free_list_head << ",tail: " << free_list_tail << "\n";
+
+	for (const auto& [db_name, range] :database_ranges) {
+		ss << "Database '" << db_name << "' (ID: " << range.database_id << "): pages " << range.start_page << "-" << range.end_page <<", freepages: " << range.free_pages.size() << "\n";
+	}
+
+	return ss.str();
+}
+
+uint32_t Pager::get_total_pages() const {
+	std::fstream& non_const_file = const_cast<std::fstream&>(file);
+	non_const_file.seekg(0, std::ios::end);
+	return non_const_file.tellg() / BPTREE_PAGE_SIZE;
+}
+
+uint32_t Pager::get_free_pages_count() const {
+	return free_pages.size();
+}
 
 uint64_t Pager::write_data_block(const std::string& data) {
     file.seekp(0, std::ios::end);
@@ -386,7 +782,7 @@ void WriteAheadLog::log_operation(const std::string& op, uint32_t page_id, const
     log_file.flush();
 }
 
-void WriteAheadLog::checkpoint(Pager& pager, uint32_t metadata_page_id) {
+void WriteAheadLog::checkpoint(MultiFilePager& multi_pager,const std::string& db_name, uint32_t metadata_page_id) {
     log_operation("CHECKPOINT", metadata_page_id, nullptr);
 }
 
@@ -424,13 +820,13 @@ BufferPool::BufferPool(size_t max_size) : max_pages(max_size) {
 #endif
 }
 
-Node* BufferPool::get_page(Pager& pager, uint32_t page_id) {
+Node* BufferPool::get_page(MultiFilePager& pager, const std::string& db_name, uint32_t page_id) {
     std::lock_guard<std::mutex> lock(cache_mutex);
     if (cache.find(page_id) != cache.end()) {
         return &cache[page_id];
     }
     Node node;
-    pager.read_page(page_id, &node);
+    pager.read_page(db_name, page_id, &node);
     if (cache.size() >= max_pages) {
         cache.erase(cache.begin());
     }
@@ -438,11 +834,11 @@ Node* BufferPool::get_page(Pager& pager, uint32_t page_id) {
     return &cache[page_id];
 }
 
-void BufferPool::write_page(Pager& pager, WriteAheadLog& wal, uint32_t page_id, const Node* node) {
+void BufferPool::write_page(MultiFilePager& multi_pager, const std::string& db_name, WriteAheadLog& wal, uint32_t page_id, const Node* node) {
     std::lock_guard<std::mutex> lock(cache_mutex);
     cache[page_id] = *node;
     wal.log_operation("WRITE", page_id, node);
-    pager.write_page(page_id, node);
+    multi_pager.write_page(db_name,page_id, node);
 }
 
 void BufferPool::evict_page(uint32_t page_id) {
@@ -455,25 +851,69 @@ void BufferPool::flush_all() {
     cache.clear();
 }
 
-// FractalBPlusTree implementation
-FractalBPlusTree::FractalBPlusTree(Pager& p, WriteAheadLog& w, BufferPool& bp, const std::string& tname, uint32_t root_id): pager(p), wal(w), buffer_pool(bp), table_name(tname), root_page_id(root_id) ,neon_supported(detect_neon_support()){
-    try{
-             Node root;
-             pager.read_page(root_id, &root);
-             if (root.header.type != PageType::INTERNAL && root.header.type != PageType::LEAF) {
-		 std::cout<<"Initializing new tree for table: " << tname << std::endl;
-                 root.header.type = PageType::LEAF;
-                 root.header.page_id = root_id;
-                 root.header.num_keys = 0;
-                 root.header.num_messages = 0;
-                 root.header.version = 0;
-                 write_node(root_id, &root, 0);
-	     }
-    }catch (const std::exception& e){
-	    std::cerr <<"Error initilizing tree for table " <<tname << ":" << e.what() << std::endl;
-	    throw;
+// FractalBPlusTree implementation 
+FractalBPlusTree::FractalBPlusTree(MultiFilePager& mp, WriteAheadLog& w, BufferPool& bp,
+                                  const std::string& db_name, const std::string& tname,
+                                  uint32_t root_id):
+    multi_pager(mp), wal(w), buffer_pool(bp), database_name(db_name),
+    table_name(tname), root_page_id(root_id), neon_supported(detect_neon_support()) {
+
+    if (root_id == 0) {
+        throw std::runtime_error("FATAL: Page 0 cannot be used as B+ tree root");
+    }
+
+    try {
+        Node root;
+        multi_pager.read_page(db_name, root_id, &root);
+
+        // CRITICAL FIX: Always correct page type for B+ tree pages
+        if (root.header.type == PageType::METADATA && root_id != 0) {
+            std::cout << "PAGE_TYPE_FIX: Converting page " << root_id
+                      << " from METADATA to LEAF for table " << tname << std::endl;
+            root.header.type = PageType::LEAF;
+            multi_pager.write_page(db_name, root_id, &root);
+        }
+
+        if(root.header.num_messages > 0) {
+            std::cout << "STARTUP_FLUSH: Flushing " << root.header.num_messages << " pending messages for table " << tname << std::endl;
+            flush_messages(&root, root_id, 0);
+
+            std::cout << "STARTUP_FLUSH: Completed - page now has " << root.header.num_keys << " keys " << std::endl;
+        }
+
+        // Only initialize if truly empty
+        bool should_initialize = (root.header.num_keys == 0 &&
+                                 root.header.num_messages == 0 &&
+                                 root.header.next_page_id == 0 &&
+                                 root.header.prev_page_id == 0);
+
+        if (should_initialize) {
+            // Verify data area is actually empty
+            bool data_empty = true;
+            for (size_t i = 0; i < sizeof(root.data); i++) {
+                if (root.data[i] != 0) {
+                    data_empty = false;
+                    break;
+                }
+            }
+
+            if (data_empty) {
+                std::cout << "INIT_EMPTY_TREE: Initializing empty B+ tree" << std::endl;
+                root.header.type = PageType::LEAF;
+                root.header.page_id = root_id;
+                root.header.num_keys = 0;
+                root.header.num_messages = 0;
+                root.header.version = 0;
+                multi_pager.write_page(db_name, root_id, &root);
+            }
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR: Failed to initialize tree: " << e.what() << std::endl;
+        throw;
     }
 }
+
 
 bool FractalBPlusTree::has_neon_support() const {
     //return neon_supported;
@@ -662,29 +1102,47 @@ bool FractalBPlusTree::memory_usage_high() {
 }
 
 Node* FractalBPlusTree::get_node(uint32_t page_id) {
-    return buffer_pool.get_page(pager, page_id);
+    return buffer_pool.get_page(multi_pager,database_name, page_id);
 }
 
-
-void FractalBPlusTree::write_node(uint32_t page_id, const Node* node, uint64_t transaction_id) {
+void FractalBPlusTree::write_node(const std::string& db_name, uint32_t page_id, const Node* node, uint64_t transaction_id) {
     // Create a copy of the node to avoid modifying the original
     Node node_copy = *node;
-    
+
+    if (page_id != 0 && node_copy.header.type == PageType::METADATA){
+        node_copy.header.type = PageType::LEAF;
+        std::cout << "WRITE_FIX: Ensuring page " << page_id << " is LEAF type, not METADATA" << std::endl;
+    }
+
+    // Compression logic (keep existing)
     if (node_copy.header.num_keys >= 10 && !(node_copy.header.num_keys & (1U << 31))) {
         compress_node_optimized(&node_copy);
     }
-    
+
     {
         std::lock_guard<std::mutex> lock(version_mutex);
         versioned_nodes[transaction_id].push_back(node_copy);
     }
-    
-    // Write to buffer pool and WAL
-    buffer_pool.write_page(pager, wal, page_id, &node_copy);
-    
-    //std::cout << "WRITE_NODE: Wrote page " << page_id << " with " << node_copy.header.num_keys 
-              //<< " keys, compressed: " << ((node_copy.header.num_keys & (1U << 31)) ? "yes" : "no") 
-              //<< std::endl;
+
+    // CRITICAL: Ensure page type is preserved
+    // Never overwrite a LEAF/INTERNAL page with METADATA type
+    if (node_copy.header.type == PageType::METADATA && 
+        (node_copy.header.num_keys > 0 || node_copy.header.num_messages > 0)) {
+        // This is actually a B+ tree node, fix the type
+        node_copy.header.type = PageType::LEAF;
+        std::cout << "FIXED_PAGE_TYPE: Page " << page_id << " corrected from METADATA to LEAF" << std::endl;
+    }
+
+    // Write to multi_pager FIRST to ensure disk persistence
+    multi_pager.write_page(db_name, page_id, &node_copy);
+
+    // Then write to buffer pool and WAL for caching and logging
+    buffer_pool.write_page(multi_pager, db_name, wal, page_id, &node_copy);
+
+    std::cout << "PERSISTED_NODE: Wrote page " << page_id << " to disk for table " << table_name
+              << " [keys: " << node_copy.header.num_keys
+              << ", messages: " << node_copy.header.num_messages
+              << ", type: " << static_cast<int>(node_copy.header.type) << "]" << std::endl;
 }
 
 
@@ -847,57 +1305,6 @@ void FractalBPlusTree::decompress_node(Node* node) {
     node->header.num_keys &= ~(1U << 31);*/
 }
 
-/*void FractalBPlusTree::compress_node(Node* node) {
-    // Don't compress already compressed nodes or very small nodes
-    if (node->header.num_keys & (1U << 31) || node->header.num_keys < 10) {
-        return;
-    }
-
-    char temp[BPTREE_PAGE_SIZE];
-    
-    // SAFER: Only copy and compress the actual USED portion of the buffer
-    // Estimate used size conservatively
-    size_t estimated_used_size = node->header.num_keys * (MAX_KEY_PREFIX + sizeof(KeyValue)) +
-                                node->header.num_messages * sizeof(Message) +
-                                1024; // Safety margin
-    
-    size_t copy_size = std::min(estimated_used_size, BPTREE_PAGE_SIZE - sizeof(PageHeader));
-    memcpy(temp, node->data, copy_size);
-
-    size_t compressed_size = ZSTD_compress(
-        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader),
-        temp, copy_size,  // Only compress what we actually copied
-        1
-    );
-
-    if (ZSTD_isError(compressed_size)) {
-        // If compression fails, restore original data
-        memcpy(node->data, temp, copy_size);
-        std::cerr << "Zstd node compression failed: " <<
-            ZSTD_getErrorName(compressed_size) << ", keeping uncompressed" << std::endl;
-    } else {
-        node->header.num_keys |= (1U << 31);
-    }
-}
-
-void FractalBPlusTree::decompress_node(Node* node) {
-    if (!(node->header.num_keys & (1U << 31))) return;
-
-    char temp[BPTREE_PAGE_SIZE];
-    size_t decompressed_size = ZSTD_decompress(
-        temp, BPTREE_PAGE_SIZE - sizeof(PageHeader),
-        node->data, BPTREE_PAGE_SIZE - sizeof(PageHeader)
-    );
-
-    if (ZSTD_isError(decompressed_size)) {
-        throw std::runtime_error("Zstd node decompression failed: " +
-            std::string(ZSTD_getErrorName(decompressed_size)));
-    }
-
-    // SAFER: Only copy back the decompressed data, not the entire buffer
-    memcpy(node->data, temp, decompressed_size);
-    node->header.num_keys &= ~(1U << 31);
-}*/
 
 
 bool FractalBPlusTree::is_node_full(const Node* node) {
@@ -941,7 +1348,7 @@ void FractalBPlusTree::split_node(uint32_t page_id, Node* node, uint32_t parent_
     Node* parent = parent_page_id ? get_node(parent_page_id) : nullptr;
     Node new_node = {};
     new_node.header.type = node->header.type;
-    new_node.header.page_id = pager.allocate_page();
+    new_node.header.page_id = multi_pager.allocate_page(database_name);
     new_node.header.parent_page_id = parent_page_id;
     new_node.header.version = transaction_id;
 
@@ -990,19 +1397,19 @@ void FractalBPlusTree::split_node(uint32_t page_id, Node* node, uint32_t parent_
             Node* next = get_node(node->header.next_page_id);
             next->header.prev_page_id = new_node.header.page_id;
             compress_node_optimized(next);
-            write_node(next->header.page_id, next, transaction_id);
+            write_node(database_name,next->header.page_id, next, transaction_id);
         }
         node->header.next_page_id = new_node.header.page_id;
     }
 
     compress_node_optimized(node);
     compress_node_optimized(&new_node);
-    write_node(new_node.header.page_id, &new_node, transaction_id);
+    write_node(database_name, new_node.header.page_id, &new_node, transaction_id);
 
     if (!parent) {
         parent = new Node();
         parent->header.type = PageType::INTERNAL;
-        parent->header.page_id = pager.allocate_page();
+        parent->header.page_id = multi_pager.allocate_page(database_name);
         parent->header.version = transaction_id;
         root_page_id.store(parent->header.page_id);
     }
@@ -1021,8 +1428,8 @@ void FractalBPlusTree::split_node(uint32_t page_id, Node* node, uint32_t parent_
            children, sizeof(uint32_t) * parent->header.num_keys);
 
     compress_node_optimized(parent);
-    write_node(parent->header.page_id, parent, transaction_id);
-    write_node(page_id, node, transaction_id);
+    write_node(database_name,parent->header.page_id, parent, transaction_id);
+    write_node(database_name,page_id, node, transaction_id);
 }
 
 void FractalBPlusTree::merge_nodes(uint32_t page_id, Node* node, uint32_t parent_page_id, uint64_t transaction_id) {
@@ -1086,13 +1493,13 @@ void FractalBPlusTree::merge_nodes(uint32_t page_id, Node* node, uint32_t parent
                     Node* next = get_node(node->header.next_page_id);
                     next->header.prev_page_id = sibling_page_id;
                     compress_node_optimized(next);
-                    write_node(next->header.page_id, next, transaction_id);
+                    write_node(database_name,next->header.page_id, next, transaction_id);
                 }
             }
 
             compress_keys_optimized(sibling->data, sibling_keys, sibling->header.num_keys);
             compress_node_optimized(sibling);
-            write_node(sibling_page_id, sibling, transaction_id);
+            write_node(database_name,sibling_page_id, sibling, transaction_id);
 
             for (uint32_t i = node_index; i < parent->header.num_keys; ++i) {
                 parent_keys[i - 1] = parent_keys[i];
@@ -1121,13 +1528,13 @@ void FractalBPlusTree::merge_nodes(uint32_t page_id, Node* node, uint32_t parent
                     Node* next = get_node(sibling->header.next_page_id);
                     next->header.prev_page_id = page_id;
                     compress_node_optimized(next);
-                    write_node(next->header.page_id, next, transaction_id);
+                    write_node(database_name,next->header.page_id, next, transaction_id);
                 }
             }
 
             compress_keys_optimized(node->data, node_keys, node->header.num_keys);
             compress_node_optimized(node);
-            write_node(page_id, node, transaction_id);
+            write_node(database_name,page_id, node, transaction_id);
 
             for (uint32_t i = node_index + 1; i < parent->header.num_keys; ++i) {
                 parent_keys[i - 1] = parent_keys[i];
@@ -1140,11 +1547,11 @@ void FractalBPlusTree::merge_nodes(uint32_t page_id, Node* node, uint32_t parent
         memcpy(parent->data + parent->header.num_keys * MAX_KEY_PREFIX,
                children, sizeof(uint32_t) * (parent->header.num_keys + 1));
         compress_node_optimized(parent);
-        write_node(parent_page_id, parent, transaction_id);
+        write_node(database_name,parent_page_id, parent, transaction_id);
 
         if (parent->header.num_keys == 0) {
             root_page_id.store(merge_with_left ? sibling_page_id : page_id);
-            write_node(root_page_id.load(), merge_with_left ? sibling : node, transaction_id);
+            write_node(database_name,root_page_id.load(), merge_with_left ? sibling : node, transaction_id);
         }
     }
 }
@@ -1296,71 +1703,11 @@ void FractalBPlusTree::flush_messages(Node* node, uint32_t page_id, uint64_t tra
     compress_node_optimized(node);
 
     std::cout << "DEBUG: Step 5 - Writing node..." << std::endl;
-    write_node(page_id, node, transaction_id);
+    write_node(database_name,page_id, node, transaction_id);
 
     std::cout << "DEBUG flush_messages: Completed successfully" << std::endl;
 }
 
-/*void FractalBPlusTree::flush_messages(Node* node, uint32_t page_id, uint64_t transaction_id) {
-    decompress_node_optimized(node);
-    compact_messages(node);
-
-    if (node->header.type == PageType::LEAF) {
-        KeyValue kvs[BPTREE_ORDER];
-        memcpy(kvs, node->data + node->header.num_keys * MAX_KEY_PREFIX,
-               sizeof(KeyValue) * node->header.num_keys);
-
-        Message messages[MAX_MESSAGES];
-        memcpy(messages, node->data + node->header.num_keys * MAX_KEY_PREFIX +
-               sizeof(KeyValue) * node->header.num_keys, sizeof(Message) * node->header.num_messages);
-
-        // Process messages in order (newest first)
-        for (uint32_t i = 0; i < node->header.num_messages; ++i) {
-            bool found = false;
-
-            // Look for existing key-value pair
-            for (uint32_t j = 0; j < node->header.num_keys; ++j) {
-                if (kvs[j].key == messages[i].key) {
-                    if (messages[i].type == MessageType::DELETE) {
-                        // Remove the key-value pair
-                        for (uint32_t k = j; k < node->header.num_keys - 1; ++k) {
-                            kvs[k] = kvs[k + 1];
-                        }
-                        node->header.num_keys--;
-                    } else if (messages[i].type == MessageType::UPDATE ||
-                              messages[i].type == MessageType::INSERT) {
-                        // Update the value
-                        kvs[j].value_offset = messages[i].value_offset;
-                        kvs[j].value_length = messages[i].value_length;
-                    }
-                    found = true;
-                    break;
-                }
-            }
-
-            // If not found and it's an INSERT/UPDATE, add new key-value pair
-            if (!found && (messages[i].type == MessageType::INSERT ||
-                          messages[i].type == MessageType::UPDATE)) {
-                if (node->header.num_keys < BPTREE_ORDER) {
-                    kvs[node->header.num_keys].key = messages[i].key;
-                    kvs[node->header.num_keys].value_offset = messages[i].value_offset;
-                    kvs[node->header.num_keys].value_length = messages[i].value_length;
-                    node->header.num_keys++;
-                }
-            }
-        }
-
-        // Write back the updated key-value pairs
-        memcpy(node->data + node->header.num_keys * MAX_KEY_PREFIX,
-               kvs, sizeof(KeyValue) * node->header.num_keys);
-
-        // Clear all messages
-        node->header.num_messages = 0;
-    }
-
-    compress_node_optimized(node);
-    write_node(page_id, node, transaction_id);
-}*/
 
 
 void FractalBPlusTree::adaptive_flush(Node* node, uint32_t page_id, uint64_t transaction_id) {
@@ -1399,7 +1746,7 @@ void FractalBPlusTree::update_secondary_index(const std::string& index_name, int
     // and update the appropriate entries
 
     compress_node_optimized(node);
-    write_node(index_root, node, transaction_id);
+    write_node(database_name,index_root, node, transaction_id);
 }
 
 void FractalBPlusTree::create() {
@@ -1409,10 +1756,10 @@ void FractalBPlusTree::create() {
     root.header.num_keys = 0;
     root.header.num_messages = 0;
     root.header.version = 0;
-    write_node(0, &root, 0);
+    write_node(database_name,0, &root, 0);
     memset(root.data, 0, sizeof(root.data));
 
-    write_node(root_page_id.load(), &root, 0);
+    write_node(database_name,root_page_id.load(), &root, 0);
     //std::cout << "TREE_CREATE: Created new tree with root page " << root_page_id.load() << std::endl;
 
 }
@@ -1425,9 +1772,10 @@ void FractalBPlusTree::drop() {
 
 void FractalBPlusTree::insert(int64_t key, const std::string& value, uint64_t transaction_id,
                              const std::map<std::string, std::string>& secondary_keys) {
-    uint64_t value_offset = pager.write_data_block(value);
+    uint64_t value_offset = multi_pager.write_data_block(database_name,value);
     uint32_t value_length = value.size();
 
+    multi_pager.flush_all();
     bool use_tm = begin_transaction();
     if (!use_tm) {
         transaction_fallback();
@@ -1470,7 +1818,7 @@ void FractalBPlusTree::insert(int64_t key, const std::string& value, uint64_t tr
                sizeof(KeyValue) * node->header.num_keys, messages, sizeof(Message) * node->header.num_messages);
 
         compress_node_optimized(node);
-        write_node(current_page_id, node, transaction_id);
+        write_node(database_name,current_page_id, node, transaction_id);
 
         for (const auto& sk : secondary_keys) {
             update_secondary_index(sk.first, key, sk.second, transaction_id, MessageType::INSERT);
@@ -1495,7 +1843,7 @@ void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t tr
               << ", value_size=" << value.size() 
               << ", txn=" << transaction_id << std::endl;
 
-    uint64_t value_offset = pager.write_data_block(value);
+    uint64_t value_offset = multi_pager.write_data_block(database_name,value);
     uint32_t value_length = value.size();
 
     std::cout << "DEBUG: Value written to offset=" << value_offset 
@@ -1619,115 +1967,6 @@ void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t tr
         throw;
     }
 }
-/*void FractalBPlusTree::update(int64_t key, const std::string& value, uint64_t transaction_id,
-                             const std::map<std::string, std::string>& secondary_keys) {
-    std::cout << "DEBUG FractalBPlusTree ::Update: starting update for key=" << key << ", value_size=" << value.size() << ", txn=" << transaction_id << std::endl;
-    uint64_t value_offset = pager.write_data_block(value);
-    uint32_t value_length = value.size();
-
-    std::cout << "DEBUG: Valuewritten to offset=" << value_offset << ", length=" << value_length << std::endl;
-
-    bool use_tm = begin_transaction();
-    if (!use_tm) {
-        transaction_fallback();
-    }
-
-    try {
-        uint32_t current_page_id = root_page_id.load();
-        Node* node = get_node(current_page_id);
-	std::cout << "DEBUG: ROOT page id=" << current_page_id << std::endl;
-
-	if (!node) {
-		throw std::runtime_error("Failed to get root node for update");
-	}
-
-	std::cout << "DEBUG: Got root node, type= " << (node->header.type == PageType::LEAF ? "LEAF" : "INTERNAL") << ", num_keys=" << node->header.num_keys << std::endl;
-
-        // Traverse to the leaf node containing the key
-        while (node->header.type == PageType::INTERNAL) {
-            uint32_t child_index = find_child_index(node, key);
-	    std::cout << "DEBUG: Internal node traversal, child_index=" << child_index << std::endl;
-            uint32_t children[BPTREE_ORDER + 1];
-	    if (node->header.num_keys > BPTREE_ORDER) {
-		    throw std::runtime_error("Corrupted node: too many keys");
-	    }
-            memcpy(children, node->data + node->header.num_keys * MAX_KEY_PREFIX,
-                   sizeof(uint32_t) * (node->header.num_keys + 1));
-            current_page_id = children[child_index];
-            node = get_node(current_page_id);
-	    std::cout << "DEBUG: Movingto child page ID=" << current_page_id << std::endl;
-	    if (!node) {
-		    throw std::runtime_error("Failed to get child node during update traversal");
-	    }
-        }
-
-	std::cout << "DEBUG: Reached leaf node, page_id=" <<current_page_id << ", num_kes=" << node->header.num_keys << ",num_messages" <<node->header.num_messages << std::endl;
-        decompress_node_optimized(node);
-
-        // Check if we need to split due to too many messages
-        if (is_node_full(node)) {
-	    std::cout << "DEBUG: Node is full, splitting..." << std::endl;
-            split_node(current_page_id, node, node->header.parent_page_id, transaction_id);
-            node = get_node(current_page_id);
-	    if (!node) {
-		    throw std::runtime_error("Failed to get node after split");
-	    }
-            decompress_node_optimized(node);
-        }
-
-        Message msg;
-        msg.type = MessageType::UPDATE;
-        msg.key = key;
-        msg.value_offset = value_offset;
-        msg.value_length = value_length;
-        msg.version = transaction_id;
-
-	std::cout << "DEBUG: Created messagefor keys=" << key << ", offset=" << value_offset << ", length=" << value_length << std::endl;
-
-        // Get existing messages
-        Message messages[MAX_MESSAGES + 1];
-	size_t messages_offset = node->header.num_keys * MAX_KEY_PREFIX + sizeof(KeyValue) * node->header.num_keys;
-
-	std::cout << "DEBUG: Messages_offset=" << messages_offset << ", num_messages=" << node->header.num_messages << std::endl;
-	if (messages_offset + sizeof(Message) * node->header.num_messages > sizeof(node->data)) {
-		throw std::runtime_error("Message data exceeds node buffer");
-	}
-        memcpy(messages, node->data + node->header.num_keys * MAX_KEY_PREFIX +
-               sizeof(KeyValue) * node->header.num_keys, sizeof(Message) * node->header.num_messages);
-
-        // Add new message
-        messages[node->header.num_messages++] = msg;
-
-	if (messages_offset + sizeof(Message) * node->header.num_messages > sizeof(node->data)) {
-		throw std::runtime_error("Cannot write messages - buffer overflow");
-	}
-        memcpy(node->data + node->header.num_keys * MAX_KEY_PREFIX +
-               sizeof(KeyValue) * node->header.num_keys, messages, sizeof(Message) * node->header.num_messages);
-
-        compress_node_optimized(node);
-        write_node(current_page_id, node, transaction_id);
-
-        // Update secondary indexes if any
-        for (const auto& sk : secondary_keys) {
-            update_secondary_index(sk.first, key, sk.second, transaction_id, MessageType::UPDATE);
-        }
-
-        // Force flush to ensure update is applied immediately
-        flush_messages(node, current_page_id, transaction_id);
-
-        std::cout << "FractalBPlusTree UPDATE: key=" << key << ", value_size=" << value.size()
-                  << ", txn=" << transaction_id << std::endl;
-
-        if (use_tm) {
-            end_transaction();
-        }
-    } catch (...) {
-        if (use_tm) {
-            // Transaction would abort automatically on exception
-        }
-        throw;
-    }
-}*/
 
 
 void FractalBPlusTree::remove(int64_t key, uint64_t transaction_id,
@@ -1766,7 +2005,7 @@ void FractalBPlusTree::remove(int64_t key, uint64_t transaction_id,
                sizeof(KeyValue) * node->header.num_keys, messages, sizeof(Message) * node->header.num_messages);
 
         compress_node_optimized(node);
-        write_node(current_page_id, node, transaction_id);
+        write_node(database_name,current_page_id, node, transaction_id);
 
         for (const auto& sk : secondary_keys) {
             update_secondary_index(sk.first, key, sk.second, transaction_id, MessageType::DELETE);
@@ -1812,7 +2051,7 @@ std::string FractalBPlusTree::select(int64_t key, uint64_t transaction_id) {
                 return "";
             }
             try {
-                return pager.read_data_block(messages[i].value_offset, messages[i].value_length);
+                return multi_pager.read_data_block(database_name,messages[i].value_offset, messages[i].value_length);
             } catch (const std::exception& e) {
                 std::cerr << "Error reading data block for message (key=" << key
                           << ", offset=" << messages[i].value_offset
@@ -1831,7 +2070,7 @@ std::string FractalBPlusTree::select(int64_t key, uint64_t transaction_id) {
     for (uint32_t i = 0; i < node->header.num_keys; ++i) {
         if (kvs[i].key == key) {
             try {
-                return pager.read_data_block(kvs[i].value_offset, kvs[i].value_length);
+                return multi_pager.read_data_block(database_name,kvs[i].value_offset, kvs[i].value_length);
             } catch (const std::exception& e) {
                 std::cerr << "Error reading data block for KV (key=" << key
                           << ", offset=" << kvs[i].value_offset
@@ -1852,6 +2091,12 @@ uint64_t transaction_id) {
     //std::cout << "SELECT_RANGE: Starting at root page ID " << current_page_id << std::endl;
     
     Node* node = get_node(current_page_id);
+
+    if (node->header.num_messages > 0 ) {
+        std::cout << " SELECT_FLUSHING: Flushing " << node->header.num_messages << " messages before query " << std::endl;
+        flush_messages(node, current_page_id, transaction_id);
+        node = get_node(current_page_id);
+    }
     decompress_node_optimized(node);
     
     //std::cout << "SELECT_RANGE: Root node type: " << (node->header.type == PageType::LEAF ? "LEAF" : "INTERNAL") << ", num_keys: " << node->header.num_keys << std::endl;
@@ -1903,7 +2148,7 @@ uint64_t transaction_id) {
 
         // Add visible data to result
         for (const auto& kv : visible_data) {
-            result.emplace_back(kv.first, pager.read_data_block(kv.second.first, kv.second.second));
+            result.emplace_back(kv.first, multi_pager.read_data_block(database_name,kv.second.first, kv.second.second));
         }
 
         if (node->header.next_page_id && kvs[node->header.num_keys - 1].key <= end_key) {
@@ -1918,14 +2163,14 @@ uint64_t transaction_id) {
 }
 
 void FractalBPlusTree::create_secondary_index(const std::string& index_name) {
-    uint32_t index_root = pager.allocate_page();
+    uint32_t index_root = multi_pager.allocate_page(database_name);
     Node root;
     root.header.type = PageType::LEAF;
     root.header.page_id = index_root;
     root.header.num_keys = 0;
     root.header.num_messages = 0;
     root.header.version = 0;
-    write_node(index_root, &root, 0);
+    write_node(database_name,index_root, &root, 0);
     secondary_indexes[index_name] = index_root;
 }
 
@@ -2030,7 +2275,7 @@ void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& d
                 continue;
             }
             
-            uint64_t value_offset = pager.write_data_block(kv_pair.second);
+            uint64_t value_offset = multi_pager.write_data_block(database_name,kv_pair.second);
             
             size_t pos = current_node->header.num_keys + i;
             keys[pos] = kv_pair.first;
@@ -2055,7 +2300,7 @@ void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& d
         if (current_index < all_data.size() && current_node->header.num_keys >= BPTREE_ORDER - 10) {
             Node new_node = {};
             new_node.header.type = PageType::LEAF;
-            new_node.header.page_id = pager.allocate_page();
+            new_node.header.page_id = multi_pager.allocate_page(database_name);
             new_node.header.num_keys = 0;
             new_node.header.num_messages = 0;
             
@@ -2065,7 +2310,7 @@ void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& d
             
             // Write current node
             compress_node_optimized(current_node);
-            write_node(current_page_id, current_node, transaction_id);
+            write_node(database_name,current_page_id, current_node, transaction_id);
             
             // Move to new node
             prev_page_id = current_page_id;
@@ -2077,7 +2322,7 @@ void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& d
 
     // Write the final node
     compress_node_optimized(current_node);
-    write_node(current_page_id, current_node, transaction_id);
+    write_node(database_name,current_page_id, current_node, transaction_id);
     
     // Verify the rebuild worked
     try {
@@ -2095,72 +2340,6 @@ void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& d
     std::cout << "BULK_LOAD: Completed successfully" << std::endl;
 }
 
-/*void FractalBPlusTree::bulk_load(std::vector<std::pair<int64_t, std::string>>& data,
-                                uint64_t transaction_id) {
-    if (data.empty()) {
-        //std::cout << "BULK_LOAD: No data to load" << std::endl;
-        return;
-    }
-    
-    std::sort(data.begin(), data.end());
-    //std::cout << "BULK_LOAD: Starting bulk load of " << data.size() << " rows" << std::endl;
-
-    uint32_t current_page_id = root_page_id.load();
-    Node* node = get_node(current_page_id);
-    decompress_node_optimized(node);
-    
-    for (size_t i = 0; i < data.size(); i++) {
-        const auto& kv = data[i];
-        
-        //std::cout << "BULK_LOAD: Processing row " << (i+1) << "/" << data.size() 
-                  //<< ", key: " << kv.first << std::endl;
-        
-        if (is_node_full(node)) {
-            //std::cout << "BULK_LOAD: Node full, splitting" << std::endl;
-            split_node(current_page_id, node, node->header.parent_page_id, transaction_id);
-            current_page_id = root_page_id.load();
-            node = get_node(current_page_id);
-            decompress_node_optimized(node);
-        }
-        
-        // Process the key-value pair
-        uint64_t value_offset = pager.write_data_block(kv.second);
-        
-        // Get existing keys and values
-        int64_t keys[BPTREE_ORDER];
-        KeyValue kvs[BPTREE_ORDER];
-        
-        if (node->header.num_keys > 0) {
-            decompress_keys_optimized(keys, node->data, node->header.num_keys);
-            memcpy(kvs, node->data + node->header.num_keys * MAX_KEY_PREFIX,
-                   sizeof(KeyValue) * node->header.num_keys);
-        }
-        
-        // Add new key-value pair
-        keys[node->header.num_keys] = kv.first;
-        kvs[node->header.num_keys].key = kv.first;
-        kvs[node->header.num_keys].value_offset = value_offset;
-        kvs[node->header.num_keys].value_length = kv.second.size();
-        
-        node->header.num_keys++;
-        
-        // Write back compressed keys and values
-        compress_keys_optimized(node->data, keys, node->header.num_keys);
-        memcpy(node->data + node->header.num_keys * MAX_KEY_PREFIX,
-               kvs, sizeof(KeyValue) * node->header.num_keys);
-        
-        // Write the node
-        write_node(current_page_id, node, transaction_id);
-        
-        // Refresh node pointer for next iteration
-        if (i < data.size() - 1) {
-            node = get_node(current_page_id);
-            decompress_node_optimized(node);
-        }
-    }
-    
-    //std::cout << "BULK_LOAD: Completed successfully, inserted " << data.size() << " rows" << std::endl;
-}*/
 void FractalBPlusTree::checkpoint() {
-    wal.checkpoint(pager, root_page_id.load());
+    wal.checkpoint(multi_pager,database_name, root_page_id.load());
 }
