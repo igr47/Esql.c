@@ -471,11 +471,19 @@ namespace fractal {
         DatabaseState& dbState = getDatabase(dbName);
         validateTableAccess(dbName, tableName);
 
+        TableInfo& tableInfo = dbState.tables[tableName];
         uint64_t txn_id = getTransactionId();
 
         try {
+            size_t deleted_count = 0;
             for (uint32_t row_id : row_ids) {
-                dbState.tables[tableName].tree->remove(row_id, txn_id);
+                std::string current_data = tableInfo.tree->select(row_id,txn_id);
+                if (!current_data.empty()) {
+                    tableInfo.tree->remove(row_id,txn_id);
+                    deleted_count++;
+                } else {
+                    std::cout << "Row " << row_id << " not found, skipping delete" << std::endl;
+                }
             }
 
             std::cout << "Bulk deleted " << row_ids.size() << " rows from table: " << tableName << std::endl;
