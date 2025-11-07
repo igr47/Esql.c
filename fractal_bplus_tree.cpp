@@ -947,13 +947,22 @@ namespace fractal {
         
         // Start with existing key-values
         for (uint32_t i = 0; i < node->header.key_count; ++i) {
-            final_state[keys[i]] = kvs[i];
-            std::cout << "DEBUG: Initial key " << keys[i] << std::endl;
+            if (keys[i] != kvs[i].value_offset > 0 && kvs[i].value_length > 0 && kvs[i].value_length < 65536) {
+                final_state[keys[i]] = kvs[i];
+                std::cout << "DEBUG: Initial valid  key " << keys[i] << " with offset " << kvs[i].value_offset << std::endl;
+            } else {
+                std::cout << "DEBUG: Skipping invalid base key " << keys[i] << " offset=" << kvs[i].value_offset<< " length=" << kvs[i].value_length << std::endl;
+            }
         }
         
         // Apply messages in order
         for (const auto& message : sorted_messages) {
-            std::cout << "DEBUG: Applying message key=" << message.key<< " type=" << static_cast<int>(message.type) << std::endl;
+            std::cout << "DEBUG: Applying message key=" << message.key<< " type=" << static_cast<int>(message.type) << " offset=" << message.value_offset << "  length=" << message.value_length << std::endl;
+
+            if (message.value_length > 65536) {
+                std::cerr << "WARNING: Skipping message with invalid length: " << message.value_length << std::endl;
+                continue;
+            }
             switch (message.type) {
                 case MessageType::INSERT:
                 case MessageType::UPDATE:
@@ -977,10 +986,16 @@ namespace fractal {
             if (new_index >= BPTREE_ORDER) {
                 throw std::runtime_error("Node overflow during message application");
             }
+
+            if (kv.value_length == 0 || kv.value_length > 65536) {
+                std::cerr << "WARNING: Skipping key " << key << " with invalid length " << kv.value_length << std::endl;
+                    continue;
+            }
             
             keys[new_index] = key;
             kvs[new_index] = kv;
-            std::cout << "DEBUG: Final key " << key << " at index " << new_index << std::endl;
+            std::cout << "DEBUG: Final key " << key << " at index " << new_index <<  " offset=" << kv.value_offset << " length=" << kv.value_length << std::endl;
+
             new_index++;
         }
         
@@ -990,6 +1005,7 @@ namespace fractal {
         total_messages -= node->header.message_count;
         memory_usage -= node->header.message_count * sizeof(Message);
         node->header.message_count = 0;
+        std::cout << "DEBUG: apply_messages_to_key_values completed. Final key count: " << new_index << std::endl;
     }
 
     void FractalBPlusTree::apply_single_message(Page* node, const Message& message) {
@@ -1076,6 +1092,14 @@ namespace fractal {
     }
 
     void FractalBPlusTree::insert_key_value_into_leaf(Page* leaf, int64_t key, uint64_t value_offset, uint32_t value_length) {
+        if (value_length == 0 || value_length > 65536) {
+            throw std::runtime_error("Invalid value length: " + std::to_string(value_length));
+        }
+
+        if (leaf->header.key_count >= BPTREE_ORDER) {
+            throw std::runtime_error("Leaf node is full");
+        }
+
         int64_t* keys = reinterpret_cast<int64_t*>(leaf->data);
         KeyValue* kvs = get_key_values(leaf);
 
@@ -1093,9 +1117,12 @@ namespace fractal {
 
         // Insert new key-value
         keys[insert_index] = key;
+        kvs[insert_index].key = key;
         kvs[insert_index].value_offset = value_offset;
         kvs[insert_index].value_length = value_length;
         leaf->header.key_count++;
+
+        std::cout << "DEBUG: insert_key_value_into_leaf - key: " << key << ", offset: " << value_offset<< ", length: " << value_length << std::endl;
     }
 
     void FractalBPlusTree::insert_key_into_internal(Page* internal, int64_t key, uint32_t child_page_id) {
@@ -1302,10 +1329,22 @@ namespace fractal {
                 }
             }
 
-            uint64_t offset = db_file->allocate_data_block(table_id, data.size());
+            // Validation for data size
+            if (data.size() > 65536) { // 1MB limit per value
+                throw std::runtime_error("Data too large for storage: " + std::to_string(data.size()));
+            }
+
+            // Store the actual data length separately for verification
+            uint32_t actual_length = data.size();
+
+            uint64_t offset = db_file->allocate_data_block(table_id, sizeof(uint32_t) + actual_length);
         
+            // First write the length
+            db_file->write_data_block(offset, reinterpret_cast<const char*>(&actual_length), sizeof(uint32_t));
             // Write actual data
-            db_file->write_data_block(offset, data.data(), data.size());
+            db_file->write_data_block(offset + sizeof(uint32_t), data.data(), actual_length);
+
+            std::cout << "DEBUG: write_data_block - offset: " << offset << ", actual_length: " << actual_length << ", table_id: " << table_id << std::endl;
         
             return offset;
         } catch (const std::exception& e) {
@@ -1314,7 +1353,7 @@ namespace fractal {
         }
     }
 
-    std::string FractalBPlusTree::read_data_block(uint64_t offset, uint32_t length) {
+    /*std::string FractalBPlusTree::read_data_block(uint64_t offset, uint32_t length) {
         std::cout << "DEBUG: read_data_block(offset=" << offset << ", length=" << length << ")" << std::endl;
         try {
             // Create buffer and read data
@@ -1331,7 +1370,53 @@ namespace fractal {
             std::cerr << "Faied to read data block at offset " << offset << ": " << e.what() << std::endl;
             throw;
         }
+    }*/
+
+    std::string FractalBPlusTree::read_data_block(uint64_t offset, uint32_t length) {
+    std::cout << "DEBUG: read_data_block(offset=" << offset << ", length=" << length << ")" << std::endl;
+
+    // Validate inputs
+    if (length == 0 || length > 65536) {
+        throw std::runtime_error("Invalid data length: " + std::to_string(length));
     }
+
+    if (offset == 0) {
+        throw std::runtime_error("Invalid data offset: 0");
+    }
+
+    try {
+        // Read the actual length that we stored
+        uint32_t actual_length;
+        db_file->read_data_block(offset, reinterpret_cast<char*>(&actual_length), sizeof(uint32_t));
+
+        if (actual_length > 65536) {
+            throw std::runtime_error("Corrupted data length: " + std::to_string(actual_length));
+        }
+
+        if (actual_length != length) {
+            std::cout << "WARNING: Length mismatch in read_data_block! "
+                      << "stored_length=" << length << ", actual_length=" << actual_length << std::endl;
+            // Use the smaller length for safety
+            length = std::min(length, actual_length);
+        }
+
+        std::vector<char> buffer(length);
+        db_file->read_data_block(offset + sizeof(uint32_t), buffer.data(), length);
+
+        // Validate the data isn't all zeros
+        bool all_zeros = std::all_of(buffer.begin(), buffer.end(), [](char c) { return c == 0; });
+        if (all_zeros) {
+            throw std::runtime_error("Read zero-filled data block at offset " + std::to_string(offset));
+        }
+
+        std::string result(buffer.data(), length);
+        std::cout << "DEBUG: read_data_block returning string of length " << result.size() << std::endl;
+        return result;
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to read data block at offset " << offset << " length " << length << ": " << e.what() << std::endl;
+        throw;
+    }
+}
 
     uint32_t FractalBPlusTree::find_left_sibling(uint32_t page_id, uint32_t parent_page_id) {
         Page* parent = get_page(parent_page_id, false);
@@ -1410,19 +1495,19 @@ namespace fractal {
     }
 
     KeyValue* FractalBPlusTree::get_key_values(Page* node) {
-        return reinterpret_cast<KeyValue*>(node->data + node->header.key_count * sizeof(int64_t));
+        return reinterpret_cast<KeyValue*>(node->data + (BPTREE_ORDER * sizeof(int64_t)));
     }
 
     const KeyValue* FractalBPlusTree::get_key_values(const Page* node) const {
-        return reinterpret_cast<const KeyValue*>(node->data + node->header.key_count * sizeof(int64_t));
+        return reinterpret_cast<const KeyValue*>(node->data + (BPTREE_ORDER * sizeof(int64_t)));
     }
 
     Message* FractalBPlusTree::get_messages(Page* node) {
-        return reinterpret_cast<Message*>(node->data + node->header.key_count * sizeof(int64_t) + node->header.key_count * sizeof(KeyValue));
+        return reinterpret_cast<Message*>(node->data + (BPTREE_ORDER * sizeof(int64_t)) + (BPTREE_ORDER * sizeof(KeyValue)));
     }
 
     const Message* FractalBPlusTree::get_messages(const Page* node) const {
-        return reinterpret_cast<const Message*>(node->data + node->header.key_count * sizeof(int64_t) + node->header.key_count * sizeof(KeyValue));
+        return reinterpret_cast<const Message*>(node->data + (BPTREE_ORDER * sizeof(int64_t)) + (BPTREE_ORDER * sizeof(KeyValue)));
     }
 
     void FractalBPlusTree::create_new_root(uint32_t left_child, uint32_t right_child, int64_t split_key, uint64_t transaction_id) {

@@ -793,7 +793,7 @@ namespace fractal {
     }
 
     // Serialization
-    std::string DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row, const std::vector<DatabaseSchema::Column>& columns) const {
+    /*std::string DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row, const std::vector<DatabaseSchema::Column>& columns) const {
         std::ostringstream oss;
 
         for (const auto& column : columns) {
@@ -811,8 +811,12 @@ namespace fractal {
                 oss.write(value.c_str(), length);
             }
         }
-
-        return oss.str();
+        
+        std::string result = oss.str();
+        
+        // Debug output
+        std::cout << "DEBUG: Serialized row - total size: " << result.size()<< ", columns: " << columns.size() << std::endl;
+        return result;
     }
 
     std::unordered_map<std::string,std::string> DiskStorage::deserializeRow( const std::string& data, const std::vector<DatabaseSchema::Column>& columns) const {
@@ -822,6 +826,10 @@ namespace fractal {
 
         for (size_t i = 0; i < columns.size() && remaining > 0; i++) {
             const auto& column = columns[i];
+
+            if (remaining < sizeof(uint32_t)) {
+                throw std::runtime_error("Invalid row data: insufficient data for length prefix");
+            }
 
             if (remaining >= sizeof(uint32_t)) {
                 // Read length
@@ -850,7 +858,86 @@ namespace fractal {
         }
 
         return row;
+    }*/
+
+    std::string DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
+                                     const std::vector<DatabaseSchema::Column>& columns) const {
+    std::ostringstream oss;
+
+    for (const auto& column : columns) {
+        auto it = row.find(column.name);
+
+        // Better NULL handling
+        if (it == row.end() || it->second.empty() || it->second == "NULL") {
+            uint32_t null_marker = 0xFFFFFFFF;
+            oss.write(reinterpret_cast<const char*>(&null_marker), sizeof(null_marker));
+        } else {
+            const std::string& value = it->second;
+            uint32_t length = value.size();
+
+            // Validate length
+            if (length > 65535) { // Reasonable limit
+                throw std::runtime_error("Value too long for column: " + column.name);
+            }
+
+            oss.write(reinterpret_cast<const char*>(&length), sizeof(length));
+            oss.write(value.c_str(), length);
+        }
     }
+
+    std::string result = oss.str();
+
+    // Debug output
+    std::cout << "DEBUG: Serialized row - total size: " << result.size()
+              << ", columns: " << columns.size() << std::endl;
+
+    return result;
+}
+
+std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
+    const std::string& data, const std::vector<DatabaseSchema::Column>& columns) const {
+
+    std::unordered_map<std::string, std::string> row;
+    const char* ptr = data.data();
+    size_t remaining = data.size();
+
+    std::cout << "DEBUG: Deserializing row - data size: " << data.size()
+              << ", columns: " << columns.size() << std::endl;
+
+    for (size_t i = 0; i < columns.size() && remaining > 0; i++) {
+        const auto& column = columns[i];
+
+        if (remaining < sizeof(uint32_t)) {
+            throw std::runtime_error("Invalid row data: insufficient data for length prefix");
+        }
+
+        uint32_t length_or_marker;
+        std::memcpy(&length_or_marker, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        remaining -= sizeof(uint32_t);
+
+        if (length_or_marker == 0xFFFFFFFF) {
+            // NULL value
+            row[column.name] = "NULL";
+        } else {
+            uint32_t length = length_or_marker;
+
+            // Validate length
+            if (length > remaining) {
+                throw std::runtime_error("Invalid row data: insufficient data for column " + column.name);
+            }
+            if (length > 65535) {
+                throw std::runtime_error("Invalid row data: length too large for column " + column.name);
+            }
+
+            row[column.name] = std::string(ptr, length);
+            ptr += length;
+            remaining -= length;
+        }
+    }
+
+    return row;
+}
 
     // Transaction helpers
     uint64_t DiskStorage::getTransactionId() {
