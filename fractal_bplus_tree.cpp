@@ -142,8 +142,34 @@ namespace fractal {
             // Find leaf node
             Page* leaf = find_leaf_page(key, transaction_id, true);
 
+            // Check if we need to handle this as INSERS vs UPDATE 
+            bool key_exists = false;
+
+            // Check base e keys
+            int64_t* keys = reinterpret_cast<int64_t*>(leaf->data);
+            for (uint32_t i = 0; i < leaf->header.key_count; ++i) {
+                if (keys[i] == key) {
+                    key_exists = true;
+                    break;
+                }
+            }
+
+            // Check messages for the key
+            if (!key_exists) {
+                Message* messages = get_messages(leaf);
+                for (uint32_t i = 0; i < leaf->header.message_count; ++i) {
+                    if (messages[i].key == key && (messages[i].type == MessageType::INSERT || messages[i].type == MessageType::UPDATE)) {
+                        key_exists = true;
+                        break;
+                    }
+                }
+            }
+
+            // Use insert if key doesn't exist, UPDATE if it does
+            MessageType msg_type = key_exists ? MessageType::UPDATE :MessageType::INSERT;
+
             // Add update
-            add_message_to_node(leaf, MessageType::UPDATE, key, value_offset, value_length, transaction_id);
+            add_message_to_node(leaf,/* MessageType::UPDATE*/msg_type, key, value_offset, value_length, transaction_id);
 
             adaptive_flush(leaf, leaf->header.page_id, transaction_id);
 
@@ -151,8 +177,8 @@ namespace fractal {
 
             std::cout << "UPDATE Key=" << key << ", ValueSize=" << value_length << ", Txn=" << transaction_id << std::endl;
         } catch (const std::exception& e) {
-            LockManager::clear_thread_locks();
-            DeadlockDetector::clear_thread_locks(std::this_thread::get_id());
+            //LockManager::clear_thread_locks();
+            //DeadlockDetector::clear_thread_locks(std::this_thread::get_id());
             std::cerr << "UPDATE failed: " << e.what() << std::endl;
             throw;
         }
@@ -164,6 +190,31 @@ namespace fractal {
             // Find leaf page
             Page* leaf = find_leaf_page(key, transaction_id, true);
 
+            bool key_exists = false;
+
+            // Check base keys
+            int64_t* keys = reinterpret_cast<int64_t*>(leaf->data);
+            for (uint32_t i = 0; i < leaf->header.key_count; ++i) {
+                if (keys[i] == key) {
+                    key_exists = true;
+                    break;
+                }
+            }
+
+            // Check messages for the key (non-delete messages)
+            if (!key_exists) {
+                Message* messages = get_messages(leaf);
+                for (uint32_t i = 0; i < leaf->header.message_count; ++i) {
+                    if (messages[i].key == key && (messages[i].type == MessageType::INSERT || messages[i].type == MessageType::UPDATE)) {
+                        key_exists = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!key_exists) {
+                release_page(leaf->header.page_id, false);
+            }
             // Add delete messages 
             add_message_to_node(leaf, MessageType::DELETE, key, 0, 0, transaction_id);
 
@@ -172,8 +223,8 @@ namespace fractal {
 
             std::cout << "DELETE: Key=" << key << ", Txn=" << transaction_id << std::endl;
         } catch (const std::exception& e) {
-            LockManager::clear_thread_locks();
-            DeadlockDetector::clear_thread_locks(std::this_thread::get_id());
+            //LockManager::clear_thread_locks();
+            //DeadlockDetector::clear_thread_locks(std::this_thread::get_id());
             std::cerr << "DELETE failed: " << e.what() << std::endl;
             throw;
         }
@@ -192,13 +243,16 @@ namespace fractal {
         std::string current_value = "";
         //std::map<int64_t, std::string> key_state;
         bool value_found = false;
+        bool key_exists = false;
+        bool key_deleted = false;
         uint64_t latest_version = 0;
         
         // First, check if key exists in key-values (base state)
         for (uint32_t i = 0; i < leaf->header.key_count; ++i) {
             if (keys[i] == key) {
                 current_value = read_data_block(kvs[i].value_offset, kvs[i].value_length);
-                value_found = true;
+                //value_found = true;
+                key_exists = true;
                 latest_version = 0; // Base data has version 0
                 break;
             }
@@ -222,11 +276,15 @@ namespace fractal {
                             case MessageType::INSERT:
                             case MessageType::UPDATE:
                                 current_value = read_data_block(messages[i].value_offset, messages[i].value_length);
-                                value_found = true;
+                                //value_found = true;
+                                key_exists = true;
+                                key_deleted = true;
                                 break;
                             case MessageType::DELETE:
                                 current_value = "";
-                                value_found = false;
+                                //value_found = false;
+                                key_exists = false;
+                                key_deleted = true;
                                 break;
                         }
                     }
@@ -236,15 +294,78 @@ namespace fractal {
         
         release_page(leaf->header.page_id, false);
         
-        if (value_found) {
-            return current_value;
+        return key_exists ? current_value : "";
+    }
+
+    std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::select_range(int64_t start_key, int64_t end_key, uint64_t transaction_id) {
+    std::vector<std::pair<int64_t, std::string>> results;
+
+    // Use a map to track the latest state across all pages
+    std::map<int64_t, std::string> global_state;
+
+    Page* current = find_leaf_page(start_key, transaction_id, false);
+
+    while (current != nullptr) {
+        // Get node data
+        int64_t* keys = reinterpret_cast<int64_t*>(current->data);
+        KeyValue* kvs = get_key_values(current);
+        Message* messages = get_messages(current);
+
+        // Process base keys first
+        for (uint32_t i = 0; i < current->header.key_count; ++i) {
+            if (keys[i] >= start_key && keys[i] <= end_key) {
+                try {
+                    global_state[keys[i]] = read_data_block(kvs[i].value_offset, kvs[i].value_length);
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Failed to read base data for key " << keys[i] << ": " << e.what() << std::endl;
+                }
+            }
+        }
+
+        // Apply messages in order
+        for (uint32_t i = 0; i < current->header.message_count; ++i) {
+            int64_t msg_key = messages[i].key;
+
+            bool should_apply = (transaction_id == 0) || (messages[i].version <= transaction_id);
+
+            if (msg_key >= start_key && msg_key <= end_key && should_apply) {
+                try {
+                    switch (messages[i].type) {
+                        case MessageType::INSERT:
+                        case MessageType::UPDATE:
+                            global_state[msg_key] = read_data_block(messages[i].value_offset, messages[i].value_length);
+                            break;
+                        case MessageType::DELETE:
+                            global_state.erase(msg_key);
+                            break;
+                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Failed to apply message for key " << msg_key << ": " << e.what() << std::endl;
+                }
+            }
+        }
+
+        // Move to next leaf
+        uint32_t next_page = current->header.next_page;
+        release_page(current->header.page_id, false);
+
+        if (next_page != 0) {
+            current = get_page(next_page, false);
         } else {
-            return "";
+            current = nullptr;
         }
     }
 
+    // Convert map to results
+    for (const auto& [key, value] : global_state) {
+        results.emplace_back(key, value);
+    }
+
+    return results;
+}
+
     
-    std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::select_range(int64_t start_key, int64_t end_key, uint64_t transaction_id) {
+    /*std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::select_range(int64_t start_key, int64_t end_key, uint64_t transaction_id) {
         std::cout << "=== DEBUG select_range START ===" << std::endl;
         std::cout << "DEBUG: select_range(" << start_key << ", " << end_key << ", txn=" << transaction_id << ")" << std::endl;
         
@@ -337,7 +458,7 @@ namespace fractal {
         std::cout << "DEBUG: select_range returning " << results.size() << " total results" << std::endl;
         
         return results;
-    }
+    }*/
 
     std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::scan_all(uint64_t transaction_id) {
         return select_range(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max(), transaction_id);
@@ -942,13 +1063,13 @@ namespace fractal {
         int64_t* keys = reinterpret_cast<int64_t*>(node->data);
         KeyValue* kvs = get_key_values(node);
    
-        // Temporary storage for final state
-        std::map<int64_t, KeyValue> final_state;
+        // Use a map to track the latest state of each key
+        std::map<int64_t, std::pair<bool,KeyValue>> final_state;
         
-        // Start with existing key-values
+        // Initialize with existing key value
         for (uint32_t i = 0; i < node->header.key_count; ++i) {
             if (keys[i] != kvs[i].value_offset > 0 && kvs[i].value_length > 0 && kvs[i].value_length < 65536) {
-                final_state[keys[i]] = kvs[i];
+                final_state[keys[i]] = {true,kvs[i]};
                 std::cout << "DEBUG: Initial valid  key " << keys[i] << " with offset " << kvs[i].value_offset << std::endl;
             } else {
                 std::cout << "DEBUG: Skipping invalid base key " << keys[i] << " offset=" << kvs[i].value_offset<< " length=" << kvs[i].value_length << std::endl;
@@ -966,37 +1087,45 @@ namespace fractal {
             switch (message.type) {
                 case MessageType::INSERT:
                 case MessageType::UPDATE:
-                    final_state[message.key] = KeyValue{message.key, message.value_offset, message.value_length};
+                    final_state[message.key] = {true,KeyValue{message.key, message.value_offset, message.value_length}};
                     break;
                 case MessageType::DELETE:
                     final_state.erase(message.key);
+                    //final_state[message.key] = {false, KeyValue{}}; // Mark as deleted
                     break;
             }
         }
         
         // Clear and rebuild the node's key-values
         node->header.key_count = 0;
-        std::memset(node->data, 0, PAGE_SIZE - sizeof(PageHeader));
+
+        // Only clear the key-value area, not the entire section
+        size_t kv_area_size = BPTREE_ORDER * (sizeof(int64_t) + sizeof(KeyValue));
+        std::memset(node->data, 0, kv_area_size);
+        //std::memset(node->data, 0, PAGE_SIZE - sizeof(PageHeader));
         
         keys = reinterpret_cast<int64_t*>(node->data);
         kvs = get_key_values(node);
         
         uint32_t new_index = 0;
-        for (const auto& [key, kv] : final_state) {
+        for (const auto& [key, state] : final_state) {
             if (new_index >= BPTREE_ORDER) {
                 throw std::runtime_error("Node overflow during message application");
             }
 
-            if (kv.value_length == 0 || kv.value_length > 65536) {
+            /*if (kv.value_length == 0 || kv.value_length > 65536) {
                 std::cerr << "WARNING: Skipping key " << key << " with invalid length " << kv.value_length << std::endl;
                     continue;
-            }
+            }*/
             
-            keys[new_index] = key;
-            kvs[new_index] = kv;
-            std::cout << "DEBUG: Final key " << key << " at index " << new_index <<  " offset=" << kv.value_offset << " length=" << kv.value_length << std::endl;
-
-            new_index++;
+            const auto& [is_valid, kv] = state;
+            if (is_valid && kv.value_length > 0 && kv.value_length <= 65536) {
+                keys[new_index] = key;
+                kvs[new_index] = kv;
+                std::cout << "DEBUG: Final key " << key << " at index " << new_index <<  " offset=" << kv.value_offset << " length=" << kv.value_length << std::endl;
+                new_index++;
+            }
+            // Skip deled entries
         }
         
         node->header.key_count = new_index;
