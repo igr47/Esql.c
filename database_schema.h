@@ -6,6 +6,7 @@
 #include <string>
 #include <stdexcept>
 #include <unordered_map>
+#include <cstdint>
 
 struct DatabaseSchema {
     struct Constraint {
@@ -43,6 +44,8 @@ struct DatabaseSchema {
 
     struct Table {
         std::string name;
+        uint32_t root_page;
+        uint32_t table_id; 
         std::vector<Column> columns;
         std::string primaryKey;
     };

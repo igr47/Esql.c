@@ -8,16 +8,18 @@
 #include <string>
 
 class Database;
-class DiskStorage;
+namespace fractal {
+    class DiskStorage;
+}
 class SematicAnalyzer{
 	public:
-		SematicAnalyzer(Database& db,DiskStorage& storage);//was DatabseSchema& schema
+		SematicAnalyzer(Database& db,fractal::DiskStorage& storage);//was DatabseSchema& schema
 		void analyze(std::unique_ptr<AST::Statement>& stmt);
 	private:
 		DatabaseSchema schema;
 		Database& db;
 		//DiskStorage& storage;
-		DiskStorage& storage;
+        fractal::DiskStorage& storage;
 		const DatabaseSchema::Table* currentTable=nullptr;
 		//method for DATABASE management
 		void analyzeCreateDatabase(AST::CreateDatabaseStatement& createdbstmt);
