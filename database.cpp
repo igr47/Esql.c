@@ -4,25 +4,88 @@
 #include <chrono>
 #include <iomanip>
 #include <cctype>
+#include <thread>
 
 Database::Database(const std::string& filename)
-    : storage(std::make_unique<DiskStorage>(filename)), schema() {
+    : storage(std::make_unique<fractal::DiskStorage>(filename)), schema() {
     try {
-        // Check if any databases exist
+        std::cout << "=== DATABASE INITIALIZATION ===" << std::endl;
+
+        // Give diskstorage a moment to fully initialize
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // Get available databases
         auto databases = storage->listDatabases();
+        std::cout << "Available databases: " << databases.size() << std::endl;
+        
         if (databases.empty()) {
-            // Create a default database if none exist
-            storage->createDatabase("default");
-            setCurrentDatabase("default");
+            std::cout << "No databases found, checking if we can create 'default'..." << std::endl;
+            // Try to create default, but handle the case where file might exist
+            try {
+                storage->createDatabase("default");
+                storage->useDatabase("default");
+                setCurrentDatabase("default");
+                std::cout << "Created new default database" << std::endl;
+            } catch (const std::runtime_error& e) {
+                // If creation fails because file exists, try to use it
+                if (std::string(e.what()).find("already exists") != std::string::npos) {
+                    std::cout << "Default database file exists, trying to use it..." << std::endl;
+                    try {
+                        storage->useDatabase("default");
+                        setCurrentDatabase("default");
+                        std::cout << "Successfully used existing default database" << std::endl;
+                    } catch (const std::exception& use_error) {
+                        std::cerr << "Failed to use existing default database: " << use_error.what() << std::endl;
+                        throw;
+                    }
+                } else {
+                    throw; // Re-throw other errors
+                }
+            }
         } else {
-            // Select the first available database
+            std::cout << "Using existing database: " << databases[0] << std::endl;
+            storage->useDatabase(databases[0]);
             setCurrentDatabase(databases[0]);
         }
+        
+        std::cout << "Current database: " << currentDatabase() << std::endl;
+        std::cout << "=== INITIALIZATION COMPLETE ===" << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Error initializing database: " << e.what() << "\n";
-        throw; // Re-throw to prevent partially initialized state
+        throw;
     }
 }
+/*Database::Database(const std::string& filename)
+    : storage(std::make_unique<fractal::DiskStorage>(filename)), schema() {
+    try {
+        std::cout << "=== DATABASE INITIALIZATION ===" << std::endl;
+
+        // Load existing databases immediately
+        storage->loadExistingDatabases();
+        
+        auto databases = storage->listDatabases();
+        std::cout << "Available databases: " << databases.size() << std::endl;
+        
+        if (databases.empty()) {
+            std::cout << "No databases found, creating 'default'..." << std::endl;
+            storage->createDatabase("default");
+            storage->useDatabase("default");
+            setCurrentDatabase("default");
+            std::cout << "Created new default database" << std::endl;
+        } else {
+            // Use the first available database
+            std::cout << "Using existing database: " << databases[0] << std::endl;
+            storage->useDatabase(databases[0]);
+            setCurrentDatabase(databases[0]);
+        }
+        
+        std::cout << "Current database: " << currentDatabase() << std::endl;
+        std::cout << "=== INITIALIZATION COMPLETE ===" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Error initializing database: " << e.what() << "\n";
+        throw;
+    }
+}*/
 
 Database::~Database() {
 	shutdown();
@@ -32,6 +95,7 @@ Database::~Database() {
 void Database::shutdown(){
 	try{
 		if(storage) {
+            storage->flushPendingChanges();
 			storage->checkpoint();
 		}
 	}catch (const std::exception& e) {

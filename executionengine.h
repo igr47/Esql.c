@@ -11,9 +11,10 @@
 #include <string>
 #include <set>
 
+
 class ExecutionEngine {
 public:
-    explicit ExecutionEngine(Database& db, DiskStorage& storage);
+    explicit ExecutionEngine(Database& db, fractal::DiskStorage& storage);
     
     struct ResultSet {
         std::vector<std::string> columns;
@@ -34,7 +35,7 @@ public:
 
 private:
     Database& db;
-    DiskStorage& storage;
+    fractal::DiskStorage& storage;
     std::vector<std::unordered_map<std::string, std::string>> currentBatch;
     std::set<std::vector<std::string>> currentBatchPrimaryKeys;
     

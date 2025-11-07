@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 
-SematicAnalyzer::SematicAnalyzer(Database& db,DiskStorage& storage):db(db),storage(storage){}
+SematicAnalyzer::SematicAnalyzer(Database& db,fractal::DiskStorage& storage):db(db),storage(storage){}
 //This is the entry point for the sematic analysis
 void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
 	if(auto createdb=dynamic_cast<AST::CreateDatabaseStatement*>(stmt.get())){

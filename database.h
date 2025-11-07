@@ -26,7 +26,7 @@ public:
     const std::string& currentDatabase() const;
     void setCurrentDatabase(const std::string& dbName);
     void ensureDatabaseSelected() const;
-    std::unique_ptr<DiskStorage> storage;
+    std::unique_ptr<fractal::DiskStorage> storage;
 
 private:
     //std::unique_ptr<DiskStorage> storage;

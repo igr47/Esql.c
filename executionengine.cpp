@@ -8,7 +8,7 @@
 #include <sstream>
 #include <set>
 
-ExecutionEngine::ExecutionEngine(Database& db, DiskStorage& storage) 
+ExecutionEngine::ExecutionEngine(Database& db, fractal::DiskStorage& storage) 
     : db(db), storage(storage) {}
 
 // Transaction management
@@ -1786,7 +1786,7 @@ void ExecutionEngine::handleAutoIncreament(std::unordered_map<std::string, std::
 			}
 
 			//Get the next auto increament value
-			uint32_t next_id = storage.getNextAutoIncreamentValue(db.currentDatabase(), table->name, column.name);
+			uint32_t next_id = storage.getNextAutoIncrementValue(db.currentDatabase(), table->name, column.name);
 			row[column.name] = std::to_string(next_id);
 
 			//std::cout << "DEBUG: Applied AUTO_INCREAMENT value '" << row[column.name] << "'to column '" << column.name << "'" <<std::endl;
