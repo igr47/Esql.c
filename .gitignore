@@ -1,0 +1,4 @@
+databases/*.db
+databases/*.db
+databases/*.wal
+*.db
