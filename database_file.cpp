@@ -12,7 +12,7 @@ DatabaseFile::DatabaseFile(const std::string& filename)
     db_header.magic = DATABASE_MAGIC;
     db_header.version = 1;
     db_header.page_size = PAGE_SIZE;
-    db_header.total_pages = 0;
+    db_header.total_pages = 50000;
     db_header.first_free_page = 0;
     db_header.table_count = 0;
     db_header.created_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -674,8 +674,8 @@ void DatabaseFile::initialize_table_data_blocks() {
 }
 
 uint64_t DatabaseFile::calculate_data_block_offset(uint32_t table_id) const {
-    uint64_t base_offset = db_header.total_pages * PAGE_SIZE;
-    return base_offset + (table_id * 1024 * 1024);
+    uint64_t base_offset = (db_header.total_pages + 50000) * PAGE_SIZE;
+    return base_offset + (table_id * 1024 * 1024 * 100);
 }
 void DatabaseFile::debug_page_access(uint32_t page_id) {
     std::cout << "DEBUG Page Access Analysis for page " << page_id << ":\n";
