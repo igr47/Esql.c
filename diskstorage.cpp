@@ -8,8 +8,8 @@
 namespace {
     constexpr uint32_t SCHEMA_MAGIC = 0x53434845;
     constexpr uint32_t SCHEMA_VERSION = 1;
-    constexpr uint32_t MAX_SCHEMA_PAGES = 100;
-    constexpr uint32_t SCHEMA_PAGE_START = 1000;
+    //constexpr uint32_t MAX_SCHEMA_PAGES = 100;
+    //constexpr uint32_t SCHEMA_PAGE_START = 1000;
     constexpr size_t BUFFER_POOL_SIZE = 1000;
 }
 

@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <cstring>
 #include <algorithm>
+#include <set>
 
 namespace fractal {
 
@@ -68,7 +69,8 @@ void DatabaseFile::create() {
     for (uint32_t i = 2; i < 1000; ++i) {
         free_pages.push_back(i);
     }
-    save_free_page_list();
+    // Initialize schema page tracking
+    initialize_schema_page_tracking();
     
     extend_file(db_header.total_pages);
     
@@ -105,6 +107,9 @@ void DatabaseFile::open() {
     load_free_page_list();
     
     initialize_table_data_blocks();
+
+    // Load schema page and table ID tracking
+    load_schema_page_tracking();
     
     table_name_to_id.clear();
 
@@ -221,6 +226,101 @@ void DatabaseFile::deallocate_page(uint32_t page_id) {
 /*void DatabaseFile::free_page(uint32_t page_id) {
     deallocate_page(page_id);
 }*/
+
+// Schema tracking strategy
+void DatabaseFile::initialize_schema_page_tracking() {
+    free_schema_pages.clear();
+    free_table_ids.clear();
+
+    // Initialize free schema pages(1000 - 1099)
+    for (uint32_t i = 1000; i < 1100; ++i) {
+        free_schema_pages.push_back(i);
+    }
+}
+
+uint32_t DatabaseFile::allocate_schema_page() {
+    if (!free_schema_pages.empty()) {
+        uint32_t page_id = free_schema_pages.back();
+        free_schema_pages.pop_back();
+        std::cout << "DEBUG: Reusing schema page " << page_id << std::endl;
+        return page_id;
+    }
+    
+    // If no free pages, extend (should rarely happen with proper recycling)
+    uint32_t new_page = SCHEMA_PAGE_START + MAX_SCHEMA_PAGES + free_schema_pages.size();
+    std::cout << "DEBUG: Allocating new schema page " << new_page << std::endl;
+    return new_page;
+}
+
+void DatabaseFile::free_schema_page(uint32_t page_id) {
+    if (page_id >= SCHEMA_PAGE_START && page_id < SCHEMA_PAGE_START + MAX_SCHEMA_PAGES * 2) {
+        if (std::find(free_schema_pages.begin(), free_schema_pages.end(), page_id) == free_schema_pages.end()) {
+            free_schema_pages.push_back(page_id);
+
+            // Mark the page as free in the file
+            Page free_page;
+            free_page.initialize(page_id, PageType::FREE_PAGE, 0);
+            write_page(page_id, &free_page);
+
+            std::cout << "DEBUG: Freed schema page " << page_id << std::endl;
+        }
+    }
+}
+
+uint32_t DatabaseFile::allocate_table_id() {
+    if (!free_table_ids.empty()) {
+        uint32_t table_id = free_table_ids.back();
+        free_table_ids.pop_back();
+        std::cout << "DEBUG: Reusing table ID " << table_id << std::endl;
+        return table_id;
+    }
+
+    // Use the next available ID from directory
+    return table_directory.next_table_id++;
+}
+
+void DatabaseFile::free_table_id(uint32_t table_id) {
+    if (table_id > 0 && table_id < table_directory.next_table_id) {
+        if (std::find(free_table_ids.begin(), free_table_ids.end(), table_id) == free_table_ids.end()) {
+            free_table_ids.push_back(table_id);
+            std::cout << "DEBUG: Freed table ID " << table_id << " for reuse" << std::endl;
+        }
+    }
+}
+
+void DatabaseFile::load_schema_page_tracking() {
+    free_schema_pages.clear();
+    free_table_ids.clear();
+
+    // Scan schema page range for free pages
+    for (uint32_t page_id = SCHEMA_PAGE_START; page_id < SCHEMA_PAGE_START + MAX_SCHEMA_PAGES * 2; ++page_id) {
+        try {
+            Page page;
+            read_page(page_id, &page);
+            if (page.header.type == PageType::FREE_PAGE) {
+                free_schema_pages.push_back(page_id);
+            }
+        } catch (...) {
+            // Page might not exist, skip
+        }
+    }
+
+    // Rebuild free tables IDs by finding gaps in used IDs
+    std::set<uint32_t> used_table_ids;
+    for (uint32_t i = 0; i < table_directory.num_tables; ++i) {
+        used_table_ids.insert(table_directory.entries[i].table_id);
+    }
+
+    for (uint32_t id = 1; id < table_directory.next_table_id; ++id) {
+        if (used_table_ids.find(id) == used_table_ids.end()) {
+            free_table_ids.push_back(id);
+        }
+    }
+
+    std::sort(free_table_ids.begin(), free_table_ids.end());
+    std::cout << "DEBUG: Loaded " << free_schema_pages.size() << " free schema pages and " << free_table_ids.size() << " free table IDs" << std::endl;
+}
+
 
 
 void DatabaseFile::free_page(uint32_t page_id) {
@@ -368,43 +468,6 @@ uint32_t DatabaseFile::allocate_new_table_range(uint32_t table_id) {
     
     return start_page;
 }
-/*uint32_t DatabaseFile::find_available_low_page() {
-    if (!free_pages.empty()) {
-        std::sort(free_pages.begin(), free_pages.end());
-        for (uint32_t page_id : free_pages) {
-            if (page_id >= USER_TABLE_START) {
-                //uint32_t lowest_page = free_pages.front();
-                free_pages.erase(std::remove(free_pages.begin(),free_pages.end(),page_id), free_pages.end());
-                std::cout << "DEBUG: Reusing user table page " << page_id << std::endl;
-                return page_id;
-            }
-        }
-    }
-    
-    // If no free pages, allocate a new one
-    return find_next_available_table_page();
-}
-
-uint32_t DatabaseFile::find_next_available_table_page() {
-    uint32_t highest_used = USER_TABLE_PAGES_START - 1;
-
-    // Check all table directory entries
-    for (uint32_t i = 0; i < table_directory.num_tables; ++i) {
-        if (table_directory.entries[i].root_page_id > highest_used) {
-            highest_used = table_directory.entries[i].root_page_id;
-        }
-    }
-
-    // Also check pages that are allocated but might not be in tables
-    for (uint32_t page_id : free_pages) {
-        if (page_id > highest_used && page_id >= USER_TABLE_PAGES_START) {
-            highest_used = page_id;
-        }
-    }
-
-    // The next available page is one after the highest used
-    uint32_t next_page =highest_used + 1;*/
-
 
 
 uint32_t DatabaseFile::create_table(const std::string& table_name) {
@@ -416,8 +479,10 @@ uint32_t DatabaseFile::create_table(const std::string& table_name) {
         throw std::runtime_error("Maximum table limit reached (100 tables)");
     }
     
-    uint32_t table_id = table_directory.next_table_id++;
+    //uint32_t table_id = table_directory.next_table_id++;
     //uint32_t root_page_id = get_table_start_page(table_id);
+    // Use recycled table ID if available
+    uint32_t table_id = allocate_table_id();
     // Try to reuse lower pages first
     uint32_t root_page_id = allocate_table_page_range(table_id);
     
@@ -456,6 +521,12 @@ void DatabaseFile::drop_table(const std::string& table_name) {
     uint32_t table_id = it->second;
     
     std::cout << "DEBUG: DatabaseFile dropping table '" << table_name << "' with ID " << table_id << std::endl;
+
+    uint32_t schema_page_id = SCHEMA_PAGE_START + (table_id % MAX_SCHEMA_PAGES);
+    free_schema_page(schema_page_id);
+
+    // Free table for reuse
+    free_table_id(table_id);
     
     // Get the table's root page (range start) from directory
     uint32_t range_start = 0;
@@ -523,64 +594,8 @@ void DatabaseFile::drop_table(const std::string& table_name) {
     save_free_page_list();
     
     std::cout << "DatabaseFile: Table '" << table_name << "' dropped, range available for reuse" << std::endl;
-    //print_table_ranges_status();
 }
 
-/*void DatabaseFile::drop_table(const std::string& table_name) {
-    auto it = table_name_to_id.find(table_name);
-    if (it == table_name_to_id.end()) {
-        throw std::runtime_error("Table not found: " + table_name);
-    }
-    
-    uint32_t table_id = it->second;
-    
-    
-    // Find the table's range
-    auto range_it = table_id_to_range.find(table_id);
-    if(range_it != table_id_to_range.end()) {
-        TableRange freed_range = range_it->second;
-
-        // Mark all pages in his range as freed
-        for (uint32_t page_id = freed_range.start_page; page_id <= freed_range.end_page; ++page_id) {
-            if (std::find(free_pages.begin(), free_pages.end(), page_id) == free_pages.end()) {
-                free_pages.push_back(page_id);
-
-                // Mark as free in file
-                Page free_page;
-                free_page.initialize(page_id, PageType::FREE_PAGE,0);
-                write_page(page_id, &free_page);
-            }
-        }
-
-        // Add this range to available ranges (sorted by size for best fit) 
-        available_table_ranges.push_back(freed_range);
-        table_id_to_range.erase(table_id);
-        std::cout << "DEBUG: Freed table range " << freed_range.start_page << "-" << freed_range.end_page << "for table " << table_id << std::endl;
-    }
-
-    bool found = false;
-    for (uint32_t i = 0; i < table_directory.num_tables; ++i) {
-        if (table_directory.entries[i].table_id == table_id) {
-            for (uint32_t j = i; j < table_directory.num_tables - 1; ++j) {
-                table_directory.entries[j] = table_directory.entries[j + 1];
-            }
-            table_directory.num_tables--;
-            found = true;
-            break;
-        }
-    }
-    
-    if (!found) {
-        throw std::runtime_error("Table directory corrupted");
-    }
-    
-    table_data_blocks.erase(table_id);
-    table_name_to_id.erase(table_name);
-    
-    write_table_directory();
-    
-    std::cout << "Dropped table '" << table_name << "' with ID " << table_id << std::endl;
-}*/
 
 uint32_t DatabaseFile::get_table_id(const std::string& table_name) const {
     auto it = table_name_to_id.find(table_name);
@@ -636,7 +651,7 @@ std::vector<DatabaseSchema::Table> DatabaseFile::get_all_tables() const {
 
     std::vector<DatabaseSchema::Table> tables;
     
-    // First, validate the table directory state
+    // First, We validate the table directory state
     if (table_directory.num_tables == 0) {
         std::cout << "DEBUG: No tables in database." << std::endl;
         return tables; // Return empty vector
@@ -826,7 +841,7 @@ void DatabaseFile::load_free_page_list() {
 }
 
 void DatabaseFile::save_free_page_list() {
-    // Only save if there are free pages to avoid uynnecessary writes
+    // Only saves if there are free pages to avoid uynnecessary writes
     if (!free_pages.empty()){
         for (uint32_t page_id : free_pages) {
             Page page;
@@ -836,23 +851,6 @@ void DatabaseFile::save_free_page_list() {
     }
 }
 
-/*void DatabaseFile::extend_file(uint32_t additional_pages) {
-    uint64_t current_size = get_file_size();
-    uint64_t new_size = current_size + (additional_pages * PAGE_SIZE);
-    
-    file.close();
-    file.open(filename, std::ios::binary | std::ios::in | std::ios::out);
-    
-    file.seekp(new_size - 1);
-    file.put(0);
-    file.flush();
-    
-    db_header.total_pages += additional_pages;
-    write_header();
-    
-    std::cout << "Extended database file by " << additional_pages << " pages, new total: " 
-              << db_header.total_pages << " pages" << std::endl;
-}*/
 
 void DatabaseFile::extend_file(uint32_t additional_pages) {
     // Close and reopen the file to ensure clean state
