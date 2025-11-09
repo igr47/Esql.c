@@ -191,8 +191,11 @@ namespace fractal {
 
         try {
             // Drop the tree
-            tableIt->second.tree->drop();
+            if (tableIt->second.tree) {
+                tableIt->second.tree->drop();
+            }
 
+            // Drop table from DatabaseFile(manages range freeing)
             dbState.db_file->drop_table(name);
 
             // Remove from local storage

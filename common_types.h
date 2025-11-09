@@ -13,6 +13,9 @@ namespace fractal {
     constexpr size_t BPTREE_ORDER = 256;
     constexpr size_t MAX_MESSAGES = 50;
     constexpr uint32_t DATABASE_MAGIC = 0x44424631; // "DBF1"
+    constexpr uint32_t TABLE_PAGES_START = 1000;
+    constexpr uint32_t USER_TABLE_PAGES_START = 2000; // First table starts at 2000
+    constexpr uint32_t TABLE_PAGE_RANGE_SIZE = 1000;
     
 
     // Page Types

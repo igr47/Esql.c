@@ -38,6 +38,20 @@ private:
         }
     };
 
+    struct TableRange {
+        uint32_t start_page;
+        uint32_t end_page;
+        uint32_t original_table_id;
+
+        TableRange() : start_page(0), end_page(0), original_table_id(0) {}
+        TableRange(uint32_t start,uint32_t end, uint32_t table_id = 0) : start_page(start), end_page(end), original_table_id(table_id) {}
+
+        size_t size() const  {return end_page - start_page + 1; }
+    };
+
+    std::vector<TableRange> available_table_ranges;
+    std::unordered_map<uint32_t, TableRange> table_id_to_range;
+
     std::string filename;
     mutable std::fstream file;
     bool destroyed = false;
@@ -78,7 +92,9 @@ public:
     void read_data_block(uint64_t offset, char* data, uint32_t size);
     void write_data_block(uint64_t offset, const char* data, uint32_t size);
     void extend_data_region(uint32_t table_id, uint64_t additional_size);
-    
+    uint32_t allocate_new_table_range(uint32_t table_id);
+    uint32_t allocate_table_page_range(uint32_t table_id);
+
     // Table management
     uint32_t create_table(const std::string& table_name);
     void drop_table(const std::string& table_name);
@@ -87,6 +103,9 @@ public:
     void set_table_root_page(const std::string& table_name, uint32_t root_page_id);
     std::vector<std::string> get_table_names() const;
     std::vector<DatabaseSchema::Table> get_all_tables() const;
+    void defragment();
+    //uint32_t find_available_low_page();
+
     
     // Metadata operations
     void read_header();

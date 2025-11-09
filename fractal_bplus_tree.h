@@ -162,6 +162,7 @@ namespace fractal {
             uint32_t find_left_sibling(uint32_t page_id, uint32_t parent_page_id);
             uint32_t find_right_sibling(uint32_t page_id, uint32_t parent_page_id);
             void collect_all_leaf_pages(std::vector<uint32_t>& leaf_pages) const;
+            std::vector<uint32_t> collect_all_pages_safely();
 
             // Internal node operations
             uint32_t* get_child_pointers(Page* node);

@@ -7,6 +7,7 @@
 #include <stack>
 #include <queue>
 #include <limits>
+#include <unordered_set>
 
 namespace fractal {
 
@@ -66,8 +67,55 @@ namespace fractal {
             std::cout << "Created new FractalBPlusTree with root page: " << root_page_id << std::endl;
         }
     }
-
+    
     void FractalBPlusTree::drop() {
+        std::cout << "FractalBPlusTree::drop() called for table '" << table_name << "'" << std::endl;
+
+        if (root_page_id == 0) {
+            std::cout << "Tree already dropped: "<< std::endl;
+            return;
+        }
+
+        try {
+            // Traversal to collect all pages
+            std::vector<uint32_t> all_pages = collect_all_pages_safely();
+
+            std::cout << "DEBUG: Collected " << all_pages.size() << " pages to free" << std::endl;
+
+            // Free all pages
+            for (uint32_t page_id : all_pages) {
+                if(page_id != 0) {
+                    try {
+                        free_page(page_id, 0);
+                        std::cout << "DEBUG: Freed page " << page_id << std::endl;
+                    } catch (const std::exception& e) {
+                        std::cerr << "WARNING: Failed to free page " << page_id << ": " << e.what() << std::endl;
+                    }
+                }
+            }
+
+            // Log the drop
+            wal->log_tree_operation(0, "DROP_TREE",9);
+
+            root_page_id = 0;
+            total_messages = 0;
+            memory_usage = 0;
+
+            std::cout << "Dropped FractalBPLusTree for table '" << table_name << "'" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "ERROR: Failed to drop tree: " << e.what() << std::endl;
+            // Fallback: atleast free the root page
+            try {
+                free_page(root_page_id, 0);
+                root_page_id = 0;
+            } catch (...) {
+                // Ignore errors in fall back
+            }
+            throw;
+        }
+    }
+
+    /*void FractalBPlusTree::drop() {
 
         if (root_page_id != 0) {
             // Collect all pages in the tree
@@ -91,7 +139,7 @@ namespace fractal {
 
             std::cout << "Dropped FractalBPlusTree for table '" << table_name << "'" << std::endl;
         }
-    }
+    }*/
 
     void FractalBPlusTree::insert(int64_t key, const std::string& value, uint64_t transaction_id) {
         std::cout << "=== DEBUG INSERT START ===" << std::endl;
@@ -1577,6 +1625,62 @@ namespace fractal {
         
         release_page(parent_page_id, false);
         return 0; // No right sibling
+    }
+
+    std::vector<uint32_t> FractalBPlusTree::collect_all_pages_safely() {
+        std::vector<uint32_t> all_pages;
+        if (root_page_id == 0) return all_pages;
+
+        std::queue<uint32_t> page_queue;
+        std::unordered_set<uint32_t> visited_pages;
+    
+        page_queue.push(root_page_id);
+        visited_pages.insert(root_page_id);
+
+        //Also track the table's expected page range for validation
+        uint32_t table_range_start = root_page_id;
+        uint32_t table_range_end = root_page_id + TABLE_PAGE_RANGE_SIZE -1;
+
+        while (!page_queue.empty()) {
+            uint32_t page_id = page_queue.front();
+            page_queue.pop();
+
+            if (page_id < table_range_start || page_id > table_range_end) {
+                std::cerr << "WARNING: Page " << page_id << " outside expected table range "<< table_range_start << "-" << table_range_end << std::endl;
+            }
+
+            all_pages.push_back(page_id);
+
+
+            try {
+                Page* node = get_page(page_id, false);
+            
+                if (node->header.type == PageType::INTERNAL_NODE) {
+                    const uint32_t* children = get_child_pointers(node);
+                    for (uint32_t i = 0; i <= node->header.key_count; ++i) {
+                        uint32_t child_id = children[i];
+                        if (child_id != 0 && visited_pages.find(child_id) == visited_pages.end()) {
+                            // Validate child is within table range
+                            if (child_id >= table_range_start && child_id <= table_range_end) {
+                                page_queue.push(child_id);
+                                visited_pages.insert(child_id);
+                            } else {
+                                std::cerr << "WARNING: Skipping child page " << child_id<< " outside table range" << std::endl;
+                            }
+                        }
+                    }
+                }
+
+                release_page(page_id, false);
+            } catch (const std::exception& e) {
+                std::cerr << "WARNING: Failed to process page " << page_id << " during collection: " << e.what() << std::endl;
+                // Continue with other pages
+            }
+        }
+
+        std::cout << "DEBUG: Collected " << all_pages.size() << " pages from tree (root: " << root_page_id << ", range: " << table_range_start << "-" << table_range_end << ")" << std::endl;
+
+        return all_pages;
     }
 
     void FractalBPlusTree::collect_all_leaf_pages(std::vector<uint32_t>& leaf_pages) const {
