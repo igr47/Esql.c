@@ -14,12 +14,12 @@ namespace fractal {
     FractalBPlusTree::FractalBPlusTree(DatabaseFile* db_file, BufferPool* buffer_pool, WriteAheadLog* wal, const std::string& table_name, uint32_t root_page_id, uint32_t table_id) 
         : db_file(db_file), buffer_pool(buffer_pool), wal(wal), table_name(table_name), root_page_id(root_page_id), table_id(table_id) {
             
-            //If table_id is 0, try to get it from db_file (for backward compatability)
+            //If table_id is 0, try to get it from db_file
             if (table_id == 0) {
                 try {
                     table_id = db_file->get_table_id(table_name);
                 } catch (...) {
-                    // If table doesnt exist yet, that's ok - it will be created
+                    // If table doesnt exist yet - it will be created
                     table_id = 0; 
                 }
             }
@@ -37,7 +37,7 @@ namespace fractal {
         try {
             // Ensure messages are flushed before destruction
             if (root_page_id != 0) {
-                flush_all_messages(0); // Use transaction ID 0 for clean up
+                flush_all_messages(0); // Using transaction ID 0 for clean up
             }
             std::cout << "FractalBPlusTree cleanup completed for table: " << table_name << std::endl;
         } catch (const std::exception& e) {
@@ -115,31 +115,6 @@ namespace fractal {
         }
     }
 
-    /*void FractalBPlusTree::drop() {
-
-        if (root_page_id != 0) {
-            // Collect all pages in the tree
-            std::vector<uint32_t> all_pages;
-            collect_all_leaf_pages(all_pages);
-
-            // Free all pages
-            for (uint32_t page_id : all_pages) {
-                free_page(page_id, 0); // Use transaction id 0 for cleaning
-            }
-
-            // Free the root page
-            free_page(root_page_id, 0);
-
-            // Log the drop
-            wal->log_tree_operation(0, "DROP_TREE", 9);
-
-            root_page_id = 0;
-            total_messages = 0;
-            memory_usage = 0;
-
-            std::cout << "Dropped FractalBPlusTree for table '" << table_name << "'" << std::endl;
-        }
-    }*/
 
     void FractalBPlusTree::insert(int64_t key, const std::string& value, uint64_t transaction_id) {
         std::cout << "=== DEBUG INSERT START ===" << std::endl;
@@ -151,7 +126,7 @@ namespace fractal {
             uint32_t value_length = value.size();
             std::cout << "DEBUG: Value written to offset " << value_offset << ", length " << value_length << std::endl;
 
-            // Find appropriate leaf node - this will acquire page locks in order
+            // Find appropriate leaf node 
             Page* leaf = find_leaf_page(key, transaction_id, true);
             std::cout << "DEBUG: Found leaf page " << leaf->header.page_id<< " with " << leaf->header.key_count << " keys, " << leaf->header.message_count << " messages" << std::endl;
 
@@ -295,7 +270,7 @@ namespace fractal {
         bool key_deleted = false;
         uint64_t latest_version = 0;
         
-        // First, check if key exists in key-values (base state)
+        // check if key exists in key-values (base state)
         for (uint32_t i = 0; i < leaf->header.key_count; ++i) {
             if (keys[i] == key) {
                 current_value = read_data_block(kvs[i].value_offset, kvs[i].value_length);
@@ -346,167 +321,73 @@ namespace fractal {
     }
 
     std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::select_range(int64_t start_key, int64_t end_key, uint64_t transaction_id) {
-    std::vector<std::pair<int64_t, std::string>> results;
-
-    // Use a map to track the latest state across all pages
-    std::map<int64_t, std::string> global_state;
-
-    Page* current = find_leaf_page(start_key, transaction_id, false);
-
-    while (current != nullptr) {
-        // Get node data
-        int64_t* keys = reinterpret_cast<int64_t*>(current->data);
-        KeyValue* kvs = get_key_values(current);
-        Message* messages = get_messages(current);
-
-        // Process base keys first
-        for (uint32_t i = 0; i < current->header.key_count; ++i) {
-            if (keys[i] >= start_key && keys[i] <= end_key) {
-                try {
-                    global_state[keys[i]] = read_data_block(kvs[i].value_offset, kvs[i].value_length);
-                } catch (const std::exception& e) {
-                    std::cerr << "Warning: Failed to read base data for key " << keys[i] << ": " << e.what() << std::endl;
-                }
-            }
-        }
-
-        // Apply messages in order
-        for (uint32_t i = 0; i < current->header.message_count; ++i) {
-            int64_t msg_key = messages[i].key;
-
-            bool should_apply = (transaction_id == 0) || (messages[i].version <= transaction_id);
-
-            if (msg_key >= start_key && msg_key <= end_key && should_apply) {
-                try {
-                    switch (messages[i].type) {
-                        case MessageType::INSERT:
-                        case MessageType::UPDATE:
-                            global_state[msg_key] = read_data_block(messages[i].value_offset, messages[i].value_length);
-                            break;
-                        case MessageType::DELETE:
-                            global_state.erase(msg_key);
-                            break;
-                    }
-                } catch (const std::exception& e) {
-                    std::cerr << "Warning: Failed to apply message for key " << msg_key << ": " << e.what() << std::endl;
-                }
-            }
-        }
-
-        // Move to next leaf
-        uint32_t next_page = current->header.next_page;
-        release_page(current->header.page_id, false);
-
-        if (next_page != 0) {
-            current = get_page(next_page, false);
-        } else {
-            current = nullptr;
-        }
-    }
-
-    // Convert map to results
-    for (const auto& [key, value] : global_state) {
-        results.emplace_back(key, value);
-    }
-
-    return results;
-}
-
-    
-    /*std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::select_range(int64_t start_key, int64_t end_key, uint64_t transaction_id) {
-        std::cout << "=== DEBUG select_range START ===" << std::endl;
-        std::cout << "DEBUG: select_range(" << start_key << ", " << end_key << ", txn=" << transaction_id << ")" << std::endl;
-        
         std::vector<std::pair<int64_t, std::string>> results;
+
+        // Use a map to track the latest state across all pages
+        std::map<int64_t, std::string> global_state;
+
         Page* current = find_leaf_page(start_key, transaction_id, false);
-        
-        std::cout << "DEBUG: Starting leaf page: " << (current ? current->header.page_id : 0) << std::endl;
-        
+
         while (current != nullptr) {
-            std::cout << "DEBUG: Processing leaf page " << current->header.page_id << std::endl;
-            std::cout << "DEBUG: Page key_count=" << current->header.key_count<< ", message_count=" << current->header.message_count << std::endl;
-            
             // Get node data
             int64_t* keys = reinterpret_cast<int64_t*>(current->data);
             KeyValue* kvs = get_key_values(current);
             Message* messages = get_messages(current);
-            
-            // Debug print keys and messages
-            std::cout << "DEBUG: Base keys in page: ";
-            for (uint32_t i = 0; i < current->header.key_count; ++i) {
-                std::cout << keys[i] << " ";
-            }
-            std::cout << std::endl;
-            
-            std::cout << "DEBUG: Messages in page: ";
-            for (uint32_t i = 0; i < current->header.message_count; ++i) {
-                std::cout << "[" << messages[i].key << ":" << static_cast<int>(messages[i].type) << "] ";
-            }
-            std::cout << std::endl;
-            
-            // Use a map to track the latest state of each key
-            std::map<int64_t, std::string> current_state;
-            
-            // Initialize with key-values
+
+            // Process base keys first
             for (uint32_t i = 0; i < current->header.key_count; ++i) {
                 if (keys[i] >= start_key && keys[i] <= end_key) {
-                    std::cout << "DEBUG: Adding base key " << keys[i] << " to state" << std::endl;
-                    current_state[keys[i]] = read_data_block(kvs[i].value_offset, kvs[i].value_length);
-                }
-            }
-            
-            // Apply messages in order
-            for (uint32_t i = 0; i < current->header.message_count; ++i) {
-                int64_t msg_key = messages[i].key;
-            
-                bool should_apply_message = false;
-                if (transaction_id == 0) {
-                    should_apply_message = true;
-                } else {
-                    should_apply_message = (messages[i].version <= transaction_id);
-                }
-                
-                if (msg_key >= start_key && msg_key <= end_key && should_apply_message) {
-                    std::cout << "DEBUG: Applying message key=" << msg_key << " type=" << static_cast<int>(messages[i].type) << " version=" << messages[i].version << std::endl;
-                    
-                    switch (messages[i].type) {
-                        case MessageType::INSERT:
-                        case MessageType::UPDATE:
-                            current_state[msg_key] = read_data_block(messages[i].value_offset, messages[i].value_length);
-                            std::cout << "DEBUG: Message sets key " << msg_key << " to value of length " << messages[i].value_length << std::endl;
-                            break;
-                        case MessageType::DELETE:
-                            current_state.erase(msg_key);
-                            std::cout << "DEBUG: Message deletes key " << msg_key << std::endl;
-                            break;
+                    try {
+                        global_state[keys[i]] = read_data_block(kvs[i].value_offset, kvs[i].value_length);
+                    } catch (const std::exception& e) {
+                        std::cerr << "Warning: Failed to read base data for key " << keys[i] << ": " << e.what() << std::endl;
                     }
                 }
             }
-            
-            std::cout << "DEBUG: Current state has " << current_state.size() << " keys after applying messages" << std::endl;
-            // Add to results
-            for (const auto& [key, value] : current_state) {
-                std::cout << "DEBUG: Adding to results - key=" << key << ", value_length=" << value.size() << std::endl;
-                results.emplace_back(key, value);
+
+            // Apply messages in order
+            for (uint32_t i = 0; i < current->header.message_count; ++i) {
+                int64_t msg_key = messages[i].key;
+
+                bool should_apply = (transaction_id == 0) || (messages[i].version <= transaction_id);
+
+                if (msg_key >= start_key && msg_key <= end_key && should_apply) {
+                    try {
+                        switch (messages[i].type) {
+                            case MessageType::INSERT:
+                            case MessageType::UPDATE:
+                                global_state[msg_key] = read_data_block(messages[i].value_offset, messages[i].value_length);
+                                break;
+                            case MessageType::DELETE:
+                                global_state.erase(msg_key);
+                                break;
+                        }
+                    } catch (const std::exception& e) {
+                        std::cerr << "Warning: Failed to apply message for key " << msg_key << ": " << e.what() << std::endl;
+                    }
+                }
             }
-            
+
             // Move to next leaf
             uint32_t next_page = current->header.next_page;
-            std::cout << "DEBUG: Next page pointer: " << next_page << std::endl;
             release_page(current->header.page_id, false);
-            
-            if (next_page != 0 && (!results.empty() && results.back().first <= end_key)) {
+
+            if (next_page != 0) {
                 current = get_page(next_page, false);
-                std::cout << "DEBUG: Moving to next leaf page: " << (current ? current->header.page_id : 0) << std::endl;
             } else {
                 current = nullptr;
-                std::cout << "DEBUG: No more leaf pages to process" << std::endl;
             }
         }
-        std::cout << "DEBUG: select_range returning " << results.size() << " total results" << std::endl;
-        
+
+        // Convert map to results
+        for (const auto& [key, value] : global_state) {
+            results.emplace_back(key, value);
+        }
+
         return results;
-    }*/
+    }
+
+    
 
     std::vector<std::pair<int64_t, std::string>> FractalBPlusTree::scan_all(uint64_t transaction_id) {
         return select_range(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max(), transaction_id);

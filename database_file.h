@@ -52,6 +52,17 @@ private:
     std::vector<TableRange> available_table_ranges;
     std::unordered_map<uint32_t, TableRange> table_id_to_range;
 
+    std::vector<uint32_t> free_schema_pages;
+    std::vector<uint32_t> free_table_ids;
+
+    void initialize_schema_page_tracking();
+    uint32_t allocate_schema_page();
+    void free_schema_page(uint32_t page_id);
+    uint32_t allocate_table_id();
+    void free_table_id(uint32_t);
+    void load_schema_page_tracking();
+    //void save_schema_page_tracking();
+
     std::string filename;
     mutable std::fstream file;
     bool destroyed = false;

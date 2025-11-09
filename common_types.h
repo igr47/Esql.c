@@ -16,6 +16,9 @@ namespace fractal {
     constexpr uint32_t TABLE_PAGES_START = 1000;
     constexpr uint32_t USER_TABLE_PAGES_START = 2000; // First table starts at 2000
     constexpr uint32_t TABLE_PAGE_RANGE_SIZE = 1000;
+    constexpr uint32_t MAX_SCHEMA_PAGES = 100;
+    constexpr uint32_t SCHEMA_PAGE_START = 1000;
+
     
 
     // Page Types
