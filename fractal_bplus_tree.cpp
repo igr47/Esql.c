@@ -454,12 +454,13 @@ namespace fractal {
     }
 
     void FractalBPlusTree::perform_fresh_bulk_load(const std::vector<std::pair<int64_t, std::string>>& sorted_data, uint64_t transaction_id) {
+        uint32_t original_root_page = root_page_id;
         // Clear all existing tree completly
         if (root_page_id != 0) {
             // Free all pages including root
             std::vector<uint32_t> all_pages = collect_all_pages_safely();
             for (uint32_t page_id : all_pages) {
-                if (page_id != 0) {
+                if (page_id != 0 && page_id != root_page_id) {
                     try {
                         free_page(page_id, transaction_id);
                     } catch (const std::exception& e) {
@@ -467,11 +468,19 @@ namespace fractal {
                     }
                 }
             }
-            root_page_id = 0;
+            // Reinitialize the root page instead of creating a new one
+            Page* root = get_page(root_page_id,true);
+            root->initialize(root_page_id, PageType::LEAF_NODE,0);
+            root->header.key_count = 0;
+            root->header.message_count = 0;
+            root->header.next_page = 0;
+            root->header.prev_page = 0;
+            release_page(root_page_id, true);
+            std::cout << "DEBUG: Reusing existing root page " << root_page_id << " for bulk load" << std::endl;
+        } else {
+            // Create new tree
+            create();
         }
-
-        // Create new tree
-        create();
 
         // Extend data region if needed
         try {
