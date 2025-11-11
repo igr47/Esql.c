@@ -394,6 +394,136 @@ namespace fractal {
     }
 
     void FractalBPlusTree::bulk_load(const std::vector<std::pair<int64_t, std::string>>& data, uint64_t transaction_id) {
+        if (data.empty()) {
+            std::cout << "BULK_LOAD: No data to load" << std::endl;
+            return;
+        }
+
+        std::cout << "BULK_LOAD: Starting bulk load of " << data.size() << " rows" << std::endl;
+
+        // Sort new data by key
+        std::vector<std::pair<int64_t, std::string>> sorted_data = data;
+        std::sort(sorted_data.begin(), sorted_data.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+                });
+
+        // If tree doesn't exist, create empty tree
+        if (root_page_id == 0) {
+            create();
+        }
+
+        // Get existing data
+        auto existing_data = scan_all(transaction_id);
+
+        std::cout << "BULK_LOAD: Found " << existing_data.size() << " existing records" << std::endl;
+
+        // If no existing data and we have new data, optimized for fresh load
+        if (existing_data.empty() && !sorted_data.empty()) {
+            perform_fresh_bulk_load(sorted_data, transaction_id);
+            return;
+        }
+
+        // Combine existing and new data
+        std::vector<std::pair<int64_t, std::string>> all_data;
+        all_data.reserve(existing_data.size() + sorted_data.size());
+
+        // Using a map to handle duplicates effeciently (ew data overwrites old)
+        std::map<int64_t, std::string> merged_data;
+
+        for (const auto& item : existing_data) {
+            merged_data[item.first] = item.second;
+        }
+
+        // Add new data (this will overwrite existing keys with new values)
+        for (const auto& new_item : sorted_data) {
+            if (merged_data.find(new_item.first) != merged_data.end()) {
+                std::cout << "BULK_LOAD: Overwriting key " << new_item.first << std::endl;
+            }
+            merged_data[new_item.first] = new_item.second;
+        }
+
+        // cONVERT BACK TO VECTOR
+        for (const auto& [key, value] : merged_data) {
+            all_data.emplace_back(key, value);
+        }
+
+        std::cout << "BULK_LOAD: Merged data contains " << all_data.size() << " records" << std::endl;
+        
+        // Perform the bulk load with merged data
+        perform_fresh_bulk_load(all_data, transaction_id);
+    }
+
+    void FractalBPlusTree::perform_fresh_bulk_load(const std::vector<std::pair<int64_t, std::string>>& sorted_data, uint64_t transaction_id) {
+        // Clear all existing tree completly
+        if (root_page_id != 0) {
+            // Free all pages including root
+            std::vector<uint32_t> all_pages = collect_all_pages_safely();
+            for (uint32_t page_id : all_pages) {
+                if (page_id != 0) {
+                    try {
+                        free_page(page_id, transaction_id);
+                    } catch (const std::exception& e) {
+                        std::cerr << "WARNING: Failed to free page: " << page_id << ": " << e.what() << std::endl;
+                    }
+                }
+            }
+            root_page_id = 0;
+        }
+
+        // Create new tree
+        create();
+
+        // Extend data region if needed
+        try {
+            size_t total_data_size = 0;
+            for (const auto& item : sorted_data) {
+                total_data_size += item.second.size();
+            }
+            db_file->extend_data_region(table_id, total_data_size + (1024 * 1024));
+        } catch (const std::exception& e) {
+            std::cout << "BULK_LOAD: Note - " << e.what() << e.what() << std::endl;
+        }
+
+        // Bulk load into leaf nodes
+        Page* current_leaf = get_page(root_page_id, true);
+        size_t data_index = 0;
+        size_t leaf_count = 1;
+
+        while (data_index < sorted_data.size()) {
+            // Fill current leaf
+            while (data_index < sorted_data.size() && current_leaf->header.key_count < BPTREE_ORDER) {
+                const auto& [key, value] = sorted_data[data_index];
+                uint64_t value_offset = write_data_block(value);
+
+                insert_key_value_into_leaf(current_leaf, key, value_offset, value.size());
+                data_index++;
+            }
+
+            if (data_index < sorted_data.size()) {
+                // Create new leaf
+                uint32_t new_leaf_id = allocate_new_page(PageType::LEAF_NODE, transaction_id);
+                Page* new_leaf = get_page(new_leaf_id, true);
+                leaf_count++;
+
+                // Link leaves
+                new_leaf->header.prev_page = current_leaf->header.page_id;
+                current_leaf->header.next_page = new_leaf_id;
+
+                release_page(current_leaf->header.page_id, true);
+                current_leaf = new_leaf;
+            }
+        }
+
+        release_page(current_leaf->header.page_id, true);
+
+        // Build internal nodes bottom up
+        build_internal_nodes_from_leaves(transaction_id);
+
+        std::cout << "BULK_LOAD: Completed. LOaded " << sorted_data.size() << " records into " << leaf_count << " leaf nodes" << std::endl;
+    }
+
+
+    /*void FractalBPlusTree::bulk_load(const std::vector<std::pair<int64_t, std::string>>& data, uint64_t transaction_id) {
 
         if (data.empty()) {
             std::cout << "BULK_LOAD: No data to load" << std::endl;
@@ -465,7 +595,7 @@ namespace fractal {
 
         std::cout << "BULK_LOAD: Completed. Loaded " << sorted_data.size() << " records into " << leaf_count << " leaf nodes " << std::endl;
 
-    }
+    }*/
 
     void FractalBPlusTree::checkpoint() {
 
@@ -564,6 +694,41 @@ namespace fractal {
         
         return ss.str();
     }
+
+    void FractalBPlusTree::validate_tree_structure() const {
+    if (root_page_id == 0) {
+        std::cout << "DEBUG: Tree is empty (root_page_id = 0)" << std::endl;
+        return;
+    }
+
+    std::cout << "DEBUG: Validating tree structure..." << std::endl;
+
+    try {
+        Page* root = get_page(root_page_id, false);
+        std::cout << "DEBUG: Root page " << root_page_id
+                  << " exists, type: " << static_cast<int>(root->header.type)
+                  << ", key_count: " << root->header.key_count << std::endl;
+
+        if (root->header.type == PageType::INTERNAL_NODE) {
+            const uint32_t* children = get_child_pointers(root);
+            std::cout << "DEBUG: Root has " << (root->header.key_count + 1) << " children" << std::endl;
+
+            for (uint32_t i = 0; i <= root->header.key_count; ++i) {
+                if (children[i] != 0) {
+                    Page* child = get_page(children[i], false);
+                    std::cout << "DEBUG: Child " << i << ": page " << children[i]
+                              << ", type: " << static_cast<int>(child->header.type)
+                              << ", key_count: " << child->header.key_count << std::endl;
+                    release_page(children[i], false);
+                }
+            }
+        }
+
+        release_page(root_page_id, false);
+    } catch (const std::exception& e) {
+        std::cerr << "DEBUG: Tree validation failed: " << e.what() << std::endl;
+    }
+}
 
     void FractalBPlusTree::print_tree_structure() const {
 
@@ -1387,6 +1552,7 @@ namespace fractal {
                 }
             }
 
+
             // Validation for data size
             if (data.size() > 65536) { // 1MB limit per value
                 throw std::runtime_error("Data too large for storage: " + std::to_string(data.size()));
@@ -1394,6 +1560,7 @@ namespace fractal {
 
             // Store the actual data length separately for verification
             uint32_t actual_length = data.size();
+            uint32_t total_size = sizeof(uint32_t) + actual_length;
 
             uint64_t offset = db_file->allocate_data_block(table_id, sizeof(uint32_t) + actual_length);
         
@@ -1455,7 +1622,7 @@ namespace fractal {
             std::cout << "WARNING: Length mismatch in read_data_block! "
                       << "stored_length=" << length << ", actual_length=" << actual_length << std::endl;
             // Use the smaller length for safety
-            length = std::min(length, actual_length);
+            //length = std::min(length, actual_length);
         }
 
         std::vector<char> buffer(length);
