@@ -1495,7 +1495,7 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         }
     }
 
-    void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName, const std::vector<DatabaseSchema::Column>& newSchema, const std::unordered_map<std::string,std::string>& renameMapping) {
+    /*void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName, const std::vector<DatabaseSchema::Column>& newSchema, const std::unordered_map<std::string,std::string>& renameMapping) {
         DatabaseState& dbState = getDatabase(dbName);
         TableInfo& tableInfo = dbState.tables[tableName];
 
@@ -1550,75 +1550,85 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         tableInfo.tree->flush_all_messages(0);
 
         std::cout << "Table rebuilt with new schema: " << tableName << std::endl;
-    }
+    }*/
 
-    /*void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName, const std::vector<DatabaseSchema::Column>& newSchema, const std::unordered_map<std::string, std::string>& renameMapping) {
+    void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName, const std::vector<DatabaseSchema::Column>& newSchema, const std::unordered_map<std::string, std::string>& renameMapping) {
         DatabaseState& dbState = getDatabase(dbName);
         TableInfo& tableInfo = dbState.tables[tableName];
 
-        // Get all current data
-        auto old_data = getTableData(dbName, tableName);
-        
-        std::cout << "DEBUG: Rebuilding table with new schema. Old data count: " << old_data.size() << std::endl;
-        std::cout << "DEBUG: Old schema columns: " << tableInfo.columns.size() << std::endl;
-        std::cout << "DEBUG: New schema columns: " << newSchema.size() << std::endl;
+        // Get all current data with thier original row IDs
+        std::cout << "DEBUG: Rebuilding table with new schema for table: " << tableName << std::endl;
 
-        // Store the old schema for proper data migration
-        auto old_schema = tableInfo.columns;
+        // Use scan_all to get data with thier original row IDs
+        auto existing_data = tableInfo.tree->scan_all(0);
+        std::cout << "DEBUG: Found " << existing_data.size() << " existing records " << std::endl;
 
-        // Drop and recreate table with new schema
+        // Prepare data for bulk load
+        std::vector<std::pair<int64_t, std::string>> bulk_data;
+
+        for (const auto& [row_id, serialized_data] : existing_data) {
+            try {
+                // Desirialize using OLD schema
+                auto old_row = deserializeRow(serialized_data, tableInfo.columns);
+
+                std::unordered_map<std::string, std::string> migratedRow;
+
+                // Copy all existing data from ole row
+                for (const auto& [col_name, value] : old_row) {
+                   migratedRow[col_name] = value;
+                }
+
+               // Apply columns renames
+               for (const auto& [old_name, new_name] : renameMapping) {
+                  if (migratedRow.find(old_name) != migratedRow.end()) {
+                     migratedRow[new_name] = migratedRow[old_name];
+                    migratedRow.erase(old_name);
+                  }
+               }
+
+              // Apply default values for new columns
+              for (const auto& newColumn : newSchema) {
+                 if (migratedRow.find(newColumn.name) == migratedRow.end() && !newColumn.defaultValue.empty()) {
+                     migratedRow[newColumn.name] = newColumn.defaultValue;
+                 }
+              }
+
+              // Serialize the NEW schema
+              std::string new_serialized_data = serializeRow(migratedRow, newSchema);
+
+              // Keep the original row_id
+              bulk_data.emplace_back(row_id, new_serialized_data);
+
+              std::cout << "DEBUG: Migrated row " << row_id << " with " << migratedRow.size() << " columns" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "WARNING: Faile to migrate row " << row_id << ": " << e.what() << std::endl;
+        }
+        }
+
+        // Drop and create table with new schema
+        std::cout << "DEBUG: Dropping and recreating table..." << std::endl;
         dropTable(dbName, tableName);
         createTable(dbName, tableName, newSchema);
 
-        // Reinsert data with new schema
-        for (auto& row : old_data) {
-            // Apply column renames
-            std::unordered_map<std::string, std::string> migratedRow;
+        // Use bulk load to rebuild tree with clean KeyValue entries
+        std::cout << "DEBUG: Performing bulk load..." << std::endl;
+        dbState.tables[tableName].tree->bulk_load(bulk_data, 0);
 
-            for (const auto& [old_name, new_name] : renameMapping) {
-                if (row.find(old_name) != row.end()) {
-                    //row[new_name] = row[old_name];
-                    //row.erase(old_name);
-                    migratedRow[new_name] = row[old_name];
-                }
-            }
-
-            // Map old columns to new columns, handling added/removed columns
-            for (const auto& newColumn : newSchema) {
-                // If column exists in old data use it
-                if (row.find(newColumn.name) != row.end()) {
-                    migratedRow[newColumn.name] = row[newColumn.name];
-                }
-                // If column was renamed, check rename mapping
-                else {
-                    bool foundInRename = false;
-                    for (const auto& [old_name, new_name] : renameMapping) {
-                        if (new_name == newColumn.name && row.find(old_name) != row.end()) {
-                            migratedRow[newColumn.name] = row[old_name];
-                            foundInRename = true;
-                            break;
-                        }
-                    }
-                    // If not found and column has default value, apply it
-                    if (!foundInRename && !newColumn.defaultValue.empty()) {
-                        migratedRow[newColumn.name] = newColumn.defaultValue;
-                    }
-                }
-            }
-
-            std::cout << "DEBUG: Migrated row has " << migratedRow.size() << " columns" << std::endl;
-            for (const auto& [col, val] : migratedRow) {
-                std::cout << "  " << col << " = '" << val << "'" << std::endl;
-            }
-
-            // Apply default values for new columns
-            //applyDefaultValues(row, newSchema);
-
-            insertRow(dbName, tableName, row);
+        // Update the next_row_id counter
+        if (!bulk_data.empty()) {
+            auto max_id = std::max_element(bulk_data.begin(), bulk_data.end(),[](const auto& a, const auto& b){
+                    return a.first < b.first;
+                    });
+            dbState.tables[tableName].next_row_id = max_id->first+1;
+            std::cout << "DEBUG: Updated next_row_id to " << dbState.tables[tableName].next_row_id << std::endl;
+        } else {
+            dbState.tables[tableName].next_row_id = 1;
+            std::cout<< "DEBUG: Reset next_row_id to 1 (empty table) " << std::endl;
         }
 
-        std::cout << "Table rebuilt with new schema: " << tableName << std::endl;
-    }*/
+        std::cout << "Table rebuilt with new schema using bulk load: " << tableName << std::endl;
+    }
+
 
     void DiskStorage::validateAlterTableOperation(const std::string& dbName, const std::string& tableName, const DatabaseSchema::Column& newColumn, const std::vector<DatabaseSchema::Column>& existingColumns) {
         // Check for duplicate column name
