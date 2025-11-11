@@ -1171,11 +1171,12 @@ namespace fractal {
         
         // Initialize with existing key value
         for (uint32_t i = 0; i < node->header.key_count; ++i) {
-            if (keys[i] != kvs[i].value_offset > 0 && kvs[i].value_length > 0 && kvs[i].value_length < 65536) {
+            if (/*keys[i] !=*/ kvs[i].value_offset > 0 && kvs[i].value_length > 0 && kvs[i].value_length < 65536) {
                 final_state[keys[i]] = {true,kvs[i]};
                 std::cout << "DEBUG: Initial valid  key " << keys[i] << " with offset " << kvs[i].value_offset << std::endl;
             } else {
                 std::cout << "DEBUG: Skipping invalid base key " << keys[i] << " offset=" << kvs[i].value_offset<< " length=" << kvs[i].value_length << std::endl;
+                final_state[keys[i]] = {false, kvs[i]};
             }
         }
         
@@ -1222,7 +1223,8 @@ namespace fractal {
             }*/
             
             const auto& [is_valid, kv] = state;
-            if (is_valid && kv.value_length > 0 && kv.value_length <= 65536) {
+            //if (is_valid && kv.value_length > 0 && kv.value_length <= 65536) {
+            if (is_valid) {
                 keys[new_index] = key;
                 kvs[new_index] = kv;
                 std::cout << "DEBUG: Final key " << key << " at index " << new_index <<  " offset=" << kv.value_offset << " length=" << kv.value_length << std::endl;
