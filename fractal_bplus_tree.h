@@ -96,11 +96,13 @@ namespace fractal {
 
             // Bulk operations
             void bulk_load(const std::vector<std::pair<int64_t, std::string>>& data, uint64_t transaction_id);
+            void perform_fresh_bulk_load(const std::vector<std::pair<int64_t, std::string>>& sorted_data, uint64_t transaction_id);
 
             // Maintenance
             void checkpoint();
             void flush_all_messages(uint64_t transaction_id);
             void defragment_tree(uint64_t transaction_id);
+            void validate_tree_structure() const;
 
             // Statistics and info
             uint32_t get_root_page_id() const { return root_page_id.load(); }
