@@ -824,25 +824,29 @@ std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
 
     bool wasInValueContext = inValueContext;
     inValueContext = true;
+    
+    try {
+        // Parse first row update
+        parseSingleRowUpdate(*stmt);
 
-    // Parse first row update
-    parseSingleRowUpdate(*stmt);
-
-    // Parse additional row updates
-    while (match(Token::Type::COMMA)) {
-        // Use peekToken to confirm this comma is followed by ROW
-        Token nextToken = peekToken();
-        if (nextToken.type != Token::Type::ROW) {
-            throw ParseError(currentToken.line, currentToken.column, 
-                           "Expected ROW after comma in BULK UPDATE");
+        // Parse additional row updates
+        while (match(Token::Type::COMMA)) {
+            // Use peekToken to confirm this comma is followed by ROW
+            Token nextToken = peekToken();
+            if (nextToken.type != Token::Type::ROW) {
+                throw ParseError(currentToken.line, currentToken.column, "Expected ROW after comma in BULK UPDATE");
+            }
+        
+            consume(Token::Type::COMMA);
+            parseSingleRowUpdate(*stmt);
         }
         
-        consume(Token::Type::COMMA);
-        parseSingleRowUpdate(*stmt);
+        inValueContext = wasInValueContext;
+        return stmt;
+    } catch (...) {
+        inValueContext = wasInValueContext;
+        throw;
     }
-
-    inValueContext = wasInValueContext;
-    return stmt;
 }
 
 void Parse::parseSingleSetClause(AST::BulkUpdateStatement::UpdateSpec& updateSpec) {

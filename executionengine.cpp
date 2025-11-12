@@ -1588,7 +1588,10 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkUpdate(AST::BulkUpdateSta
             const auto& current_row = table_data[update_spec.row_id - 1];
             std::unordered_map<std::string, std::string> actual_values;
             for (const auto& [col, expr] : update_spec.setClauses) {
-                actual_values[col] = evaluateExpression(expr.get(), current_row);
+                //actual_values[col] = evaluateExpression(expr.get(), current_row);
+                std::string value = evaluateExpression(expr.get(), current_row);
+                actual_values[col] = value;
+                std::cout << "DEBUG: Row " << update_spec.row_id << " - " << col << " = " << value<< " (expression: " << expr->toString() << ")" << std::endl;
             }
 
             actual_updates.emplace_back(update_spec.row_id, actual_values);
@@ -1912,7 +1915,8 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
                                               const std::unordered_map<std::string, std::string>& row) {
     if (!expr) {
         return "NULL";
-    }
+    } 
+
     if (auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(expr)) {
 	    std::string agg_name;
 	    if (aggregate->isCountAll) {
