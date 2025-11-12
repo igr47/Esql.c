@@ -1127,6 +1127,20 @@ void SematicAnalyzer::analyzeBulkUpdate(AST::BulkUpdateStatement& bulkUpdateStmt
 
             validateExpression(*expr, currentTable);
 
+            if (auto* binOp = dynamic_cast<AST::BinaryOp*>(expr.get())) {
+                if (binOp->op.type == Token::Type::PLUS || binOp->op.type == Token::Type::MINUS || binOp->op.type == Token::Type::ASTERIST || binOp->op.type == Token::Type::SLASH) {
+                    // Allow numeric opeartions that produce numeric resultd
+                    auto leftType = getValueType(*binOp->left);
+                    auto rightType = getValueType(*binOp->right);
+
+                    if (!(leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT) || !(rightType == DatabaseSchema::Column::INTEGER || rightType == DatabaseSchema::Column::FLOAT)) {
+                        throw SematicError("Arithmetic operations require numeric operands forcolumn: " + colName);
+                    }
+                    continue;
+                }
+            }
+            
+
             DatabaseSchema::Column::Type valueType = getValueType(*expr);
             if (!isTypeCompatible(column->type, valueType)) {
                 throw SematicError("Type mismatch for column: " + colName);
