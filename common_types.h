@@ -54,9 +54,10 @@ namespace fractal {
     struct KeyValue {
         int64_t key;
         uint64_t value_offset;  
-        uint32_t value_length;
+        uint32_t value_length; // This stores the ACTUAL data length
+        uint32_t stored_length; // Stores  total stored length (with header)
 
-        static constexpr size_t SIZE = sizeof(int64_t) + sizeof(uint64_t) + sizeof(uint32_t);
+        static constexpr size_t SIZE = sizeof(int64_t) + sizeof(uint64_t) + sizeof(uint32_t) * 2;
     };
 
     // Page header
