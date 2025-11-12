@@ -1142,7 +1142,7 @@ void ExecutionEngine::validateUpdateAgainstUniqueConstraints(const std::unordere
 
 	//Check each column beingupdated against unique constraint
 	for(const auto& column : table->columns) {
-		if(!column.isNullable) continue;
+		if(!column.isUnique) continue;
 
 		auto updateIt = updates.find(column.name);
 		if (updateIt == updates.end()) continue; //This column is not being updated
