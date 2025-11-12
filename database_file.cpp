@@ -345,7 +345,18 @@ uint64_t DatabaseFile::allocate_data_block(uint32_t table_id, uint32_t size) {
         throw std::runtime_error("Table not found for data block allocation: " + std::to_string(table_id));
     }
     
-    return it->second.allocate_block(size);
+    uint32_t allocated = it->second.allocate_block(size);
+
+    if (allocated >= it->second.end_offset) {
+        // Extend the data region
+        extend_data_region(table_id, size * 2); // Double the size
+        allocated = it->second.allocate_block(size);
+    }
+
+    std::cout << "DEBUG: allocate_data_block - table " << table_id
+              << " allocated offset " << allocated << " size " << size << std::endl;
+
+    return allocated;
 }
 
 void DatabaseFile::read_data_block(uint64_t offset, char* data, uint32_t size) {
