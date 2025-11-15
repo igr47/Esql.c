@@ -130,6 +130,23 @@ namespace fractal {
         return dbNames;
     }
 
+    std::vector<std::string> DiskStorage::getTableNames(const std::string& dbName) const {
+        std::vector<std::string> tableNames;
+
+        auto dbIt = databases.find(dbName);
+
+        if (dbIt == databases.end()) {
+            throw std::runtime_error("Database not found: " + dbName);
+        }
+
+        for (const auto& [tableName, _] : dbIt->second.tables) {
+            tableNames.push_back(tableName);
+        }
+
+        return tableNames;
+    }
+
+
     bool DiskStorage::databaseExists(const std::string& dbName) const {
         //std::shared_lock lock(storage_mutex);
         return databases.find(dbName) != databases.end();
@@ -1178,6 +1195,12 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         offset += sizeof(column.isNullable);
         std::memcpy(page->data + offset, &column.autoIncreament, sizeof(column.autoIncreament));
         offset += sizeof(column.autoIncreament);
+        std::memcpy(page->data + offset, &column.generateDate, sizeof(column.generateDate));
+        offset += sizeof(column.generateDate);
+        std::memcpy(page->data + offset, &column.generateDateTime, sizeof(column.generateDateTime));
+        offset += sizeof(column.generateDateTime);
+        std::memcpy(page->data + offset, &column.generateUUID, sizeof(column.generateUUID));
+        offset += sizeof(column.generateUUID);
 
         // Write default value
         uint32_t default_length = column.defaultValue.size();
@@ -1224,6 +1247,12 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         offset += sizeof(column.isNullable);
         std::memcpy(&column.autoIncreament, page->data + offset, sizeof(column.autoIncreament));
         offset += sizeof(column.autoIncreament);
+        std::memcpy(&column.generateDate, page->data + offset, sizeof(column.generateDate));
+        offset += sizeof(column.generateDate);
+        std::memcpy(&column.generateDateTime, page->data + offset, sizeof(column.generateDateTime));
+        offset += sizeof(column.generateDateTime);
+        std::memcpy(&column.generateUUID, page->data + offset, sizeof(column.generateUUID));
+        offset += sizeof(column.generateUUID);
 
         // Read default value
         uint32_t default_length;
@@ -1254,6 +1283,8 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
             case DatabaseSchema::Column::TEXT: return "TEXT";
             case DatabaseSchema::Column::VARCHAR: return "VARCHAR";
             case DatabaseSchema::Column::DATETIME: return "DATETIME";
+            case DatabaseSchema::Column::DATE: return "DATE";
+            case DatabaseSchema::Column::UUID: return "UUID";
             default: return "STRING";
         }
     }

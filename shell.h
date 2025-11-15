@@ -47,6 +47,7 @@ private:
     void redraw_interface();
     std::string colorize_sql(const std::string& input);
     void print_results(const ExecutionEngine::ResultSet& result, double duration);
+    void print_structure_results(const ExecutionEngine::ResultSet& result, double duration);
     void show_help();
     
     // History and completion

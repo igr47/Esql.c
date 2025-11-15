@@ -54,6 +54,9 @@ void Lexer::initializeKeyWords(){
 		{"BOOL",Token::Type::BOOL},
 		{"TEXT",Token::Type::TEXT},
 		{"FLOAT",Token::Type::FLOAT},
+        {"DATE",Token::Type::DATE},
+        {"DATETIME",Token::Type::DATETIME},
+        {"UUID",Token::Type::UUID},
 		{"COLON",Token::Type::COLON},
 		{"TRUE",Token::Type::TRUE},
 		{"FALSE",Token::Type::FALSE},
@@ -93,8 +96,21 @@ void Lexer::initializeKeyWords(){
 		{"DEFAULT",Token::Type::DEFAULT},
 		{"AUTO_INCREAMENT",Token::Type::AUTO_INCREAMENT},
 		{"IS",Token::Type::IS},
-		{"CHECK",Token::Type::CHECK}
-
+		{"CHECK",Token::Type::CHECK},
+        {"CASE",Token::Type::CASE},
+        {"WHEN",Token::Type::WHEN},
+        {"THEN",Token::Type::THEN},
+        {"ELSE",Token::Type::ELSE},
+        {"END",Token::Type::END},
+        {"ROUND",Token::Type::ROUND},
+        {"LOWER",Token::Type::LOWER},
+        {"UPPER",Token::Type::UPPER},
+        {"SUBSTRING",Token::Type::SUBSTRING},
+        {"LIKE",Token::Type::LIKE},
+        {"GENERATE_DATE",Token::Type::GENERATE_DATE},
+        {"GENERATE_DATE_TIME",Token::Type::GENERATE_DATE_TIME},
+        {"GENERATE_UUID",Token::Type::GENERATE_UUID},
+        {"STRUCTURE",Token::Type::STRUCTURE}
 	};
 }
 

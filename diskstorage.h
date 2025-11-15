@@ -56,6 +56,7 @@ namespace fractal {
             void createDatabase(const std::string& dbName);
             void useDatabase(const std::string& dbName);
             std::vector<std::string> listDatabases() const;
+            std::vector<std::string> getTableNames(const std::string& dbName) const; 
             bool databaseExists(const std::string& dbName) const;
             bool tableExists(const std::string& dbName, const std::string& tableName) const;
             void cleanupTable(TableInfo& tableInfo);
