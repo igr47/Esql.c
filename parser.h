@@ -135,6 +135,97 @@ namespace AST{
 			}
 	};
 
+    class CharClass : public Expression {
+        public:
+            std::string pattern;
+
+            std::unique_ptr<Expression> clone() const override {
+                return std::make_unique<CharClass>(pattern);
+            }
+
+            explicit CharClass(const std::string& p) : pattern(p) {}
+
+            std::string toString() const override {
+                return "[" + pattern + "]";
+            }
+    };
+
+    class LikeOp : public Expression{
+        public:
+            std::unique_ptr<Expression> left;
+            std::unique_ptr<Expression> right;
+
+            std::unique_ptr<Expression> clone() const override {
+                return std::make_unique<LikeOp>(left->clone(), right->clone());
+            }
+
+            LikeOp(std::unique_ptr<Expression> l, std::unique_ptr<Expression> r) : left(std::move(l)), right(std::move(r)) {}
+
+            std::string toString() const override {
+                return left->toString() + " LIKE " + right->toString();
+            }
+    };
+
+    class CaseExpression : public Expression {
+        public:
+            std::unique_ptr<Expression> caseExpression; // For simple case
+            std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whenClauses;
+            std::unique_ptr<Expression> elseClause;
+
+            std::unique_ptr<Expression> clone() const override {
+                std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> clonedWhens;
+                for (const auto& when : whenClauses) {
+                    clonedWhens.emplace_back(when.first->clone(), when.second->clone());
+                }
+                return std::make_unique<CaseExpression>(caseExpression ? caseExpression->clone() : nullptr, std::move(clonedWhens),elseClause ? elseClause->clone() : nullptr);
+            }
+
+            CaseExpression(std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whens,std::unique_ptr<Expression> elseExpr) : caseExpression(nullptr),whenClauses(std::move(whens)), elseClause(std::move(elseExpr)) {}
+
+            // Construction for simple case
+            CaseExpression(std::unique_ptr<Expression> caseExpr,std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whens,std::unique_ptr<Expression> elseExpr) : caseExpression(std::move(caseExpr)), whenClauses(std::move(whens)), elseClause(std::move(elseExpr)) {}
+
+            std::string toString() const override {
+                std::string result = "CASE";
+                if (caseExpression) {
+                    result += " " + caseExpression->toString();
+                }
+                for (const auto& when : whenClauses) {
+                    result += "WHEN" + when.first->toString() + "THEN" + when.second->toString() + " ";
+                }
+                if (elseClause) {
+                    result += "ELSE" + elseClause->toString() + " ";
+                }
+                return result + "END";
+            }
+    };
+
+    class FunctionCall : public Expression {
+        public: 
+            Token function;
+            std::vector<std::unique_ptr<Expression>> arguments;
+
+            std::unique_ptr<Expression> clone() const override {
+                std::vector<std::unique_ptr<Expression>> clonedArgs;
+                for (const auto& arg : arguments) {
+                    clonedArgs.push_back(arg->clone());
+                }
+                return std::make_unique<FunctionCall>(function,std::move(clonedArgs));
+            }
+
+            FunctionCall(Token func, std::vector<std::unique_ptr<Expression>> args) : function(func), arguments(std::move(args)) {}
+
+            std::string toString() const override {
+                std::string result = function.lexeme + "(";
+                for (size_t i = 0; i < arguments.size(); ++i) {
+                    result += arguments[i]->toString();
+                    if (i < arguments.size() - 1) result += ", ";
+                }
+                return result + ")";
+            }
+    };
+
+
 	class Literal:public Expression{
 		public:
 			Token token;
@@ -213,7 +304,16 @@ namespace AST{
 	};
 	class ShowTableStatement:public Statement{
 		public:
+            std::string tableName;
 	};
+    class ShowTableStructureStatement : public Statement {
+        public:
+            std::string tableName;
+    };
+    class ShowDatabaseStructure : public Statement {
+        public:
+            std::string dbName;
+    };
 	class SelectStatement:public Statement{
 		public:
 			std::vector<std::unique_ptr<Expression>> columns;
@@ -367,8 +467,13 @@ class Parse{
 		std::unique_ptr<AST::Statement> parseStatement();
 		std::unique_ptr<AST::CreateDatabaseStatement> parseCreateDatabaseStatement();
 		std::unique_ptr<AST::UseDatabaseStatement> parseUseStatement();
+        // Queries to show the contents and structures of the database
+        std::unique_ptr<AST::ShowTableStatement> parseShowTableStatement();
 		std::unique_ptr<AST::ShowDatabaseStatement> parseShowDatabaseStatement();
-		std::unique_ptr<AST::ShowTableStatement> parseShowTableStatement();
+        std::unique_ptr<AST::ShowTableStructureStatement> parseShowTableStructureStatement();
+        std::unique_ptr<AST::ShowDatabaseStructure> parseShowDatabaseStructureStatement();
+        // ****************** END *************************************************
+		//std::unique_ptr<AST::ShowTableStatement> parseShowTableStatement();
 		std::unique_ptr<AST::GroupByClause>  parseGroupByClause();
 		std::unique_ptr<AST::HavingClause> parseHavingClause();
 		std::unique_ptr<AST::OrderByClause> parseOrderByClause();
@@ -389,8 +494,12 @@ class Parse{
 		std::vector<std::unique_ptr<AST::Expression>> parseColumnList();
 		std::vector<std::pair<std::unique_ptr<AST::Expression>,std::string>> parseColumnListAs();
 		std::unique_ptr<AST::Expression> parseFromClause();
+        // Case expressions in UPDATE
+        std::unique_ptr<AST::Expression> parseCaseExpression();
 		//std::unique_ptr<AST::Expression> parseExpression();
 		std::unique_ptr<AST::Expression> parseBinaryExpression(int minPrecedence);
+        std::unique_ptr<AST::Expression> parseLikePattern();
+        std::unique_ptr<AST::Expression> parseCharacterClassPattern(const std::string& pattern);
 		std::unique_ptr<AST::Expression> parsePrimaryExpression();
 		std::unique_ptr<AST::Expression> parseIdentifier();
 		std::unique_ptr<AST::Expression> parseLiteral();

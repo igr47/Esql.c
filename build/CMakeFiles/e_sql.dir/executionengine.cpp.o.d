@@ -1,6 +1,7 @@
-CMakeFiles/e_sql.dir/analyzer.cpp.o: \
- /home/igiris/git_projects/Esql.c/analyzer.cpp /usr/include/stdc-predef.h \
- /home/igiris/git_projects/Esql.c/analyzer.h \
+CMakeFiles/e_sql.dir/executionengine.cpp.o: \
+ /home/igiris/git_projects/Esql.c/executionengine.cpp \
+ /usr/include/stdc-predef.h \
+ /home/igiris/git_projects/Esql.c/executionengine.h \
  /home/igiris/git_projects/Esql.c/parser.h \
  /home/igiris/git_projects/Esql.c/scanner.h /usr/include/c++/14/string \
  /usr/include/c++/14/bits/requires_hosted.h \
@@ -180,6 +181,7 @@ CMakeFiles/e_sql.dir/analyzer.cpp.o: \
  /usr/include/c++/14/bits/stl_heap.h \
  /usr/include/c++/14/bits/uniform_int_dist.h \
  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
+ /home/igiris/git_projects/Esql.c/analyzer.h \
  /home/igiris/git_projects/Esql.c/database_schema.h \
  /usr/include/c++/14/cstdint \
  /home/igiris/git_projects/Esql.c/diskstorage.h \
@@ -226,9 +228,9 @@ CMakeFiles/e_sql.dir/analyzer.cpp.o: \
  /usr/include/c++/14/bits/stl_deque.h /usr/include/c++/14/bits/deque.tcc \
  /usr/include/c++/14/bits/stl_queue.h /usr/include/c++/14/cstring \
  /usr/include/string.h /usr/include/strings.h \
- /home/igiris/git_projects/Esql.c/storage.h \
- /home/igiris/git_projects/Esql.c/database.h \
- /home/igiris/git_projects/Esql.c/executionengine.h \
- /usr/include/c++/14/set /usr/include/c++/14/bits/stl_set.h \
- /usr/include/c++/14/bits/stl_multiset.h /usr/include/c++/14/utility \
- /usr/include/c++/14/bits/stl_relops.h
+ /home/igiris/git_projects/Esql.c/storage.h /usr/include/c++/14/set \
+ /usr/include/c++/14/bits/stl_set.h \
+ /usr/include/c++/14/bits/stl_multiset.h \
+ /home/igiris/git_projects/Esql.c/database.h /usr/include/c++/14/utility \
+ /usr/include/c++/14/bits/stl_relops.h /usr/include/c++/14/sstream \
+ /usr/include/c++/14/bits/sstream.tcc

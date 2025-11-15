@@ -1,6 +1,5 @@
-CMakeFiles/e_sql.dir/analyzer.cpp.o: \
- /home/igiris/git_projects/Esql.c/analyzer.cpp /usr/include/stdc-predef.h \
- /home/igiris/git_projects/Esql.c/analyzer.h \
+CMakeFiles/e_sql.dir/parser.cpp.o: \
+ /home/igiris/git_projects/Esql.c/parser.cpp /usr/include/stdc-predef.h \
  /home/igiris/git_projects/Esql.c/parser.h \
  /home/igiris/git_projects/Esql.c/scanner.h /usr/include/c++/14/string \
  /usr/include/c++/14/bits/requires_hosted.h \
@@ -180,12 +179,7 @@ CMakeFiles/e_sql.dir/analyzer.cpp.o: \
  /usr/include/c++/14/bits/stl_heap.h \
  /usr/include/c++/14/bits/uniform_int_dist.h \
  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
- /home/igiris/git_projects/Esql.c/database_schema.h \
- /usr/include/c++/14/cstdint \
- /home/igiris/git_projects/Esql.c/diskstorage.h \
- /home/igiris/git_projects/Esql.c/database_file.h \
- /home/igiris/git_projects/Esql.c/common_types.h \
- /usr/include/c++/14/fstream /usr/include/c++/14/istream \
+ /usr/include/c++/14/iostream /usr/include/c++/14/ostream \
  /usr/include/c++/14/ios /usr/include/c++/14/bits/ios_base.h \
  /usr/include/c++/14/bits/locale_classes.h \
  /usr/include/c++/14/bits/locale_classes.tcc \
@@ -199,36 +193,6 @@ CMakeFiles/e_sql.dir/analyzer.cpp.o: \
  /usr/include/c++/14/bits/streambuf_iterator.h \
  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
  /usr/include/c++/14/bits/locale_facets.tcc \
- /usr/include/c++/14/bits/basic_ios.tcc /usr/include/c++/14/ostream \
- /usr/include/c++/14/bits/ostream.tcc \
- /usr/include/c++/14/bits/istream.tcc /usr/include/c++/14/bits/codecvt.h \
- /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
- /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
- /usr/include/c++/14/bits/fstream.tcc \
- /home/igiris/git_projects/Esql.c/buffer_pool.h /usr/include/c++/14/list \
- /usr/include/c++/14/bits/stl_list.h /usr/include/c++/14/bits/list.tcc \
- /home/igiris/git_projects/Esql.c/write_ahead_log.h \
- /usr/include/c++/14/map /usr/include/c++/14/bits/stl_tree.h \
- /usr/include/c++/14/bits/stl_map.h \
- /usr/include/c++/14/bits/stl_multimap.h \
- /home/igiris/git_projects/Esql.c/fractal_bplus_tree.h \
- /home/igiris/git_projects/Esql.c/locking_policy.h \
- /usr/include/c++/14/shared_mutex /usr/include/c++/14/bits/chrono.h \
- /usr/include/c++/14/ratio /usr/include/c++/14/limits \
- /usr/include/c++/14/ctime /usr/include/c++/14/bits/parse_numbers.h \
- /usr/include/c++/14/bits/std_mutex.h /usr/include/c++/14/mutex \
- /usr/include/c++/14/bits/unique_lock.h /usr/include/c++/14/atomic \
- /usr/include/c++/14/thread /usr/include/c++/14/bits/std_thread.h \
- /usr/include/c++/14/bits/this_thread_sleep.h \
- /home/igiris/git_projects/Esql.c/deadlock_detector.h \
- /usr/include/c++/14/chrono /usr/include/c++/14/iostream \
- /usr/include/c++/14/queue /usr/include/c++/14/deque \
- /usr/include/c++/14/bits/stl_deque.h /usr/include/c++/14/bits/deque.tcc \
- /usr/include/c++/14/bits/stl_queue.h /usr/include/c++/14/cstring \
- /usr/include/string.h /usr/include/strings.h \
- /home/igiris/git_projects/Esql.c/storage.h \
- /home/igiris/git_projects/Esql.c/database.h \
- /home/igiris/git_projects/Esql.c/executionengine.h \
- /usr/include/c++/14/set /usr/include/c++/14/bits/stl_set.h \
- /usr/include/c++/14/bits/stl_multiset.h /usr/include/c++/14/utility \
- /usr/include/c++/14/bits/stl_relops.h
+ /usr/include/c++/14/bits/basic_ios.tcc \
+ /usr/include/c++/14/bits/ostream.tcc /usr/include/c++/14/istream \
+ /usr/include/c++/14/bits/istream.tcc

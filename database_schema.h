@@ -10,7 +10,7 @@
 
 struct DatabaseSchema {
     struct Constraint {
-	    enum Type { NOT_NULL,UNIQUE,PRIMARY_KEY,FOREIGN_KEY,CHECK,DEFAULT,AUTO_INCREAMENT };
+	    enum Type { NOT_NULL,UNIQUE,PRIMARY_KEY,FOREIGN_KEY,CHECK,DEFAULT,AUTO_INCREAMENT, GENERATE_DATE,GENERATE_DATE_TIME,GENERATE_UUID };
 	    Type type;
 	    std::string name;
 	    std::string value;
@@ -21,12 +21,15 @@ struct DatabaseSchema {
     };
     struct Column {
     std::string name;
-    enum Type { INTEGER, FLOAT, STRING, BOOLEAN, TEXT, VARCHAR, DATETIME } type;
+    enum Type { INTEGER, FLOAT, STRING, BOOLEAN, TEXT, VARCHAR, DATETIME, DATE, UUID } type;
     bool isNullable = true;
     bool hasDefault = false;
     bool isPrimaryKey = false;
     bool isUnique = false;
     bool autoIncreament = false;
+    bool generateDate = false;
+    bool generateDateTime = false;
+    bool generateUUID = false;
     std::string defaultValue;
     size_t length = 0; // For VARCHAR types
     std::vector<Constraint> constraints;
@@ -37,8 +40,14 @@ struct DatabaseSchema {
         if (typeStr == "BOOL" || typeStr == "BOOLEAN") return BOOLEAN;
         if (typeStr == "TEXT") return TEXT;
         if (typeStr.find("VARCHAR") == 0) return VARCHAR;
-        if (typeStr == "DATETIME") return DATETIME;
+        if (typeStr == "DATETIME" || typeStr == "TIMESTAMP") return DATETIME;
+        if (typeStr == "DATE") return DATE;
+        if (typeStr == "UUID") return UUID;
         throw std::runtime_error("Unknown type: " + typeStr);
+    }
+
+    bool shouldAutoGenerate() const {
+        return generateDate || generateDateTime || generateUUID;
     }
 };
 

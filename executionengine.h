@@ -5,6 +5,8 @@
 #include "parser.h"
 #include "analyzer.h"
 #include "diskstorage.h"
+#include "datetime.h"
+#include "uuid.h"
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -42,7 +44,15 @@ private:
     // Statement execution methods
     ResultSet executeCreateDatabase(AST::CreateDatabaseStatement& stmt);
     ResultSet executeUse(AST::UseDatabaseStatement& stmt);
+
+    // Methods to show the database structure
     ResultSet executeShow(AST::ShowDatabaseStatement& stmt);
+    ResultSet executeShowTables(AST::ShowTableStatement& stmt); 
+    ResultSet executeShowTableStructure(AST::ShowTableStructureStatement& stmt);
+    ResultSet executeShowDatabaseStructure(AST::ShowDatabaseStructure& stmt);
+    std::string getTypeString(DatabaseSchema::Column::Type type);
+    //********************************************************************
+
     ResultSet executeCreateTable(AST::CreateTableStatement& stmt);
     ResultSet executeDropTable(AST::DropStatement& stmt);
     ResultSet executeSelect(AST::SelectStatement& stmt);
@@ -62,6 +72,26 @@ private:
     std::vector<std::unordered_map<std::string,std::string>> sortResult(const std::vector<std::unordered_map<std::string,std::string>>& result,AST::OrderByClause* orderBy);
     bool isAggregateFunction(const std::string& functionName);
     std::vector<std::vector<std::string>> applyDistinct(const std::vector<std::vector<std::string>>& rows);
+    bool simplePatternMatch(const std::string& str, const std::string& pattern);
+    bool matchPattern(const std::string& str, const std::string& pattern,size_t strPos, size_t patternPos,bool startsWithAnchor, bool endsWithAnchor);
+    std::string expandCharacterClass(const std::string& charClass); 
+    bool isRegexSpecialChar(char c);
+    std::string likePatternToRegex(const std::string& likePattern);
+    std::string evaluateLikeOperation(const AST::LikeOp* likeOp, const std::unordered_map<std::string, std::string>& row);
+    bool evaluateCharacterClassMatch(const std::string& str, const std::string& charClassPattern);
+    bool simpleRegexMatch(const std::string& str, const std::string& regexPattern);
+
+    // Helper methods for applying auto generated values
+    DateTime generateCurrentDate();
+    DateTime generateCurrentDateTime();
+    UUID generateUUIDValue();
+
+    // Helper to convert stored strings to proper types
+    std::string convertToStorableValue(const std::string& rawValue, DatabaseSchema::Column::Type columnType);
+    std::string convertFromStoredValue(const std::string& storedValue, DatabaseSchema::Column::Type columnType);
+
+    // Method to apply the values
+    void applyGeneratedValues(std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table);
     
     // ALTER TABLE helper methods
     ResultSet handleAlterAdd(AST::AlterTableStatement* stmt);

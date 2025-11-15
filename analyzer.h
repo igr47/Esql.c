@@ -27,6 +27,9 @@ class SematicAnalyzer{
 		void analyzeUse(AST::UseDatabaseStatement& useStmt);
 		//method for show
 		void analyzeShow(AST::ShowDatabaseStatement& showStmt);
+        void analyzeShowTable(AST::ShowTableStatement& showStmt);
+        void anlyzeShowTableStructure(AST::ShowTableStructureStatement& showStmt);
+        void analyzeShowDatabaseStructure(AST::ShowDatabaseStructure& showStmt); 
 		void ensureDatabaseSelected() const;
 		//method for select analysis
 		void analyzeSelect(AST::SelectStatement& selectStmt);
@@ -42,6 +45,13 @@ class SematicAnalyzer{
 		void validateInOperation(AST::InOp& inOp,const DatabaseSchema::Table* table);
 		void validateNotOperation(AST::NotOp& notOp, const DatabaseSchema::Table* table);
 		void validateDistinctUsage(AST::SelectStatement& selectStmt);
+        // Validation for conditions in UPDATE
+        void validateCaseExpression(AST::CaseExpression& caseExpr, const DatabaseSchema::Table* table);
+        void validateFunctionCall(AST::FunctionCall& funcCall, const DatabaseSchema::Table* table);
+        bool areTypesCompatible(DatabaseSchema::Column::Type t1, DatabaseSchema::Column::Type t2);
+        bool isTypeCompatibleForAssignment(DatabaseSchema::Column::Type columnType, DatabaseSchema::Column::Type valueType);
+        bool isImplicitlyBoolean(const AST::Expression& expr);
+        std::string typeToString(DatabaseSchema::Column::Type type) const;
 		//void validateColumnReference(AST::Expression& expr);
 		void validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table);
 		void validateBinaryOperation(AST::BinaryOp&,const DatabaseSchema::Table* table);
@@ -51,6 +61,9 @@ class SematicAnalyzer{
 		bool isComparisonOperator(Token::Type type);
 		bool isAggregateExpression(const AST::Expression& expr) const;
 		//end of the child methods
+        //**********************************************************************
+        void validateLikeOperation(AST::LikeOp& likeOp, const DatabaseSchema::Table* table);
+        void validateCharacterClassSyntax(const std::string& pattern);
 		//metod to analyze insert statement analysis
 		void analyzeInsert(AST::InsertStatement& insertStmt);
 		void analyzeCreate(AST::CreateTableStatement& createStmt);

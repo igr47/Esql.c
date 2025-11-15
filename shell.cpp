@@ -22,15 +22,15 @@
 const std::unordered_set<std::string> ESQLShell::keywords = {
     "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
     "DELETE", "CREATE", "TABLE", "DATABASE", "DROP", "ALTER", "ADD", "RENAME",
-    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", "DATABASES","BY","ORDER","GROUP","HAVING","BULK","ROW"
+    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", "DATABASES","BY","ORDER","GROUP","HAVING","BULK","ROW","TABLES","STRUCTURE"
 };
 
 const std::unordered_set<std::string> ESQLShell::datatypes = {
-    "INT", "INTEGER", "FLOAT", "TEXT", "STRING", "BOOL", "BOLEAN", "VARCHAR", "DATE"
+    "INT", "INTEGER", "FLOAT", "TEXT", "STRING", "BOOL", "BOLEAN", "VARCHAR", "DATE", "DATETIME", "UUID"
 };
 
 const std::unordered_set<std::string> ESQLShell::conditionals = {
-    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT","AS","PRIMARY_KEY","UNIQUE","DEFAULT","AUTO_INCREAMENT","CHECK","NOT_NULL","TO","TRUE","FALSE"
+    "AND", "OR", "NOT", "NULL", "IS", "LIKE", "IN", "BETWEEN", "OFFSET", "LIMIT","AS","PRIMARY_KEY","UNIQUE","DEFAULT","AUTO_INCREAMENT","CHECK","NOT_NULL","TO","TRUE","FALSE", "GENERATE_UUID", "GENERATE_DATE", "GENERATE_DATE_TIME", "CASE", "WHEN", "THEN", "ELSE"
 };
 
 ESQLShell::ESQLShell(Database& db) : db(db), current_db("default") {
@@ -646,13 +646,19 @@ void ESQLShell::execute_command(const std::string& command) {
     
     std::cout << "\n";
 }
-void ESQLShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
+/*void ESQLShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
     if (result.columns.empty()) {
         std::cout << (use_colors ? GREEN : "") << "Query executed successfully.\n"
                   << (use_colors ? RESET : "");
         return;
     }
-    
+   
+    // Specialformatting  for structure commands
+    if (result.column.size() == 2 && (result.columns[0] == "Property" || result.columns[0] == "Database Structure")) {
+        print_structure_results(result, duration);
+        return;
+    }
+
     // Calculate column widths
     std::vector<size_t> widths(result.columns.size());
     for (size_t i = 0; i < result.columns.size(); ++i) {
@@ -662,18 +668,25 @@ void ESQLShell::print_results(const ExecutionEngine::ResultSet& result, double d
                 widths[i] = row[i].length() + 2;
             }
         }
+        // Limit maximum width for better display
+        if (widths[i] > 50) widths[i] = 50;
     }
     
     // Print header
-    std::cout << (use_colors ? CYAN : "");
+    std::cout << (use_colors ? CYAN : "") << "┌";;
     for (size_t i = 0; i < result.columns.size(); ++i) {
-        std::cout << std::left << std::setw(widths[i]) << result.columns[i] << " |";
+        //std::cout << std::left << std::setw(widths[i]) << result.columns[i] << " |";
+        std::cout << std::string(widths[i], '-');
+        if (i < result.columns.size() - 1) std::cout << "┬";
     }
-    std::cout << (use_colors ? RESET : "") << "\n";
+    std::cout << "┐\n";
+    //std::cout << (use_colors ? RESET : "") << "\n";
     
+    std::cout << "│";
     // Print separator
     for (size_t i = 0; i < result.columns.size(); ++i) {
-        std::cout << std::string(widths[i], '-') << "-|";
+        std::cout << (use_colors ? MAGENTA : "") << std::left << std::setw(widths[i]) << result.columns[i] << (use_colors ? CYAN : "") << "│";
+        //std::cout << std::string(widths[i], '-') << "-|";
     }
     std::cout << "\n";
     
@@ -692,6 +705,162 @@ void ESQLShell::print_results(const ExecutionEngine::ResultSet& result, double d
     std::cout << (use_colors ? GRAY : "") << "Time: " << std::fixed 
               << std::setprecision(4) << duration << " seconds\n"
               << (use_colors ? RESET : "");
+}*/
+
+// Replace the print_results method in shell.cpp with this version:
+void ESQLShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
+    if (result.columns.empty()) {
+        std::cout << (use_colors ? GREEN : "") << "Query executed successfully.\n"
+                  << (use_colors ? RESET : "");
+        return;
+    }
+    
+    // Special formatting for structure commands
+    if (result.columns.size() == 2 && 
+        (result.columns[0] == "Property" || result.columns[0] == "Database Structure")) {
+        print_structure_results(result, duration);
+        return;
+    }
+    
+    // Calculate column widths for regular results
+    std::vector<size_t> widths(result.columns.size());
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        widths[i] = result.columns[i].length() + 2;
+        for (const auto& row : result.rows) {
+            if (i < row.size() && row[i].length() + 2 > widths[i]) {
+                widths[i] = row[i].length() + 2;
+            }
+        }
+        // Limit maximum width for better display
+        if (widths[i] > 50) widths[i] = 50;
+    }
+    
+    // Print header with ASCII styling
+    std::cout << (use_colors ? CYAN : "") << "+";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << std::string(widths[i], '-');
+        if (i < result.columns.size() - 1) std::cout << "+";
+    }
+    std::cout << "+\n";
+    
+    std::cout << "|";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << (use_colors ? MAGENTA : "") 
+                  << std::left << std::setw(widths[i]) << result.columns[i] 
+                  << (use_colors ? CYAN : "") << "|";
+    }
+    std::cout << (use_colors ? RESET : "") << "\n";
+    
+    std::cout << (use_colors ? CYAN : "") << "+";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << std::string(widths[i], '-');
+        if (i < result.columns.size() - 1) std::cout << "+";
+    }
+    std::cout << "+\n" << (use_colors ? RESET : "");
+    
+    // Print rows
+    for (const auto& row : result.rows) {
+        std::cout << (use_colors ? CYAN : "") << "|" << (use_colors ? RESET : "");
+        for (size_t i = 0; i < row.size(); ++i) {
+            std::string display_value = row[i];
+            if (display_value.length() > widths[i] - 2) {
+                display_value = display_value.substr(0, widths[i] - 5) + "...";
+            }
+            std::cout << (use_colors ? YELLOW : "") 
+                      << std::left << std::setw(widths[i]) << display_value 
+                      << (use_colors ? CYAN : "") << "|" << (use_colors ? RESET : "");
+        }
+        std::cout << "\n";
+    }
+    
+    // Print footer
+    std::cout << (use_colors ? CYAN : "") << "+";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << std::string(widths[i], '-');
+        if (i < result.columns.size() - 1) std::cout << "+";
+    }
+    std::cout << "+\n" << (use_colors ? RESET : "");
+    
+    // Print summary
+    std::cout << (use_colors ? GRAY : "") << "> " << result.rows.size() << " row" 
+              << (result.rows.size() != 1 ? "s" : "") 
+              << " in " << std::fixed << std::setprecision(4) << duration << "s"
+              << (use_colors ? RESET : "") << "\n";
+}
+
+// Replace the print_structure_results method with this ASCII version:
+void ESQLShell::print_structure_results(const ExecutionEngine::ResultSet& result, double duration) {
+    std::cout << (use_colors ? CYAN : "") << "==============================================================\n";
+    std::cout << (use_colors ? MAGENTA : "") << "               DATABASE STRUCTURE REPORT               \n";
+    std::cout << (use_colors ? CYAN : "") << "==============================================================\n" 
+              << (use_colors ? RESET : "");
+    
+    std::string current_section = "";
+    
+    for (const auto& row : result.rows) {
+        if (row.size() < 2) continue;
+        
+        const std::string& left = row[0];
+        const std::string& right = row[1];
+        
+        // Handle section headers
+        if (right.empty() && (left.find("COLUMNS") != std::string::npos || 
+                             left.find("CONSTRAINTS") != std::string::npos ||
+                             left.find("TABLE DETAILS") != std::string::npos ||
+                             left.find("STORAGE INFO") != std::string::npos)) {
+            std::cout << "\n" << (use_colors ? GREEN : "") << "=== " << left 
+                      << " " << std::string(50 - left.length(), '=') << "\n"
+                      << (use_colors ? RESET : "");
+            current_section = left;
+            continue;
+        }
+        
+        // Handle separators
+        if (left == "---" && right == "---") {
+            std::cout << (use_colors ? GRAY : "") 
+                      << std::string(60, '-') << "\n" 
+                      << (use_colors ? RESET : "");
+            continue;
+        }
+        
+        // Handle column headers in columns section
+        if (current_section.find("COLUMNS") != std::string::npos && 
+            left.empty() && right.find("Name | Type") != std::string::npos) {
+            std::cout << (use_colors ? CYAN : "") 
+                      << std::left << std::setw(56) << right 
+                      << (use_colors ? RESET : "") << "\n";
+            std::cout << std::string(56, '-') << "\n" 
+                      << (use_colors ? RESET : "");
+            continue;
+        }
+        
+        // Regular property-value pairs
+        if (!left.empty() && !right.empty()) {
+            if (left == right) { // This is a section title
+                std::cout << (use_colors ? MAGENTA : "") 
+                          << std::left << std::setw(56) << left 
+                          << (use_colors ? RESET : "") << "\n";
+            } else {
+                std::cout << (use_colors ? YELLOW : "") << std::left << std::setw(20) << left 
+                          << (use_colors ? CYAN : "") << " : " 
+                          << (use_colors ? GRAY : "") << std::left << std::setw(33) << right 
+                          << (use_colors ? RESET : "") << "\n";
+            }
+        } else if (left.empty() && !right.empty()) {
+            // Indented information (like column details)
+            std::cout << "   " 
+                      << (use_colors ? BLUE : "") << std::left << std::setw(53) << right 
+                      << (use_colors ? RESET : "") << "\n";
+        }
+    }
+    
+    std::cout << (use_colors ? CYAN : "") << std::string(60, '=') << "\n" 
+              << (use_colors ? RESET : "");
+    
+    // Print summary
+    std::cout << (use_colors ? GRAY : "") << "> Report generated in " 
+              << std::fixed << std::setprecision(4) << duration << "s"
+              << (use_colors ? RESET : "") << "\n";
 }
 
 void ESQLShell::show_help() {

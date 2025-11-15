@@ -58,7 +58,13 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 		}else if(match(Token::Type::TABLES)){
 			advance();
 			return parseShowTableStatement();
-		}
+        } else if (match(Token::Type::TABLE)) {
+            advance();
+            return parseShowTableStructureStatement();
+        } else if (match(Token::Type::DATABASE)) {
+            advance();
+            return parseShowDatabaseStructureStatement();
+        }
 	}else if(match(Token::Type::ALTER)){
 		return parseAlterTableStatement();
 	}
@@ -174,12 +180,12 @@ std::unique_ptr<AST::ShowDatabaseStatement> Parse::parseShowDatabaseStatement(){
 	//consume(Token::Type::DATABASES);
 	return stmt;
 }
-std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement(){
+/*std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement(){
 	auto stmt=std::make_unique<AST::ShowTableStatement>();
 	consume(Token::Type::SHOW);
 	consume(Token::Type::TABLES);
 	return stmt;
-}
+}*/
 
 std::unique_ptr<AST::GroupByClause> Parse::parseGroupByClause() {
 	consume(Token::Type::GROUP);
@@ -482,14 +488,14 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
     //consume(Token::Type::COLON);
 
     // Column type
-    if (!matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT})) {
-        throw std::runtime_error("Expected column type (INT, TEXT, BOOL, or FLOAT)");
+    if (!matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT,Token::Type::DATE,Token::Type::DATETIME, Token::Type::UUID})) {
+        throw std::runtime_error("Expected column type (INT, TEXT, BOOL, DATE, DATETIME, UUID or FLOAT)");
     }
     col.type = currentToken.lexeme;
     consume(currentToken.type);
 
     // Column constraints
-    while(matchAny({Token::Type::PRIMARY_KEY , Token::Type::NOT_NULL,Token::Type::UNIQUE,Token::Type::CHECK,Token::Type::DEFAULT,Token::Type::AUTO_INCREAMENT})){
+    while(matchAny({Token::Type::PRIMARY_KEY , Token::Type::NOT_NULL,Token::Type::UNIQUE,Token::Type::CHECK,Token::Type::DEFAULT,Token::Type::AUTO_INCREAMENT, Token::Type::GENERATE_DATE, Token::Type::GENERATE_DATE_TIME,Token::Type::GENERATE_UUID})){
 	     if(match(Token::Type::PRIMARY_KEY)){
                    col.constraints.push_back("PRIMARY_KEY");
 		   consume(Token::Type::PRIMARY_KEY);
@@ -513,6 +519,32 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
 		     col.autoIncreament = true;
 		     col.constraints.push_back("AUTO_INCREAMENT");
 		     consume(Token::Type::AUTO_INCREAMENT);
+         } else if (match(Token::Type::GENERATE_DATE)) {
+             col.constraints.push_back("GENERATE_DATE");
+             //col.generateDate = true;
+             consume(Token::Type::GENERATE_DATE);
+
+             if (col.type != "DATE") {
+                 throw std::runtime_error("GENERATE_DATE can only be applied to DATE columns");
+             }
+         } else if (match(Token::Type::GENERATE_DATE_TIME)) {
+             col.constraints.push_back("GENERATE_DATE_TIME");
+             //col.generateDateTime = true;
+             consume(Token::Type::GENERATE_DATE_TIME);
+
+             // Validate that column type is DATETIME
+             if (col.type != "DATETIME" && col.type != "TIMESTAMP") {
+                 throw std::runtime_error("GENERATE_DATE_TIME can only be applied toDATETIME columns");
+             }
+         } else if (match(Token::Type::GENERATE_UUID)) {
+             col.constraints.push_back("GENERATE_UUID");
+             //col.generateUUID = true;
+             consume(Token::Type::GENERATE_UUID);
+
+             // Valiadte taht columns is UUID or TEXT
+             if (col.type != "UUID" && col.type != "TEXT") {
+                 throw std::runtime_error("GENERATE_UUID can only be applied to UUID or TEXT columns");
+             }
 	     }else if (match(Token::Type::DEFAULT)){
 		     consume(Token::Type::DEFAULT);
 
@@ -569,6 +601,32 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
     }
 
     stmt.columns.push_back(std::move(col));
+}
+
+std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement() {
+    auto stmt = std::make_unique<AST::ShowTableStatement>();
+
+    return stmt;
+}
+
+std::unique_ptr<AST::ShowTableStructureStatement> Parse::parseShowTableStructureStatement() {
+    auto stmt = std::make_unique<AST::ShowTableStructureStatement>();
+    
+    consume(Token::Type::STRUCTURE);
+    stmt->tableName = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    return stmt;
+}
+
+std::unique_ptr<AST::ShowDatabaseStructure> Parse::parseShowDatabaseStructureStatement() {
+    auto stmt = std::make_unique<AST::ShowDatabaseStructure>();
+
+    consume(Token::Type::STRUCTURE);
+    stmt->dbName = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    return stmt;
 }
 
 std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
@@ -971,6 +1029,37 @@ std::unique_ptr<AST::Expression> Parse::parseFromClause(){
 	return parseIdentifier();
 }
 
+std::unique_ptr<AST::Expression> Parse::parseLikePattern() {
+    if (match(Token::Type::L_PAREN)) {
+        // Handle complex expressions in like
+        return parseExpression();
+    } else if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+        // Parse string literals that may contain character classes
+        std::string pattern = currentToken.lexeme;
+
+        // Remove quotes
+        if (pattern.size() >= 2 && ((pattern[0] == '\'' && pattern.back() == '\'') || (pattern[0] == '"' && pattern.back() == '"'))) {
+            pattern = pattern.substr(1, pattern.size() - 2);
+        }
+
+        advance();
+
+        // Check if this string contains character classes that nee parsing
+        if (pattern.find('[') != std::string::npos) {
+            return parseCharacterClassPattern(pattern);
+        }
+
+        return std::make_unique<AST::Literal>(Token(Token::Type::STRING_LITERAL,pattern, 0, 0));
+    } else {
+        throw ParseError(currentToken.line, currentToken.column,"Expected string literal in LIKE pattern");
+    }
+}
+
+std::unique_ptr<AST::Expression> Parse::parseCharacterClassPattern(const std::string& pattern) {
+    // Charachter class expansion will be taken care off in the execution enging
+    return std::make_unique<AST::CharClass>(pattern);
+}
+
 std::unique_ptr<AST::Expression> Parse::parseExpression(){
 	return parseBinaryExpression(1);
 }
@@ -1010,7 +1099,13 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
             auto upper = parseBinaryExpression(precedence+1);
             left = std::make_unique<AST::BetweenOp>(std::move(left), std::move(lower), std::move(upper));
             continue;
-        } 
+        }
+        else if (op.type == Token::Type::LIKE) {
+           consume(Token::Type::LIKE);
+           auto right = parseLikePattern();
+           left = std::make_unique<AST::LikeOp>(std::move(left), std::move(right));
+           continue;
+        }
         else if (op.type == Token::Type::IN) {
             consume(Token::Type::IN);
             consume(Token::Type::L_PAREN);
@@ -1057,7 +1152,10 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 	std::cout<< "DEBUG: parsePrimarExpression() - current Token:" << static_cast<int>(currentToken.type) <<"'" <<currentToken.lexeme <<"'"<<std::endl;
 
 	std::unique_ptr<AST::Expression> left;
-	if(matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})){
+
+    if (match(Token::Type::CASE)) {
+            return parseCaseExpression();
+    } else if (matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})) {
 		std::cout<< "DEBUG: Foung aggregate function: " <<currentToken.lexeme<<std::endl;
 		Token funcToken = currentToken;
 		consume(currentToken.type);
@@ -1112,6 +1210,20 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		auto nullLiteral = std::make_unique<AST::Literal>(currentToken);
 		consume(Token::Type::NULL_TOKEN);
 		left = std::move(nullLiteral);
+    } else if (match(Token::Type::ROUND) || match(Token::Type::LOWER) || match(Token::Type::UPPER) || match(Token::Type::SUBSTRING)) {
+        Token funcToken = currentToken;
+        consume(currentToken.type);
+        consume(Token::Type::L_PAREN);
+
+        std::vector<std::unique_ptr<AST::Expression>> args;
+        if (!match(Token::Type::R_PAREN)) {
+            do {
+                args.push_back(parseExpression());
+            } while (match(Token::Type::COMMA) && (consume(Token::Type::COMMA), true));
+        }
+        consume(Token::Type::R_PAREN);
+
+        return std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
 	}else{
 		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
 	}
@@ -1122,6 +1234,44 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		//return left;
 	}
 	return left;
+}
+
+// Method for parsing Conditionals
+std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
+    consume(Token::Type::CASE);
+
+    std::vector<std::pair<std::unique_ptr<AST::Expression>,std::unique_ptr<AST::Expression>>> whenClauses;
+    std::unique_ptr<AST::Expression> elseClause = nullptr;
+
+    //Parse optional CASE expressions (for simple CASE)
+    std::unique_ptr<AST::Expression> caseExpression = nullptr;
+    if (!match(Token::Type::WHEN) && !match(Token::Type::END)) {
+        caseExpression = parseExpression();
+    }
+
+    // Parse WHEN clauses
+    while (match(Token::Type::WHEN)) {
+        consume(Token::Type::WHEN);
+        auto condition = parseExpression();
+        consume (Token::Type::THEN);
+        auto result = parseExpression();
+        whenClauses.emplace_back(std::move(condition), std::move(result));
+    }
+
+    // Parse ELSE clause
+    if (match(Token::Type::ELSE)) {
+        consume(Token::Type::ELSE);
+        elseClause = parseExpression();
+    }
+
+    consume(Token::Type::END);
+    if (caseExpression) {
+        // Simple CASE: CASE expr WHEN value THEN result...
+        return std::make_unique<AST::CaseExpression>(std::move(caseExpression),std::move(whenClauses),std::move(elseClause));
+    } else {
+        // SErced CASE: CASE WHEN condition THEN result...
+        return std::make_unique<AST::CaseExpression>(std::move(whenClauses), std::move(elseClause));
+    }
 }
 
 std::unique_ptr<AST::Expression> Parse::parseIdentifier(){
