@@ -6,9 +6,6 @@
 #include "buffer_pool.h"
 #include "write_ahead_log.h"
 #include "fractal_bplus_tree.h"
-#include "locking_policy.h"
-#include "deadlock_detector.h"
-#include "storage.h"
 #include <unordered_map>
 #include <memory>
 #include <atomic>
@@ -45,8 +42,6 @@ namespace fractal {
             std::atomic<uint64_t> next_transaction_id{1};
             uint64_t current_transaction_id{0};
             bool in_transaction{false};
-
-            mutable HierarchicalMutex<LockLevel::STORAGE> storage_mutex;
 
        public:
             explicit DiskStorage(const std::string& base_path = "databases/");

@@ -5,8 +5,6 @@
 #include "buffer_pool.h"
 #include "write_ahead_log.h"
 #include "common_types.h"
-#include "locking_policy.h"
-#include "deadlock_detector.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -67,7 +65,6 @@ namespace fractal {
             std::atomic<uint32_t> root_page_id;
 
             // Fractal tree specific
-            mutable HierarchicalMutex<LockLevel::TREE> tree_mutex;
             std::atomic<size_t> total_messages{0};
             std::atomic<size_t> memory_usage{0};
 

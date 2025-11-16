@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <memory>
 #include <termios.h>
+#include <csignal>
 
 class ESQLShell {
 public:
@@ -16,17 +17,28 @@ public:
     
     void run();
     void setCurrentDatabase(const std::string& db_name);
+     static volatile sig_atomic_t terminal_resized;
 
 private:
     // Platform detection
     enum class Platform { Linux, Windows, Termux, Unknown };
     Platform detect_platform();
     void process_word(const std::string& word, std::string& result,const std::unordered_set<std::string>& aggregate_functions,const std::unordered_set<std::string>& operators);
+    
     // Terminal control
     void enable_raw_mode();
     void disable_raw_mode();
     void get_terminal_size();
     void clear_screen();
+    
+    // Signal handling for terminal resize
+    void setup_signal_handlers();
+    void handle_terminal_resize();
+    
+    // Line wrapping and display utilities
+    size_t visible_length(const std::string& str) const;
+    size_t find_word_boundary(const std::string& text, size_t max_visible, size_t start_pos = 0) const;
+    std::vector<std::string> wrap_line_with_colors(const std::string& input, int first_line_width) const;
     
     // Input handling
     int read_key();
@@ -76,6 +88,9 @@ private:
     
     Platform current_platform = Platform::Unknown;
     bool use_colors = true;
+    
+    // Signal handler flag
+    //static volatile sig_atomic_t terminal_resized;
     
     #ifdef _WIN32
     HANDLE hInput;

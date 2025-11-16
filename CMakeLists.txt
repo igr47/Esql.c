@@ -1,52 +1,42 @@
 cmake_minimum_required(VERSION 3.10)
-project(Esql CXX)
+project(ESQL)
 
-# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Compiler flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+find_library(READLINE_LIBRARY NAMES readline)
+find_path(READLINE_INCLUDE_DIR NAMES readline/readline.h)
 
-# Include directories
-include_directories(.)
+# Check for readline availability
+if(READLINE_LIBRARY AND READLINE_INCLUDE_DIR)
+    message(STATUS "Found readline library: ${READLINE_LIBRARY}")
+    message(STATUS "Found readline headers: ${READLINE_INCLUDE_DIR}")
+    add_definitions(-DHAVE_READLINE)
+else()
+    message(WARNING "Readline not found. Using basic input mode.")
+endif()
 
-# Source files
-set(SRC_FILES
-    analyzer.cpp
-    buffer_pool.cpp
-    database.cpp
-    database_file.cpp
-    database_schema.cpp
-    diskstorage.cpp
-    executionengine.cpp
-    fractal_bplus_tree.cpp
-    main.cpp
-    parser.cpp
-    scanner.cpp
-    shell.cpp
-    write_ahead_log.cpp
+
+add_executable(e_sql
+    src/scanner.cpp
+    src/parser.cpp
+    src/analyzer.cpp     
+    src/executionengine.cpp
+    src/diskstorage.cpp
+    src/database_file.cpp      
+    src/write_ahead_log.cpp  
+    src/buffer_pool.cpp
+    src/page.cpp  
+    src/fractal_bplus_tree.cpp
+    src/database.cpp    
+    src/shell.cpp 
+    src/database_schema.cpp
+    src/main.cpp  
 )
 
-# Headers ( for IDE organization)
-set(HEADER_FILES
-    analyzer.h
-    buffer_pool.h
-    common_types.h
-    database.h
-    database_file.h
-    diskstorage.h
-    executionengine.h
-    fractal_bplus_tree.h
-    parser.h
-    scanner.h
-    shell.h
-    storage.h
-    write_ahead_log.h
-)
+target_include_directories(e_sql PRIVATE include)
 
-# Create executable
-add_executable(e_sql ${SRC_FILES} ${HEADER_FILES})
+if(READLINE_LIBRARY AND READLINE_INCLUDE_DIR)
+    target_include_directories(e_sql PRIVATE ${READLINE_INCLUDE_DIR})
+    target_link_libraries(e_sql ${READLINE_LIBRARY})
+endif()
 
-# Set output name to match your existing binary
-set_target_properties(e_sql PROPERTIES OUTPUT_NAME "e_sql")
