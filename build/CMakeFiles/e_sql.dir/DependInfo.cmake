@@ -8,19 +8,20 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/igiris/git_projects/Esql.c/analyzer.cpp" "CMakeFiles/e_sql.dir/analyzer.cpp.o" "gcc" "CMakeFiles/e_sql.dir/analyzer.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/buffer_pool.cpp" "CMakeFiles/e_sql.dir/buffer_pool.cpp.o" "gcc" "CMakeFiles/e_sql.dir/buffer_pool.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/database.cpp" "CMakeFiles/e_sql.dir/database.cpp.o" "gcc" "CMakeFiles/e_sql.dir/database.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/database_file.cpp" "CMakeFiles/e_sql.dir/database_file.cpp.o" "gcc" "CMakeFiles/e_sql.dir/database_file.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/database_schema.cpp" "CMakeFiles/e_sql.dir/database_schema.cpp.o" "gcc" "CMakeFiles/e_sql.dir/database_schema.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/diskstorage.cpp" "CMakeFiles/e_sql.dir/diskstorage.cpp.o" "gcc" "CMakeFiles/e_sql.dir/diskstorage.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/executionengine.cpp" "CMakeFiles/e_sql.dir/executionengine.cpp.o" "gcc" "CMakeFiles/e_sql.dir/executionengine.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/fractal_bplus_tree.cpp" "CMakeFiles/e_sql.dir/fractal_bplus_tree.cpp.o" "gcc" "CMakeFiles/e_sql.dir/fractal_bplus_tree.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/main.cpp" "CMakeFiles/e_sql.dir/main.cpp.o" "gcc" "CMakeFiles/e_sql.dir/main.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/parser.cpp" "CMakeFiles/e_sql.dir/parser.cpp.o" "gcc" "CMakeFiles/e_sql.dir/parser.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/scanner.cpp" "CMakeFiles/e_sql.dir/scanner.cpp.o" "gcc" "CMakeFiles/e_sql.dir/scanner.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/shell.cpp" "CMakeFiles/e_sql.dir/shell.cpp.o" "gcc" "CMakeFiles/e_sql.dir/shell.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/write_ahead_log.cpp" "CMakeFiles/e_sql.dir/write_ahead_log.cpp.o" "gcc" "CMakeFiles/e_sql.dir/write_ahead_log.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/analyzer.cpp" "CMakeFiles/e_sql.dir/src/analyzer.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/analyzer.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/buffer_pool.cpp" "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/database.cpp" "CMakeFiles/e_sql.dir/src/database.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/database.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/database_file.cpp" "CMakeFiles/e_sql.dir/src/database_file.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/database_file.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/database_schema.cpp" "CMakeFiles/e_sql.dir/src/database_schema.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/database_schema.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/diskstorage.cpp" "CMakeFiles/e_sql.dir/src/diskstorage.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/diskstorage.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/executionengine.cpp" "CMakeFiles/e_sql.dir/src/executionengine.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/executionengine.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/fractal_bplus_tree.cpp" "CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/main.cpp" "CMakeFiles/e_sql.dir/src/main.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/main.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/page.cpp" "CMakeFiles/e_sql.dir/src/page.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/page.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/parser.cpp" "CMakeFiles/e_sql.dir/src/parser.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/parser.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/scanner.cpp" "CMakeFiles/e_sql.dir/src/scanner.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/scanner.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/shell.cpp" "CMakeFiles/e_sql.dir/src/shell.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp" "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o.d"
   "" "e_sql" "gcc" "CMakeFiles/e_sql.dir/link.d"
   )
 

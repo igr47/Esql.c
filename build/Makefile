@@ -129,317 +129,341 @@ e_sql/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/build
 .PHONY : e_sql/fast
 
-analyzer.o: analyzer.cpp.o
-.PHONY : analyzer.o
+src/analyzer.o: src/analyzer.cpp.o
+.PHONY : src/analyzer.o
 
 # target to build an object file
-analyzer.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/analyzer.cpp.o
-.PHONY : analyzer.cpp.o
+src/analyzer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/analyzer.cpp.o
+.PHONY : src/analyzer.cpp.o
 
-analyzer.i: analyzer.cpp.i
-.PHONY : analyzer.i
+src/analyzer.i: src/analyzer.cpp.i
+.PHONY : src/analyzer.i
 
 # target to preprocess a source file
-analyzer.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/analyzer.cpp.i
-.PHONY : analyzer.cpp.i
+src/analyzer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/analyzer.cpp.i
+.PHONY : src/analyzer.cpp.i
 
-analyzer.s: analyzer.cpp.s
-.PHONY : analyzer.s
+src/analyzer.s: src/analyzer.cpp.s
+.PHONY : src/analyzer.s
 
 # target to generate assembly for a file
-analyzer.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/analyzer.cpp.s
-.PHONY : analyzer.cpp.s
+src/analyzer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/analyzer.cpp.s
+.PHONY : src/analyzer.cpp.s
 
-buffer_pool.o: buffer_pool.cpp.o
-.PHONY : buffer_pool.o
+src/buffer_pool.o: src/buffer_pool.cpp.o
+.PHONY : src/buffer_pool.o
 
 # target to build an object file
-buffer_pool.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/buffer_pool.cpp.o
-.PHONY : buffer_pool.cpp.o
+src/buffer_pool.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o
+.PHONY : src/buffer_pool.cpp.o
 
-buffer_pool.i: buffer_pool.cpp.i
-.PHONY : buffer_pool.i
+src/buffer_pool.i: src/buffer_pool.cpp.i
+.PHONY : src/buffer_pool.i
 
 # target to preprocess a source file
-buffer_pool.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/buffer_pool.cpp.i
-.PHONY : buffer_pool.cpp.i
+src/buffer_pool.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/buffer_pool.cpp.i
+.PHONY : src/buffer_pool.cpp.i
 
-buffer_pool.s: buffer_pool.cpp.s
-.PHONY : buffer_pool.s
+src/buffer_pool.s: src/buffer_pool.cpp.s
+.PHONY : src/buffer_pool.s
 
 # target to generate assembly for a file
-buffer_pool.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/buffer_pool.cpp.s
-.PHONY : buffer_pool.cpp.s
+src/buffer_pool.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/buffer_pool.cpp.s
+.PHONY : src/buffer_pool.cpp.s
 
-database.o: database.cpp.o
-.PHONY : database.o
+src/database.o: src/database.cpp.o
+.PHONY : src/database.o
 
 # target to build an object file
-database.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database.cpp.o
-.PHONY : database.cpp.o
+src/database.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database.cpp.o
+.PHONY : src/database.cpp.o
 
-database.i: database.cpp.i
-.PHONY : database.i
+src/database.i: src/database.cpp.i
+.PHONY : src/database.i
 
 # target to preprocess a source file
-database.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database.cpp.i
-.PHONY : database.cpp.i
+src/database.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database.cpp.i
+.PHONY : src/database.cpp.i
 
-database.s: database.cpp.s
-.PHONY : database.s
+src/database.s: src/database.cpp.s
+.PHONY : src/database.s
 
 # target to generate assembly for a file
-database.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database.cpp.s
-.PHONY : database.cpp.s
+src/database.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database.cpp.s
+.PHONY : src/database.cpp.s
 
-database_file.o: database_file.cpp.o
-.PHONY : database_file.o
+src/database_file.o: src/database_file.cpp.o
+.PHONY : src/database_file.o
 
 # target to build an object file
-database_file.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database_file.cpp.o
-.PHONY : database_file.cpp.o
+src/database_file.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database_file.cpp.o
+.PHONY : src/database_file.cpp.o
 
-database_file.i: database_file.cpp.i
-.PHONY : database_file.i
+src/database_file.i: src/database_file.cpp.i
+.PHONY : src/database_file.i
 
 # target to preprocess a source file
-database_file.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database_file.cpp.i
-.PHONY : database_file.cpp.i
+src/database_file.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database_file.cpp.i
+.PHONY : src/database_file.cpp.i
 
-database_file.s: database_file.cpp.s
-.PHONY : database_file.s
+src/database_file.s: src/database_file.cpp.s
+.PHONY : src/database_file.s
 
 # target to generate assembly for a file
-database_file.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database_file.cpp.s
-.PHONY : database_file.cpp.s
+src/database_file.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database_file.cpp.s
+.PHONY : src/database_file.cpp.s
 
-database_schema.o: database_schema.cpp.o
-.PHONY : database_schema.o
+src/database_schema.o: src/database_schema.cpp.o
+.PHONY : src/database_schema.o
 
 # target to build an object file
-database_schema.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database_schema.cpp.o
-.PHONY : database_schema.cpp.o
+src/database_schema.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database_schema.cpp.o
+.PHONY : src/database_schema.cpp.o
 
-database_schema.i: database_schema.cpp.i
-.PHONY : database_schema.i
+src/database_schema.i: src/database_schema.cpp.i
+.PHONY : src/database_schema.i
 
 # target to preprocess a source file
-database_schema.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database_schema.cpp.i
-.PHONY : database_schema.cpp.i
+src/database_schema.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database_schema.cpp.i
+.PHONY : src/database_schema.cpp.i
 
-database_schema.s: database_schema.cpp.s
-.PHONY : database_schema.s
+src/database_schema.s: src/database_schema.cpp.s
+.PHONY : src/database_schema.s
 
 # target to generate assembly for a file
-database_schema.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/database_schema.cpp.s
-.PHONY : database_schema.cpp.s
+src/database_schema.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/database_schema.cpp.s
+.PHONY : src/database_schema.cpp.s
 
-diskstorage.o: diskstorage.cpp.o
-.PHONY : diskstorage.o
+src/diskstorage.o: src/diskstorage.cpp.o
+.PHONY : src/diskstorage.o
 
 # target to build an object file
-diskstorage.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/diskstorage.cpp.o
-.PHONY : diskstorage.cpp.o
+src/diskstorage.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/diskstorage.cpp.o
+.PHONY : src/diskstorage.cpp.o
 
-diskstorage.i: diskstorage.cpp.i
-.PHONY : diskstorage.i
+src/diskstorage.i: src/diskstorage.cpp.i
+.PHONY : src/diskstorage.i
 
 # target to preprocess a source file
-diskstorage.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/diskstorage.cpp.i
-.PHONY : diskstorage.cpp.i
+src/diskstorage.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/diskstorage.cpp.i
+.PHONY : src/diskstorage.cpp.i
 
-diskstorage.s: diskstorage.cpp.s
-.PHONY : diskstorage.s
+src/diskstorage.s: src/diskstorage.cpp.s
+.PHONY : src/diskstorage.s
 
 # target to generate assembly for a file
-diskstorage.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/diskstorage.cpp.s
-.PHONY : diskstorage.cpp.s
+src/diskstorage.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/diskstorage.cpp.s
+.PHONY : src/diskstorage.cpp.s
 
-executionengine.o: executionengine.cpp.o
-.PHONY : executionengine.o
+src/executionengine.o: src/executionengine.cpp.o
+.PHONY : src/executionengine.o
 
 # target to build an object file
-executionengine.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/executionengine.cpp.o
-.PHONY : executionengine.cpp.o
+src/executionengine.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/executionengine.cpp.o
+.PHONY : src/executionengine.cpp.o
 
-executionengine.i: executionengine.cpp.i
-.PHONY : executionengine.i
+src/executionengine.i: src/executionengine.cpp.i
+.PHONY : src/executionengine.i
 
 # target to preprocess a source file
-executionengine.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/executionengine.cpp.i
-.PHONY : executionengine.cpp.i
+src/executionengine.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/executionengine.cpp.i
+.PHONY : src/executionengine.cpp.i
 
-executionengine.s: executionengine.cpp.s
-.PHONY : executionengine.s
+src/executionengine.s: src/executionengine.cpp.s
+.PHONY : src/executionengine.s
 
 # target to generate assembly for a file
-executionengine.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/executionengine.cpp.s
-.PHONY : executionengine.cpp.s
+src/executionengine.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/executionengine.cpp.s
+.PHONY : src/executionengine.cpp.s
 
-fractal_bplus_tree.o: fractal_bplus_tree.cpp.o
-.PHONY : fractal_bplus_tree.o
+src/fractal_bplus_tree.o: src/fractal_bplus_tree.cpp.o
+.PHONY : src/fractal_bplus_tree.o
 
 # target to build an object file
-fractal_bplus_tree.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/fractal_bplus_tree.cpp.o
-.PHONY : fractal_bplus_tree.cpp.o
+src/fractal_bplus_tree.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o
+.PHONY : src/fractal_bplus_tree.cpp.o
 
-fractal_bplus_tree.i: fractal_bplus_tree.cpp.i
-.PHONY : fractal_bplus_tree.i
+src/fractal_bplus_tree.i: src/fractal_bplus_tree.cpp.i
+.PHONY : src/fractal_bplus_tree.i
 
 # target to preprocess a source file
-fractal_bplus_tree.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/fractal_bplus_tree.cpp.i
-.PHONY : fractal_bplus_tree.cpp.i
+src/fractal_bplus_tree.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.i
+.PHONY : src/fractal_bplus_tree.cpp.i
 
-fractal_bplus_tree.s: fractal_bplus_tree.cpp.s
-.PHONY : fractal_bplus_tree.s
+src/fractal_bplus_tree.s: src/fractal_bplus_tree.cpp.s
+.PHONY : src/fractal_bplus_tree.s
 
 # target to generate assembly for a file
-fractal_bplus_tree.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/fractal_bplus_tree.cpp.s
-.PHONY : fractal_bplus_tree.cpp.s
+src/fractal_bplus_tree.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.s
+.PHONY : src/fractal_bplus_tree.cpp.s
 
-main.o: main.cpp.o
-.PHONY : main.o
+src/main.o: src/main.cpp.o
+.PHONY : src/main.o
 
 # target to build an object file
-main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/main.cpp.o
-.PHONY : main.cpp.o
+src/main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
 
-main.i: main.cpp.i
-.PHONY : main.i
+src/main.i: src/main.cpp.i
+.PHONY : src/main.i
 
 # target to preprocess a source file
-main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/main.cpp.i
-.PHONY : main.cpp.i
+src/main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/main.cpp.i
+.PHONY : src/main.cpp.i
 
-main.s: main.cpp.s
-.PHONY : main.s
+src/main.s: src/main.cpp.s
+.PHONY : src/main.s
 
 # target to generate assembly for a file
-main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/main.cpp.s
-.PHONY : main.cpp.s
+src/main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/main.cpp.s
+.PHONY : src/main.cpp.s
 
-parser.o: parser.cpp.o
-.PHONY : parser.o
+src/page.o: src/page.cpp.o
+.PHONY : src/page.o
 
 # target to build an object file
-parser.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/parser.cpp.o
-.PHONY : parser.cpp.o
+src/page.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/page.cpp.o
+.PHONY : src/page.cpp.o
 
-parser.i: parser.cpp.i
-.PHONY : parser.i
+src/page.i: src/page.cpp.i
+.PHONY : src/page.i
 
 # target to preprocess a source file
-parser.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/parser.cpp.i
-.PHONY : parser.cpp.i
+src/page.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/page.cpp.i
+.PHONY : src/page.cpp.i
 
-parser.s: parser.cpp.s
-.PHONY : parser.s
+src/page.s: src/page.cpp.s
+.PHONY : src/page.s
 
 # target to generate assembly for a file
-parser.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/parser.cpp.s
-.PHONY : parser.cpp.s
+src/page.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/page.cpp.s
+.PHONY : src/page.cpp.s
 
-scanner.o: scanner.cpp.o
-.PHONY : scanner.o
+src/parser.o: src/parser.cpp.o
+.PHONY : src/parser.o
 
 # target to build an object file
-scanner.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/scanner.cpp.o
-.PHONY : scanner.cpp.o
+src/parser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/parser.cpp.o
+.PHONY : src/parser.cpp.o
 
-scanner.i: scanner.cpp.i
-.PHONY : scanner.i
+src/parser.i: src/parser.cpp.i
+.PHONY : src/parser.i
 
 # target to preprocess a source file
-scanner.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/scanner.cpp.i
-.PHONY : scanner.cpp.i
+src/parser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/parser.cpp.i
+.PHONY : src/parser.cpp.i
 
-scanner.s: scanner.cpp.s
-.PHONY : scanner.s
+src/parser.s: src/parser.cpp.s
+.PHONY : src/parser.s
 
 # target to generate assembly for a file
-scanner.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/scanner.cpp.s
-.PHONY : scanner.cpp.s
+src/parser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/parser.cpp.s
+.PHONY : src/parser.cpp.s
 
-shell.o: shell.cpp.o
-.PHONY : shell.o
+src/scanner.o: src/scanner.cpp.o
+.PHONY : src/scanner.o
 
 # target to build an object file
-shell.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/shell.cpp.o
-.PHONY : shell.cpp.o
+src/scanner.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/scanner.cpp.o
+.PHONY : src/scanner.cpp.o
 
-shell.i: shell.cpp.i
-.PHONY : shell.i
+src/scanner.i: src/scanner.cpp.i
+.PHONY : src/scanner.i
 
 # target to preprocess a source file
-shell.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/shell.cpp.i
-.PHONY : shell.cpp.i
+src/scanner.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/scanner.cpp.i
+.PHONY : src/scanner.cpp.i
 
-shell.s: shell.cpp.s
-.PHONY : shell.s
+src/scanner.s: src/scanner.cpp.s
+.PHONY : src/scanner.s
 
 # target to generate assembly for a file
-shell.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/shell.cpp.s
-.PHONY : shell.cpp.s
+src/scanner.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/scanner.cpp.s
+.PHONY : src/scanner.cpp.s
 
-write_ahead_log.o: write_ahead_log.cpp.o
-.PHONY : write_ahead_log.o
+src/shell.o: src/shell.cpp.o
+.PHONY : src/shell.o
 
 # target to build an object file
-write_ahead_log.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/write_ahead_log.cpp.o
-.PHONY : write_ahead_log.cpp.o
+src/shell.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell.cpp.o
+.PHONY : src/shell.cpp.o
 
-write_ahead_log.i: write_ahead_log.cpp.i
-.PHONY : write_ahead_log.i
+src/shell.i: src/shell.cpp.i
+.PHONY : src/shell.i
 
 # target to preprocess a source file
-write_ahead_log.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/write_ahead_log.cpp.i
-.PHONY : write_ahead_log.cpp.i
+src/shell.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell.cpp.i
+.PHONY : src/shell.cpp.i
 
-write_ahead_log.s: write_ahead_log.cpp.s
-.PHONY : write_ahead_log.s
+src/shell.s: src/shell.cpp.s
+.PHONY : src/shell.s
 
 # target to generate assembly for a file
-write_ahead_log.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/write_ahead_log.cpp.s
-.PHONY : write_ahead_log.cpp.s
+src/shell.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell.cpp.s
+.PHONY : src/shell.cpp.s
+
+src/write_ahead_log.o: src/write_ahead_log.cpp.o
+.PHONY : src/write_ahead_log.o
+
+# target to build an object file
+src/write_ahead_log.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o
+.PHONY : src/write_ahead_log.cpp.o
+
+src/write_ahead_log.i: src/write_ahead_log.cpp.i
+.PHONY : src/write_ahead_log.i
+
+# target to preprocess a source file
+src/write_ahead_log.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.i
+.PHONY : src/write_ahead_log.cpp.i
+
+src/write_ahead_log.s: src/write_ahead_log.cpp.s
+.PHONY : src/write_ahead_log.s
+
+# target to generate assembly for a file
+src/write_ahead_log.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.s
+.PHONY : src/write_ahead_log.cpp.s
 
 # Help Target
 help:
@@ -450,45 +474,48 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... e_sql"
-	@echo "... analyzer.o"
-	@echo "... analyzer.i"
-	@echo "... analyzer.s"
-	@echo "... buffer_pool.o"
-	@echo "... buffer_pool.i"
-	@echo "... buffer_pool.s"
-	@echo "... database.o"
-	@echo "... database.i"
-	@echo "... database.s"
-	@echo "... database_file.o"
-	@echo "... database_file.i"
-	@echo "... database_file.s"
-	@echo "... database_schema.o"
-	@echo "... database_schema.i"
-	@echo "... database_schema.s"
-	@echo "... diskstorage.o"
-	@echo "... diskstorage.i"
-	@echo "... diskstorage.s"
-	@echo "... executionengine.o"
-	@echo "... executionengine.i"
-	@echo "... executionengine.s"
-	@echo "... fractal_bplus_tree.o"
-	@echo "... fractal_bplus_tree.i"
-	@echo "... fractal_bplus_tree.s"
-	@echo "... main.o"
-	@echo "... main.i"
-	@echo "... main.s"
-	@echo "... parser.o"
-	@echo "... parser.i"
-	@echo "... parser.s"
-	@echo "... scanner.o"
-	@echo "... scanner.i"
-	@echo "... scanner.s"
-	@echo "... shell.o"
-	@echo "... shell.i"
-	@echo "... shell.s"
-	@echo "... write_ahead_log.o"
-	@echo "... write_ahead_log.i"
-	@echo "... write_ahead_log.s"
+	@echo "... src/analyzer.o"
+	@echo "... src/analyzer.i"
+	@echo "... src/analyzer.s"
+	@echo "... src/buffer_pool.o"
+	@echo "... src/buffer_pool.i"
+	@echo "... src/buffer_pool.s"
+	@echo "... src/database.o"
+	@echo "... src/database.i"
+	@echo "... src/database.s"
+	@echo "... src/database_file.o"
+	@echo "... src/database_file.i"
+	@echo "... src/database_file.s"
+	@echo "... src/database_schema.o"
+	@echo "... src/database_schema.i"
+	@echo "... src/database_schema.s"
+	@echo "... src/diskstorage.o"
+	@echo "... src/diskstorage.i"
+	@echo "... src/diskstorage.s"
+	@echo "... src/executionengine.o"
+	@echo "... src/executionengine.i"
+	@echo "... src/executionengine.s"
+	@echo "... src/fractal_bplus_tree.o"
+	@echo "... src/fractal_bplus_tree.i"
+	@echo "... src/fractal_bplus_tree.s"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
+	@echo "... src/page.o"
+	@echo "... src/page.i"
+	@echo "... src/page.s"
+	@echo "... src/parser.o"
+	@echo "... src/parser.i"
+	@echo "... src/parser.s"
+	@echo "... src/scanner.o"
+	@echo "... src/scanner.i"
+	@echo "... src/scanner.s"
+	@echo "... src/shell.o"
+	@echo "... src/shell.i"
+	@echo "... src/shell.s"
+	@echo "... src/write_ahead_log.o"
+	@echo "... src/write_ahead_log.i"
+	@echo "... src/write_ahead_log.s"
 .PHONY : help
 
 
