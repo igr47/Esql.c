@@ -28,7 +28,7 @@ add_executable(e_sql
     src/page.cpp  
     src/fractal_bplus_tree.cpp
     src/database.cpp    
-    src/shell.cpp 
+    src/shell2.cpp 
     src/database_schema.cpp
     src/main.cpp  
 )
