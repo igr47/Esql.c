@@ -417,29 +417,29 @@ src/scanner.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/scanner.cpp.s
 .PHONY : src/scanner.cpp.s
 
-src/shell.o: src/shell.cpp.o
-.PHONY : src/shell.o
+src/shell2.o: src/shell2.cpp.o
+.PHONY : src/shell2.o
 
 # target to build an object file
-src/shell.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell.cpp.o
-.PHONY : src/shell.cpp.o
+src/shell2.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell2.cpp.o
+.PHONY : src/shell2.cpp.o
 
-src/shell.i: src/shell.cpp.i
-.PHONY : src/shell.i
+src/shell2.i: src/shell2.cpp.i
+.PHONY : src/shell2.i
 
 # target to preprocess a source file
-src/shell.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell.cpp.i
-.PHONY : src/shell.cpp.i
+src/shell2.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell2.cpp.i
+.PHONY : src/shell2.cpp.i
 
-src/shell.s: src/shell.cpp.s
-.PHONY : src/shell.s
+src/shell2.s: src/shell2.cpp.s
+.PHONY : src/shell2.s
 
 # target to generate assembly for a file
-src/shell.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell.cpp.s
-.PHONY : src/shell.cpp.s
+src/shell2.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell2.cpp.s
+.PHONY : src/shell2.cpp.s
 
 src/write_ahead_log.o: src/write_ahead_log.cpp.o
 .PHONY : src/write_ahead_log.o
@@ -510,9 +510,9 @@ help:
 	@echo "... src/scanner.o"
 	@echo "... src/scanner.i"
 	@echo "... src/scanner.s"
-	@echo "... src/shell.o"
-	@echo "... src/shell.i"
-	@echo "... src/shell.s"
+	@echo "... src/shell2.o"
+	@echo "... src/shell2.i"
+	@echo "... src/shell2.s"
 	@echo "... src/write_ahead_log.o"
 	@echo "... src/write_ahead_log.i"
 	@echo "... src/write_ahead_log.s"

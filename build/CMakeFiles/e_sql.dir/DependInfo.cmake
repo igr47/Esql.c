@@ -20,7 +20,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/igiris/git_projects/Esql.c/src/page.cpp" "CMakeFiles/e_sql.dir/src/page.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/page.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/parser.cpp" "CMakeFiles/e_sql.dir/src/parser.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/parser.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/scanner.cpp" "CMakeFiles/e_sql.dir/src/scanner.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/scanner.cpp.o.d"
-  "/home/igiris/git_projects/Esql.c/src/shell.cpp" "CMakeFiles/e_sql.dir/src/shell.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/shell2.cpp" "CMakeFiles/e_sql.dir/src/shell2.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell2.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp" "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o.d"
   "" "e_sql" "gcc" "CMakeFiles/e_sql.dir/link.d"
   )

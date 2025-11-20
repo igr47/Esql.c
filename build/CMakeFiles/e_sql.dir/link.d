@@ -13,7 +13,7 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/page.cpp.o \
   CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o \
   CMakeFiles/e_sql.dir/src/database.cpp.o \
-  CMakeFiles/e_sql.dir/src/shell.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell2.cpp.o \
   CMakeFiles/e_sql.dir/src/database_schema.cpp.o \
   CMakeFiles/e_sql.dir/src/main.cpp.o \
   /usr/lib/x86_64-linux-gnu/libreadline.so \
@@ -74,7 +74,7 @@ CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o:
 
 CMakeFiles/e_sql.dir/src/database.cpp.o:
 
-CMakeFiles/e_sql.dir/src/shell.cpp.o:
+CMakeFiles/e_sql.dir/src/shell2.cpp.o:
 
 CMakeFiles/e_sql.dir/src/database_schema.cpp.o:
 

@@ -325,7 +325,7 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_multiset.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/utility \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_relops.h \
-  /home/igiris/git_projects/Esql.c/include/shell.h \
+  /home/igiris/git_projects/Esql.c/include/shell2.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/unordered_set \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h \
   /usr/include/termios.h /usr/include/x86_64-linux-gnu/bits/termios.h \
