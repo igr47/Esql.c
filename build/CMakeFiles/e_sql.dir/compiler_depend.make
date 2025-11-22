@@ -3347,7 +3347,6 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/math.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
-  /usr/include/signal.h \
   /usr/include/stdc-predef.h \
   /usr/include/stdint.h \
   /usr/include/stdio.h \
@@ -3402,19 +3401,6 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/x86_64-linux-gnu/bits/sched.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
-  /usr/include/x86_64-linux-gnu/bits/sigaction.h \
-  /usr/include/x86_64-linux-gnu/bits/sigcontext.h \
-  /usr/include/x86_64-linux-gnu/bits/sigevent-consts.h \
-  /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h \
-  /usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h \
-  /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h \
-  /usr/include/x86_64-linux-gnu/bits/signal_ext.h \
-  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
-  /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
-  /usr/include/x86_64-linux-gnu/bits/sigstack.h \
-  /usr/include/x86_64-linux-gnu/bits/sigstksz.h \
-  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
-  /usr/include/x86_64-linux-gnu/bits/ss_flags.h \
   /usr/include/x86_64-linux-gnu/bits/stat.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
@@ -3447,25 +3433,18 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/sigval_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/stack_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_sigstack.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
   /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h \
@@ -3488,7 +3467,6 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
   /usr/include/x86_64-linux-gnu/sys/ttydefaults.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
-  /usr/include/x86_64-linux-gnu/sys/ucontext.h \
   /usr/include/c++/15/algorithm \
   /usr/include/c++/15/atomic \
   /usr/include/c++/15/backward/auto_ptr.h \
@@ -3555,6 +3533,18 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/c++/15/bits/random.tcc \
   /usr/include/c++/15/bits/range_access.h \
   /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/regex.h \
+  /usr/include/c++/15/bits/regex.tcc \
+  /usr/include/c++/15/bits/regex_automaton.h \
+  /usr/include/c++/15/bits/regex_automaton.tcc \
+  /usr/include/c++/15/bits/regex_compiler.h \
+  /usr/include/c++/15/bits/regex_compiler.tcc \
+  /usr/include/c++/15/bits/regex_constants.h \
+  /usr/include/c++/15/bits/regex_error.h \
+  /usr/include/c++/15/bits/regex_executor.h \
+  /usr/include/c++/15/bits/regex_executor.tcc \
+  /usr/include/c++/15/bits/regex_scanner.h \
+  /usr/include/c++/15/bits/regex_scanner.tcc \
   /usr/include/c++/15/bits/requires_hosted.h \
   /usr/include/c++/15/bits/shared_ptr.h \
   /usr/include/c++/15/bits/shared_ptr_atomic.h \
@@ -3562,6 +3552,7 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/c++/15/bits/specfun.h \
   /usr/include/c++/15/bits/sstream.tcc \
   /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
   /usr/include/c++/15/bits/std_mutex.h \
   /usr/include/c++/15/bits/std_thread.h \
   /usr/include/c++/15/bits/stl_algo.h \
@@ -3584,6 +3575,7 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/c++/15/bits/stl_raw_storage_iter.h \
   /usr/include/c++/15/bits/stl_relops.h \
   /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
   /usr/include/c++/15/bits/stl_tempbuf.h \
   /usr/include/c++/15/bits/stl_tree.h \
   /usr/include/c++/15/bits/stl_uninitialized.h \
@@ -3603,13 +3595,13 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/c++/15/bits/utility.h \
   /usr/include/c++/15/bits/vector.tcc \
   /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/bitset \
   /usr/include/c++/15/cctype \
   /usr/include/c++/15/cerrno \
   /usr/include/c++/15/chrono \
   /usr/include/c++/15/clocale \
   /usr/include/c++/15/cmath \
   /usr/include/c++/15/concepts \
-  /usr/include/c++/15/csignal \
   /usr/include/c++/15/cstddef \
   /usr/include/c++/15/cstdint \
   /usr/include/c++/15/cstdio \
@@ -3653,9 +3645,11 @@ CMakeFiles/e_sql.dir/src/shell2.cpp.o: /home/igiris/git_projects/Esql.c/src/shel
   /usr/include/c++/15/queue \
   /usr/include/c++/15/random \
   /usr/include/c++/15/ratio \
+  /usr/include/c++/15/regex \
   /usr/include/c++/15/set \
   /usr/include/c++/15/shared_mutex \
   /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
   /usr/include/c++/15/stdexcept \
   /usr/include/c++/15/streambuf \
   /usr/include/c++/15/string \
@@ -4035,13 +4029,11 @@ e_sql: /lib/x86_64-linux-gnu/Scrt1.o \
   CMakeFiles/e_sql.dir/src/page.cpp.o \
   CMakeFiles/e_sql.dir/src/parser.cpp.o \
   CMakeFiles/e_sql.dir/src/scanner.cpp.o \
-  CMakeFiles/e_sql.dir/src/shell.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell2.cpp.o \
   CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o
 
 
 CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o:
-
-CMakeFiles/e_sql.dir/src/shell.cpp.o:
 
 CMakeFiles/e_sql.dir/src/scanner.cpp.o:
 
@@ -4059,51 +4051,51 @@ CMakeFiles/e_sql.dir/src/analyzer.cpp.o:
 
 /usr/lib/x86_64-linux-gnu/libc_nonshared.a:
 
+/usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a:
+
 /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so:
 
 /lib64/ld-linux-x86-64.so.2:
 
 /lib/x86_64-linux-gnu/libtinfo.so.6:
 
+/lib/x86_64-linux-gnu/crti.o:
+
+/usr/include/c++/15/regex:
+
+/usr/include/c++/15/bitset:
+
+/usr/include/c++/15/bits/regex_scanner.h:
+
+/usr/include/c++/15/bits/regex_executor.tcc:
+
+/usr/include/c++/15/bits/regex_executor.h:
+
+/usr/include/c++/15/bits/regex_error.h:
+
+/usr/include/c++/15/bits/regex_constants.h:
+
+/usr/include/c++/15/bits/regex_compiler.tcc:
+
+/usr/include/c++/15/bits/regex_automaton.tcc:
+
 /home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp:
+
+/usr/include/c++/15/bits/regex_automaton.h:
+
+/usr/include/c++/15/bits/regex.tcc:
 
 /usr/include/x86_64-linux-gnu/sys/ioctl.h:
 
 /usr/include/x86_64-linux-gnu/bits/unistd_ext.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/stack_t.h:
-
-/lib/x86_64-linux-gnu/crti.o:
-
-/usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/ss_flags.h:
-
-/usr/include/x86_64-linux-gnu/bits/sigthread.h:
-
 /usr/include/x86_64-linux-gnu/bits/stat.h:
-
-/usr/include/x86_64-linux-gnu/bits/sigstksz.h:
-
-/usr/include/x86_64-linux-gnu/bits/signal_ext.h:
-
-/usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h:
-
-/usr/include/x86_64-linux-gnu/bits/siginfo-arch.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a:
-
-/usr/include/x86_64-linux-gnu/bits/sigcontext.h:
-
-/usr/include/x86_64-linux-gnu/bits/sigaction.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix_opt.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h:
-
 /usr/include/x86_64-linux-gnu/bits/ioctls.h:
+
+/usr/include/c++/15/bits/regex_compiler.h:
 
 /usr/include/x86_64-linux-gnu/bits/getopt_core.h:
 
@@ -4112,8 +4104,6 @@ CMakeFiles/e_sql.dir/src/analyzer.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/confname.h:
 
 /usr/include/x86_64-linux-gnu/asm/ioctls.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h:
 
 /usr/include/x86_64-linux-gnu/asm/ioctl.h:
 
@@ -4185,8 +4175,6 @@ CMakeFiles/e_sql.dir/src/database.cpp.o:
 
 /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h:
 
-/usr/include/x86_64-linux-gnu/bits/siginfo-consts.h:
-
 /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h:
 
 /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h:
@@ -4249,8 +4237,6 @@ CMakeFiles/e_sql.dir/src/parser.cpp.o:
 
 /lib/x86_64-linux-gnu/libc.so.6:
 
-/usr/include/x86_64-linux-gnu/bits/types/sigval_t.h:
-
 /usr/lib/llvm-19/lib/clang/19/include/__stddef_wchar_t.h:
 
 /usr/include/c++/15/memory:
@@ -4264,8 +4250,6 @@ CMakeFiles/e_sql.dir/src/parser.cpp.o:
 /usr/include/c++/15/limits:
 
 /usr/include/c++/15/istream:
-
-/usr/include/x86_64-linux-gnu/bits/sigevent-consts.h:
 
 /usr/include/c++/15/iosfwd:
 
@@ -4352,8 +4336,6 @@ CMakeFiles/e_sql.dir/src/parser.cpp.o:
 /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h:
 
 /usr/include/c++/15/bits/locale_facets_nonio.h:
-
-/usr/include/c++/15/csignal:
 
 /usr/include/c++/15/exception:
 
@@ -4461,6 +4443,8 @@ CMakeFiles/e_sql.dir/src/main.cpp.o:
 
 /home/igiris/git_projects/Esql.c/include/parser.h:
 
+/usr/include/c++/15/bits/regex.h:
+
 /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
 
 /usr/include/asm-generic/bitsperlong.h:
@@ -4516,6 +4500,8 @@ CMakeFiles/e_sql.dir/src/page.cpp.o:
 /usr/include/c++/15/bits/ostream.h:
 
 /usr/include/x86_64-linux-gnu/bits/byteswap.h:
+
+/usr/include/c++/15/bits/std_function.h:
 
 /usr/include/c++/15/bits/codecvt.h:
 
@@ -4591,8 +4577,6 @@ CMakeFiles/e_sql.dir/src/page.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct_sigstack.h:
-
 /home/igiris/git_projects/Esql.c/include/scanner.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
@@ -4640,8 +4624,6 @@ CMakeFiles/e_sql.dir/src/page.cpp.o:
 /usr/include/sched.h:
 
 /usr/include/wctype.h:
-
-/usr/include/x86_64-linux-gnu/bits/signum-arch.h:
 
 /usr/include/x86_64-linux-gnu/bits/errno.h:
 
@@ -4733,8 +4715,6 @@ CMakeFiles/e_sql.dir/src/page.cpp.o:
 
 /usr/include/c++/15/bits/stl_iterator_base_funcs.h:
 
-/usr/include/signal.h:
-
 /usr/include/c++/15/ostream:
 
 /usr/include/strings.h:
@@ -4742,6 +4722,8 @@ CMakeFiles/e_sql.dir/src/page.cpp.o:
 /home/igiris/git_projects/Esql.c/include/executionengine.h:
 
 /usr/include/c++/15/bits/exception.h:
+
+/usr/include/c++/15/bits/regex_scanner.tcc:
 
 /usr/include/c++/15/ext/concurrence.h:
 
@@ -4752,8 +4734,6 @@ CMakeFiles/e_sql.dir/src/page.cpp.o:
 /usr/include/errno.h:
 
 /usr/include/c++/15/cstddef:
-
-/usr/include/x86_64-linux-gnu/bits/signum-generic.h:
 
 /usr/include/c++/15/bits/memoryfwd.h:
 
@@ -4771,6 +4751,8 @@ CMakeFiles/e_sql.dir/src/diskstorage.cpp.o:
 
 /usr/include/c++/15/bits/new_allocator.h:
 
+CMakeFiles/e_sql.dir/src/shell2.cpp.o:
+
 /usr/include/c++/15/bits/uses_allocator.h:
 
 /usr/include/c++/15/bits/allocated_ptr.h:
@@ -4786,8 +4768,6 @@ CMakeFiles/e_sql.dir/src/diskstorage.cpp.o:
 /usr/include/c++/15/bits/move.h:
 
 /usr/include/c++/15/bits/node_handle.h:
-
-/usr/include/x86_64-linux-gnu/bits/sigstack.h:
 
 /usr/include/c++/15/bits/ostream.tcc:
 
@@ -4942,8 +4922,6 @@ CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o:
 /home/igiris/git_projects/Esql.c/include/shell2.h:
 
 /usr/include/c++/15/cerrno:
-
-/usr/include/x86_64-linux-gnu/sys/ucontext.h:
 
 /usr/include/c++/15/unordered_map:
 
