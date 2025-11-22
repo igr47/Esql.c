@@ -116,6 +116,7 @@ private:
     void run_termux();
     void run_linux();
     bool is_termux() const;
+    void render_input_only();
     
     Database& db;
     std::string current_db;

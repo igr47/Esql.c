@@ -46,7 +46,7 @@ ESQLShell::ESQLShell(Database& db) : db(db), current_db("default") {
     current_platform = detect_platform();
     get_terminal_size();
     // compute banner_lines based on your ascii art + header lines
-    banner_lines = std::max((int)load_ascii_art().size(), 6) + 4; // approximate
+    banner_lines = std::max((int)load_ascii_art().size(), 6) + 11; // approximate
     if (!is_termux()) {
         enable_raw_mode();
     }
@@ -167,6 +167,9 @@ void ESQLShell::run() {
 }
 
 void ESQLShell::run_linux() {
+    clear_screen();
+    print_banner();
+
     refresh_display(); // initial
     while (true) {
         int ch = read_key();
@@ -478,7 +481,81 @@ std::string ESQLShell::build_prompt() const {
     return prompt;
 }
 
-void ESQLShell::render_input_full() {
+void ESQLShell::render_input_only() {
+    if (is_termux()) return;
+    get_terminal_size();
+
+    // Rebuild cell buffer from current_line
+    rebuild_cells_from_input(current_line);
+
+    // Build prompt and compute prompt width
+    std::string prompt = build_prompt();
+    int prompt_width = display_width(strip_ansi_simple(prompt));
+
+    // Wrap cells
+    auto rows = wrap_cells_for_prompt(prompt_width);
+
+    // Move cursor to just after banner area
+    std::cout << "\033[" << (banner_lines + 1) << ";1H";
+
+    // Clear from prompt position to end of screen
+    std::cout << "\033[J";
+
+    // Print prompt + first row
+    std::cout << prompt;
+    if (!rows.empty()) {
+        std::string last_prefix;
+        for (const auto &cell : rows[0]) {
+            if (cell.prefix != last_prefix) {
+                if (!cell.prefix.empty()) std::cout << cell.prefix;
+                else std::cout << RESET;
+                last_prefix = cell.prefix;
+            }
+            std::cout << cell.bytes;
+        }
+        if (!last_prefix.empty()) std::cout << RESET;
+    }
+
+    // Continuation rows
+    for (size_t r = 1; r < rows.size(); ++r) {
+        std::cout << "\r\n";
+        if (use_colors) std::cout << GRAY << " -> " << RESET;
+        else std::cout << " -> ";
+        std::string last_prefix;
+        for (const auto &cell : rows[r]) {
+            if (cell.prefix != last_prefix) {
+                if (!cell.prefix.empty()) std::cout << cell.prefix;
+                else std::cout << RESET;
+                last_prefix = cell.prefix;
+            }
+            std::cout << cell.bytes;
+        }
+        if (!last_prefix.empty()) std::cout << RESET;
+    }
+
+    // Position cursor (your existing cursor positioning code)
+    CursorPos cur = cursor_position_from_byte_offset(cursor_pos, prompt_width);
+
+    int move_up = static_cast<int>(rows.size() - 1) - cur.row;
+    if (move_up > 0) {
+        std::cout << "\033[" << move_up << "A";
+    }
+
+    if (cur.row == 0) {
+        int col = prompt_width + cur.col;
+        if (col < 1) col = 1;
+        std::cout << "\033[" << col << "G";
+    } else {
+        int cont_prefix_width = 4;
+        int col = cont_prefix_width + cur.col;
+        if (col < 1) col = 1;
+        std::cout << "\033[" << col << "G";
+    }
+
+    std::cout.flush();
+}
+
+/*void ESQLShell::render_input_full() {
     if (is_termux()) return; // termux uses line mode
     get_terminal_size();
 
@@ -557,11 +634,11 @@ void ESQLShell::render_input_full() {
     }
 
     std::cout.flush();
-}
+}*/
 
 void ESQLShell::refresh_display() {
     if (is_termux()) return;
-    render_input_full();
+    render_input_only();
 }
 
 void ESQLShell::redraw_input_enhanced() {
@@ -764,7 +841,11 @@ void ESQLShell::handle_enter() {
     cursor_pos = 0;
     history_index = -1;
     invalidate_cache();
-    refresh_display();
+    //refresh_display();
+    
+    // Print new prompt on the next line after results
+    std::cout << build_prompt();
+    std::cout.flush();
 }
 
 void ESQLShell::add_to_history(const std::string& command) {
@@ -790,6 +871,10 @@ void ESQLShell::execute_command(const std::string& command) {
     } else if (upper_cmd == "CLEAR") {
         clear_screen();
         print_banner();
+
+        // After clear, we need to show the prompt again
+        std::cout << build_prompt();
+        std::cout.flush();
     } else {
         try {
             auto start = std::chrono::high_resolution_clock::now();
@@ -814,7 +899,7 @@ void ESQLShell::execute_command(const std::string& command) {
                       << (use_colors ? RESET : "") << "\n";
         }
     }
-    std::cout << "\n";
+    //std::cout << "\n";
 }
 
 // ------------------------ Results printing (kept from original) ------------------------
