@@ -33,6 +33,7 @@ add_executable(e_sql
     src/line_renderer.cpp 
     src/syntax_highlighter.cpp
     src/hisory_manager.cpp 
+    src/animator.cpp
     src/modern_shell.cpp 
     src/database_schema.cpp
     src/main.cpp  

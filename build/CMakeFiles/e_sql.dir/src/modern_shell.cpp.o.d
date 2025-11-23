@@ -357,4 +357,8 @@ CMakeFiles/e_sql.dir/src/modern_shell.cpp.o: \
   /home/igiris/git_projects/Esql.c/include/utf8_processor.h \
   /home/igiris/git_projects/Esql.c/include/syntax_highlighter.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/unordered_set \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h \
+  /home/igiris/git_projects/Esql.c/include/animator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/thread \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/std_thread.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h

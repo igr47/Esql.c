@@ -454,6 +454,17 @@ void ModernShell::print_banner() {
                   << "Quantum ESQL Processor: ONLINE\n";
         std::cout << esql::colors::RED << "[*] " << esql::colors::GRAY 
                   << "Syntax Highlighting: ACTIVATED\n" << esql::colors::RESET;
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::CYAN << "Forged ";
+        std::cout.flush();
+
+        ConsoleAnimator animator;
+        animator.animateText("from the fires of performance and for the warriors of the digital age", 4000);
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::CYAN;
+        std::cout.flush();
+
+        WaveAnimator waveAnim;
+        waveAnim.waveAnimation("accessing the esql framework console", 2);
+        
         std::cout << esql::colors::MAGENTA << "[+] "<< esql::colors::CYAN 
                   << "Connected to: " << (use_colors_ ? esql::colors::GRAY : "") 
                   << current_db_ << esql::colors::GREEN << "•" 

@@ -153,6 +153,30 @@ src/analyzer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/analyzer.cpp.s
 .PHONY : src/analyzer.cpp.s
 
+src/animator.o: src/animator.cpp.o
+.PHONY : src/animator.o
+
+# target to build an object file
+src/animator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/animator.cpp.o
+.PHONY : src/animator.cpp.o
+
+src/animator.i: src/animator.cpp.i
+.PHONY : src/animator.i
+
+# target to preprocess a source file
+src/animator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/animator.cpp.i
+.PHONY : src/animator.cpp.i
+
+src/animator.s: src/animator.cpp.s
+.PHONY : src/animator.s
+
+# target to generate assembly for a file
+src/animator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/animator.cpp.s
+.PHONY : src/animator.cpp.s
+
 src/buffer_pool.o: src/buffer_pool.cpp.o
 .PHONY : src/buffer_pool.o
 
@@ -597,6 +621,9 @@ help:
 	@echo "... src/analyzer.o"
 	@echo "... src/analyzer.i"
 	@echo "... src/analyzer.s"
+	@echo "... src/animator.o"
+	@echo "... src/animator.i"
+	@echo "... src/animator.s"
 	@echo "... src/buffer_pool.o"
 	@echo "... src/buffer_pool.i"
 	@echo "... src/buffer_pool.s"

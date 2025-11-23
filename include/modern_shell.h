@@ -7,6 +7,7 @@
 #include "database.h"
 #include "utf8_processor.h"
 #include "syntax_highlighter.h"
+#include "animator.h"
 #include <string>
 #include <vector>
 #include <memory>
