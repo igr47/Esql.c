@@ -1,5 +1,5 @@
 #include "database.h"
-#include "shell2.h"
+#include "modern_shell.h"
 #include <iostream>
 #include <chrono>
 #include <iomanip>
@@ -219,9 +219,9 @@ void Database::execute(const std::string& query) {
 }
 
 void Database::startInteractive() {
-    ESQLShell shell(*this);
+    ModernShell shell(*this);
     if(hasDatabaseSelected()){
-        shell.setCurrentDatabase(currentDatabase());
+        shell.set_current_database(currentDatabase());
     }
     shell.run();
 }
