@@ -1,8 +1,7 @@
-CMakeFiles/e_sql.dir/src/database.cpp.o: \
-  /home/igiris/git_projects/Esql.c/src/database.cpp \
-  /home/igiris/git_projects/Esql.c/include/database.h \
-  /home/igiris/git_projects/Esql.c/include/parser.h \
-  /home/igiris/git_projects/Esql.c/include/scanner.h \
+CMakeFiles/e_sql.dir/src/modern_shell.cpp.o: \
+  /home/igiris/git_projects/Esql.c/src/modern_shell.cpp \
+  /home/igiris/git_projects/Esql.c/include/modern_shell.h \
+  /home/igiris/git_projects/Esql.c/include/shell_types.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/string \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/requires_hosted.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++config.h \
@@ -143,33 +142,47 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator_args.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/tuple \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/unordered_map \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_map.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/hashtable.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/hashtable_policy.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/aligned_buffer.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/enable_special_members.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/node_handle.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/erase_if.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/vector \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_uninitialized.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_vector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_bvector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/vector.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/stdexcept \
+  /home/igiris/git_projects/Esql.c/include/terminal_input.h \
+  /usr/include/termios.h /usr/include/x86_64-linux-gnu/bits/termios.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-struct.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-c_cc.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-c_iflag.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-c_oflag.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-baud.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-c_cflag.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-c_lflag.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-tcflow.h \
+  /usr/include/x86_64-linux-gnu/bits/termios-misc.h \
+  /usr/include/x86_64-linux-gnu/sys/ttydefaults.h /usr/include/unistd.h \
+  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
+  /usr/include/x86_64-linux-gnu/bits/environments.h \
+  /usr/include/x86_64-linux-gnu/bits/confname.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
+  /usr/include/linux/close_range.h \
+  /usr/include/x86_64-linux-gnu/sys/ioctl.h \
+  /usr/include/x86_64-linux-gnu/bits/ioctls.h \
+  /usr/include/x86_64-linux-gnu/asm/ioctls.h \
+  /usr/include/asm-generic/ioctls.h /usr/include/linux/ioctl.h \
+  /usr/include/x86_64-linux-gnu/asm/ioctl.h \
+  /usr/include/asm-generic/ioctl.h \
+  /usr/include/x86_64-linux-gnu/bits/ioctl-types.h \
+  /home/igiris/git_projects/Esql.c/include/history_manager.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/fstream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ios \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/exception \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception_ptr.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/cxxabi_init_exception.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/typeinfo \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/nested_exception.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/memory \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tempbuf.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_raw_storage_iter.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/align.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unique_ptr.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/shared_ptr.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/shared_ptr_base.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/allocated_ptr.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ios_base.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/atomicity.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/gthr.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
@@ -195,6 +208,50 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_classes.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_classes.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/system_error \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/stdexcept \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/streambuf \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/streambuf.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_ios.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_facets.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cwctype \
+  /usr/include/wctype.h \
+  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/streambuf_iterator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_facets.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_ios.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/istream.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/codecvt.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/fstream.tcc \
+  /home/igiris/git_projects/Esql.c/include/database.h \
+  /home/igiris/git_projects/Esql.c/include/parser.h \
+  /home/igiris/git_projects/Esql.c/include/scanner.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/unordered_map \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_map.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/hashtable.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/hashtable_policy.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/aligned_buffer.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/enable_special_members.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/node_handle.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/erase_if.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/memory \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tempbuf.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/align.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unique_ptr.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/shared_ptr.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/shared_ptr_base.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/allocated_ptr.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/concurrence.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/shared_ptr_atomic.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/atomic_base.h \
@@ -218,34 +275,6 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /home/igiris/git_projects/Esql.c/include/diskstorage.h \
   /home/igiris/git_projects/Esql.c/include/database_file.h \
   /home/igiris/git_projects/Esql.c/include/common_types.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/fstream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ios \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ios_base.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_classes.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_classes.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/system_error \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/streambuf \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/streambuf.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_ios.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_facets.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cwctype \
-  /usr/include/wctype.h \
-  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/streambuf_iterator.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_facets.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_ios.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/istream.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/codecvt.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++io.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/fstream.tcc \
   /home/igiris/git_projects/Esql.c/include/buffer_pool.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/list \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_list.h \
@@ -325,39 +354,7 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_multiset.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/utility \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_relops.h \
-  /home/igiris/git_projects/Esql.c/include/modern_shell.h \
-  /home/igiris/git_projects/Esql.c/include/shell_types.h \
-  /home/igiris/git_projects/Esql.c/include/terminal_input.h \
-  /usr/include/termios.h /usr/include/x86_64-linux-gnu/bits/termios.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-struct.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-c_cc.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-c_iflag.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-c_oflag.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-baud.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-c_cflag.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-c_lflag.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-tcflow.h \
-  /usr/include/x86_64-linux-gnu/bits/termios-misc.h \
-  /usr/include/x86_64-linux-gnu/sys/ttydefaults.h /usr/include/unistd.h \
-  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
-  /usr/include/x86_64-linux-gnu/bits/environments.h \
-  /usr/include/x86_64-linux-gnu/bits/confname.h \
-  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
-  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
-  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
-  /usr/include/linux/close_range.h \
-  /usr/include/x86_64-linux-gnu/sys/ioctl.h \
-  /usr/include/x86_64-linux-gnu/bits/ioctls.h \
-  /usr/include/x86_64-linux-gnu/asm/ioctls.h \
-  /usr/include/asm-generic/ioctls.h /usr/include/linux/ioctl.h \
-  /usr/include/x86_64-linux-gnu/asm/ioctl.h \
-  /usr/include/asm-generic/ioctl.h \
-  /usr/include/x86_64-linux-gnu/bits/ioctl-types.h \
-  /home/igiris/git_projects/Esql.c/include/history_manager.h \
   /home/igiris/git_projects/Esql.c/include/utf8_processor.h \
   /home/igiris/git_projects/Esql.c/include/syntax_highlighter.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/unordered_set \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/thread \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/std_thread.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h
