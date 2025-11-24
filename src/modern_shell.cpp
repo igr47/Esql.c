@@ -55,6 +55,115 @@ void ModernShell::run_interactive() {
     // Position for first prompt
     move_to_prompt_position();
     print_prompt();
+    update_prompt_position();
+    
+    refresh_display(true);
+
+    while (!should_exit_) {
+        char c;
+        ssize_t n = read(STDIN_FILENO, &c, 1);
+
+        if (n != 1) continue;
+
+        // Handle escape sequences (arrow keys)
+        if (c == '\033') {
+            // Read the next characters with timeout
+            struct timeval tv = {0, 50000}; // 50ms timeout
+            fd_set fds;
+            
+            // Check if there are more characters available
+            FD_ZERO(&fds);
+            FD_SET(STDIN_FILENO, &fds);
+            
+            if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
+                char seq[2];
+                // Read the '[' character
+                if (read(STDIN_FILENO, &seq[0], 1) == 1 && seq[0] == '[') {
+                    // Read the direction character
+                    if (read(STDIN_FILENO, &seq[1], 1) == 1) {
+                        // Process the arrow key
+                        switch (seq[1]) {
+                            case 'A': // Up arrow
+                                handle_navigation(esql::KeyCode::Up);
+                                continue; // Skip the rest of the loop
+                            case 'B': // Down arrow
+                                handle_navigation(esql::KeyCode::Down);
+                                continue;
+                            case 'C': // Right arrow
+                                handle_navigation(esql::KeyCode::Right);
+                                continue;
+                            case 'D': // Left arrow
+                                handle_navigation(esql::KeyCode::Left);
+                                continue;
+                            case 'H': // Home
+                                handle_navigation(esql::KeyCode::Home);
+                                continue;
+                            case 'F': // End
+                                handle_navigation(esql::KeyCode::End);
+                                continue;
+                        }
+                    }
+                }
+            }
+            
+            // If we get here, it's just the Escape key
+            if (in_multiline_mode_) {
+                in_multiline_mode_ = false;
+                multiline_buffer_.clear();
+                current_input_.clear();
+                cursor_pos_ = 0;
+                std::cout << "\n";
+                print_prompt();
+                update_prompt_position();
+                refresh_display(true);
+            }
+            continue;
+        }
+
+        // Handle regular characters
+        esql::KeyCode key = convert_char_to_keycode(c);
+        
+        switch (key) {
+            case esql::KeyCode::Enter:
+                handle_enter();
+                break;
+            case esql::KeyCode::Backspace:
+                handle_backspace();
+                break;
+            case esql::KeyCode::Tab:
+                handle_tab();
+                break;
+            case esql::KeyCode::Character:
+                handle_character(c);
+                break;
+            case esql::KeyCode::CtrlD:
+                should_exit_ = true;
+                break;
+            case esql::KeyCode::CtrlL:
+                clear_screen();
+                print_banner();
+                refresh_display(true);
+                break;
+            default:
+                break;
+        }
+    }
+
+    std::cout << "\n";
+}
+/*void ModernShell::run_interactive() {
+    clear_screen();
+    print_banner();
+    
+    // Initialize state
+    current_input_.clear();
+    cursor_pos_ = 0;
+    last_rendered_input_.clear();
+    last_cursor_pos_ = 0;
+
+    // Position for first prompt
+    move_to_prompt_position();
+    print_prompt();
     update_prompt_position(); // Store hwre we placed the prompt
     
     refresh_display(true); // Force initial display
@@ -124,7 +233,7 @@ void ModernShell::run_interactive() {
     }
 
     std::cout << "\n";
-}
+}*/
 
 void ModernShell::update_prompt_position() {
     terminal_.get_cursor_position(prompt_row_, prompt_col_);
