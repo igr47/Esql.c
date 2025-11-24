@@ -118,6 +118,9 @@ private:
     std::string last_rendered_input_;
     size_t last_cursor_pos_ = 0;
    
+    bool in_multiline_mode_ = false;
+    std::vector<std::string> multiline_buffer_;
+
     int prompt_row_ = 0;  // Current prompt row position
     int prompt_col_ = 1;  // Current prompt column position
 

@@ -104,7 +104,19 @@ void ModernShell::run_interactive() {
                 refresh_display(true);
                 break;
             case esql::KeyCode::Escape:
-                // Ignore standalone escape
+                if (in_multiline_mode_) {
+                    // Escape from multiline mode - cancel the current multiline input
+                    in_multiline_mode_ = false;
+                    multiline_buffer_.clear();
+                    current_input_.clear();
+                    cursor_pos_ = 0;
+
+                    // Move to new line and show fresh prompt
+                    std::cout << "\n";
+                    print_prompt();
+                    update_prompt_position();
+                    refresh_display(true);
+                }
                 break;
             default:
                 break;
@@ -128,6 +140,55 @@ void ModernShell::move_to_prompt_position() {
 }
 
 void ModernShell::update_screen() {
+        // If in multiline mode, we need special handling for display
+    if (in_multiline_mode_ && !multiline_buffer_.empty()) {
+        // For multiline mode, we need to display all accumulated lines
+        move_to_prompt_position();
+        
+        std::string current_prompt = build_prompt();
+        std::cout << "\033[K" << current_prompt;
+        
+        // Display all previous multiline buffers
+        for (size_t i = 0; i < multiline_buffer_.size(); ++i) {
+            std::string colored_line = highlighter_.highlight(multiline_buffer_[i]);
+            std::cout << colored_line << "\n";
+
+                        // Print continuation prefix
+            if (use_colors_) {
+                std::cout << esql::colors::GRAY << " -> " << esql::colors::RESET;
+            } else {
+                std::cout << " -> ";
+            }
+        }
+
+        // Display current input with highlighting
+        std::string colored_input = highlighter_.highlight(current_input_);
+        std::cout << colored_input;
+
+        // Clear any remaining characters from previous input
+        if (last_rendered_input_.length() > current_input_.length()) {
+            int chars_to_clear = last_rendered_input_.length() - current_input_.length();
+            std::cout << std::string(chars_to_clear, ' ');
+        }
+
+        // Position cursor correctly
+        int cursor_screen_pos = esql::UTF8Processor::display_width(
+            esql::UTF8Processor::strip_ansi(" -> ")) +  // Continuation prefix
+            esql::UTF8Processor::display_width(
+                esql::UTF8Processor::strip_ansi(current_input_.substr(0, cursor_pos_)));
+
+        // Calculate which row we're on (prompt row + number of multiline buffers)
+        int current_row = prompt_row_ + static_cast<int>(multiline_buffer_.size());
+        std::cout << "\033[" << current_row << ";" << (prompt_col_ + cursor_screen_pos) << "H";
+
+        std::cout.flush();
+
+        // Update last rendered state
+        last_rendered_input_ = current_input_;
+        last_cursor_pos_ = cursor_pos_;
+        current_prompt_ = current_prompt;
+        return;
+    }
     // Move to where the prompt is currently located
     move_to_prompt_position();
     
@@ -162,6 +223,7 @@ void ModernShell::update_screen() {
     last_cursor_pos_ = cursor_pos_;
     current_prompt_ = current_prompt;
 }
+
 
 /*void ModernShell::update_screen() {
     // Move to where the prompt is currently located
@@ -230,14 +292,176 @@ void ModernShell::handle_enter() {
         return;
     }
 
-    // Save command
-    std::string command_to_execute = current_input_;
+    // Check if we should continue in multiline mode
+    // We continue if current line doesn't end with semicolon
+    // We execute if current line ends with semicolon
+    bool should_continue_multiline = current_input_.back() != ';';
+
+    if (should_continue_multiline) {
+        // Enter multiline mode or continue in multiline mode
+        if (!in_multiline_mode_) {
+            // Starting multiline mode - save first line
+            multiline_buffer_.clear();
+            in_multiline_mode_ = true;
+        }
+
+        multiline_buffer_.push_back(current_input_);
+
+        // Move to new line with continuation prefix
+        std::cout << "\n";
+
+        // Print continuation prompt
+        if (use_colors_) {
+            std::cout << esql::colors::GRAY << " -> " << esql::colors::RESET;
+        } else {
+            std::cout << " -> ";
+        }
+
+        // Reset input state for next line
+        current_input_.clear();
+        cursor_pos_ = 0;
+
+        // Update display for the new continuation line
+        refresh_display(true);
+        return;
+    }
+
+    // We have a complete command (ends with semicolon and we're ready to execute)
+    std::string command_to_execute;
+    std::string history_command;
+
+    if (in_multiline_mode_) {
+        // Combine all multiline buffers with the current line
+        for (const auto& line : multiline_buffer_) {
+            command_to_execute += line + " ";
+        }
+        command_to_execute += current_input_;
+        history_command = command_to_execute;
+
+        // Reset multiline state
+        in_multiline_mode_ = false;
+        multiline_buffer_.clear();
+    } else {
+        // Single line command
+        command_to_execute = current_input_;
+        history_command = current_input_;
+    }
+
+    // Remove trailing semicolon and trim
+    if (!command_to_execute.empty() && command_to_execute.back() == ';') {
+        command_to_execute.pop_back();
+    }
+    // Trim whitespace
+    command_to_execute.erase(0, command_to_execute.find_first_not_of(" \t"));
+    command_to_execute.erase(command_to_execute.find_last_not_of(" \t") + 1);
+
+    // Move to new line
+    std::cout << "\n";
+
+    // Add to history
+    history_.add(history_command);
+
+    // Execute command
+    execute_command(command_to_execute);
+
+    // Reset input state
+    current_input_.clear();
+    cursor_pos_ = 0;
+    history_.reset_navigation();
+
+    // Print new prompt after command output
+    std::cout << "\n"; // Ensure we're on a new line
+    print_prompt();
+    update_prompt_position();
+
+    // Prepare for next input
+    if (!should_exit_) {
+        refresh_display(true);
+    }
+}
+
+/*void ModernShell::handle_enter() {
+    if (current_input_.empty()) {
+        // Empty line - just show new prompt
+        std::cout << "\n";
+        move_to_prompt_position();
+        print_prompt();
+        update_prompt_position();
+        refresh_display(true);
+        return;
+    }
+
+    // Check if we're in multiline mode or if current line ends with semicolon
+    if (in_multiline_mode_ || current_input_.back() != ';') {
+        // Enter multiline mode or continue in multiline mode
+        if (!in_multiline_mode_) {
+            // Starting multiline mode - save first line
+            multiline_buffer_.clear();
+            in_multiline_mode_ = true;
+        }
+        
+        multiline_buffer_.push_back(current_input_);
+        
+        // Move to new line with continuation prefix
+        std::cout << "\n";
+        
+        // Print continuation prompt
+        if (use_colors_) {
+            std::cout << esql::colors::GRAY << " -> " << esql::colors::RESET;
+        } else {
+            std::cout << " -> ";
+        }
+
+        // Reset input state for next line
+        current_input_.clear();
+        cursor_pos_ = 0;
+        
+        // Update display for the new continuation line
+        refresh_display(true);
+        return;
+    }
+
+    // We have a complete command (ends with semicolon)
+    std::string command_to_execute;
+    
+    if (in_multiline_mode_) {
+        // Combine all multiline buffers with the current line
+        for (const auto& line : multiline_buffer_) {
+            command_to_execute += line + " ";
+        }
+        command_to_execute += current_input_;
+        
+        // Reset multiline state
+        in_multiline_mode_ = false;
+        multiline_buffer_.clear();
+    } else {
+        // Single line command
+        command_to_execute = current_input_;
+    }
+    
+    // Remove trailing semicolon and trim
+    if (!command_to_execute.empty() && command_to_execute.back() == ';') {
+        command_to_execute.pop_back();
+    }
+    // Trim whitespace
+    command_to_execute.erase(0, command_to_execute.find_first_not_of(" \t"));
+    command_to_execute.erase(command_to_execute.find_last_not_of(" \t") + 1);
     
     // Move to new line
     std::cout << "\n";
     
-    // Add to history
-    history_.add(command_to_execute);
+    // Add to history (store the original formatted command)
+    std::string history_command;
+    if (in_multiline_mode_ && !multiline_buffer_.empty()) {
+        // For history, reconstruct the multiline command
+        for (const auto& line : multiline_buffer_) {
+            history_command += line + " ";
+        }
+        history_command += current_input_ + ";";
+    } else {
+        history_command = current_input_;
+    }
+    history_.add(history_command);
     
     // Execute command
     execute_command(command_to_execute);
@@ -248,7 +472,7 @@ void ModernShell::handle_enter() {
     history_.reset_navigation();
     
     // Print new prompt after command output
-    std::cout << "\n"; // Ensure we re on a new line
+    std::cout << "\n"; // Ensure we're on a new line
     print_prompt();
     update_prompt_position();
 
@@ -256,7 +480,7 @@ void ModernShell::handle_enter() {
     if (!should_exit_) {
         refresh_display(true);
     }
-}
+}*/
 
 void ModernShell::handle_character(char c) {
     // Insert character at cursor position
@@ -471,6 +695,11 @@ void ModernShell::execute_command(const std::string& command) {
         move_to_prompt_position();
         print_prompt();
         update_prompt_position();
+
+        // Reset multiline state
+        in_multiline_mode_ = false;
+        multiline_buffer_.clear();
+
         refresh_display(true);
         return;
     } else {
