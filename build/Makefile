@@ -201,6 +201,30 @@ src/buffer_pool.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/buffer_pool.cpp.s
 .PHONY : src/buffer_pool.cpp.s
 
+src/completion_engine.o: src/completion_engine.cpp.o
+.PHONY : src/completion_engine.o
+
+# target to build an object file
+src/completion_engine.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/completion_engine.cpp.o
+.PHONY : src/completion_engine.cpp.o
+
+src/completion_engine.i: src/completion_engine.cpp.i
+.PHONY : src/completion_engine.i
+
+# target to preprocess a source file
+src/completion_engine.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/completion_engine.cpp.i
+.PHONY : src/completion_engine.cpp.i
+
+src/completion_engine.s: src/completion_engine.cpp.s
+.PHONY : src/completion_engine.s
+
+# target to generate assembly for a file
+src/completion_engine.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/completion_engine.cpp.s
+.PHONY : src/completion_engine.cpp.s
+
 src/database.o: src/database.cpp.o
 .PHONY : src/database.o
 
@@ -627,6 +651,9 @@ help:
 	@echo "... src/buffer_pool.o"
 	@echo "... src/buffer_pool.i"
 	@echo "... src/buffer_pool.s"
+	@echo "... src/completion_engine.o"
+	@echo "... src/completion_engine.i"
+	@echo "... src/completion_engine.s"
 	@echo "... src/database.o"
 	@echo "... src/database.i"
 	@echo "... src/database.s"

@@ -6,6 +6,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/e_sql.dir/src/animator.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o"
   "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o.d"
+  "CMakeFiles/e_sql.dir/src/completion_engine.cpp.o"
+  "CMakeFiles/e_sql.dir/src/completion_engine.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/database.cpp.o"
   "CMakeFiles/e_sql.dir/src/database.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/database_file.cpp.o"
