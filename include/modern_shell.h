@@ -87,6 +87,9 @@ private:
     
     // Command execution
     void execute_command(const std::string& command);
+
+    void update_prompt_position();
+    void move_to_prompt_position();
     
     // UI components
     void print_banner();
@@ -114,7 +117,10 @@ private:
     std::string current_prompt_;
     std::string last_rendered_input_;
     size_t last_cursor_pos_ = 0;
-    
+   
+    int prompt_row_ = 0;  // Current prompt row position
+    int prompt_col_ = 1;  // Current prompt column position
+
     // State
     std::string current_db_;
     std::string current_input_;

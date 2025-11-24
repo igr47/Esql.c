@@ -83,6 +83,22 @@ void TerminalInput::get_terminal_size(int& width, int& height) {
     if (height < 10) height = 10;
 }
 
+void TerminalInput::get_cursor_position(int& row, int& col) {
+    switch(current_platform_) {
+        case Platform::Windows:
+            // get_cursor_position_windows(row, col);
+            break;
+        case Platform::Linux:
+        case Platform::Termux:
+            get_cursor_position_unix(row, col);
+            break;
+        default:
+            row = 1;
+            col = 1;
+            break;
+    }
+}
+
 KeyCode TerminalInput::read_key() {
     switch (current_platform_) {
         case Platform::Windows:
@@ -336,6 +352,51 @@ void TerminalInput::get_terminal_size_unix(int& width, int& height) {
         const char* lines = getenv("LINES");
         width = columns ? std::atoi(columns) : 80;
         height = lines ? std::atoi(lines) : 24;
+    }
+}
+
+void TerminalInput::get_cursor_position_unix(int& row, int& col) {
+    // Save current terminal state
+    struct termios original, raw;
+    if (tcgetattr(STDIN_FILENO, &original) == -1) {
+        row = 1;
+        col = 1;
+        return;
+    }
+
+    raw = original;
+    raw.c_lflag &= (ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+
+    // Querry cursor position
+    std::cout << "\033[6n";
+    std::cout.flush();
+
+    // Read response
+    char buf[32];
+    int bytes_read = 0;
+    struct timeval tv = {0, 100000}; // 100ms timeout
+    fd_set fds;
+
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+
+    if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
+        bytes_read = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+    }
+
+    // Restore terminal settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &original);
+    if (bytes_read > 0) {
+        buf[bytes_read] = '\0';
+        // Parse response : \033[<row>;<col>R
+        if (sscanf(buf, "\033[%d;%dr", &row, &col) != 2) {
+            row = 1;
+            col = 1;
+        }
+    } else {
+        row = 1;
+        col = 1;
     }
 }
 
