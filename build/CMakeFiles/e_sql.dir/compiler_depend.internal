@@ -5388,6 +5388,7 @@ e_sql
  /usr/lib/x86_64-linux-gnu/libc_nonshared.a
  /usr/lib/x86_64-linux-gnu/libreadline.so
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/analyzer.cpp.o
+ /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/animator.cpp.o
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/database.cpp.o
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/database_file.cpp.o

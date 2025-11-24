@@ -22,6 +22,10 @@ ModernShell::ModernShell(Database& db)
     
     highlighter_.enable_colors(use_colors_);
     highlighter_.set_current_database(current_db_);
+
+    // Initial prompt positions is below the banner
+    prompt_row_ = 19;
+    prompt_col_ = 1;
 }
 
 ModernShell::~ModernShell() {
@@ -47,6 +51,11 @@ void ModernShell::run_interactive() {
     cursor_pos_ = 0;
     last_rendered_input_.clear();
     last_cursor_pos_ = 0;
+
+    // Position for first prompt
+    move_to_prompt_position();
+    print_prompt();
+    update_prompt_position(); // Store hwre we placed the prompt
     
     refresh_display(true); // Force initial display
 
@@ -105,21 +114,76 @@ void ModernShell::run_interactive() {
     std::cout << "\n";
 }
 
+void ModernShell::update_prompt_position() {
+    terminal_.get_cursor_position(prompt_row_, prompt_col_);
+
+    // Adjust for the fact that we  want the position BEFORE the prompt was printed
+    // Sice get_cursor get_cursor_position returns where we are AFTER printing
+
+    prompt_col_ = 1;
+}
+
+void ModernShell::move_to_prompt_position() {
+    terminal_.move_cursor(prompt_row_, prompt_col_);
+}
+
 void ModernShell::update_screen() {
+    // Move to where the prompt is currently located
+    move_to_prompt_position();
+    
+    std::string current_prompt = build_prompt();
+    std::string colored_input = highlighter_.highlight(current_input_);
+    
+    // Clear from prompt position to end of line
+    std::cout << "\033[K" << current_prompt;
+    
+    // Output colored input
+    std::cout << colored_input;
+    
+    // Clear any remaining characters from previous input
+    if (last_rendered_input_.length() > current_input_.length()) {
+        int chars_to_clear = last_rendered_input_.length() - current_input_.length();
+        std::cout << std::string(chars_to_clear, ' ');
+     }
+
+    // Position cursor correctly within the input
+    int cursor_screen_pos = esql::UTF8Processor::display_width(
+        esql::UTF8Processor::strip_ansi(current_prompt)) +
+        esql::UTF8Processor::display_width(
+            esql::UTF8Processor::strip_ansi(current_input_.substr(0, cursor_pos_)));
+
+    // Move cursor to correct position relative to prompt start
+    std::cout << "\033[" << prompt_row_ << ";" << (prompt_col_ + cursor_screen_pos) << "H";
+
+    std::cout.flush();
+
+    // Update last rendered state
+    last_rendered_input_ = current_input_;
+    last_cursor_pos_ = cursor_pos_;
+    current_prompt_ = current_prompt;
+}
+
+/*void ModernShell::update_screen() {
+    // Move to where the prompt is currently located
+    move_to_prompt_position();
+
     // Fish-like optimization: only redraw what changed
     
     std::string current_prompt = build_prompt();
     std::string colored_input = highlighter_.highlight(current_input_);
+
+    // Clear from prompt to end of line
+     std::cout << "\033[K" << current_prompt;
     
     // Calculate prompt width (without ANSI codes)
     std::string clean_prompt = esql::UTF8Processor::strip_ansi(current_prompt);
     int prompt_width = esql::UTF8Processor::display_width(clean_prompt);
     
     // Move to input area (below banner)
-    std::cout << "\033[16;1H"; // Fixed position below banner
+    //std::cout << "\033[16;1H"; // Fixed position below banner
     
     // Clear the current input line and redraw prompt
-    std::cout << "\033[K" << current_prompt;
+    //std::cout << "\033[K" << current_prompt;
     
     // Output colored input
     std::cout << colored_input;
@@ -136,6 +200,7 @@ void ModernShell::update_screen() {
     
     // Move cursor to correct position
     std::cout << "\033[16;" << (cursor_screen_pos + 1) << "H";
+
     
     std::cout.flush();
     
@@ -143,7 +208,7 @@ void ModernShell::update_screen() {
     last_rendered_input_ = current_input_;
     last_cursor_pos_ = cursor_pos_;
     current_prompt_ = current_prompt;
-}
+}*/
 
 void ModernShell::refresh_display(bool force_redraw) {
     if (force_redraw || 
@@ -158,6 +223,9 @@ void ModernShell::handle_enter() {
     if (current_input_.empty()) {
         // Empty line - just show new prompt
         std::cout << "\n";
+        move_to_prompt_position();
+        print_prompt();
+        update_prompt_position();
         refresh_display(true);
         return;
     }
@@ -179,6 +247,11 @@ void ModernShell::handle_enter() {
     cursor_pos_ = 0;
     history_.reset_navigation();
     
+    // Print new prompt after command output
+    std::cout << "\n"; // Ensure we re on a new line
+    print_prompt();
+    update_prompt_position();
+
     // Prepare for next input
     if (!should_exit_) {
         refresh_display(true);
@@ -345,6 +418,12 @@ bool ModernShell::handle_possible_resize() {
         // Clear and redraw
         clear_screen();
         print_banner();
+                // Reset prompt position
+        prompt_row_ = 19;
+        prompt_col_ = 1;
+        move_to_prompt_position();
+        print_prompt();
+        update_prompt_position();
         refresh_display(true);
         return true;
     }
@@ -386,6 +465,12 @@ void ModernShell::execute_command(const std::string& command) {
     } else if (upper_cmd == "CLEAR") {
         clear_screen();
         print_banner();
+        // Reset prompt position to below banner
+        prompt_row_ = 19;
+        prompt_col_ = 1;
+        move_to_prompt_position();
+        print_prompt();
+        update_prompt_position();
         refresh_display(true);
         return;
     } else {
@@ -423,7 +508,7 @@ void ModernShell::execute_command(const std::string& command) {
     }
     
     // Ensure we're ready for next input
-    std::cout << std::endl;
+    //std::cout << std::endl;
 }
 
 void ModernShell::print_banner() {
@@ -454,17 +539,24 @@ void ModernShell::print_banner() {
                   << "Quantum ESQL Processor: ONLINE\n";
         std::cout << esql::colors::RED << "[*] " << esql::colors::GRAY 
                   << "Syntax Highlighting: ACTIVATED\n" << esql::colors::RESET;
-        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::CYAN << "Forged ";
-        std::cout.flush();
 
-        ConsoleAnimator animator;
-        animator.animateText("from the fires of performance and for the warriors of the digital age", 4000);
-        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::CYAN;
+        //First animation - ALWAYS on one line
+        //std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::CYAN;
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET; // Just the prefix in magenta
         std::cout.flush();
-
-        WaveAnimator waveAnim;
-        waveAnim.waveAnimation("accessing the esql framework console", 2);
         
+        ConsoleAnimator animator1(terminal_width_);
+        animator1.animateText("Forged from the fires of performance and for the warriors of the digital age", 4000);
+        
+        // Second animation - ALWAYS on one line
+        //std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::CYAN;
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET; // Just the prefix in magenta
+        std::cout.flush();
+        
+        WaveAnimator animator2(terminal_width_);
+        animator2.waveAnimation("accessing the esql framework console", 2);
+
+        // Connected line after animations
         std::cout << esql::colors::MAGENTA << "[+] "<< esql::colors::CYAN 
                   << "Connected to: " << (use_colors_ ? esql::colors::GRAY : "") 
                   << current_db_ << esql::colors::GREEN << "•" 
@@ -474,7 +566,6 @@ void ModernShell::print_banner() {
         std::cout << "Connected to: " << current_db_ << "\n\n";
     }
 }
-
 void ModernShell::print_prompt() {
     std::cout << build_prompt();
 }

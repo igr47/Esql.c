@@ -8,6 +8,7 @@
 
 class ConsoleAnimator {
     private:
+        int terminal_width_;
         void hideCursor() {
             std::cout << "\033[?25l";
         }
@@ -19,9 +20,10 @@ class ConsoleAnimator {
         void clearLine() {
             std::cout << "\033[2k\r";
         }
+        std::string compressTextToFit(const std::string& text, int max_width);
 
     public:
-        ConsoleAnimator() = default;
+        ConsoleAnimator(int terminal_width = 80) : terminal_width_(terminal_width) {}
         ~ConsoleAnimator() {
             showCursor();
         }
@@ -33,8 +35,11 @@ class ConsoleAnimator {
 
 class WaveAnimator {
     private:
+        int terminal_width_;
         std::string getStyledChar(char c, int style, bool capitalize);
+        std::string compressTextToFit(const std::string& text, int max_width);
     public:
+        WaveAnimator(int terminal_width = 80) : terminal_width_(terminal_width) {}
         void waveAnimation(const std::string& text, int cycles = 2);
 };
 

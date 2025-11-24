@@ -35,6 +35,7 @@ public:
     enum class Platform { Linux, Windows, Termux, Unknown };
     Platform detect_platform() const;
     bool is_termux() const { return current_platform_ == Platform::Termux; }
+    void get_cursor_position(int& row, int& col);
     
 private:
     Platform current_platform_;
@@ -59,6 +60,8 @@ private:
     //void disable_raw_mode_windows();
     void get_terminal_size_unix(int& width, int& height);
     //void get_terminal_size_windows(int& width, int& height);
+    void get_cursor_position_unix(int& row, int& col);
+    //void get_cursor_position_windows(int& row, int& col);
     
     // Escape sequence parsing
     KeyCode parse_escape_sequence();
