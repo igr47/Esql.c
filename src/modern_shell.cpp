@@ -14,7 +14,7 @@
 #endif
 
 ModernShell::ModernShell(Database& db) 
-    : db_(db), current_db_("default") {
+    : db_(db), current_db_("default"), completion_engine_(db) {
     
     // Initialize terminal
     terminal_.enable_raw_mode();
@@ -22,6 +22,7 @@ ModernShell::ModernShell(Database& db)
     
     highlighter_.enable_colors(use_colors_);
     highlighter_.set_current_database(current_db_);
+    completion_engine_.set_current_database(current_db_);
 
     // Initial prompt positions is below the banner
     prompt_row_ = 19;
@@ -611,11 +612,88 @@ void ModernShell::handle_backspace() {
 }
 
 void ModernShell::handle_tab() {
-    // Basic tab completion - insert 4 spaces
-    std::string completion = "    ";
-    current_input_.insert(cursor_pos_, completion);
-    cursor_pos_ += completion.size();
-    refresh_display();
+    // Get completions for current input and cursor position
+    auto completions = completion_engine_.get_completions(current_input_, cursor_pos_);
+
+    if (completions.empty()) {
+        // No completions found, insert spaces as fall back
+        std::string completions = " ";
+        current_input_.insert(cursor_pos_, completions);
+        cursor_pos_ += completions.size();
+        refresh_display();
+    } else if (completions.size() == 1) {
+        // Single completion - insert it
+        const std::string& completion = completions[0];
+
+        // Calculate the part to insert (after the current prefix)
+        size_t prefix_length = get_current_word_prefix().length();
+        std::string to_insert = completion.substr(prefix_length);
+
+        current_input_.insert(cursor_pos_, to_insert);
+        cursor_pos_ += to_insert.length();
+        refresh_display();
+    } else {
+        // Multiple completions - show the
+        show_completions(completions);
+    }
+}
+
+// Helper to get the word prefix
+std::string ModernShell::get_current_word_prefix() {
+    if (cursor_pos_ == 0 || current_input_.empty()) return "";
+    
+    size_t word_start = cursor_pos_;
+    while (word_start > 0 && 
+           (std::isalnum(current_input_[word_start-1]) || 
+            current_input_[word_start-1] == '_' || 
+            current_input_[word_start-1] == '.')) {
+        --word_start;
+    }
+    
+    return current_input_.substr(word_start, cursor_pos_ - word_start);
+}
+
+// Method to show completion list
+void ModernShell::show_completions(const std::vector<std::string>& completions) {
+    if (completions.empty()) return;
+    
+    std::cout << "\n"; // Move to new line
+    
+    // Calculate display parameters
+    int max_width = 0;
+    for (const auto& comp : completions) {
+        int width = esql::UTF8Processor::display_width(comp);
+        if (width > max_width) max_width = width;
+    }
+    
+    max_width += 2; // Add padding
+
+    int items_per_row = std::max(1, terminal_width_ / max_width);
+    int row_count = (completions.size() + items_per_row - 1) / items_per_row;
+
+    // Display completions in columns
+    for (int row = 0; row < row_count; ++row) {
+        for (int col = 0; col < items_per_row; ++col) {
+            size_t index = row + col * row_count;
+            if (index < completions.size()) {
+                std::cout << std::left << std::setw(max_width) << completions[index];
+            }
+        }
+        std::cout << "\n";
+            }
+
+    // Redisplay prompt and current input
+    print_prompt();
+    std::cout << current_input_;
+
+    // Reposition cursor
+    int cursor_screen_pos = esql::UTF8Processor::display_width(
+        esql::UTF8Processor::strip_ansi(build_prompt())) +
+        esql::UTF8Processor::display_width(
+            esql::UTF8Processor::strip_ansi(current_input_.substr(0, cursor_pos_)));
+
+    std::cout << "\033[" << prompt_row_ << ";" << (prompt_col_ + cursor_screen_pos) << "H";
+    std::cout.flush();
 }
 
 void ModernShell::handle_navigation(esql::KeyCode key) {
@@ -832,8 +910,13 @@ void ModernShell::execute_command(const std::string& command) {
                     if (!db_name.empty()) {
                         current_db_ = db_name;
                         highlighter_.set_current_database(current_db_);
+                        completion_engine_.set_current_database(current_db_); 
                     }
                 }
+            }
+
+            if (upper_cmd.find("CREATE ") == 0 || upper_cmd.find("DROP ") == 0 || upper_cmd.find("ALTER ") == 0) {
+                completion_engine_.refresh_metadata();
             }
             
             // OUTPUT RESULTS DIRECTLY - don't route through renderer
@@ -884,7 +967,7 @@ void ModernShell::print_banner() {
         std::cout.flush();
         
         ConsoleAnimator animator1(terminal_width_);
-        animator1.animateText("Forged from the fires of performance and for the warriors of the digital age", 4000);
+        animator1.animateText("Forged from the fires of performance for the warriors of the digital age", 4000);
         
         // Second animation - ALWAYS on one line
         //std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::CYAN;
@@ -969,6 +1052,7 @@ void ModernShell::show_help() {
 void ModernShell::set_current_database(const std::string& db_name) {
     current_db_ = db_name;
     highlighter_.set_current_database(db_name);
+    completion_engine_.set_current_database(db_name);
 }
 
 void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {

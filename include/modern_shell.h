@@ -8,6 +8,7 @@
 #include "utf8_processor.h"
 #include "syntax_highlighter.h"
 #include "animator.h"
+#include "completion_engine.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -85,6 +86,10 @@ private:
     void handle_tab();
     void handle_navigation(esql::KeyCode key);
     
+    // Helper methods for tab completion
+    std::string get_current_word_prefix();
+    void show_completions(const std::vector<std::string>& completions);
+
     // Command execution
     void execute_command(const std::string& command);
 
@@ -112,6 +117,7 @@ private:
     esql::HistoryManager history_;
     esql::SyntaxHighlighter highlighter_;
     esql::UTF8Processor utf8_processor_;
+    esql::CompletionEngine completion_engine_;
     
     // Fish-like screen state - SIMPLIFIED APPROACH
     std::string current_prompt_;
