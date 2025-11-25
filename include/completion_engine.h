@@ -66,6 +66,7 @@ private:
     std::vector<std::string> filter_completions(const std::vector<std::string>& completions, 
                                                const std::string& prefix);
     void sort_completions(std::vector<std::string>& completions);
+    bool needs_metadata_refresh() const;
     
     // Database metadata cache
     Database& db_;
@@ -73,6 +74,9 @@ private:
     std::vector<std::string> databases_;
     std::vector<std::string> tables_;
     std::unordered_map<std::string, std::vector<std::string>> columns_;
+
+    std::chrono::steady_clock::time_point last_metadata_refresh_;
+    std::chrono::milliseconds metadata_refresh_interval_{2000}; // Refresh every 2 seconds
     
     // Language definitions
     static const std::unordered_set<std::string> sql_keywords;

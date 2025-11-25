@@ -37,9 +37,15 @@ CompletionEngine::CompletionEngine(Database& db) : db_(db) {
 }
 
 std::vector<std::string> CompletionEngine::get_completions(const std::string& input, size_t cursor_pos) {
-    if (metadata_dirty_) {
+
+        // Only refresh metadata if needed (not on every tab press)
+    if (needs_metadata_refresh()) {
         refresh_metadata();
+        last_metadata_refresh_ = std::chrono::steady_clock::now();
     }
+    /*if (metadata_dirty_) {
+        refresh_metadata();
+    }*/
     
     CompletionContext context = analyze_input_context(input, cursor_pos);
     
@@ -354,8 +360,68 @@ void CompletionEngine::sort_completions(std::vector<std::string>& completions) {
         return a_upper < b_upper;
     });
 }
+#include <sstream>
 
 void CompletionEngine::refresh_metadata() {
+    // Save original cout buffer
+    std::streambuf* original_cout_buffer = std::cout.rdbuf();
+    std::ostringstream silent_buffer;
+    
+    try {
+        // Redirect cout to silent buffer
+        std::cout.rdbuf(silent_buffer.rdbuf());
+        
+        // Refresh databases
+        auto [db_result, duration1] = db_.executeQuery("SHOW DATABASES");
+        databases_.clear();
+        for (const auto& row : db_result.rows) {
+            if (!row.empty()) {
+                databases_.push_back(row[0]);
+            }
+        }
+        
+        // Refresh tables for current database
+        if (!current_db_.empty()) {
+            auto [table_result, duration2] = db_.executeQuery("SHOW TABLES");
+            tables_.clear();
+            for (const auto& row : table_result.rows) {
+                if (!row.empty()) {
+                    tables_.push_back(row[0]);
+                }
+            }
+            
+            // Refresh columns for each table
+            columns_.clear();
+            for (const auto& table : tables_) {
+                auto [column_result, duration3] = db_.executeQuery("DESCRIBE " + table);
+                for (const auto& row : column_result.rows) {
+                    if (!row.empty()) {
+                        columns_[current_db_].push_back(row[0]);
+                    }
+                }
+            }
+        }
+        
+        metadata_dirty_ = false;
+        
+        // Restore original cout buffer
+        std::cout.rdbuf(original_cout_buffer);
+        
+    } catch (...) {
+        // Restore cout buffer even on error
+        std::cout.rdbuf(original_cout_buffer);
+        // Ignore errors - metadata will be refreshed on next attempt
+    }
+}
+
+bool CompletionEngine::needs_metadata_refresh() const {
+    auto now = std::chrono::steady_clock::now();
+    auto time_since_refresh = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - last_metadata_refresh_);
+    return metadata_dirty_ || time_since_refresh > metadata_refresh_interval_;
+}
+
+/*void CompletionEngine::refresh_metadata() {
     try {
         // Refresh databases
         auto db_result_pair = db_.executeQuery("SHOW DATABASES");
@@ -395,7 +461,7 @@ void CompletionEngine::refresh_metadata() {
     } catch (...) {
         // Ignore errors - metadata will be refreshed on next attempt
     }
-}
+}*/
 
 void CompletionEngine::set_current_database(const std::string& db_name) {
     current_db_ = db_name;
