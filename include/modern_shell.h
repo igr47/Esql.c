@@ -9,6 +9,7 @@
 #include "syntax_highlighter.h"
 #include "animator.h"
 #include "completion_engine.h"
+#include "autosuggestion_manager.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -90,6 +91,12 @@ private:
     std::string get_current_word_prefix();
     void show_completions(const std::vector<std::string>& completions);
 
+    // Autosuggestion methods
+    void update_autosuggestion();
+    void accept_autosuggestion();
+    void clear_autosuggestion();
+    std::string render_with_suggestion(const std::string& input, const esql::AutoSuggestion& suggestion);
+
     // Command execution
     void execute_command(const std::string& command);
 
@@ -118,6 +125,10 @@ private:
     esql::SyntaxHighlighter highlighter_;
     esql::UTF8Processor utf8_processor_;
     esql::CompletionEngine completion_engine_;
+    esql::AutoSuggestionManager autosuggestion_manager_;
+
+    // Autosuggestion state
+    esql::AutoSuggestion current_suggestion_;
     
     // Fish-like screen state - SIMPLIFIED APPROACH
     std::string current_prompt_;

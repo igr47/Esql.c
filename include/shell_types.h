@@ -37,6 +37,13 @@ struct RenderCache {
     bool valid = false;
 };
 
+struct AutoSuggestion {
+    std::string suggestion;
+    std::string prefix;
+    bool active = false;
+    size_t display_start = 0;
+};
+
 // Key codes for cross-platform input
 enum class KeyCode {
     None = -1,
