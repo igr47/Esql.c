@@ -387,6 +387,8 @@ void TerminalInput::get_cursor_position_unix(int& row, int& col) {
 
     // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &original);
+
+
     if (bytes_read > 0) {
         buf[bytes_read] = '\0';
         // Parse response : \033[<row>;<col>R

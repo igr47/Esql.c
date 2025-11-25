@@ -177,6 +177,30 @@ src/animator.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/animator.cpp.s
 .PHONY : src/animator.cpp.s
 
+src/autosuggestion_manager.o: src/autosuggestion_manager.cpp.o
+.PHONY : src/autosuggestion_manager.o
+
+# target to build an object file
+src/autosuggestion_manager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o
+.PHONY : src/autosuggestion_manager.cpp.o
+
+src/autosuggestion_manager.i: src/autosuggestion_manager.cpp.i
+.PHONY : src/autosuggestion_manager.i
+
+# target to preprocess a source file
+src/autosuggestion_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.i
+.PHONY : src/autosuggestion_manager.cpp.i
+
+src/autosuggestion_manager.s: src/autosuggestion_manager.cpp.s
+.PHONY : src/autosuggestion_manager.s
+
+# target to generate assembly for a file
+src/autosuggestion_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.s
+.PHONY : src/autosuggestion_manager.cpp.s
+
 src/buffer_pool.o: src/buffer_pool.cpp.o
 .PHONY : src/buffer_pool.o
 
@@ -648,6 +672,9 @@ help:
 	@echo "... src/animator.o"
 	@echo "... src/animator.i"
 	@echo "... src/animator.s"
+	@echo "... src/autosuggestion_manager.o"
+	@echo "... src/autosuggestion_manager.i"
+	@echo "... src/autosuggestion_manager.s"
 	@echo "... src/buffer_pool.o"
 	@echo "... src/buffer_pool.i"
 	@echo "... src/buffer_pool.s"

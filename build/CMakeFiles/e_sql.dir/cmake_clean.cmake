@@ -4,6 +4,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/e_sql.dir/src/analyzer.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/animator.cpp.o"
   "CMakeFiles/e_sql.dir/src/animator.cpp.o.d"
+  "CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o"
+  "CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o"
   "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/completion_engine.cpp.o"

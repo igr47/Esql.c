@@ -14,7 +14,7 @@
 #endif
 
 ModernShell::ModernShell(Database& db) 
-    : db_(db), current_db_("default"), completion_engine_(db) {
+    : db_(db), current_db_("default"), completion_engine_(db), autosuggestion_manager_(history_)  {
     
     // Initialize terminal
     terminal_.enable_raw_mode();
@@ -60,12 +60,36 @@ void ModernShell::run_interactive() {
     
     refresh_display(true);
 
+    // Buffer for detecting escape sequence responses
+    std::string escape_buffer;
+    bool in_escape_sequence = false;
+
     while (!should_exit_) {
         char c;
         ssize_t n = read(STDIN_FILENO, &c, 1);
 
         if (n != 1) continue;
 
+                // Handle escape sequence responses from cursor position queries
+        if (in_escape_sequence) {
+            escape_buffer += c;
+
+            // Check if we have a complete cursor position response: \033[<row>;<col>R
+            if (c == 'R' && escape_buffer.length() >= 6) {
+                // This is a cursor position response, ignore it
+                in_escape_sequence = false;
+                escape_buffer.clear();
+                continue;
+            }
+
+                       // If buffer gets too long, assume it's not a cursor position response
+            if (escape_buffer.length() > 15) {
+                in_escape_sequence = false;
+                escape_buffer.clear();
+            } else {
+                continue; // Still processing escape sequence
+            }
+        }
         // Handle escape sequences (arrow keys)
         if (c == '\033') {
             // Read the next characters with timeout
@@ -272,7 +296,8 @@ void ModernShell::update_screen() {
         }
 
         // Display current input with highlighting
-        std::string colored_input = highlighter_.highlight(current_input_);
+        //istd::string colored_input = highlighter_.highlight(current_input_);
+        std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
         std::cout << colored_input;
 
         // Clear any remaining characters from previous input
@@ -303,7 +328,8 @@ void ModernShell::update_screen() {
     move_to_prompt_position();
     
     std::string current_prompt = build_prompt();
-    std::string colored_input = highlighter_.highlight(current_input_);
+    //std::string colored_input = highlighter_.highlight(current_input_);
+    std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
     
     // Clear from prompt position to end of line
     std::cout << "\033[K" << current_prompt;
@@ -596,6 +622,10 @@ void ModernShell::handle_character(char c) {
     // Insert character at cursor position
     current_input_.insert(cursor_pos_, 1, c);
     cursor_pos_++;
+
+    // Updte auto suggestion
+    update_autosuggestion();
+
     refresh_display();
 }
 
@@ -607,6 +637,9 @@ void ModernShell::handle_backspace() {
     
     // Delete character at cursor position
     current_input_ = esql::UTF8Processor::delete_char_at_byte(current_input_, cursor_pos_);
+
+    // Update autosuggestion
+    update_autosuggestion();
     
     refresh_display();
 }
@@ -696,6 +729,42 @@ void ModernShell::show_completions(const std::vector<std::string>& completions) 
     std::cout.flush();
 }
 
+void ModernShell::update_autosuggestion() {
+    current_suggestion_ = autosuggestion_manager_.get_suggestion(current_input_);
+}
+
+void ModernShell::accept_autosuggestion() {
+    if (current_suggestion_.active) {
+        current_input_ = autosuggestion_manager_.accept_suggestion(current_input_, current_suggestion_);
+        cursor_pos_ = current_input_.size();
+        clear_autosuggestion();
+        refresh_display();
+    }
+}
+
+void ModernShell::clear_autosuggestion() {
+    current_suggestion_.active = false;
+    current_suggestion_.suggestion.clear();
+    current_suggestion_.prefix.clear();
+}
+
+std::string ModernShell::render_with_suggestion(const std::string& input,
+                                              const esql::AutoSuggestion& suggestion) {
+    if (!suggestion.active || input != suggestion.prefix) {
+        return highlighter_.highlight(input);
+    }
+
+    // Render input normally, then add suggestion in gray
+    std::string result = highlighter_.highlight(input);
+
+    if (suggestion.display_start < suggestion.suggestion.length()) {
+        std::string suggestion_part = suggestion.suggestion.substr(suggestion.display_start);
+        result += esql::colors::GRAY + suggestion_part + esql::colors::RESET;
+    }
+
+    return result;
+}
+
 void ModernShell::handle_navigation(esql::KeyCode key) {
     switch (key) {
         case esql::KeyCode::Left:
@@ -709,6 +778,8 @@ void ModernShell::handle_navigation(esql::KeyCode key) {
             if (cursor_pos_ < current_input_.size()) {
                 cursor_pos_ = esql::UTF8Processor::next_char_boundary(current_input_, cursor_pos_);
                 refresh_display();
+            } else if (cursor_pos_ == current_input_.size() && current_suggestion_.active) {
+                accept_autosuggestion();
             }
             break;
             
@@ -717,6 +788,9 @@ void ModernShell::handle_navigation(esql::KeyCode key) {
             if (!history_item.empty()) {
                 current_input_ = history_item;
                 cursor_pos_ = current_input_.size();
+
+                // Clear auto suggestion when using history navigation
+                clear_autosuggestion();
                 refresh_display();
             }
             break;
@@ -726,6 +800,8 @@ void ModernShell::handle_navigation(esql::KeyCode key) {
             std::string history_item = history_.navigate_down();
             current_input_ = history_item;
             cursor_pos_ = current_input_.size();
+            // Clear autosuggestion when using history navigation
+            clear_autosuggestion();
             refresh_display();
             break;
         }

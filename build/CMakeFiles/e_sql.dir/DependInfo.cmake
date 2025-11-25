@@ -10,6 +10,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/igiris/git_projects/Esql.c/src/analyzer.cpp" "CMakeFiles/e_sql.dir/src/analyzer.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/analyzer.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/animator.cpp" "CMakeFiles/e_sql.dir/src/animator.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/animator.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/autosuggestion_manager.cpp" "CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/buffer_pool.cpp" "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/completion_engine.cpp" "CMakeFiles/e_sql.dir/src/completion_engine.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/completion_engine.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/database.cpp" "CMakeFiles/e_sql.dir/src/database.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/database.cpp.o.d"
