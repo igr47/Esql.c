@@ -16,6 +16,7 @@
 #include <memory>
 #include <chrono>
 
+
 class ModernShell {
 public:
     explicit ModernShell(Database& db);
@@ -113,6 +114,7 @@ private:
     void print_results(const ExecutionEngine::ResultSet& result, double duration);
     void print_structure_results(const ExecutionEngine::ResultSet& result, double duration);
     
+
     // Utility
     std::string get_current_time() const;
     esql::KeyCode convert_char_to_keycode(char c);

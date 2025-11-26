@@ -168,8 +168,8 @@ void DatabaseFile::write_page(uint32_t page_id, const Page* page) {
     
     off_t offset = calculate_file_offset(page_id);
     
-    std::cout << "DEBUG DatabaseFile::write_page: Writing page " << page_id 
-              << " at offset " << offset << std::endl;
+    //std::cout << "DEBUG DatabaseFile::write_page: Writing page " << page_id 
+              //<< " at offset " << offset << std::endl;
     
     file.seekp(offset);
     
@@ -188,7 +188,7 @@ void DatabaseFile::write_page(uint32_t page_id, const Page* page) {
     // Force flush
     file.flush();
     
-    std::cout << "DEBUG DatabaseFile::write_page: Page " << page_id << " written successfully" << std::endl;
+    //std::cout << "DEBUG DatabaseFile::write_page: Page " << page_id << " written successfully" << std::endl;
     write_count++;
 }
 
@@ -248,7 +248,7 @@ uint32_t DatabaseFile::allocate_schema_page() {
     
     // If no free pages, extend (should rarely happen with proper recycling)
     uint32_t new_page = SCHEMA_PAGE_START + MAX_SCHEMA_PAGES + free_schema_pages.size();
-    std::cout << "DEBUG: Allocating new schema page " << new_page << std::endl;
+    //std::cout << "DEBUG: Allocating new schema page " << new_page << std::endl;
     return new_page;
 }
 
@@ -353,8 +353,8 @@ uint64_t DatabaseFile::allocate_data_block(uint32_t table_id, uint32_t size) {
         allocated = it->second.allocate_block(size);
     }
 
-    std::cout << "DEBUG: allocate_data_block - table " << table_id
-              << " allocated offset " << allocated << " size " << size << std::endl;
+    //std::cout << "DEBUG: allocate_data_block - table " << table_id
+              //<< " allocated offset " << allocated << " size " << size << std::endl;
 
     return allocated;
 }
@@ -474,8 +474,8 @@ uint32_t DatabaseFile::allocate_new_table_range(uint32_t table_id) {
     TableRange new_range(start_page, end_page, table_id);
     table_id_to_range[table_id] = new_range;
     
-    std::cout << "DEBUG: Allocated new range " << start_page << "-" << end_page 
-              << " for table " << table_id << std::endl;
+    //std::cout << "DEBUG: Allocated new range " << start_page << "-" << end_page 
+              //<< " for table " << table_id << std::endl;
     
     return start_page;
 }
@@ -578,8 +578,8 @@ void DatabaseFile::drop_table(const std::string& table_name) {
     available_table_ranges.push_back(freed_range);
     table_id_to_range.erase(table_id);
     
-    std::cout << "DEBUG: Table range " << freed_range.start_page << "-" << freed_range.end_page 
-              << " marked as available for reuse" << std::endl;
+    //std::cout << "DEBUG: Table range " << freed_range.start_page << "-" << freed_range.end_page 
+              //<< " marked as available for reuse" << std::endl;
     
     // Remove from table directory
     bool found = false;

@@ -301,8 +301,8 @@ namespace fractal {
 
     // Query operations
     std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableData(const std::string& dbName, const std::string& tableName) {
-        std::cout << "==== DEBUG getTableData START ===" << std::endl;
-        std::cout << "DEBUG Getting data for table: " << tableName << std::endl;
+        //std::cout << "==== DEBUG getTableData START ===" << std::endl;
+        //std::cout << "DEBUG Getting data for table: " << tableName << std::endl;
 
         ensureDatabaseOpen(dbName);
         const DatabaseState& dbState = getDatabase(dbName);
@@ -312,30 +312,30 @@ namespace fractal {
         std::vector<std::unordered_map<std::string,std::string>> result;
 
         try {
-            std::cout << "DEBUG: Calling tree->select_range()..." << std::endl;
-            tableInfo.tree->validate_tree_structure();
+            //std::cout << "DEBUG: Calling tree->select_range()..." << std::endl;
+            //tableInfo.tree->validate_tree_structure();
 
             // Scan all data from the tree
             auto data = tableInfo.tree->scan_all(getTransactionId());
             //auto data = tableInfo.tree->select_range(0,UINT32_MAX, getTransactionId());
             //
-            std::cout << "DEBUG: select_range returned " << data.size() << " raw rows" << std::endl;
+            //std::cout << "DEBUG: select_range returned " << data.size() << " raw rows" << std::endl;
 
             for (const auto& [row_id, serialized_data] : data) {
                 try {
-                    std::cout << "DEBUG: Processing row_id=" << row_id << ", data_size=" << serialized_data.size() << std::endl;
+                    //std::cout << "DEBUG: Processing row_id=" << row_id << ", data_size=" << serialized_data.size() << std::endl;
                     auto row = deserializeRow(serialized_data, tableInfo.columns);
-                    std::cout << "DEBUG: Deserialized row with " << row.size() << " columns" << std::endl;
-                    for (const auto& [col, val] : row) {
+                    //std::cout << "DEBUG: Deserialized row with " << row.size() << " columns" << std::endl;
+                    /*for (const auto& [col, val] : row) {
                         std::cout << "  " << col << " = '" << val << "'" << std::endl;
-                    }
+                    }*/
                     result.push_back(row);
                 } catch (const std::exception& e) {
                     std::cerr << "Warning: Failed to deserialize row " << row_id << " in table " << tableName << ": " << e.what() << std::endl;
                 }
             }
 
-            std::cout << "Retrieved " << result.size() << " rows from table: " << tableName << std::endl;
+            //std::cout << "Retrieved " << result.size() << " rows from table: " << tableName << std::endl;
         } catch (const std::exception& e) {
             throw std::runtime_error("Failed to get data from table '" + tableName + "': " + e.what());
         }
@@ -824,73 +824,6 @@ namespace fractal {
     }
 
     // Serialization
-    /*std::string DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row, const std::vector<DatabaseSchema::Column>& columns) const {
-        std::ostringstream oss;
-
-        for (const auto& column : columns) {
-            auto it = row.find(column.name);
-
-            if (it == row.end() || it->second.empty() || it->second == "NULL") {
-                // Write NULL market
-                uint32_t null_marker = 0xFFFFFFFF; // Special null marker
-                oss.write(reinterpret_cast<const char*>(&null_marker), sizeof(null_marker));
-            } else {
-                // Write length-prefixed value
-                const std::string& value = it->second;
-                uint32_t length = value.size();
-                oss.write(reinterpret_cast<const char*>(&length), sizeof(length));
-                oss.write(value.c_str(), length);
-            }
-        }
-        
-        std::string result = oss.str();
-        
-        // Debug output
-        std::cout << "DEBUG: Serialized row - total size: " << result.size()<< ", columns: " << columns.size() << std::endl;
-        return result;
-    }
-
-    std::unordered_map<std::string,std::string> DiskStorage::deserializeRow( const std::string& data, const std::vector<DatabaseSchema::Column>& columns) const {
-        std::unordered_map<std::string, std::string> row;
-        const char* ptr = data.data();
-        size_t remaining = data.size();
-
-        for (size_t i = 0; i < columns.size() && remaining > 0; i++) {
-            const auto& column = columns[i];
-
-            if (remaining < sizeof(uint32_t)) {
-                throw std::runtime_error("Invalid row data: insufficient data for length prefix");
-            }
-
-            if (remaining >= sizeof(uint32_t)) {
-                // Read length
-                uint32_t length_or_marker;
-                std::memcpy(&length_or_marker, ptr, sizeof(uint32_t));
-                ptr += sizeof(uint32_t);
-                remaining -= sizeof(uint32_t);
-
-                if (length_or_marker == 0xFFFFFFFF) {
-                    // nULL VALUE
-                    row[column.name] = "NULL";
-                } else {
-                    // Regular value
-                    uint32_t length = length_or_marker;
-                    if (remaining >= length) {
-                        row[column.name] = std::string(ptr, length);
-                        ptr += length;
-                        remaining -= length;
-                    } else {
-                        throw std::runtime_error("Invalid row data: insufficient data for column " + column.name);
-                }
-                }
-            } else {
-                throw std::runtime_error("Invalid row data: insufficient data for length prefix");
-            }
-        }
-
-        return row;
-    }*/
-
     std::string DiskStorage::serializeRow(const std::unordered_map<std::string, std::string>& row,
                                      const std::vector<DatabaseSchema::Column>& columns) const {
     std::ostringstream oss;
@@ -913,15 +846,15 @@ namespace fractal {
 
             oss.write(reinterpret_cast<const char*>(&length), sizeof(length));
             oss.write(value.c_str(), length);
-            std::cout << "DEBUG: Serialized column: " << column.name << " length: " << length << " value: '" << value << "'" << std::endl;
+            //std::cout << "DEBUG: Serialized column: " << column.name << " length: " << length << " value: '" << value << "'" << std::endl;
         }
     }
 
     std::string result = oss.str();
 
     // Debug output
-    std::cout << "DEBUG: Serialized row - total size: " << result.size()
-              << ", columns: " << columns.size() << std::endl;
+    //std::cout << "DEBUG: Serialized row - total size: " << result.size()
+              //<< ", columns: " << columns.size() << std::endl;
 
     return result;
 }
@@ -933,8 +866,8 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     const char* ptr = data.data();
     size_t remaining = data.size();
 
-    std::cout << "DEBUG: Deserializing row - data size: " << data.size()
-              << ", columns: " << columns.size() << std::endl;
+    //std::cout << "DEBUG: Deserializing row - data size: " << data.size()
+              //<< ", columns: " << columns.size() << std::endl;
 
     for (size_t i = 0; i < columns.size() && remaining > 0; i++) {
         const auto& column = columns[i];
@@ -993,7 +926,7 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
 
         // Get or allocate schema page
         uint32_t page_id = getSchemaPageId(dbName, tableName);
-        std::cout << "DEBUG: Serializing schema for '" << tableName << "' to page " << page_id << std::endl;
+        //std::cout << "DEBUG: Serializing schema for '" << tableName << "' to page " << page_id << std::endl;
 
         Page* page = dbState.buffer_pool->get_page(page_id);
         if (!page) {
@@ -1047,7 +980,7 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         DatabaseState& dbState = getDatabase(dbName);
 
         uint32_t page_id = getSchemaPageId(dbName, tableName);
-        std::cout << "DEBUG: Attempting to deserialize schema for '" << tableName << "' from page " << page_id << std::endl;
+        //std::cout << "DEBUG: Attempting to deserialize schema for '" << tableName << "' from page " << page_id << std::endl;
 
         dbState.db_file->debug_page_access(page_id);
         
@@ -1117,12 +1050,12 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         //return;
 
         // Get all tables from database file
-        std::cout << "DEBUG: Beging to get table data: " << std::endl;
+        //std::cout << "DEBUG: Beging to get table data: " << std::endl;
         auto tables = dbState.db_file->get_all_tables();
-        std::cout << "DEBUG: Finished getting table data: " << std::endl;
+        //std::cout << "DEBUG: Finished getting table data: " << std::endl;
 
         for (const auto& table : tables) {
-            std::cout << "DEBUG: Got table: " << table.name << std::endl;
+            //std::cout << "DEBUG: Got table: " << table.name << std::endl;
             try {
                 // Load schema
                 auto columns = deserializeTableSchema(dbName, table.name);
@@ -1130,7 +1063,7 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
                 // Initialize table
                 initializeTable(dbName, table.name, columns, table.root_page,table.table_id);
 
-                std::cout << "Loaded schema for table: " << table.name << std::endl;
+                //std::cout << "Loaded schema for table: " << table.name << std::endl;
             } catch (const std::exception& e) {
                 std::cerr << "Failed to load schema for table '" << table.name << "': " << e.what() << std::endl;
             }
@@ -1147,10 +1080,10 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
 
             // Check if page has valid data (not all zeros)
             bool all_zeros = std::all_of(test_page.data, test_page.data + PAGE_SIZE, [](char c) {return c == 0; });
-            std::cout << "DEBUG: Schema page " << page_id << " exists, all_zeros=" << all_zeros << std::endl;
+            //std::cout << "DEBUG: Schema page " << page_id << " exists, all_zeros=" << all_zeros << std::endl;
             return !all_zeros;
         } catch (const std::exception& e) {
-            std::cout << "DEBUG: SChema page " << page_id << " does not exists or is invalid: " << e.what() << std::endl;
+            //std::cout << "DEBUG: SChema page " << page_id << " does not exists or is invalid: " << e.what() << std::endl;
             return false;
         }
     }
@@ -1434,9 +1367,9 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
     void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName, const std::string& old_column, const std::string& new_column, const std::string& newType, int action) {
        // Should have a lock
 
-        std::cout << "=== DEBUG ALTER TABLE START ===" << std::endl;
-        std::cout << "DEBUG: alterTable called for table: " << tableName << std::endl;
-        std::cout << "DEBUG: Action: " << action << ", old_column: " << old_column<< ", new_column: " << new_column << std::endl;
+        //std::cout << "=== DEBUG ALTER TABLE START ===" << std::endl;
+        //std::cout << "DEBUG: alterTable called for table: " << tableName << std::endl;
+        //std::cout << "DEBUG: Action: " << action << ", old_column: " << old_column<< ", new_column: " << new_column << std::endl;
 
         ensureDatabaseOpen(dbName);
         DatabaseState& dbState = getDatabase(dbName);
@@ -1445,8 +1378,8 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         TableInfo& tableInfo = dbState.tables[tableName];
         auto& existingColumns = tableInfo.columns;
 
-        std::cout << "DEBUG: Current table_id: " << dbState.db_file->get_table_id(tableName) << std::endl;
-        std::cout << "DEBUG: Current columns count: " << tableInfo.columns.size() << std::endl;
+        //std::cout << "DEBUG: Current table_id: " << dbState.db_file->get_table_id(tableName) << std::endl;
+        //std::cout << "DEBUG: Current columns count: " << tableInfo.columns.size() << std::endl;
 
         try {
             switch (action) {
@@ -1495,12 +1428,12 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
                     throw std::runtime_error("Unknown ALTER TABLE action: " + std::to_string(action));
             }
 
-            std::cout << "ALTER TABLE completed for table: " << tableName << std::endl;
+            //std::cout << "ALTER TABLE completed for table: " << tableName << std::endl;
         } catch (const std::exception& e) {
             throw std::runtime_error("Failed to alter table '" + tableName + "': " + e.what());
         }
 
-          std::cout << "=== DEBUG ALTER TABLE END ===" << std::endl;
+          //std::cout << "=== DEBUG ALTER TABLE END ===" << std::endl;
     }
 
     void DiskStorage::alterTable(const std::string& dbName, const std::string& tableName, const DatabaseSchema::Column& newColumn) {
@@ -1526,73 +1459,17 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         }
     }
 
-    /*void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName, const std::vector<DatabaseSchema::Column>& newSchema, const std::unordered_map<std::string,std::string>& renameMapping) {
-        DatabaseState& dbState = getDatabase(dbName);
-        TableInfo& tableInfo = dbState.tables[tableName];
-
-        // Get all current data
-        auto old_data = getTableData(dbName, tableName);
-
-        std::cout << "DEBUG: Rebuilding table with new schema. Old data count: " << old_data.size() << std::endl;
-        std::cout << "DEBUG: Old schema columns: " << tableInfo.columns.size() << std::endl;
-        std::cout << "DEBUG: New schema columns: " << newSchema.size() << std::endl;
-
-        // Store the old schema for proper data migration
-        auto old_schema = tableInfo.columns;
-
-        // Drop and create table with new schema
-        dropTable(dbName, tableName);
-        createTable(dbName,tableName, newSchema);
-
-        // Reinsert data with new schema
-        for (auto& old_row : old_data) {
-            std::unordered_map<std::string, std::string> migratedRow;
-
-            // First copy all existsing data from old row
-            for (const auto& [col_name, value] : old_row) {
-                migratedRow[col_name] = value;
-            }
-
-            // Apply column renames
-            for (const auto& [old_name, new_name] : renameMapping) {
-                if (migratedRow.find(old_name) != migratedRow.end()) {
-                    migratedRow[new_name] = migratedRow[old_name];
-                    migratedRow.erase(old_name);
-                }
-            }
-
-            // Apply default values for new columns
-            for (const auto& newColumn : newSchema) {
-                // If column doesn't exist in igrated data and has a default value, apply it
-                if (migratedRow.find(newColumn.name) == migratedRow.end() && !newColumn.defaultValue.empty()) {
-                    migratedRow[newColumn.name] = newColumn.defaultValue;
-                }
-            }
-
-            std::cout << "DEBUG: Migrated row has " << migratedRow.size() << " Columns" << std::endl;
-            for (const auto& [col, val] : migratedRow) {
-                std::cout << " " << col <<  " = '" << val << "'" << std::endl;
-            }
-
-            //Insert the migrated row
-            insertRow(dbName, tableName, migratedRow);
-        }
-
-        tableInfo.tree->flush_all_messages(0);
-
-        std::cout << "Table rebuilt with new schema: " << tableName << std::endl;
-    }*/
 
     void DiskStorage::rebuildTableWithNewSchema(const std::string& dbName, const std::string& tableName, const std::vector<DatabaseSchema::Column>& newSchema, const std::unordered_map<std::string, std::string>& renameMapping) {
         DatabaseState& dbState = getDatabase(dbName);
         TableInfo& tableInfo = dbState.tables[tableName];
 
         // Get all current data with thier original row IDs
-        std::cout << "DEBUG: Rebuilding table with new schema for table: " << tableName << std::endl;
+        //std::cout << "DEBUG: Rebuilding table with new schema for table: " << tableName << std::endl;
 
         // Use scan_all to get data with thier original row IDs
         auto existing_data = tableInfo.tree->scan_all(0);
-        std::cout << "DEBUG: Found " << existing_data.size() << " existing records " << std::endl;
+        //std::cout << "DEBUG: Found " << existing_data.size() << " existing records " << std::endl;
 
         // Prepare data for bulk load
         std::vector<std::pair<int64_t, std::string>> bulk_data;
@@ -1630,19 +1507,19 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
               // Keep the original row_id
               bulk_data.emplace_back(row_id, new_serialized_data);
 
-              std::cout << "DEBUG: Migrated row " << row_id << " with " << migratedRow.size() << " columns" << std::endl;
+              //std::cout << "DEBUG: Migrated row " << row_id << " with " << migratedRow.size() << " columns" << std::endl;
         } catch (const std::exception& e) {
             std::cerr << "WARNING: Faile to migrate row " << row_id << ": " << e.what() << std::endl;
         }
         }
 
         // Drop and create table with new schema
-        std::cout << "DEBUG: Dropping and recreating table..." << std::endl;
+        //std::cout << "DEBUG: Dropping and recreating table..." << std::endl;
         dropTable(dbName, tableName);
         createTable(dbName, tableName, newSchema);
 
         // Use bulk load to rebuild tree with clean KeyValue entries
-        std::cout << "DEBUG: Performing bulk load..." << std::endl;
+        //std::cout << "DEBUG: Performing bulk load..." << std::endl;
         dbState.tables[tableName].tree->bulk_load(bulk_data, 0);
 
         // Update the next_row_id counter
@@ -1651,10 +1528,10 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
                     return a.first < b.first;
                     });
             dbState.tables[tableName].next_row_id = max_id->first+1;
-            std::cout << "DEBUG: Updated next_row_id to " << dbState.tables[tableName].next_row_id << std::endl;
+            //std::cout << "DEBUG: Updated next_row_id to " << dbState.tables[tableName].next_row_id << std::endl;
         } else {
             dbState.tables[tableName].next_row_id = 1;
-            std::cout<< "DEBUG: Reset next_row_id to 1 (empty table) " << std::endl;
+            //std::cout<< "DEBUG: Reset next_row_id to 1 (empty table) " << std::endl;
         }
 
         std::cout << "Table rebuilt with new schema using bulk load: " << tableName << std::endl;
