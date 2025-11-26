@@ -87,7 +87,7 @@ namespace fractal {
                 if(page_id != 0) {
                     try {
                         free_page(page_id, 0);
-                        std::cout << "DEBUG: Freed page " << page_id << std::endl;
+                        //std::cout << "DEBUG: Freed page " << page_id << std::endl;
                     } catch (const std::exception& e) {
                         std::cerr << "WARNING: Failed to free page " << page_id << ": " << e.what() << std::endl;
                     }
@@ -117,18 +117,18 @@ namespace fractal {
 
 
     void FractalBPlusTree::insert(int64_t key, const std::string& value, uint64_t transaction_id) {
-        std::cout << "=== DEBUG INSERT START ===" << std::endl;
-        std::cout << "DEBUG: INSERT key=" << key << ", value='" << value << "', txn=" << transaction_id << std::endl;
+        //std::cout << "=== DEBUG INSERT START ===" << std::endl;
+        //std::cout << "DEBUG: INSERT key=" << key << ", value='" << value << "', txn=" << transaction_id << std::endl;
 
         try {
             // Write data block first
             uint64_t value_offset = write_data_block(value);
             uint32_t value_length = value.size();
-            std::cout << "DEBUG: Value written to offset " << value_offset << ", length " << value_length << std::endl;
+            //std::cout << "DEBUG: Value written to offset " << value_offset << ", length " << value_length << std::endl;
 
             // Find appropriate leaf node 
             Page* leaf = find_leaf_page(key, transaction_id, true);
-            std::cout << "DEBUG: Found leaf page " << leaf->header.page_id<< " with " << leaf->header.key_count << " keys, " << leaf->header.message_count << " messages" << std::endl;
+            //std::cout << "DEBUG: Found leaf page " << leaf->header.page_id<< " with " << leaf->header.key_count << " keys, " << leaf->header.message_count << " messages" << std::endl;
 
             // Add insert message (fractal tree optimisation - buffer instead of immediate apply)
             add_message_to_node(leaf, MessageType::INSERT, key, value_offset, value_length, transaction_id);
@@ -136,17 +136,17 @@ namespace fractal {
 
             // Check if we need to split
             if (is_node_full(leaf)) {
-                 std::cout << "DEBUG: Node is full, splitting..." << std::endl;
+                 //std::cout << "DEBUG: Node is full, splitting..." << std::endl;
                 split_node(leaf, leaf->header.page_id, transaction_id);
             } else {
-                std::cout << "DEBUG: Node not full, adaptive flush..." << std::endl;
+                //std::cout << "DEBUG: Node not full, adaptive flush..." << std::endl;
                 adaptive_flush(leaf, leaf->header.page_id, transaction_id);
             }
 
             release_page(leaf->header.page_id, true);
 
 
-            std::cout << "INSERT Key= " << key << ", valuesize=" << value_length << ", Txn= " << transaction_id << std::endl;
+            //std::cout << "INSERT Key= " << key << ", valuesize=" << value_length << ", Txn= " << transaction_id << std::endl;
         } catch (const std::exception& e) {
             //LockManager::clear_thread_locks();
             //DeadlockDetector::clear_thread_locks(std::this_thread::get_id());
@@ -169,8 +169,8 @@ namespace fractal {
         adaptive_flush(leaf, leaf->header.page_id, transaction_id);
         release_page(leaf->header.page_id, true);
 
-        std::cout << "UPDATE Key=" << key << ", ValueSize=" << value_length
-                  << ", NewOffset=" << value_offset << ", Txn=" << transaction_id << std::endl;
+        //std::cout << "UPDATE Key=" << key << ", ValueSize=" << value_length
+                  //<< ", NewOffset=" << value_offset << ", Txn=" << transaction_id << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "UPDATE failed: " << e.what() << std::endl;
         throw;
@@ -266,7 +266,7 @@ namespace fractal {
             adaptive_flush(leaf, leaf->header.page_id, transaction_id);
             release_page(leaf->header.page_id, true);
 
-            std::cout << "DELETE: Key=" << key << ", Txn=" << transaction_id << std::endl;
+            //std::cout << "DELETE: Key=" << key << ", Txn=" << transaction_id << std::endl;
         } catch (const std::exception& e) {
             //LockManager::clear_thread_locks();
             //DeadlockDetector::clear_thread_locks(std::this_thread::get_id());
@@ -421,7 +421,7 @@ namespace fractal {
             return;
         }
 
-        std::cout << "BULK_LOAD: Starting bulk load of " << data.size() << " rows" << std::endl;
+        //std::cout << "BULK_LOAD: Starting bulk load of " << data.size() << " rows" << std::endl;
 
         // Sort new data by key
         std::vector<std::pair<int64_t, std::string>> sorted_data = data;
@@ -437,7 +437,7 @@ namespace fractal {
         // Get existing data
         auto existing_data = scan_all(transaction_id);
 
-        std::cout << "BULK_LOAD: Found " << existing_data.size() << " existing records" << std::endl;
+        //std::cout << "BULK_LOAD: Found " << existing_data.size() << " existing records" << std::endl;
 
         // If no existing data and we have new data, optimized for fresh load
         if (existing_data.empty() && !sorted_data.empty()) {
@@ -469,7 +469,7 @@ namespace fractal {
             all_data.emplace_back(key, value);
         }
 
-        std::cout << "BULK_LOAD: Merged data contains " << all_data.size() << " records" << std::endl;
+        //std::cout << "BULK_LOAD: Merged data contains " << all_data.size() << " records" << std::endl;
         
         // Perform the bulk load with merged data
         perform_fresh_bulk_load(all_data, transaction_id);
@@ -498,7 +498,7 @@ namespace fractal {
             root->header.next_page = 0;
             root->header.prev_page = 0;
             release_page(root_page_id, true);
-            std::cout << "DEBUG: Reusing existing root page " << root_page_id << " for bulk load" << std::endl;
+            //std::cout << "DEBUG: Reusing existing root page " << root_page_id << " for bulk load" << std::endl;
         } else {
             // Create new tree
             create();
@@ -550,7 +550,7 @@ namespace fractal {
         // Build internal nodes bottom up
         build_internal_nodes_from_leaves(transaction_id);
 
-        std::cout << "BULK_LOAD: Completed. LOaded " << sorted_data.size() << " records into " << leaf_count << " leaf nodes" << std::endl;
+        //std::cout << "BULK_LOAD: Completed. LOaded " << sorted_data.size() << " records into " << leaf_count << " leaf nodes" << std::endl;
     }
 
 
@@ -726,7 +726,7 @@ namespace fractal {
         return ss.str();
     }
 
-    void FractalBPlusTree::validate_tree_structure() const {
+    /*void FractalBPlusTree::validate_tree_structure() const {
     if (root_page_id == 0) {
         std::cout << "DEBUG: Tree is empty (root_page_id = 0)" << std::endl;
         return;
@@ -759,7 +759,7 @@ namespace fractal {
     } catch (const std::exception& e) {
         std::cerr << "DEBUG: Tree validation failed: " << e.what() << std::endl;
     }
-}
+}*/
 
     void FractalBPlusTree::print_tree_structure() const {
 
@@ -772,13 +772,13 @@ namespace fractal {
     }
 
     Page* FractalBPlusTree::find_leaf_page(int64_t key, uint64_t transaction_id, bool exclusive) {
-        std::cout << "DEBUG: find_leaf_page(key=" << key << ", txn=" << transaction_id << ", exclusive=" << exclusive << ")" << std::endl;
+        //std::cout << "DEBUG: find_leaf_page(key=" << key << ", txn=" << transaction_id << ", exclusive=" << exclusive << ")" << std::endl;
 
         if (root_page_id == 0) {
             throw std::runtime_error("Tree is empty");
         }
 
-         std::cout << "DEBUG: Starting from root page: " << root_page_id << std::endl;
+         //std::cout << "DEBUG: Starting from root page: " << root_page_id << std::endl;
 
         std::vector<uint32_t> page_chain;
         Page* current = get_page(root_page_id, exclusive);
@@ -786,13 +786,13 @@ namespace fractal {
 
         // Traverse down to leaf
         while (current->header.type == PageType::INTERNAL_NODE) {
-            std::cout << "DEBUG: Internal node " << current->header.page_id << " with " << current->header.key_count << " keys" << std::endl;
+            //std::cout << "DEBUG: Internal node " << current->header.page_id << " with " << current->header.key_count << " keys" << std::endl;
 
             uint32_t child_index = find_child_index(current, key);
             const uint32_t* children = get_child_pointers(current);
 
             uint32_t child_page_id = children[child_index];
-            std::cout << "DEBUG: Following child pointer at index " << child_index << " to page " << child_page_id << std::endl;
+            //std::cout << "DEBUG: Following child pointer at index " << child_index << " to page " << child_page_id << std::endl;
             Page* child = get_page(child_page_id, exclusive);
             page_chain.push_back(child_page_id);
 
@@ -802,7 +802,7 @@ namespace fractal {
             current = child;
         }
         
-        std::cout << "DEBUG: Found leaf page: " << current->header.page_id << std::endl;
+        //std::cout << "DEBUG: Found leaf page: " << current->header.page_id << std::endl;
 
         // Release all but the last page (the leaf we're returning)
         for (size_t i = 0; i < page_chain.size() - 1; ++i) {
@@ -813,7 +813,7 @@ namespace fractal {
     }
 
     void FractalBPlusTree::split_node(Page* node, uint32_t page_id, uint64_t transaction_id) {
-        std::cout << "SPLIT_NODE: Page " << page_id << " is full, splitting..." << std::endl;
+        //std::cout << "SPLIT_NODE: Page " << page_id << " is full, splitting..." << std::endl;
 
         // Create new node
         uint32_t new_page_id = allocate_new_page(node->header.type, transaction_id);
@@ -889,7 +889,7 @@ namespace fractal {
         // Log the split operation
         wal->log_tree_operation(transaction_id, "SPLIT_NODE", 10);
         release_page(new_page_id, true);
-        std::cout << "SPLIT_NODE: Completed. New page: " << new_page_id << std::endl;
+        //std::cout << "SPLIT_NODE: Completed. New page: " << new_page_id << std::endl;
     }
 
     void FractalBPlusTree::merge_nodes(Page* left, Page* right, uint64_t transaction_id) {
@@ -897,7 +897,7 @@ namespace fractal {
             return; // Can't merge root
         }
 
-        std::cout << "MERGE_NODES: Page " << left->header.page_id << " and "  << right->header.page_id << " merging... " << std::endl;
+        //std::cout << "MERGE_NODES: Page " << left->header.page_id << " and "  << right->header.page_id << " merging... " << std::endl;
 
         // Get parent node
         Page* parent = get_page(left->header.parent_id, true);
@@ -994,7 +994,7 @@ namespace fractal {
           update_parent_key_after_merge(parent, left_page_id, right_page_id, transaction_id);
       }
 
-      std::cout << "MERGE_LEAF_NODES: Moved " << keys_to_move << " keys from " << right_page_id << " to " << left_page_id << std::endl;
+      //std::cout << "MERGE_LEAF_NODES: Moved " << keys_to_move << " keys from " << right_page_id << " to " << left_page_id << std::endl;
 
       // Log the merge operation
       wal->log_tree_operation(transaction_id, "MERGE_LEAF_NODES", 15);
@@ -1151,7 +1151,7 @@ namespace fractal {
         // Log message addition
         wal->log_message_buffer(transaction_id,node->header.page_id, message_data.c_str(), message_data.size());
 
-        std::cout << "ADD_MESSAGE: Type=" << static_cast<int>(type) << ", Key=" << key << ", Txn=" << transaction_id << std::endl;
+        //std::cout << "ADD_MESSAGE: Type=" << static_cast<int>(type) << ", Key=" << key << ", Txn=" << transaction_id << std::endl;
     }
 
     void FractalBPlusTree::flush_messages_in_node(Page* node, uint32_t page_id, uint64_t transaction_id) {
@@ -1194,9 +1194,9 @@ namespace fractal {
     for (uint32_t i = 0; i < node->header.key_count; ++i) {
         if (kvs[i].value_offset > 0 && kvs[i].value_length > 0 && kvs[i].value_length < 65536) {
             final_state[keys[i]] = kvs[i];
-            std::cout << "DEBUG: Initial valid key " << keys[i] 
-                      << " with offset " << kvs[i].value_offset 
-                      << " length " << kvs[i].value_length << std::endl;
+            //std::cout << "DEBUG: Initial valid key " << keys[i] 
+                      //<< " with offset " << kvs[i].value_offset 
+                      //<< " length " << kvs[i].value_length << std::endl;
         } else {
             std::cout << "DEBUG: Skipping invalid base key " << keys[i] 
                       << " offset=" << kvs[i].value_offset 
@@ -1206,10 +1206,10 @@ namespace fractal {
     
     // Apply messages in order - CRITICAL: Don't overwrite existing offsets
     for (const auto& message : sorted_messages) {
-        std::cout << "DEBUG: Applying message key=" << message.key
-                  << " type=" << static_cast<int>(message.type) 
-                  << " offset=" << message.value_offset 
-                  << " length=" << message.value_length << std::endl;
+        //std::cout << "DEBUG: Applying message key=" << message.key
+                  //<< " type=" << static_cast<int>(message.type) 
+                  //<< " offset=" << message.value_offset 
+                  //<< " length=" << message.value_length << std::endl;
 
         if (message.value_length > 65536) {
             std::cerr << "WARNING: Skipping message with invalid length: " << message.value_length << std::endl;
@@ -1254,8 +1254,8 @@ namespace fractal {
 
         keys[new_index] = key;
         kvs[new_index] = kv;
-        std::cout << "DEBUG: Final key " << key << " at index " << new_index 
-                  << " offset=" << kv.value_offset << " length=" << kv.value_length << std::endl;
+        //std::cout << "DEBUG: Final key " << key << " at index " << new_index 
+                  //<< " offset=" << kv.value_offset << " length=" << kv.value_length << std::endl;
         new_index++;
     }
     
@@ -1265,7 +1265,7 @@ namespace fractal {
     total_messages -= node->header.message_count;
     memory_usage -= node->header.message_count * sizeof(Message);
     node->header.message_count = 0;
-    std::cout << "DEBUG: apply_messages_to_key_values completed. Final key count: " << new_index << std::endl;
+    //std::cout << "DEBUG: apply_messages_to_key_values completed. Final key count: " << new_index << std::endl;
 }
 
 
@@ -1472,7 +1472,7 @@ namespace fractal {
         kvs[insert_index].value_length = value_length;
         leaf->header.key_count++;
 
-        std::cout << "DEBUG: insert_key_value_into_leaf - key: " << key << ", offset: " << value_offset<< ", length: " << value_length << std::endl;
+        //std::cout << "DEBUG: insert_key_value_into_leaf - key: " << key << ", offset: " << value_offset<< ", length: " << value_length << std::endl;
     }
 
     void FractalBPlusTree::insert_key_into_internal(Page* internal, int64_t key, uint32_t child_page_id) {
@@ -1691,7 +1691,7 @@ namespace fractal {
             // Write actual data
             db_file->write_data_block(offset + sizeof(uint32_t), data.data(), actual_length);
 
-            std::cout << "DEBUG: write_data_block - NEW offset: " << offset << ", actual_length: " << actual_length << ", table_id: " << table_id << std::endl;
+            //std::cout << "DEBUG: write_data_block - NEW offset: " << offset << ", actual_length: " << actual_length << ", table_id: " << table_id << std::endl;
             return offset;
         } catch (const std::exception& e) {
             std::cerr << "Failed to write data block for table " << table_name << " (id: " << table_id << "): " << e.what() << std::endl;
@@ -1785,7 +1785,7 @@ namespace fractal {
     }
 }*/
     std::string FractalBPlusTree::read_data_block(uint64_t offset, uint32_t stored_length) {
-        std::cout << "DEBUG: read_data_block(ofset=" << offset << ", stored_length=" << stored_length << ")" << std::endl;
+        //std::cout << "DEBUG: read_data_block(ofset=" << offset << ", stored_length=" << stored_length << ")" << std::endl;
         if (offset == 0) {
             throw std::runtime_error("Invalid data offset: 0");
         }
@@ -1811,7 +1811,7 @@ namespace fractal {
             }
 
             std::string result(buffer.data(), actual_length);
-            std::cout << "DEBUG: read_data_block returning string of length " << result.size() << " (stored_length param was: " << stored_length << ")" << std::endl;
+            //std::cout << "DEBUG: read_data_block returning string of length " << result.size() << " (stored_length param was: " << stored_length << ")" << std::endl;
             return result;
         } catch (const std::exception& e) {
             std::cerr << "Failed to read data block at offset " << offset << " stored_length " << stored_length << ": " << e.what() << std::endl;

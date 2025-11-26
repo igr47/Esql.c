@@ -22,11 +22,11 @@ BufferPool::~BufferPool() {
 }
 
 Page* BufferPool::get_page(uint32_t page_id, bool exclusive) {
-    std::cout << "DEBUG BufferPool::get_page: Requesting page " << page_id << std::endl;
+    //std::cout << "DEBUG BufferPool::get_page: Requesting page " << page_id << std::endl;
     auto it = page_to_frame.find(page_id);
     
     if (it != page_to_frame.end()) {
-        std::cout << "DEBUG BufferPool::get_page: Page " << page_id << " found in cache" << std::endl;
+        //std::cout << "DEBUG BufferPool::get_page: Page " << page_id << " found in cache" << std::endl;
         size_t frame_index = it->second;
         BufferFrame& frame = frames[frame_index];
         
@@ -42,7 +42,7 @@ Page* BufferPool::get_page(uint32_t page_id, bool exclusive) {
         return &frame.page;
     }
     
-    std::cout << "DEBUG BufferPool::get_page: Page " << page_id << " not in cache, loading from disk" << std::endl;
+    //std::cout << "DEBUG BufferPool::get_page: Page " << page_id << " not in cache, loading from disk" << std::endl;
     miss_count++;
     read_count++;
     
@@ -61,7 +61,7 @@ Page* BufferPool::get_page(uint32_t page_id, bool exclusive) {
     frame.dirty = false;
     frame.pinned = true;
     
-    std::cout << "DEBUG BufferPool::get_page: Loading page " << page_id << " into frame " << frame_index << std::endl;
+    //std::cout << "DEBUG BufferPool::get_page: Loading page " << page_id << " into frame " << frame_index << std::endl;
     db_file->read_page(page_id, &frame.page);
     
     lru_list.push_front(page_id);
