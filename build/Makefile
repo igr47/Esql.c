@@ -537,6 +537,30 @@ src/parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/parser.cpp.s
 .PHONY : src/parser.cpp.s
 
+src/phoenix_animator.o: src/phoenix_animator.cpp.o
+.PHONY : src/phoenix_animator.o
+
+# target to build an object file
+src/phoenix_animator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o
+.PHONY : src/phoenix_animator.cpp.o
+
+src/phoenix_animator.i: src/phoenix_animator.cpp.i
+.PHONY : src/phoenix_animator.i
+
+# target to preprocess a source file
+src/phoenix_animator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.i
+.PHONY : src/phoenix_animator.cpp.i
+
+src/phoenix_animator.s: src/phoenix_animator.cpp.s
+.PHONY : src/phoenix_animator.s
+
+# target to generate assembly for a file
+src/phoenix_animator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.s
+.PHONY : src/phoenix_animator.cpp.s
+
 src/scanner.o: src/scanner.cpp.o
 .PHONY : src/scanner.o
 
@@ -717,6 +741,9 @@ help:
 	@echo "... src/parser.o"
 	@echo "... src/parser.i"
 	@echo "... src/parser.s"
+	@echo "... src/phoenix_animator.o"
+	@echo "... src/phoenix_animator.i"
+	@echo "... src/phoenix_animator.s"
 	@echo "... src/scanner.o"
 	@echo "... src/scanner.i"
 	@echo "... src/scanner.s"

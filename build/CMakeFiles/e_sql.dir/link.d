@@ -21,6 +21,7 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/animator.cpp.o \
   CMakeFiles/e_sql.dir/src/completion_engine.cpp.o \
   CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o \
+  CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o \
   CMakeFiles/e_sql.dir/src/modern_shell.cpp.o \
   CMakeFiles/e_sql.dir/src/database_schema.cpp.o \
   CMakeFiles/e_sql.dir/src/main.cpp.o \
@@ -97,6 +98,8 @@ CMakeFiles/e_sql.dir/src/animator.cpp.o:
 CMakeFiles/e_sql.dir/src/completion_engine.cpp.o:
 
 CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o:
+
+CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o:
 
 CMakeFiles/e_sql.dir/src/modern_shell.cpp.o:
 

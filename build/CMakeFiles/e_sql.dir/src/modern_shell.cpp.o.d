@@ -363,4 +363,5 @@ CMakeFiles/e_sql.dir/src/modern_shell.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/std_thread.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h \
   /home/igiris/git_projects/Esql.c/include/completion_engine.h \
-  /home/igiris/git_projects/Esql.c/include/autosuggestion_manager.h
+  /home/igiris/git_projects/Esql.c/include/autosuggestion_manager.h \
+  /home/igiris/git_projects/Esql.c/include/phoenix_animator.h

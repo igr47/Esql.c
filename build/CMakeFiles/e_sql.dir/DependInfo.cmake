@@ -25,6 +25,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/igiris/git_projects/Esql.c/src/modern_shell.cpp" "CMakeFiles/e_sql.dir/src/modern_shell.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/modern_shell.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/page.cpp" "CMakeFiles/e_sql.dir/src/page.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/page.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/parser.cpp" "CMakeFiles/e_sql.dir/src/parser.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/parser.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/phoenix_animator.cpp" "CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/scanner.cpp" "CMakeFiles/e_sql.dir/src/scanner.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/scanner.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/syntax_highlighter.cpp" "CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/terminal_input.cpp" "CMakeFiles/e_sql.dir/src/terminal_input.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/terminal_input.cpp.o.d"

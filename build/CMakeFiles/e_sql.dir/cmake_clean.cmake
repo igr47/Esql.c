@@ -34,6 +34,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/e_sql.dir/src/page.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/parser.cpp.o"
   "CMakeFiles/e_sql.dir/src/parser.cpp.o.d"
+  "CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o"
+  "CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/scanner.cpp.o"
   "CMakeFiles/e_sql.dir/src/scanner.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.o"
