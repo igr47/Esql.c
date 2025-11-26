@@ -36,6 +36,7 @@ add_executable(e_sql
     src/animator.cpp
     src/completion_engine.cpp
     src/autosuggestion_manager.cpp
+    src/phoenix_animator.cpp
     src/modern_shell.cpp 
     src/database_schema.cpp
     src/main.cpp  

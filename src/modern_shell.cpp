@@ -25,7 +25,7 @@ ModernShell::ModernShell(Database& db)
     completion_engine_.set_current_database(current_db_);
 
     // Initial prompt positions is below the banner
-    prompt_row_ = 19;
+    prompt_row_ = 34;
     prompt_col_ = 1;
 }
 
@@ -906,7 +906,7 @@ bool ModernShell::handle_possible_resize() {
         clear_screen();
         print_banner();
                 // Reset prompt position
-        prompt_row_ = 19;
+        prompt_row_ = 34;
         prompt_col_ = 1;
         move_to_prompt_position();
         print_prompt();
@@ -953,7 +953,7 @@ void ModernShell::execute_command(const std::string& command) {
         clear_screen();
         print_banner();
         // Reset prompt position to below banner
-        prompt_row_ = 19;
+        prompt_row_ = 34;
         prompt_col_ = 1;
         move_to_prompt_position();
         print_prompt();
@@ -1010,6 +1010,240 @@ void ModernShell::execute_command(const std::string& command) {
 
 void ModernShell::print_banner() {
     terminal_.clear_screen();
+
+    if (use_colors_) {
+        // Position cursor at top
+        std::cout << "\033[1;1H";
+
+        // Create Phoenix animator
+        PhoenixAnimator phoenix_animator(terminal_width_);
+
+        // ESQL logo (6 lines)
+        std::vector<std::string> esql_logo = {
+            "   ███████╗███████╗ ██████╗ ██╗   ",
+            "   ██╔════╝██╔════╝██╔═══██╗██║   ",
+            "   █████╗  ███████╗██║   ██║██║   ",
+            "   ██╔══╝  ╚════██║██║   ██║██║   ",
+            "   ███████╗███████║╚██████╔╝███████╗",
+            "   ╚══════╝╚══════╝ ╚═════╝ ╚══════╝"
+        };
+
+        int esql_height = esql_logo.size();
+        int phoenix_height = phoenix_animator.get_current_frame().size();
+
+        // Calculate positioning - align bases with 0 free space
+        int phoenix_start_row = 1; // Phoenix starts at row 1
+        int esql_start_row = 1 + (phoenix_height - esql_height); // ESQL starts at row 14 (1 + 13)
+
+        int phoenix_start_col = terminal_width_ - 45;
+        if (phoenix_start_col < 40) phoenix_start_col = 40;
+
+        // Draw Phoenix art (19 lines starting from row 1)
+        for (int i = 0; i < phoenix_height; ++i) {
+            std::cout << "\033[" << (phoenix_start_row + i) << ";" << phoenix_start_col << "H";
+            std::string colored_line = phoenix_animator.apply_gradient(
+                phoenix_animator.get_current_frame()[i], i * 2);
+            std::cout << colored_line;
+        }
+
+        // Draw ESQL logo (6 lines starting from row 14)
+        for (int i = 0; i < esql_height; ++i) {
+            std::cout << "\033[" << (esql_start_row + i) << ";1H";
+            std::cout << esql::colors::GRAY << esql_logo[i] << esql::colors::RESET;
+        }
+
+        // Header box starts below the combined art (row 20)
+        int header_start_line = phoenix_start_row + phoenix_height + 1; // 1 + 19 + 1 = 21
+        std::cout << "\033[" << header_start_line << ";1H";
+
+        std::cout << esql::colors::CYAN << "╔═══════════════════════════════════════╗\n";
+        std::cout << "║    " << esql::colors::MAGENTA << "E N H A N C E D   ES Q L   S H E L L"
+                  << esql::colors::CYAN << "  ║\n";
+        std::cout << "║        " << esql::colors::YELLOW << "H4CK3R  STYL3  V3RSI0N"
+                  << esql::colors::CYAN << "         ║\n";
+        std::cout << "╚═══════════════════════════════════════╝\n" << esql::colors::RESET;
+
+        // Status messages (4 lines starting from row 25)
+        int status_start_line = header_start_line + 4; // 21 + 4 = 25
+        std::cout << "\033[" << status_start_line << ";1H";
+
+        std::cout << esql::colors::RED << "[*] "<< esql::colors::CYAN
+                  << "Type 'help' for commands, 'exit' to quit\n";
+        std::cout << esql::colors::RED << "[*] " << esql::colors::CYAN
+                  << "Initializing ESQL Database Matrix...\n";
+        std::cout << esql::colors::RED << "[*] " << esql::colors::MAGENTA
+                  << "Quantum ESQL Processor: ONLINE\n";
+        std::cout << esql::colors::RED << "[*] " << esql::colors::GRAY
+                  << "Syntax Highlighting: ACTIVATED" << esql::colors::RESET;
+        std::cout.flush();
+
+        // STEP 1: Phoenix fire effect comes to life for 3 seconds after "Syntax Highlighting"
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Small pause
+        std::thread phoenix_thread([&phoenix_animator, phoenix_start_row, phoenix_start_col]() {
+            phoenix_animator.animate_fire_effect(3000); // 3 seconds of fire
+        });
+        phoenix_thread.join(); // Wait for Phoenix animation to complete
+
+        // STEP 2: First line animation
+        int anim1_line = status_start_line + 2; // 25 + 2 = 27 (right below status messages)
+        std::cout << "\033[" << anim1_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
+        std::cout.flush();
+
+        ConsoleAnimator animator1(terminal_width_);
+        animator1.animateText("Forged from the fires of performance for the warriors of the digital age", 4000);
+
+        // STEP 3: Second line animation
+        int anim2_line = anim1_line + 1; // 27 + 1 = 28
+        std::cout << "\033[" << anim2_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
+        std::cout.flush();
+
+        WaveAnimator animator2(terminal_width_);
+        animator2.waveAnimation("accessing the esql framework console", 2);
+
+        // STEP 4: Final connection line
+        int conn_line = anim2_line + 1; // 28 + 1 = 29
+        std::cout << "\033[" << conn_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] "<< esql::colors::CYAN
+                  << "Connected to: " << (use_colors_ ? esql::colors::GRAY : "")
+                  << current_db_ << esql::colors::GREEN << "•"
+                  << (use_colors_ ? esql::colors::RESET : "") << "\n\n";
+
+        // Set prompt position below everything (row 31)
+        //prompt_row_ = conn_line + 2; // 29 + 2 = 31
+        //prompt_col_ = 1;
+
+    } else {
+        // Fallback for no colors
+        std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
+        std::cout << "Connected to: " << current_db_ << "\n\n";
+    }
+}
+
+/*void ModernShell::print_banner() {
+    terminal_.clear_screen();
+
+    if (use_colors_) {
+        // Position cursor at top
+        std::cout << "\033[1;1H";
+
+        // Create Phoenix animator
+        PhoenixAnimator phoenix_animator(terminal_width_);
+
+        // ESQL logo (6 lines)
+        std::vector<std::string> esql_logo = {
+            "   ███████╗███████╗ ██████╗ ██╗   ",
+            "   ██╔════╝██╔════╝██╔═══██╗██║   ",
+            "   █████╗  ███████╗██║   ██║██║   ",
+            "   ██╔══╝  ╚════██║██║   ██║██║   ",
+            "   ███████╗███████║╚██████╔╝███████╗",
+            "   ╚══════╝╚══════╝ ╚═════╝ ╚══════╝"
+        };
+
+        int esql_height = esql_logo.size();
+        int phoenix_height = phoenix_animator.get_current_frame().size();
+
+        // Calculate positioning - align bases with 0 free space
+        int phoenix_start_row = 1; // Phoenix starts at row 1
+        int esql_start_row = 1 + (phoenix_height - esql_height); // ESQL starts at row 14 (1 + 13)
+
+        int phoenix_start_col = terminal_width_ - 45;
+        if (phoenix_start_col < 40) phoenix_start_col = 40;
+
+        // Draw Phoenix art (19 lines starting from row 1)
+        for (int i = 0; i < phoenix_height; ++i) {
+            std::cout << "\033[" << (phoenix_start_row + i) << ";" << phoenix_start_col << "H";
+            std::string colored_line = phoenix_animator.apply_gradient(
+                phoenix_animator.get_current_frame()[i], i * 2);
+            std::cout << colored_line;
+        }
+
+        // Draw ESQL logo (6 lines starting from row 14)
+        for (int i = 0; i < esql_height; ++i) {
+            std::cout << "\033[" << (esql_start_row + i) << ";1H";
+            std::cout << esql::colors::GRAY << esql_logo[i] << esql::colors::RESET;
+        }
+
+        // Header box starts below the combined art (row 20)
+        int header_start_line = phoenix_start_row + phoenix_height + 1; // 1 + 19 + 1 = 21
+        std::cout << "\033[" << header_start_line << ";1H";
+
+        std::cout << esql::colors::CYAN << "╔═══════════════════════════════════════╗\n";
+        std::cout << "║    " << esql::colors::MAGENTA << "E N H A N C E D   ES Q L   S H E L L"
+                  << esql::colors::CYAN << "  ║\n";
+        std::cout << "║        " << esql::colors::YELLOW << "H4CK3R  STYL3  V3RSI0N"
+                  << esql::colors::CYAN << "         ║\n";
+        std::cout << "╚═══════════════════════════════════════╝\n" << esql::colors::RESET;
+
+        // Status messages (4 lines starting from row 25)
+        int status_start_line = header_start_line + 4; // 21 + 4 = 25
+        std::cout << "\033[" << status_start_line << ";1H";
+
+        std::cout << esql::colors::RED << "[*] "<< esql::colors::CYAN
+                  << "Type 'help' for commands, 'exit' to quit\n";
+        std::cout << esql::colors::RED << "[*] " << esql::colors::CYAN
+                  << "Initializing ESQL Database Matrix...\n";
+        std::cout << esql::colors::RED << "[*] " << esql::colors::MAGENTA
+                  << "Quantum ESQL Processor: ONLINE\n";
+        std::cout << esql::colors::RED << "[*] " << esql::colors::GRAY
+                  << "Syntax Highlighting: ACTIVATED\n" << esql::colors::RESET;
+
+        // START PHOENIX ANIMATION - runs in current thread for 6000ms
+        *std::thread phoenix_thread([&phoenix_animator]() {
+            phoenix_animator.animate_fire_effect(6000); // Total duration for both line animations
+        });*
+
+        phoenix_animator.draw_static_phoenix();
+
+        // FIRST LINE ANIMATION - starts immediately after status messages
+        int anim1_line = status_start_line + 4; // 25 + 4 = 29
+        std::cout << "\033[" << anim1_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
+        std::cout.flush();
+
+        ConsoleAnimator animator1(terminal_width_);
+        animator1.animateText("Forged from the fires of performance for the warriors of the digital age", 4000);
+
+        // SECOND LINE ANIMATION - starts after first completes
+        int anim2_line = anim1_line + 1; // 29 + 1 = 30
+        std::cout << "\033[" << anim2_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
+        std::cout.flush();
+
+        WaveAnimator animator2(terminal_width_);
+        animator2.waveAnimation("accessing the esql framework console", 2);
+
+        std::thread phoenix_thread([&phoenix_animator]() {
+    phoenix_animator.animate_fire_effect(2000); // Shorter duration
+});
+
+        // Wait for phoenix animation to complete
+        *if (phoenix_thread.joinable()) {
+            phoenix_thread.join();
+        }
+
+        // Final connection line (row 31)
+        int conn_line = anim2_line + 1; // 30 + 1 = 31
+        std::cout << "\033[" << conn_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] "<< esql::colors::CYAN
+                  << "Connected to: " << (use_colors_ ? esql::colors::GRAY : "")
+                  << current_db_ << esql::colors::GREEN << "•"
+                  << (use_colors_ ? esql::colors::RESET : "") << "\n\n";
+
+        // Set prompt position below everything (row 33)
+        prompt_row_ = conn_line + 2; // 31 + 2 = 33
+        prompt_col_ = 1;
+
+    } else {
+        // Fallback for no colors
+        std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
+        std::cout << "Connected to: " << current_db_ << "\n\n";
+    }
+}*/
+
+/*void ModernShell::print_banner() {
+    terminal_.clear_screen();
     
     if (use_colors_) {
         std::cout << esql::colors::GRAY;
@@ -1062,7 +1296,7 @@ void ModernShell::print_banner() {
         std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
         std::cout << "Connected to: " << current_db_ << "\n\n";
     }
-}
+}*/
 void ModernShell::print_prompt() {
     std::cout << build_prompt();
 }

@@ -10,6 +10,7 @@
 #include "animator.h"
 #include "completion_engine.h"
 #include "autosuggestion_manager.h"
+#include "phoenix_animator.h"
 #include <string>
 #include <vector>
 #include <memory>
