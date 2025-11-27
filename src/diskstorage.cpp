@@ -244,7 +244,7 @@ namespace fractal {
             // Insert into tree
             tableInfo.tree->insert(row_id, serialized_data, getTransactionId());
 
-            std::cout << "Inserted row " << row_id << " into table: " << tableName << std::endl;
+            //std::cout << "Inserted row " << row_id << " into table: " << tableName << std::endl;
         } catch (const std::exception& e) {
             throw std::runtime_error("Failed to insert row into table '" + tableName + "': " + e.what());
         }

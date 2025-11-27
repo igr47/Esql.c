@@ -137,10 +137,6 @@ Token Parse::peekToken() {
     Token nextToken = lexer.nextToken();
 
     // Restore state
-    //lexer.position = savedPosition;
-    //lexer.line = savedLine;
-    //lexer.column = savedColumn;
-    //currentToken = savedCurrent;
     lexer.restoreState(savedPos, savedLine , savedCol);
 
     return nextToken;
@@ -156,10 +152,10 @@ bool Parse::matchAny(const std::vector<Token::Type>& types) const{
 	}
 	return false;
 }
+
+// CREATE AND DATABASE tokens are not consumed since they wre consumed in the main method
 std::unique_ptr<AST::CreateDatabaseStatement> Parse::parseCreateDatabaseStatement(){
 	auto stmt=std::make_unique<AST::CreateDatabaseStatement>();
-	//consume(Token::Type::CREATE);
-	//consume(Token::Type::DATABASE);
 	stmt->dbName=currentToken.lexeme;
 	consume(Token::Type::IDENTIFIER);
 	return stmt;
@@ -176,16 +172,8 @@ std::unique_ptr<AST::UseDatabaseStatement> Parse::parseUseStatement(){
 }
 std::unique_ptr<AST::ShowDatabaseStatement> Parse::parseShowDatabaseStatement(){
 	auto stmt=std::make_unique<AST::ShowDatabaseStatement>();
-	//consume(Token::Type::SHOW);
-	//consume(Token::Type::DATABASES);
 	return stmt;
 }
-/*std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement(){
-	auto stmt=std::make_unique<AST::ShowTableStatement>();
-	consume(Token::Type::SHOW);
-	consume(Token::Type::TABLES);
-	return stmt;
-}*/
 
 std::unique_ptr<AST::GroupByClause> Parse::parseGroupByClause() {
 	consume(Token::Type::GROUP);
@@ -194,13 +182,13 @@ std::unique_ptr<AST::GroupByClause> Parse::parseGroupByClause() {
 
 	columns.push_back(parseExpression());
 
-	std::cout <<"DEBUG: Parsing GROUP B clause" <<std::endl;
+	//std::cout <<"DEBUG: Parsing GROUP B clause" <<std::endl;
 
 	while(match(Token::Type::COMMA)){
-		std::cout<<"DEBUG : Found comma, parsing next expression" <<std::endl;
+		//std::cout<<"DEBUG : Found comma, parsing next expression" <<std::endl;
 		consume(Token::Type::COMMA);
 		columns.push_back(parseExpression());
-		std::cout<<"DEBUG: Added expression to GROUP BY " <<std::endl;
+		//std::cout<<"DEBUG: Added expression to GROUP BY " <<std::endl;
 	}
 
 	return std::make_unique<AST::GroupByClause>(std::move(columns));
@@ -245,39 +233,19 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 		consume(Token::Type::DISTINCT);
 		stmt->distinct = true;
 	}
-
-	//bool hasAggregates = false;
-	//size_t savePos,saveLine,saveCol;
-	
-	//Save state and peek ahead
-	//lexer.saveState(savePos,saveLine,saveCol);
-	//Token peeked = peekToken();
-
-	//if(peeked.type == Token::Type::COUNT || peeked.type == Token::Type::SUM || peeked.type == Token::Type::AVG || peeked.type == Token::Type::MIN || peeked.type == Token::Type::MAX){
-		//hasAggregates = true;
-	//}
 	if(match(Token::Type::ASTERIST)){
 		consume(Token::Type::ASTERIST);
-	//} else if(hasAggregates) {
-		//stmt->newCols = parseColumnListAs();
 	}else{
 		//lexer.restoreState(savePos, saveLine, saveCol);
 		//parse the first expression to see if it followed by AS
 		//auto firstExpr = parseExpression();
 		Token nextToken = peekToken();
-		//lexer.restoreState(savePos,saveLine,saveCol);
 
 		if(nextToken.type == Token::Type::AS){
-			//lexer.restoreState(savePos, saveLine, saveCol);
 			stmt->newCols = parseColumnListAs();
-
-		//if(peeked.type == Token::Type::AS){
-			//stmt->newCols = parseColumnListAs();
-		//}
 		}
 		else{
-			//lexer.restoreState(savePos, saveLine, saveCol);
-	                stmt->columns=parseColumnList();
+	        stmt->columns=parseColumnList();
 		}
 
 	}
@@ -335,12 +303,11 @@ std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement() {
         consume(Token::Type::IDENTIFIER);
         consume(Token::Type::EQUAL);
 
-	//auto expr = parseExpression();
 
 	//std::cout<<"DEBUG: Parsed expression:" << expr->toString()<<std::endl;
 
         // Use parseExpression() for strict value parsing
-        stmt->setClauses.emplace_back(column, /*std::move(expr)*/parseExpression());
+        stmt->setClauses.emplace_back(column, parseExpression());
     } while (match(Token::Type::COMMA));
 
     inValueContext = wasInValueContext;  // Restore context
@@ -572,7 +539,7 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
 	     } else if (match(Token::Type::CHECK)){
 		     consume(Token::Type::CHECK);
 		     consume(Token::Type::L_PAREN);
-		     std::cout << "DEBUG: Consumed Token (. Moving to expression. " << std::endl;
+		     //std::cout << "DEBUG: Consumed Token (. Moving to expression. " << std::endl;
 
 		     bool wasInValueContext = inValueContext;
 		     inValueContext = false;
@@ -580,17 +547,14 @@ void Parse::parseColumnDefinition(AST::CreateTableStatement& stmt) {
 		     try {
 			     //Parse the expression using the existing expression Parser
 			     auto checkExpr = parseExpression();
-			     std::cout << "DEBUG: Parsed CHECK expression: " + checkExpr->toString() << std::endl;
+			     //std::cout << "DEBUG: Parsed CHECK expression: " + checkExpr->toString() << std::endl;
 			     consume(Token::Type::R_PAREN);
 			     //Convert the expression into a string for storage in constrints
 			     std::string checkConstraint = "CHECK(" + checkExpr->toString() + ")";
 			     col.constraints.push_back(checkConstraint);
 			     //col.checkExpression = "CHECK(" + checkExpr->toString() + ")";
 			     col.checkExpression = checkExpr->toString();
-			     /*if (!match(Token::Type::R_PAREN)) {
-				     throw ParseError(currentToken.line, currentToken.column, "Expectedclosing parenthesis ')' after CHECK expression" );
-			     }*/
-			     std::cout << "DEBUG: Succssefully copleted CHECK constraint: " + checkConstraint << std::endl;
+			     //std::cout << "DEBUG: Succssefully copleted CHECK constraint: " + checkConstraint << std::endl;
 		     } catch (...) {
 			     inValueContext = wasInValueContext;
 			     throw;
@@ -720,7 +684,7 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
                 try {
                     // Parse the expression using the existing expression parser
                     auto checkExpr = parseExpression();
-                    std::cout << "DEBUG: Parsed CHECK expression: " + checkExpr->toString() << std::endl;
+                    //std::cout << "DEBUG: Parsed CHECK expression: " + checkExpr->toString() << std::endl;
                     consume(Token::Type::R_PAREN);
 
                     // Convert the expression into a string for storage
@@ -728,7 +692,7 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
                     stmt->constraints.push_back(checkConstraint);
                     stmt->checkExpression = checkExpr->toString();
 
-                    std::cout << "DEBUG: Successfully completed CHECK constraint: " + checkConstraint << std::endl;
+                    //std::cout << "DEBUG: Successfully completed CHECK constraint: " + checkConstraint << std::endl;
                 } catch (...) {
                     inValueContext = wasInValueContext;
                     throw;
@@ -1181,14 +1145,14 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 }
 
 std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
-	std::cout<< "DEBUG: parsePrimarExpression() - current Token:" << static_cast<int>(currentToken.type) <<"'" <<currentToken.lexeme <<"'"<<std::endl;
+	//std::cout<< "DEBUG: parsePrimarExpression() - current Token:" << static_cast<int>(currentToken.type) <<"'" <<currentToken.lexeme <<"'"<<std::endl;
 
 	std::unique_ptr<AST::Expression> left;
 
     if (match(Token::Type::CASE)) {
             return parseCaseExpression();
     } else if (matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})) {
-		std::cout<< "DEBUG: Foung aggregate function: " <<currentToken.lexeme<<std::endl;
+		//std::cout<< "DEBUG: Foung aggregate function: " <<currentToken.lexeme<<std::endl;
 		Token funcToken = currentToken;
 		consume(currentToken.type);
 
@@ -1202,7 +1166,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 			consume(Token::Type::ASTERIST);
 			isCountAll = true;
 		}else if(match(Token::Type::IDENTIFIER)){
-			std::cout<<"DEBUG: Handling identifier argument"<<std::endl;
+			//std::cout<<"DEBUG: Handling identifier argument"<<std::endl;
 			arg = parseIdentifier();
 		}else if(match(Token::Type::ASTERIST)){
 			if(funcToken.type == Token::Type::COUNT){
@@ -1213,7 +1177,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 			}
 			//continue;
 		}else{
-			std::cout<< "DEBUG: Handling expression argument"<<std::endl;
+			//std::cout<< "DEBUG: Handling expression argument"<<std::endl;
 			arg=parseExpression();
 		}
 

@@ -286,17 +286,17 @@ void SematicAnalyzer::validateCaseExpression(AST::CaseExpression& caseExpr, cons
     // Validate consistent return types
     if (!caseExpr.whenClauses.empty()) {
         DatabaseSchema::Column::Type firstType = getValueType(*caseExpr.whenClauses[0].second);
-        std::cout << "DEBUG CASE: First WHEN result type: " << typeToString(firstType) << std::endl;
+        //std::cout << "DEBUG CASE: First WHEN result type: " << typeToString(firstType) << std::endl;
         for (size_t i = 1; i < caseExpr.whenClauses.size(); ++i) {
             auto currentType = getValueType(*caseExpr.whenClauses[i].second);
-            std::cout << "DEBUG CASE: WHEN " << i << " result type: " << typeToString(currentType) << std::endl;
+            //std::cout << "DEBUG CASE: WHEN " << i << " result type: " << typeToString(currentType) << std::endl;
             if (!areTypesCompatible(firstType, currentType)) {
                 throw SematicError("Inconsistent types in CASE expression results");
             }
         }
         if (caseExpr.elseClause) {
             auto elseType = getValueType(*caseExpr.elseClause);
-            std::cout << "DEBUG CASE: ELSE result type: " << typeToString(elseType) << std::endl;
+            //std::cout << "DEBUG CASE: ELSE result type: " << typeToString(elseType) << std::endl;
             if (!areTypesCompatible(firstType, elseType)) {
                 throw SematicError("ELSE clause type incompatible with WHEN clauses in CASE expression");
             }
@@ -558,32 +558,6 @@ void SematicAnalyzer::validateIsOperation(AST::BinaryOp& isOp, const DatabaseSch
     }
 }
 
-/*void SematicAnalyzer::validateNotOperation(AST::NotOp& notOp, const DatabaseSchema::Table* table) {
-	validateExpression(*notOp.expr , table);
-
-	//NOT operator  should be implemented to a boolean expression
-	auto exprType = getValueType(*notOp.expr);
-	if(exprType != DatabaseSchema::Column::BOOLEAN){
-		if(auto* binaryOp = dynamic_cast<AST::BinaryOp*>(notOp.expr.get())){
-			switch (binaryOp->op.type){
-				case Token::Type::EQUAL:
-				case Token::Type::NOT_EQUAL:
-				case Token::Type::LESS:
-				case Token::Type::LESS_EQUAL:
-				case Token::Type::GREATER:
-				case Token::Type::GREATER_EQUAL:
-					return;
-				default:
-					break;
-			}
-		}
-		//check if this is a BETWEEN or IN operation (which alsoreturns a boolean)
-		if(dynamic_cast<AST::BetweenOp*> (notOp.expr.get()) || dynamic_cast<AST::InOp*>(notOp.expr.get())){
-			return;
-		}
-		throw SematicError("NOT operator can only be applied to boolean expressions");
-	}
-}*/
 void SematicAnalyzer::validateLiteral(const AST::Literal& literal, const DatabaseSchema::Table* table) {
     switch (literal.token.type) {
         case Token::Type::STRING_LITERAL:
@@ -611,24 +585,6 @@ void SematicAnalyzer::validateLiteral(const AST::Literal& literal, const Databas
     }
 }
 
-/*void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op,const DatabaseSchema::Table* table){
-	validateExpression(*op.left,table);
-	validateExpression(*op.right,table);
-
-	auto leftType=getValueType(*op.left);
-	auto rightType=getValueType(*op.right);
-	//special handling for string comparisons
-	if(op.op.type==Token::Type::EQUAL || op.op.type==Token::Type::NOT_EQUAL){
-		if(!areTypesComparable(leftType,rightType)){
-			throw SematicError("Cannot compare types");
-		}
-		return;
-	}
-	//check operator is valid for the operator types
-	if(!isValidOperation(op.op.type,*op.left,*op.right)){
-		throw SematicError("Invalid operation between these operands");
-	}
-}*/
 
 bool SematicAnalyzer::columnExists(const std::string& columnName) const{
 	if(!currentTable) return false;
@@ -671,9 +627,9 @@ void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op, const DatabaseS
     }
 
     // Debug output
-    std::cout << "DEBUG: Comparing " << op.left->toString() << " (type: " << static_cast<int>(leftType)
-              << ") with " << op.right->toString() << " (type: " << static_cast<int>(rightType)
-              << ") using operator: " << static_cast<int>(op.op.type) << std::endl;
+    //std::cout << "DEBUG: Comparing " << op.left->toString() << " (type: " << static_cast<int>(leftType)
+              //<< ") with " << op.right->toString() << " (type: " << static_cast<int>(rightType)
+              //<< ") using operator: " << static_cast<int>(op.op.type) << std::endl;
 
     // Special handling for string comparisons
     if(op.op.type == Token::Type::AND || op.op.type == Token::Type::OR){
@@ -733,47 +689,6 @@ bool SematicAnalyzer::isComparisonOperator(Token::Type type) {
 			return false;
 	}
 }
-/*bool SematicAnalyzer::isValidOperation(Token::Type op,const AST::Expression& left,const AST::Expression& right){
-	auto leftType=getValueType(left);
-	auto rightType=getValueType(right);
-
-	if(leftType==rightType){
-		switch (op){
-			case Token::Type::EQUAL:
-			case Token::Type::NOT_EQUAL:
-				return true;
-			case Token::Type::LESS:
-			case Token::Type::LESS_EQUAL:
-			case Token::Type::GREATER:
-			case Token::Type::GREATER_EQUAL:
-				//Allow comparison for numeric and string tpes
-				return leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT || leftType == DatabaseSchema::Column::STRING || leftType == DatabaseSchema::Column::TEXT;
-			case Token::Type::AND:
-			case Token::Type::OR:
-				return leftType == DatabaseSchema::Column::BOOLEAN;
-			default :
-		                return false;
-		}
-	}
-
-	switch(op){
-		case Token::Type::EQUAL:
-		case Token::Type::NOT_EQUAL: 
-			return areTypesComparable(leftType,rightType);
-		case Token::Type::LESS:
-		case Token::Type::LESS_EQUAL:
-		case Token::Type::GREATER:
-		case Token::Type::GREATER_EQUAL:
-			//return leftType==DatabaseSchema::Column::INTEGER|| leftType==DatabaseSchema::Column::FLOAT;
-			return (leftType == DatabaseSchema::Column::INTEGER ||leftType == DatabaseSchema::Column::FLOAT) && 
-				(rightType == DatabaseSchema::Column::INTEGER || rightType ==DatabaseSchema::Column::FLOAT);
-		//case Token::Type::AND:
-		//case Token::Type::OR:
-					//return leftType==DatabaseSchema::Column::BOOLEAN;
-		default: return false;
-
-	}
-}*/
 
 bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& left, const AST::Expression& right) {
     if(op == Token::Type::PLUS || op == Token::Type::MINUS || op == Token::Type::ASTERIST || op == Token::Type::SLASH){
@@ -1113,22 +1028,20 @@ const DatabaseSchema::Column* SematicAnalyzer::findColumn(const std::string& nam
 
 DatabaseSchema::Column::Type SematicAnalyzer::getValueType(const AST::Expression& expr) {
      if (auto* caseExpr = dynamic_cast<const AST::CaseExpression*>(&expr)) {
-        std::cout << "DEBUG getValueType: Processing CASE expression" << std::endl;
+        //std::cout << "DEBUG getValueType: Processing CASE expression" << std::endl;
 
         // Get the type from the first WHEN result (all should be consistent)
         if (!caseExpr->whenClauses.empty()) {
             auto firstType = getValueType(*caseExpr->whenClauses[0].second);
-            std::cout << "DEBUG getValueType: CASE expression returning type: "
-                      << static_cast<int>(firstType) << std::endl;
+            //std::cout << "DEBUG getValueType: CASE expression returning type: "<< static_cast<int>(firstType) << std::endl;
             return firstType;
         } else if (caseExpr->elseClause) {
             auto elseType = getValueType(*caseExpr->elseClause);
-            std::cout << "DEBUG getValueType: CASE expression returning ELSE type: "
-                      << static_cast<int>(elseType) << std::endl;
+            //std::cout << "DEBUG getValueType: CASE expression returning ELSE type: " << static_cast<int>(elseType) << std::endl;
             return elseType;
         }
 
-        std::cout << "DEBUG getValueType: CASE expression with no clauses - returning STRING" << std::endl;
+        //std::cout << "DEBUG getValueType: CASE expression with no clauses - returning STRING" << std::endl;
         return DatabaseSchema::Column::STRING;
     }
     if (auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(&expr)){
@@ -1148,20 +1061,18 @@ DatabaseSchema::Column::Type SematicAnalyzer::getValueType(const AST::Expression
             auto leftType = getValueType(*binOp->left);
             auto rightType = getValueType(*binOp->right);
 
-            std::cout << "DEBUG getValueType: Arithmetic operation " << binOp->op.lexeme
-                      << " - leftType: " << static_cast<int>(leftType)
-                      << ", rightType: " << static_cast<int>(rightType) << std::endl;
+            //std::cout << "DEBUG getValueType: Arithmetic operation " << binOp->op.le<< " - leftType: " << static_cast<int>(leftType) << ", rightType: " << static_cast<int>(rightType) << std::endl;
             if (leftType == DatabaseSchema::Column::FLOAT || rightType == DatabaseSchema::Column::FLOAT) {
-                std::cout << "DEBUG getValueType: Arithmetic result type: FLOAT" << std::endl;
+                //std::cout << "DEBUG getValueType: Arithmetic result type: FLOAT" << std::endl;
                 return DatabaseSchema::Column::FLOAT;
             }
             // Both are INTEGER
             if (leftType == DatabaseSchema::Column::INTEGER && rightType == DatabaseSchema::Column::INTEGER) {
-                std::cout << "DEBUG getValueType: Arithmetic result type: INTEGER" << std::endl;
+                //std::cout << "DEBUG getValueType: Arithmetic result type: INTEGER" << std::endl;
                 return DatabaseSchema::Column::INTEGER;
             }
 
-            std::cout << "DEBUG getValueType: Arithmetic operation fallback to FLOAT" << std::endl;
+            //std::cout << "DEBUG getValueType: Arithmetic operation fallback to FLOAT" << std::endl;
             return DatabaseSchema::Column::FLOAT;
         }
 	    if(isComparisonOperator(binOp->op.type)){
@@ -1200,48 +1111,15 @@ DatabaseSchema::Column::Type SematicAnalyzer::getValueType(const AST::Expression
     }
     // For identifiers (column references), return their actual type
     else if (auto* ident = dynamic_cast<const AST::Identifier*>(&expr)) {
-        std::cout << "DEBUG getValueType: Looking up column '" << ident->token.lexeme << "'" << std::endl;
+        //std::cout << "DEBUG getValueType: Looking up column '" << ident->token.lexeme << "'" << std::endl;
         if (auto* col = findColumn(ident->token.lexeme)) {
-            std::cout << "DEBUG getValueType: Found column '" << col->name << "' with type: " << typeToString(col->type) << std::endl;
+            //std::cout << "DEBUG getValueType: Found column '" << col->name << "' with type: " << typeToString(col->type) << std::endl;
             return col->type;
         }
     }
     return DatabaseSchema::Column::STRING;
 }
 
-/*bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1,DatabaseSchema::Column::Type t2) {
-    // All types are comparable with themselves
-    if (t1 == t2) return true;
-    
-    // Special cases for compatible types
-    if ((t1 == DatabaseSchema::Column::INTEGER && t2 == DatabaseSchema::Column::FLOAT) ||
-        (t1 == DatabaseSchema::Column::FLOAT && t2 == DatabaseSchema::Column::INTEGER)) {
-        return true;
-    }
-    
-    // TEXT is compatible with STRING literals
-    if ((t1 == DatabaseSchema::Column::TEXT && t2 == DatabaseSchema::Column::STRING) ||
-        (t1 == DatabaseSchema::Column::STRING && t2 == DatabaseSchema::Column::TEXT)) {
-        return true;
-    }
-
-    //BOOLEAN can be compared with string representationd
-
-    if((t1 == DatabaseSchema::Column::BOOLEAN && (t2 == DatabaseSchema::Column::STRING || t2 == DatabaseSchema::Column::TEXT)) || (t2 ==DatabaseSchema::Column::BOOLEAN && (t1 == DatabaseSchema::Column::STRING || t1 == DatabaseSchema::Column::TEXT))){
-	    return true;
-    }
-    
-    // These are the basic comparable types
-    static const std::set<DatabaseSchema::Column::Type> comparableTypes = {
-        DatabaseSchema::Column::INTEGER,
-        DatabaseSchema::Column::FLOAT,
-        DatabaseSchema::Column::TEXT,
-        DatabaseSchema::Column::STRING,
-        DatabaseSchema::Column::BOOLEAN
-    };
-    
-    return comparableTypes.count(t1) && comparableTypes.count(t2);
-}*/
 
 bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1, DatabaseSchema::Column::Type t2) {
     // All types are comparable with themselves
@@ -1291,55 +1169,27 @@ bool SematicAnalyzer::areTypesComparable(DatabaseSchema::Column::Type t1, Databa
 
     return comparableTypes.count(t1) && comparableTypes.count(t2);
 }
-/*bool SematicAnalyzer::isTypeCompatible(DatabaseSchema::Column::Type columnType,DatabaseSchema::Column::Type valueType) {
-    // Exact type match
-    if (columnType == valueType) return true;
-
-    // Float can accept Integer values
-    if (columnType == DatabaseSchema::Column::FLOAT &&
-        valueType == DatabaseSchema::Column::INTEGER) {
-        return true;
-    }
-
-    if (columnType == DatabaseSchema::Column::INTEGER &&valueType == DatabaseSchema::Column::FLOAT) {
-        return true; // Allow with truncation warning
-    }
-
-    // Text can accept String value,Date,DateTime and UUID values
-    if (columnType == DatabaseSchema::Column::TEXT) {
-        return valueType == DatabaseSchema::Column::STRING || valueType == DatabaseSchema::Column::DATETIME || valueType == DatabaseSchema::Column::UUID;
-    }
-
-    if (columnType == DatabaseSchema::Column::STRING) {
-        return valueType == DatabaseSchema::Column::DATE || valueType == DatabaseSchema::Column::DATETIME || valueType == DatabaseSchema::Column::UUID;
-    }
-
-    // All other cases are incompatible
-    return false;
-}*/
 
 bool SematicAnalyzer::isTypeCompatible(DatabaseSchema::Column::Type columnType, DatabaseSchema::Column::Type valueType) {
-    // Debug output to help diagnose
-    std::cout << "DEBUG isTypeCompatible: Checking compatibility - columnType: "
-              << static_cast<int>(columnType) << ", valueType: " << static_cast<int>(valueType) << std::endl;
+    //std::cout << "DEBUG isTypeCompatible: Checking compatibility - columnType: "<< static_cast<int>(columnType) << ", valueType: " << static_cast<int>(valueType) << std::endl;
 
     // 1. Exact type match - always compatible
     if (columnType == valueType) {
-        std::cout << "DEBUG isTypeCompatible: Exact type match - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: Exact type match - compatible" << std::endl;
         return true;
     }
 
     // 2. Numeric type compatibility
     if ((columnType == DatabaseSchema::Column::FLOAT || columnType == DatabaseSchema::Column::INTEGER) &&
         (valueType == DatabaseSchema::Column::FLOAT || valueType == DatabaseSchema::Column::INTEGER)) {
-        std::cout << "DEBUG isTypeCompatible: Numeric types - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: Numeric types - compatible" << std::endl;
         return true;
     }
 
     // 3. String/Text compatibility
     if ((columnType == DatabaseSchema::Column::STRING || columnType == DatabaseSchema::Column::TEXT) &&
         (valueType == DatabaseSchema::Column::STRING || valueType == DatabaseSchema::Column::TEXT)) {
-        std::cout << "DEBUG isTypeCompatible: String/Text types - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: String/Text types - compatible" << std::endl;
         return true;
     }
 
@@ -1349,8 +1199,7 @@ bool SematicAnalyzer::isTypeCompatible(DatabaseSchema::Column::Type columnType, 
                           valueType == DatabaseSchema::Column::DATE ||
                           valueType == DatabaseSchema::Column::DATETIME ||
                           valueType == DatabaseSchema::Column::UUID);
-        std::cout << "DEBUG isTypeCompatible: TEXT column accepting various types - "
-                  << (compatible ? "compatible" : "incompatible") << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: TEXT column accepting various types -<< (compatible ? "compatible" : "incompatible") << std::endl;
         return compatible;
     }
 
@@ -1359,44 +1208,43 @@ bool SematicAnalyzer::isTypeCompatible(DatabaseSchema::Column::Type columnType, 
         bool compatible = (valueType == DatabaseSchema::Column::DATE ||
                           valueType == DatabaseSchema::Column::DATETIME ||
                           valueType == DatabaseSchema::Column::UUID);
-        std::cout << "DEBUG isTypeCompatible: STRING column accepting date/UUID types - "
-                  << (compatible ? "compatible" : "incompatible") << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: STRING column accepting date/UUID types - "<< (compatible ? "compatible" : "incompatible") << std::endl;
         return compatible;
     }
 
     // 6. DATE can accept STRING (for date literals)
     if (columnType == DatabaseSchema::Column::DATE && valueType == DatabaseSchema::Column::STRING) {
-        std::cout << "DEBUG isTypeCompatible: DATE column accepting STRING - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: DATE column accepting STRING - compatible" << std::endl;
         return true;
     }
 
     // 7. DATETIME can accept STRING (for datetime literals)
     if (columnType == DatabaseSchema::Column::DATETIME && valueType == DatabaseSchema::Column::STRING) {
-        std::cout << "DEBUG isTypeCompatible: DATETIME column accepting STRING - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: DATETIME column accepting STRING - compatible" << std::endl;
         return true;
     }
 
     // 8. UUID can accept STRING (for UUID literals)
     if (columnType == DatabaseSchema::Column::UUID && valueType == DatabaseSchema::Column::STRING) {
-        std::cout << "DEBUG isTypeCompatible: UUID column accepting STRING - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: UUID column accepting STRING - compatible" << std::endl;
         return true;
     }
 
     // 9. BOOLEAN can accept INTEGER (0=false, non-zero=true)
     if (columnType == DatabaseSchema::Column::BOOLEAN &&
         (valueType == DatabaseSchema::Column::INTEGER || valueType == DatabaseSchema::Column::FLOAT)) {
-        std::cout << "DEBUG isTypeCompatible: BOOLEAN column accepting numeric - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: BOOLEAN column accepting numeric - compatible" << std::endl;
         return true;
     }
 
     // 10. INTEGER/FLOAT can accept BOOLEAN (true=1, false=0)
     if ((columnType == DatabaseSchema::Column::INTEGER || columnType == DatabaseSchema::Column::FLOAT) &&
         valueType == DatabaseSchema::Column::BOOLEAN) {
-        std::cout << "DEBUG isTypeCompatible: Numeric column accepting BOOLEAN - compatible" << std::endl;
+        //std::cout << "DEBUG isTypeCompatible: Numeric column accepting BOOLEAN - compatible" << std::endl;
         return true;
     }
 
-    std::cout << "DEBUG isTypeCompatible: No compatibility found - INCOMPATIBLE" << std::endl;
+    //std::cout << "DEBUG isTypeCompatible: No compatibility found - INCOMPATIBLE" << std::endl;
     return false;
 }
 
@@ -1421,41 +1269,6 @@ void SematicAnalyzer::analyzeDrop(AST::DropStatement& dropStmt){
 	//schema.dropTable(dropStmt.tablename);
 }
 //method to analyze UPDATE statement
-/*void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt) {
-    currentTable = storage.getTable(db.currentDatabase(), updateStmt.table);
-    if (!currentTable) {
-        throw SematicError("Table does not exist: " + updateStmt.table);
-    }
-
-    // Validate SET assignments
-    for (auto& [colName, expr] : updateStmt.setClauses) {
-        auto* column = findColumn(colName);
-        if (!column) {
-            throw SematicError("Unknown column: " + colName);
-        }
-	validateExpression(*expr,currentTable);
-
-        // Special handling for TEXT columns
-        *if (column->type == DatabaseSchema::Column::TEXT) {
-            if (auto* literal = dynamic_cast<AST::Literal*>(expr.get())) {
-                if (literal->token.type != Token::Type::STRING_LITERAL &&
-                    literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
-                    throw SematicError("String values must be quoted for TEXT column: " + colName);
-                }
-            }
-        }/
-
-        DatabaseSchema::Column::Type valueType = getValueType(*expr);
-        if (!isTypeCompatible(column->type, valueType)) {
-            throw SematicError("Type mismatch for column: " + colName);
-        }
-    }
-
-    // Validate WHERE clause if present
-    if (updateStmt.where) {
-        validateExpression(*updateStmt.where, currentTable);
-    }
-}*/
 
 void SematicAnalyzer::analyzeUpdate(AST::UpdateStatement& updateStmt) {
     currentTable = storage.getTable(db.currentDatabase(), updateStmt.table);
