@@ -16,6 +16,11 @@
 #include <memory>
 #include <chrono>
 
+//static const int MIN_FREE_LINES = 3;
+//static const int SCROLL_LINES = 5;
+
+static const int MIN_FREE_LINES = 2;
+static const int SCROLL_LINES = 2;
 
 class ModernShell {
 public:
@@ -99,11 +104,17 @@ private:
     void clear_autosuggestion();
     std::string render_with_suggestion(const std::string& input, const esql::AutoSuggestion& suggestion);
 
+    void ensure_input_space();  // Only check space for input area
+    void scroll_input_area(int lines_to_scroll);   // Scroll only when absolutely necessary
+
     // Command execution
     void execute_command(const std::string& command);
 
     void update_prompt_position();
     void move_to_prompt_position();
+
+    int calculate_rendered_lines(const std::string& input, const std::string& prompt);
+    void clear_previous_lines(int previous_lines, int current_lines);
     
     // UI components
     void print_banner();
