@@ -1,4 +1,4 @@
-#include "syntax_highlighter.h"
+#include "shell_includes/syntax_highlighter.h"
 #include <algorithm>
 #include <cctype>
 

@@ -15,8 +15,12 @@ else()
     message(WARNING "Readline not found. Using basic input mode.")
 endif()
 
+#Shell executables
+file(GLOB SHELL_SOURCES 
+    "src/shell_executables/*.cpp"
+)
 
-add_executable(e_sql
+set(CORE_SOURCES
     src/scanner.cpp
     src/parser.cpp
     src/analyzer.cpp     
@@ -28,21 +32,22 @@ add_executable(e_sql
     src/page.cpp  
     src/fractal_bplus_tree.cpp
     src/database.cpp    
-    src/terminal_input.cpp
-    src/utf8_processor.cpp 
-    src/line_renderer.cpp 
-    src/syntax_highlighter.cpp
-    src/hisory_manager.cpp 
-    src/animator.cpp
-    src/completion_engine.cpp
-    src/autosuggestion_manager.cpp
-    src/phoenix_animator.cpp
-    src/modern_shell.cpp 
     src/database_schema.cpp
     src/main.cpp  
 )
 
-target_include_directories(e_sql PRIVATE include)
+# Combine all sources
+set(ALL_SOURCES
+    ${CORE_SOURCES}
+    ${SHELL_SOURCES}
+)
+
+add_executable(e_sql ${ALL_SOURCES})
+
+target_include_directories(e_sql PRIVATE 
+    include
+    include/shell_includes
+)
 
 if(READLINE_LIBRARY AND READLINE_INCLUDE_DIR)
     target_include_directories(e_sql PRIVATE ${READLINE_INCLUDE_DIR})

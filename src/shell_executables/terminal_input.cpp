@@ -1,4 +1,4 @@
-#include "terminal_input.h"
+#include "shell_includes/terminal_input.h"
 #include <iostream>
 #include <cstring>
 
