@@ -1696,6 +1696,18 @@ ExecutionEngine::ResultSet ExecutionEngine::handleAlterAdd(AST::AlterTableStatem
             dbConstraint.type = DatabaseSchema::Constraint::CHECK;
             dbConstraint.name = "CHECK";
             dbConstraint.value = stmt->checkExpression;
+        } else if (constraint == "GENERATE_UUID") {
+            newCol.generateUUID = true;
+            dbConstraint.type = DatabaseSchema::Constraint::GENERATE_UUID;
+            dbConstraint.name = "GENERATE_UUID";
+        } else if (constraint == "GENERATE_DATE") {
+            newCol.generateDate = true;
+            dbConstraint.type = DatabaseSchema::Constraint::GENERATE_DATE;
+            dbConstraint.name = "GENERATE_DATE";
+        } else if (constraint == "GENERATE_DATE_TIME") {
+            newCol.generateDateTime = true;
+            dbConstraint.type = DatabaseSchema::Constraint::GENERATE_DATE_TIME;
+            dbConstraint.name = "GENERATE_DATE_TIME";
         }
         
         newCol.constraints.push_back(dbConstraint);

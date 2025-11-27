@@ -4825,6 +4825,18 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: /home/igiris/git_
   /usr/include/c++/15/bits/random.tcc \
   /usr/include/c++/15/bits/range_access.h \
   /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/regex.h \
+  /usr/include/c++/15/bits/regex.tcc \
+  /usr/include/c++/15/bits/regex_automaton.h \
+  /usr/include/c++/15/bits/regex_automaton.tcc \
+  /usr/include/c++/15/bits/regex_compiler.h \
+  /usr/include/c++/15/bits/regex_compiler.tcc \
+  /usr/include/c++/15/bits/regex_constants.h \
+  /usr/include/c++/15/bits/regex_error.h \
+  /usr/include/c++/15/bits/regex_executor.h \
+  /usr/include/c++/15/bits/regex_executor.tcc \
+  /usr/include/c++/15/bits/regex_scanner.h \
+  /usr/include/c++/15/bits/regex_scanner.tcc \
   /usr/include/c++/15/bits/requires_hosted.h \
   /usr/include/c++/15/bits/shared_ptr.h \
   /usr/include/c++/15/bits/shared_ptr_atomic.h \
@@ -4832,6 +4844,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: /home/igiris/git_
   /usr/include/c++/15/bits/specfun.h \
   /usr/include/c++/15/bits/sstream.tcc \
   /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
   /usr/include/c++/15/bits/std_mutex.h \
   /usr/include/c++/15/bits/std_thread.h \
   /usr/include/c++/15/bits/stl_algo.h \
@@ -4854,6 +4867,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: /home/igiris/git_
   /usr/include/c++/15/bits/stl_raw_storage_iter.h \
   /usr/include/c++/15/bits/stl_relops.h \
   /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
   /usr/include/c++/15/bits/stl_tempbuf.h \
   /usr/include/c++/15/bits/stl_tree.h \
   /usr/include/c++/15/bits/stl_uninitialized.h \
@@ -4873,6 +4887,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: /home/igiris/git_
   /usr/include/c++/15/bits/utility.h \
   /usr/include/c++/15/bits/vector.tcc \
   /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/bitset \
   /usr/include/c++/15/cctype \
   /usr/include/c++/15/cerrno \
   /usr/include/c++/15/chrono \
@@ -4922,9 +4937,11 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: /home/igiris/git_
   /usr/include/c++/15/queue \
   /usr/include/c++/15/random \
   /usr/include/c++/15/ratio \
+  /usr/include/c++/15/regex \
   /usr/include/c++/15/set \
   /usr/include/c++/15/shared_mutex \
   /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
   /usr/include/c++/15/stdexcept \
   /usr/include/c++/15/streambuf \
   /usr/include/c++/15/string \
@@ -6244,8 +6261,6 @@ CMakeFiles/e_sql.dir/src/analyzer.cpp.o:
 
 /lib/x86_64-linux-gnu/crti.o:
 
-/home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp:
-
 /usr/include/x86_64-linux-gnu/bits/stat.h:
 
 /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h:
@@ -6253,6 +6268,30 @@ CMakeFiles/e_sql.dir/src/analyzer.cpp.o:
 /usr/include/fcntl.h:
 
 /home/igiris/git_projects/Esql.c/src/shell_executables/phoenix_animator.cpp:
+
+/usr/include/c++/15/regex:
+
+/usr/include/c++/15/bitset:
+
+/usr/include/c++/15/bits/regex_scanner.h:
+
+/usr/include/c++/15/bits/regex_executor.tcc:
+
+/usr/include/c++/15/bits/regex_executor.h:
+
+/usr/include/c++/15/bits/regex_error.h:
+
+/usr/include/c++/15/bits/regex_constants.h:
+
+/usr/include/c++/15/bits/regex_compiler.tcc:
+
+/usr/include/c++/15/bits/regex_automaton.tcc:
+
+/home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp:
+
+/usr/include/c++/15/bits/regex_automaton.h:
+
+/usr/include/c++/15/bits/regex.tcc:
 
 /home/igiris/git_projects/Esql.c/include/shell_includes/line_renderer.h:
 
@@ -6301,6 +6340,8 @@ CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/posix_opt.h:
 
 /usr/include/x86_64-linux-gnu/bits/ioctls.h:
+
+/usr/include/c++/15/bits/regex_compiler.h:
 
 /usr/include/x86_64-linux-gnu/bits/getopt_core.h:
 
@@ -6642,6 +6683,8 @@ CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o:
 
 /home/igiris/git_projects/Esql.c/include/parser.h:
 
+/usr/include/c++/15/bits/regex.h:
+
 /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
 
 /usr/include/asm-generic/bitsperlong.h:
@@ -6697,6 +6740,8 @@ CMakeFiles/e_sql.dir/src/page.cpp.o:
 /usr/include/c++/15/bits/ostream.h:
 
 /usr/include/x86_64-linux-gnu/bits/byteswap.h:
+
+/usr/include/c++/15/bits/std_function.h:
 
 /usr/include/c++/15/bits/codecvt.h:
 
@@ -6921,6 +6966,8 @@ CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o:
 /home/igiris/git_projects/Esql.c/include/executionengine.h:
 
 /usr/include/c++/15/bits/exception.h:
+
+/usr/include/c++/15/bits/regex_scanner.tcc:
 
 /usr/include/c++/15/ext/concurrence.h:
 

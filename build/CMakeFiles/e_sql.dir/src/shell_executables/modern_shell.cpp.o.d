@@ -364,4 +364,21 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h \
   /home/igiris/git_projects/Esql.c/include/shell_includes/completion_engine.h \
   /home/igiris/git_projects/Esql.c/include/shell_includes/autosuggestion_manager.h \
-  /home/igiris/git_projects/Esql.c/include/shell_includes/phoenix_animator.h
+  /home/igiris/git_projects/Esql.c/include/shell_includes/phoenix_animator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/regex \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bitset \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/stack \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_stack.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/std_function.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_constants.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_error.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_automaton.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_automaton.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_scanner.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_scanner.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_compiler.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_compiler.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_executor.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_executor.tcc
