@@ -612,7 +612,7 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
         consume(Token::Type::IDENTIFIER);
 
         // Get column type
-        if (matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT})) {
+        if (matchAny({Token::Type::INT, Token::Type::TEXT, Token::Type::BOOL, Token::Type::FLOAT,Token::Type::UUID,Token::Type::DATE,Token::Type::DATETIME})) {
             stmt->type = currentToken.lexeme;
             consume(currentToken.type);
         } else {
@@ -622,7 +622,7 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
         // Parse constraints (same as in CREATE TABLE)
         while (matchAny({Token::Type::PRIMARY_KEY, Token::Type::NOT_NULL,
                         Token::Type::UNIQUE, Token::Type::CHECK,
-                        Token::Type::DEFAULT, Token::Type::AUTO_INCREAMENT})) {
+                        Token::Type::DEFAULT, Token::Type::AUTO_INCREAMENT,Token::Type::GENERATE_UUID,Token::Type::GENERATE_DATE,Token::Type::GENERATE_DATE_TIME})) {
 
             if (match(Token::Type::PRIMARY_KEY)) {
                 stmt->constraints.push_back("PRIMARY_KEY");
@@ -650,6 +650,15 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
                 stmt->autoIncreament = true;
                 stmt->constraints.push_back("AUTO_INCREAMENT");
                 consume(Token::Type::AUTO_INCREAMENT);
+            } else if (match(Token::Type::GENERATE_UUID)) {
+                stmt->constraints.push_back("GENERATE_UUID");
+                consume(Token::Type::GENERATE_UUID);
+            } else if (match(Token::Type::GENERATE_DATE)) {
+                stmt->constraints.push_back("GENERATE_DATE");
+                consume(Token::Type::GENERATE_DATE);
+            } else if (match(Token::Type::GENERATE_DATE_TIME)) {
+                stmt->constraints.push_back("GENERATE_DATE_TIME");
+                consume(Token::Type::GENERATE_DATE_TIME);
             } else if (match(Token::Type::DEFAULT)) {
                 consume(Token::Type::DEFAULT);
 

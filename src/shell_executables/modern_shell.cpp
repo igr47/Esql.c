@@ -5,6 +5,8 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
+#include <regex>
+#include <numeric>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -1095,12 +1097,232 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
         return;
     }
 
+    // Calculate minimum reasonable widths for each column
+    std::vector<size_t> widths(result.columns.size());
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        // Start with column header width + padding
+        widths[i] = result.columns[i].length() + 2;
+
+        // Calculate reasonable content width
+        size_t max_content_width = 0;
+        for (const auto& row : result.rows) {
+            if (i < row.size() && !row[i].empty()) {
+                // For content, use smarter width calculation
+                size_t reasonable_width = calculate_reasonable_content_width(row[i]);
+                if (reasonable_width > max_content_width) {
+                    max_content_width = reasonable_width;
+                }
+            }
+        }
+
+        // Use the larger of header width or reasonable content width
+        widths[i] = std::max(widths[i], max_content_width + 2);
+
+        // Set reasonable maximums based on data type and importance
+        widths[i] = apply_smart_maximums(result.columns[i], widths[i]);
+    }
+
+    // Ensure we don't exceed terminal width
+    size_t total_width = std::accumulate(widths.begin(), widths.end(), 0) + (widths.size() - 1);
+    if (total_width > static_cast<size_t>(terminal_width_)) {
+        // Scale down proportionally
+        double scale_factor = static_cast<double>(terminal_width_) / total_width;
+        for (size_t i = 0; i < widths.size(); ++i) {
+            widths[i] = static_cast<size_t>(widths[i] * scale_factor);
+            // Ensure minimum width
+            widths[i] = std::max(widths[i], result.columns[i].length() + 2);
+        }
+    }
+
+    // Rest of your existing table drawing code remains the same...
+    std::cout << (use_colors_ ? esql::colors::CYAN : "") << "+";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << std::string(widths[i], '-');
+        if (i < result.columns.size() - 1) std::cout << "+";
+    }
+    std::cout << "+\n";
+
+    std::cout << "|";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << (use_colors_ ? esql::colors::MAGENTA : "") << std::left << std::setw(widths[i]) << result.columns[i] << (use_colors_ ? esql::colors::CYAN : "") << "|";
+    }
+
+    std::cout << (use_colors_ ? esql::colors::RESET : "") << "\n";
+
+    std::cout << (use_colors_ ? esql::colors::CYAN : "") << "+";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << std::string(widths[i], '-');
+        if (i < result.columns.size() - 1) std::cout << "+";
+    }
+    std::cout << "+\n" << (use_colors_ ? esql::colors::RESET : "");
+
+    for (const auto& row : result.rows) {
+        std::cout << (use_colors_ ? esql::colors::CYAN : "") << "|" << (use_colors_ ? esql::colors::RESET : "");
+        for (size_t i = 0; i < row.size(); ++i) {
+            std::string display_value = format_cell_value(row[i], widths[i] - 2);
+            std::cout << (use_colors_ ? esql::colors::YELLOW : "") << std::left << std::setw(widths[i]) << display_value << (use_colors_ ? esql::colors::CYAN : "") << "|" << (use_colors_ ? esql::colors::RESET : "");
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << (use_colors_ ? esql::colors::CYAN : "") << "+";
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << std::string(widths[i], '-');
+        if (i < result.columns.size() - 1) std::cout << "+";
+    }
+    std::cout << "+\n" << (use_colors_ ? esql::colors::RESET : "");
+
+    std::cout << (use_colors_ ? esql::colors::GRAY : "") << "> " << result.rows.size() << " row" << (result.rows.size() != 1 ? "s" : "") << " in " << std::fixed << std::setprecision(4) << duration << "s" << (use_colors_ ? esql::colors::RESET : "") << "\n";
+}
+
+// New helper methods for smart column sizing
+size_t ModernShell::calculate_reasonable_content_width(const std::string& value) {
+    if (value.empty()) return 4; // "NULL" or empty
+
+    // Common data type patterns with reasonable display widths
+    if (is_numeric(value)) {
+        // Numbers: show full value up to reasonable limit
+        return std::min(value.length(), size_t(12));
+    } else if (is_email(value)) {
+        // Emails: show reasonable portion (username@domain...)
+        return std::min(value.length(), size_t(20));
+    } else if (is_date(value)) {
+        // Dates: full date format
+        return std::min(value.length(), size_t(12));
+    } else if (is_boolean(value)) {
+        // Boolean: "TRUE"/"FALSE"
+        return 5;
+    } else if (value.length() <= 15) {
+        // Short strings: show full
+        return value.length();
+    } else {
+        // Long strings: reasonable default
+        return std::min(value.length(), size_t(25));
+    }
+}
+
+size_t ModernShell::apply_smart_maximums(const std::string& column_name, size_t current_width) {
+    std::string lower_name = column_name;
+    std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), ::tolower);
+
+    // Set maximums based on column name patterns
+    if (lower_name.find("id") != std::string::npos) {
+        return std::min(current_width, size_t(15));
+    } else if (lower_name.find("name") != std::string::npos) {
+        return std::min(current_width, size_t(20));
+    } else if (lower_name.find("email") != std::string::npos) {
+        return std::min(current_width, size_t(25));
+    } else if (lower_name.find("salary") != std::string::npos ||
+               lower_name.find("amount") != std::string::npos ||
+               lower_name.find("price") != std::string::npos) {
+        return std::min(current_width, size_t(12)); // Numbers
+    } else if (lower_name.find("date") != std::string::npos ||
+               lower_name.find("time") != std::string::npos) {
+        return std::min(current_width, size_t(12));
+    } else if (lower_name.find("desc") != std::string::npos ||
+               lower_name.find("note") != std::string::npos ||
+               lower_name.find("comment") != std::string::npos) {
+        return std::min(current_width, size_t(30));
+    } else {
+        // Default maximum
+        return std::min(current_width, size_t(25));
+    }
+}
+
+// Improved format_cell_value to show more content
+std::string ModernShell::format_cell_value(const std::string& value, size_t max_width) {
+    if (value.empty()) return "NULL";
+    if (value.length() <= max_width) return value;
+
+    // For numeric values, try to show more digits
+    if (is_numeric(value) && max_width >= 8) {
+        // For numbers, prefer to show beginning (most significant digits)
+        return value.substr(0, max_width - 3) + "...";
+    }
+
+    // For emails, show username part fully if possible
+    if (is_email(value)) {
+        size_t at_pos = value.find('@');
+        if (at_pos != std::string::npos && at_pos <= max_width - 4) {
+            return value.substr(0, max_width - 3) + "...";
+        }
+    }
+
+    // For other values, use smarter truncation
+    if (max_width >= 12) {
+        // Show both beginning and end for medium widths
+        size_t first_part = max_width * 2 / 3;
+        size_t last_part = max_width - first_part - 3;
+
+        if (last_part >= 3 && first_part >= 3) {
+            return value.substr(0, first_part) + "..." + value.substr(value.length() - last_part);
+        }
+    }
+
+    // Simple truncation as fallback
+    return value.substr(0, max_width - 3) + "...";
+}
+
+// Additional pattern detection helpers
+bool ModernShell::is_numeric(const std::string& value) {
+    if (value.empty()) return false;
+
+    // Check if it's a number (integer or decimal)
+    bool has_digit = false;
+    bool has_decimal = false;
+
+    for (char c : value) {
+        if (std::isdigit(c)) {
+            has_digit = true;
+        } else if (c == '.' && !has_decimal) {
+            has_decimal = true;
+        } else if (c == '-' || c == '+') {
+            // Allow signs only at beginning
+            if (&c != &value[0]) return false;
+        } else {
+            return false;
+        }
+    }
+
+    return has_digit;
+}
+
+bool ModernShell::is_email(const std::string& value) {
+    return value.find('@') != std::string::npos &&
+           value.find('.') != std::string::npos &&
+           value.length() > 5;
+}
+
+bool ModernShell::is_date(const std::string& value) {
+    // Simple date pattern detection (YYYY-MM-DD or similar)
+    static const std::regex date_pattern("^\\d{4}-\\d{2}-\\d{2}");
+    return std::regex_search(value, date_pattern);
+}
+
+bool ModernShell::is_boolean(const std::string& value) {
+    std::string upper_value = value;
+    std::transform(upper_value.begin(), upper_value.end(), upper_value.begin(), ::toupper);
+    return upper_value == "TRUE" || upper_value == "FALSE" ||
+           upper_value == "1" || upper_value == "0" ||
+           upper_value == "T" || upper_value == "F";
+}
+
+/*void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
+    if (result.columns.empty()) {
+        std::cout << (use_colors_ ? esql::colors::GREEN : "") << "Query executed successfully.\n" << (use_colors_ ? esql::colors::RESET : "");
+        return;
+    }
+    if (result.columns.size() == 2 && (result.columns[0] == "Property" || result.columns[0] == "Database Structure")) {
+        print_structure_results(result, duration);
+        return;
+    }
+
     std::vector<size_t> widths(result.columns.size());
     for (size_t i = 0; i < result.columns.size(); ++i) {
         widths[i] = result.columns[i].length() + 2;
         for (const auto& row : result.rows) {
             if (i < row.size() && row[i].length() + 2 > widths[i]) {
-                widths[i] = row[i].length() + 2;
+                  widths[i] = row[i].length() + 2;
             }
         }
         if (widths[i] > 50) widths[i] = 50;
@@ -1147,7 +1369,7 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
     std::cout << "+\n" << (use_colors_ ? esql::colors::RESET : "");
 
     std::cout << (use_colors_ ? esql::colors::GRAY : "") << "> " << result.rows.size() << " row" << (result.rows.size() != 1 ? "s" : "") << " in " << std::fixed << std::setprecision(4) << duration << "s" << (use_colors_ ? esql::colors::RESET : "") << "\n";
-}
+}*/
 
 void ModernShell::print_structure_results(const ExecutionEngine::ResultSet& result, double duration) {
     std::cout << (use_colors_ ? esql::colors::CYAN : "") << "==============================================================\n";

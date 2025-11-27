@@ -124,7 +124,15 @@ private:
     void clear_screen();
     void print_results(const ExecutionEngine::ResultSet& result, double duration);
     void print_structure_results(const ExecutionEngine::ResultSet& result, double duration);
-    
+
+        // Smart column sizing helpers
+    size_t calculate_reasonable_content_width(const std::string& value);
+    size_t apply_smart_maximums(const std::string& column_name, size_t current_width);
+    bool is_numeric(const std::string& value);
+    bool is_email(const std::string& value);
+    bool is_date(const std::string& value);
+    bool is_boolean(const std::string& value);
+    std::string format_cell_value(const std::string& value, size_t max_width);
 
     // Utility
     std::string get_current_time() const;
