@@ -325,9 +325,9 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_multiset.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/utility \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_relops.h \
-  /home/igiris/git_projects/Esql.c/include/modern_shell.h \
-  /home/igiris/git_projects/Esql.c/include/shell_types.h \
-  /home/igiris/git_projects/Esql.c/include/terminal_input.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/modern_shell.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/shell_types.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/terminal_input.h \
   /usr/include/termios.h /usr/include/x86_64-linux-gnu/bits/termios.h \
   /usr/include/x86_64-linux-gnu/bits/termios-struct.h \
   /usr/include/x86_64-linux-gnu/bits/termios-c_cc.h \
@@ -353,15 +353,15 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /usr/include/x86_64-linux-gnu/asm/ioctl.h \
   /usr/include/asm-generic/ioctl.h \
   /usr/include/x86_64-linux-gnu/bits/ioctl-types.h \
-  /home/igiris/git_projects/Esql.c/include/history_manager.h \
-  /home/igiris/git_projects/Esql.c/include/utf8_processor.h \
-  /home/igiris/git_projects/Esql.c/include/syntax_highlighter.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/history_manager.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/utf8_processor.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/syntax_highlighter.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/unordered_set \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h \
-  /home/igiris/git_projects/Esql.c/include/animator.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/animator.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/thread \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/std_thread.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h \
-  /home/igiris/git_projects/Esql.c/include/completion_engine.h \
-  /home/igiris/git_projects/Esql.c/include/autosuggestion_manager.h \
-  /home/igiris/git_projects/Esql.c/include/phoenix_animator.h
+  /home/igiris/git_projects/Esql.c/include/shell_includes/completion_engine.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/autosuggestion_manager.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/phoenix_animator.h

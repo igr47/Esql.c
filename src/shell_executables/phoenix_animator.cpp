@@ -1,4 +1,4 @@
-#include "phoenix_animator.h"
+#include "shell_includes/phoenix_animator.h"
 
 // PhoenixAnimator implementation
 PhoenixAnimator::PhoenixAnimator(int terminal_width)

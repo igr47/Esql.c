@@ -1,7 +1,7 @@
-CMakeFiles/e_sql.dir/src/animator.cpp.o: \
-  /home/igiris/git_projects/Esql.c/src/animator.cpp \
-  /home/igiris/git_projects/Esql.c/include/animator.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/string \
+CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o: \
+  /home/igiris/git_projects/Esql.c/src/shell_executables/hisory_manager.cpp \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/history_manager.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/vector \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/requires_hosted.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++config.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
@@ -14,8 +14,64 @@ CMakeFiles/e_sql.dir/src/animator.cpp.o: \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/pstl/pstl_config.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stringfwd.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_algobase.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/functexcept.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception_defines.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/cpp_type_traits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/version.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/type_traits \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/type_traits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/numeric_traits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_pair.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/move.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/utility.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/concept_check.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/debug/assertions.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_iterator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ptr_traits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/debug/debug.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/predefined_ops.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bit \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/concepts \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/allocator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/new_allocator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/new \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/memoryfwd.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_construct.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_uninitialized.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/alloc_traits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/alloc_traits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_vector.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/initializer_list \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_bvector.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/functional_hash.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/hash_bytes.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/refwrap.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/invoke.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_function.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/backward/binders.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/range_access.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/vector.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/memory_resource.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cstddef \
+  /usr/lib/llvm-19/lib/clang/19/include/stddef.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_header_macro.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_ptrdiff_t.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_size_t.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_wchar_t.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_null.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_nullptr_t.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_max_align_t.h \
+  /usr/lib/llvm-19/lib/clang/19/include/__stddef_offsetof.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator_args.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/tuple \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/string \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stringfwd.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/char_traits.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/postypes.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cwchar \
@@ -23,10 +79,6 @@ CMakeFiles/e_sql.dir/src/animator.cpp.o: \
   /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
   /usr/include/x86_64-linux-gnu/bits/floatn.h \
   /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
-  /usr/lib/llvm-19/lib/clang/19/include/stddef.h \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_size_t.h \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_wchar_t.h \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_null.h \
   /usr/lib/llvm-19/lib/clang/19/include/stdarg.h \
   /usr/lib/llvm-19/lib/clang/19/include/__stdarg___gnuc_va_list.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
@@ -37,17 +89,6 @@ CMakeFiles/e_sql.dir/src/animator.cpp.o: \
   /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
   /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
   /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/type_traits \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/version.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/allocator.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/new_allocator.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/new \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/functexcept.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception_defines.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/move.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/cpp_type_traits.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/localefwd.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/clocale \
@@ -61,34 +102,8 @@ CMakeFiles/e_sql.dir/src/animator.cpp.o: \
   /usr/include/x86_64-linux-gnu/bits/endianness.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream_insert.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/cxxabi_forced.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_iterator_base_funcs.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/concept_check.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/debug/assertions.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_iterator_base_types.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_iterator.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/type_traits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ptr_traits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_function.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/backward/binders.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/numeric_traits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_algobase.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_pair.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/utility.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/debug/debug.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/predefined_ops.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bit \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/concepts \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/refwrap.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/invoke.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/range_access.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/initializer_list \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_string.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/alloc_traits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/alloc_traits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_construct.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/string_view \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/functional_hash.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/hash_bytes.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/string_view.tcc \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ext/string_conversions.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cstdlib \
@@ -131,19 +146,8 @@ CMakeFiles/e_sql.dir/src/animator.cpp.o: \
   /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/charconv.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_string.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/memory_resource.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cstddef \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_header_macro.h \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_ptrdiff_t.h \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_nullptr_t.h \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_max_align_t.h \
-  /usr/lib/llvm-19/lib/clang/19/include/__stddef_offsetof.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator_args.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/tuple \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/iostream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/fstream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ios \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/exception \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception_ptr.h \
@@ -193,20 +197,19 @@ CMakeFiles/e_sql.dir/src/animator.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_facets.tcc \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_ios.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/istream.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/thread \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/std_thread.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unique_ptr.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/chrono.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ratio \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cstdint \
-  /usr/lib/llvm-19/lib/clang/19/include/stdint.h /usr/include/stdint.h \
-  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
-  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/limits \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ctime \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/parse_numbers.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/chrono
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/codecvt.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/fstream.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/algorithm \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_algo.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/algorithmfwd.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_heap.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uniform_int_dist.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tempbuf.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/pstl/execution_defs.h

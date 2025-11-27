@@ -1,4 +1,4 @@
-#include "animator.h"
+#include "shell_includes/animator.h"
 
 std::string ConsoleAnimator::compressTextToFit(const std::string& text, int max_width) {
         std::string compressed = text;

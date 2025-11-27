@@ -1,4 +1,4 @@
-#include "autosuggestion_manager.h"
+#include "shell_includes/autosuggestion_manager.h"
 #include <algorithm>
 #include <cctype>
 

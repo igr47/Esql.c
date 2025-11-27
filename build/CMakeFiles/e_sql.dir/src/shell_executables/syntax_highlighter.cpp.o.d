@@ -1,7 +1,7 @@
-CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.o: \
-  /home/igiris/git_projects/Esql.c/src/syntax_highlighter.cpp \
-  /home/igiris/git_projects/Esql.c/include/syntax_highlighter.h \
-  /home/igiris/git_projects/Esql.c/include/shell_types.h \
+CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o: \
+  /home/igiris/git_projects/Esql.c/src/shell_executables/syntax_highlighter.cpp \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/syntax_highlighter.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/shell_types.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/string \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/requires_hosted.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++config.h \

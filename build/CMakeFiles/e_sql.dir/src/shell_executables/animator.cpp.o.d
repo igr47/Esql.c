@@ -1,7 +1,6 @@
-CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o: \
-  /home/igiris/git_projects/Esql.c/src/autosuggestion_manager.cpp \
-  /home/igiris/git_projects/Esql.c/include/autosuggestion_manager.h \
-  /home/igiris/git_projects/Esql.c/include/shell_types.h \
+CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o: \
+  /home/igiris/git_projects/Esql.c/src/shell_executables/animator.cpp \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/animator.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/string \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/requires_hosted.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++config.h \
@@ -142,14 +141,9 @@ CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uses_allocator_args.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/tuple \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/vector \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_uninitialized.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_vector.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_bvector.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/vector.tcc \
-  /home/igiris/git_projects/Esql.c/include/history_manager.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/fstream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/iostream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ios \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/exception \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception_ptr.h \
@@ -199,19 +193,20 @@ CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_facets.tcc \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_ios.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/istream.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/codecvt.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++io.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/fstream.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/algorithm \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_algo.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/algorithmfwd.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_heap.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/uniform_int_dist.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tempbuf.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/pstl/glue_algorithm_defs.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/pstl/execution_defs.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/thread \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/std_thread.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unique_ptr.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/chrono.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ratio \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/cstdint \
+  /usr/lib/llvm-19/lib/clang/19/include/stdint.h /usr/include/stdint.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/limits \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ctime \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/parse_numbers.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/chrono

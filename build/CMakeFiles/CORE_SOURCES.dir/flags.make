@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/clang++
 CXX_DEFINES = -DHAVE_READLINE
 
-CXX_INCLUDES = -I/home/igiris/git_projects/Esql.c/include -I/home/igiris/git_projects/Esql.c/include/shell_includes
+CXX_INCLUDES = 
 
 CXX_FLAGS = -std=gnu++17
 

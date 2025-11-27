@@ -13,18 +13,18 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/page.cpp.o \
   CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o \
   CMakeFiles/e_sql.dir/src/database.cpp.o \
-  CMakeFiles/e_sql.dir/src/terminal_input.cpp.o \
-  CMakeFiles/e_sql.dir/src/utf8_processor.cpp.o \
-  CMakeFiles/e_sql.dir/src/line_renderer.cpp.o \
-  CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.o \
-  CMakeFiles/e_sql.dir/src/hisory_manager.cpp.o \
-  CMakeFiles/e_sql.dir/src/animator.cpp.o \
-  CMakeFiles/e_sql.dir/src/completion_engine.cpp.o \
-  CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o \
-  CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o \
-  CMakeFiles/e_sql.dir/src/modern_shell.cpp.o \
   CMakeFiles/e_sql.dir/src/database_schema.cpp.o \
   CMakeFiles/e_sql.dir/src/main.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o \
   /usr/lib/x86_64-linux-gnu/libreadline.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so \
   /lib/x86_64-linux-gnu/libm.so \
@@ -83,29 +83,29 @@ CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o:
 
 CMakeFiles/e_sql.dir/src/database.cpp.o:
 
-CMakeFiles/e_sql.dir/src/terminal_input.cpp.o:
-
-CMakeFiles/e_sql.dir/src/utf8_processor.cpp.o:
-
-CMakeFiles/e_sql.dir/src/line_renderer.cpp.o:
-
-CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.o:
-
-CMakeFiles/e_sql.dir/src/hisory_manager.cpp.o:
-
-CMakeFiles/e_sql.dir/src/animator.cpp.o:
-
-CMakeFiles/e_sql.dir/src/completion_engine.cpp.o:
-
-CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o:
-
-CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o:
-
-CMakeFiles/e_sql.dir/src/modern_shell.cpp.o:
-
 CMakeFiles/e_sql.dir/src/database_schema.cpp.o:
 
 CMakeFiles/e_sql.dir/src/main.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o:
 
 /usr/lib/x86_64-linux-gnu/libreadline.so:
 

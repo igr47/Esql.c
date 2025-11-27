@@ -153,54 +153,6 @@ src/analyzer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/analyzer.cpp.s
 .PHONY : src/analyzer.cpp.s
 
-src/animator.o: src/animator.cpp.o
-.PHONY : src/animator.o
-
-# target to build an object file
-src/animator.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/animator.cpp.o
-.PHONY : src/animator.cpp.o
-
-src/animator.i: src/animator.cpp.i
-.PHONY : src/animator.i
-
-# target to preprocess a source file
-src/animator.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/animator.cpp.i
-.PHONY : src/animator.cpp.i
-
-src/animator.s: src/animator.cpp.s
-.PHONY : src/animator.s
-
-# target to generate assembly for a file
-src/animator.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/animator.cpp.s
-.PHONY : src/animator.cpp.s
-
-src/autosuggestion_manager.o: src/autosuggestion_manager.cpp.o
-.PHONY : src/autosuggestion_manager.o
-
-# target to build an object file
-src/autosuggestion_manager.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.o
-.PHONY : src/autosuggestion_manager.cpp.o
-
-src/autosuggestion_manager.i: src/autosuggestion_manager.cpp.i
-.PHONY : src/autosuggestion_manager.i
-
-# target to preprocess a source file
-src/autosuggestion_manager.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.i
-.PHONY : src/autosuggestion_manager.cpp.i
-
-src/autosuggestion_manager.s: src/autosuggestion_manager.cpp.s
-.PHONY : src/autosuggestion_manager.s
-
-# target to generate assembly for a file
-src/autosuggestion_manager.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/autosuggestion_manager.cpp.s
-.PHONY : src/autosuggestion_manager.cpp.s
-
 src/buffer_pool.o: src/buffer_pool.cpp.o
 .PHONY : src/buffer_pool.o
 
@@ -224,30 +176,6 @@ src/buffer_pool.s: src/buffer_pool.cpp.s
 src/buffer_pool.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/buffer_pool.cpp.s
 .PHONY : src/buffer_pool.cpp.s
-
-src/completion_engine.o: src/completion_engine.cpp.o
-.PHONY : src/completion_engine.o
-
-# target to build an object file
-src/completion_engine.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/completion_engine.cpp.o
-.PHONY : src/completion_engine.cpp.o
-
-src/completion_engine.i: src/completion_engine.cpp.i
-.PHONY : src/completion_engine.i
-
-# target to preprocess a source file
-src/completion_engine.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/completion_engine.cpp.i
-.PHONY : src/completion_engine.cpp.i
-
-src/completion_engine.s: src/completion_engine.cpp.s
-.PHONY : src/completion_engine.s
-
-# target to generate assembly for a file
-src/completion_engine.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/completion_engine.cpp.s
-.PHONY : src/completion_engine.cpp.s
 
 src/database.o: src/database.cpp.o
 .PHONY : src/database.o
@@ -393,54 +321,6 @@ src/fractal_bplus_tree.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.s
 .PHONY : src/fractal_bplus_tree.cpp.s
 
-src/hisory_manager.o: src/hisory_manager.cpp.o
-.PHONY : src/hisory_manager.o
-
-# target to build an object file
-src/hisory_manager.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/hisory_manager.cpp.o
-.PHONY : src/hisory_manager.cpp.o
-
-src/hisory_manager.i: src/hisory_manager.cpp.i
-.PHONY : src/hisory_manager.i
-
-# target to preprocess a source file
-src/hisory_manager.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/hisory_manager.cpp.i
-.PHONY : src/hisory_manager.cpp.i
-
-src/hisory_manager.s: src/hisory_manager.cpp.s
-.PHONY : src/hisory_manager.s
-
-# target to generate assembly for a file
-src/hisory_manager.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/hisory_manager.cpp.s
-.PHONY : src/hisory_manager.cpp.s
-
-src/line_renderer.o: src/line_renderer.cpp.o
-.PHONY : src/line_renderer.o
-
-# target to build an object file
-src/line_renderer.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/line_renderer.cpp.o
-.PHONY : src/line_renderer.cpp.o
-
-src/line_renderer.i: src/line_renderer.cpp.i
-.PHONY : src/line_renderer.i
-
-# target to preprocess a source file
-src/line_renderer.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/line_renderer.cpp.i
-.PHONY : src/line_renderer.cpp.i
-
-src/line_renderer.s: src/line_renderer.cpp.s
-.PHONY : src/line_renderer.s
-
-# target to generate assembly for a file
-src/line_renderer.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/line_renderer.cpp.s
-.PHONY : src/line_renderer.cpp.s
-
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -464,30 +344,6 @@ src/main.s: src/main.cpp.s
 src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
-
-src/modern_shell.o: src/modern_shell.cpp.o
-.PHONY : src/modern_shell.o
-
-# target to build an object file
-src/modern_shell.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/modern_shell.cpp.o
-.PHONY : src/modern_shell.cpp.o
-
-src/modern_shell.i: src/modern_shell.cpp.i
-.PHONY : src/modern_shell.i
-
-# target to preprocess a source file
-src/modern_shell.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/modern_shell.cpp.i
-.PHONY : src/modern_shell.cpp.i
-
-src/modern_shell.s: src/modern_shell.cpp.s
-.PHONY : src/modern_shell.s
-
-# target to generate assembly for a file
-src/modern_shell.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/modern_shell.cpp.s
-.PHONY : src/modern_shell.cpp.s
 
 src/page.o: src/page.cpp.o
 .PHONY : src/page.o
@@ -537,30 +393,6 @@ src/parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/parser.cpp.s
 .PHONY : src/parser.cpp.s
 
-src/phoenix_animator.o: src/phoenix_animator.cpp.o
-.PHONY : src/phoenix_animator.o
-
-# target to build an object file
-src/phoenix_animator.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.o
-.PHONY : src/phoenix_animator.cpp.o
-
-src/phoenix_animator.i: src/phoenix_animator.cpp.i
-.PHONY : src/phoenix_animator.i
-
-# target to preprocess a source file
-src/phoenix_animator.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.i
-.PHONY : src/phoenix_animator.cpp.i
-
-src/phoenix_animator.s: src/phoenix_animator.cpp.s
-.PHONY : src/phoenix_animator.s
-
-# target to generate assembly for a file
-src/phoenix_animator.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/phoenix_animator.cpp.s
-.PHONY : src/phoenix_animator.cpp.s
-
 src/scanner.o: src/scanner.cpp.o
 .PHONY : src/scanner.o
 
@@ -585,77 +417,245 @@ src/scanner.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/scanner.cpp.s
 .PHONY : src/scanner.cpp.s
 
-src/syntax_highlighter.o: src/syntax_highlighter.cpp.o
-.PHONY : src/syntax_highlighter.o
+src/shell_executables/animator.o: src/shell_executables/animator.cpp.o
+.PHONY : src/shell_executables/animator.o
 
 # target to build an object file
-src/syntax_highlighter.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.o
-.PHONY : src/syntax_highlighter.cpp.o
+src/shell_executables/animator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o
+.PHONY : src/shell_executables/animator.cpp.o
 
-src/syntax_highlighter.i: src/syntax_highlighter.cpp.i
-.PHONY : src/syntax_highlighter.i
+src/shell_executables/animator.i: src/shell_executables/animator.cpp.i
+.PHONY : src/shell_executables/animator.i
 
 # target to preprocess a source file
-src/syntax_highlighter.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.i
-.PHONY : src/syntax_highlighter.cpp.i
+src/shell_executables/animator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.i
+.PHONY : src/shell_executables/animator.cpp.i
 
-src/syntax_highlighter.s: src/syntax_highlighter.cpp.s
-.PHONY : src/syntax_highlighter.s
+src/shell_executables/animator.s: src/shell_executables/animator.cpp.s
+.PHONY : src/shell_executables/animator.s
 
 # target to generate assembly for a file
-src/syntax_highlighter.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/syntax_highlighter.cpp.s
-.PHONY : src/syntax_highlighter.cpp.s
+src/shell_executables/animator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.s
+.PHONY : src/shell_executables/animator.cpp.s
 
-src/terminal_input.o: src/terminal_input.cpp.o
-.PHONY : src/terminal_input.o
+src/shell_executables/autosuggestion_manager.o: src/shell_executables/autosuggestion_manager.cpp.o
+.PHONY : src/shell_executables/autosuggestion_manager.o
 
 # target to build an object file
-src/terminal_input.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/terminal_input.cpp.o
-.PHONY : src/terminal_input.cpp.o
+src/shell_executables/autosuggestion_manager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o
+.PHONY : src/shell_executables/autosuggestion_manager.cpp.o
 
-src/terminal_input.i: src/terminal_input.cpp.i
-.PHONY : src/terminal_input.i
+src/shell_executables/autosuggestion_manager.i: src/shell_executables/autosuggestion_manager.cpp.i
+.PHONY : src/shell_executables/autosuggestion_manager.i
 
 # target to preprocess a source file
-src/terminal_input.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/terminal_input.cpp.i
-.PHONY : src/terminal_input.cpp.i
+src/shell_executables/autosuggestion_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.i
+.PHONY : src/shell_executables/autosuggestion_manager.cpp.i
 
-src/terminal_input.s: src/terminal_input.cpp.s
-.PHONY : src/terminal_input.s
+src/shell_executables/autosuggestion_manager.s: src/shell_executables/autosuggestion_manager.cpp.s
+.PHONY : src/shell_executables/autosuggestion_manager.s
 
 # target to generate assembly for a file
-src/terminal_input.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/terminal_input.cpp.s
-.PHONY : src/terminal_input.cpp.s
+src/shell_executables/autosuggestion_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.s
+.PHONY : src/shell_executables/autosuggestion_manager.cpp.s
 
-src/utf8_processor.o: src/utf8_processor.cpp.o
-.PHONY : src/utf8_processor.o
+src/shell_executables/completion_engine.o: src/shell_executables/completion_engine.cpp.o
+.PHONY : src/shell_executables/completion_engine.o
 
 # target to build an object file
-src/utf8_processor.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/utf8_processor.cpp.o
-.PHONY : src/utf8_processor.cpp.o
+src/shell_executables/completion_engine.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o
+.PHONY : src/shell_executables/completion_engine.cpp.o
 
-src/utf8_processor.i: src/utf8_processor.cpp.i
-.PHONY : src/utf8_processor.i
+src/shell_executables/completion_engine.i: src/shell_executables/completion_engine.cpp.i
+.PHONY : src/shell_executables/completion_engine.i
 
 # target to preprocess a source file
-src/utf8_processor.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/utf8_processor.cpp.i
-.PHONY : src/utf8_processor.cpp.i
+src/shell_executables/completion_engine.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.i
+.PHONY : src/shell_executables/completion_engine.cpp.i
 
-src/utf8_processor.s: src/utf8_processor.cpp.s
-.PHONY : src/utf8_processor.s
+src/shell_executables/completion_engine.s: src/shell_executables/completion_engine.cpp.s
+.PHONY : src/shell_executables/completion_engine.s
 
 # target to generate assembly for a file
-src/utf8_processor.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/utf8_processor.cpp.s
-.PHONY : src/utf8_processor.cpp.s
+src/shell_executables/completion_engine.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.s
+.PHONY : src/shell_executables/completion_engine.cpp.s
+
+src/shell_executables/hisory_manager.o: src/shell_executables/hisory_manager.cpp.o
+.PHONY : src/shell_executables/hisory_manager.o
+
+# target to build an object file
+src/shell_executables/hisory_manager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o
+.PHONY : src/shell_executables/hisory_manager.cpp.o
+
+src/shell_executables/hisory_manager.i: src/shell_executables/hisory_manager.cpp.i
+.PHONY : src/shell_executables/hisory_manager.i
+
+# target to preprocess a source file
+src/shell_executables/hisory_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.i
+.PHONY : src/shell_executables/hisory_manager.cpp.i
+
+src/shell_executables/hisory_manager.s: src/shell_executables/hisory_manager.cpp.s
+.PHONY : src/shell_executables/hisory_manager.s
+
+# target to generate assembly for a file
+src/shell_executables/hisory_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.s
+.PHONY : src/shell_executables/hisory_manager.cpp.s
+
+src/shell_executables/line_renderer.o: src/shell_executables/line_renderer.cpp.o
+.PHONY : src/shell_executables/line_renderer.o
+
+# target to build an object file
+src/shell_executables/line_renderer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o
+.PHONY : src/shell_executables/line_renderer.cpp.o
+
+src/shell_executables/line_renderer.i: src/shell_executables/line_renderer.cpp.i
+.PHONY : src/shell_executables/line_renderer.i
+
+# target to preprocess a source file
+src/shell_executables/line_renderer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.i
+.PHONY : src/shell_executables/line_renderer.cpp.i
+
+src/shell_executables/line_renderer.s: src/shell_executables/line_renderer.cpp.s
+.PHONY : src/shell_executables/line_renderer.s
+
+# target to generate assembly for a file
+src/shell_executables/line_renderer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.s
+.PHONY : src/shell_executables/line_renderer.cpp.s
+
+src/shell_executables/modern_shell.o: src/shell_executables/modern_shell.cpp.o
+.PHONY : src/shell_executables/modern_shell.o
+
+# target to build an object file
+src/shell_executables/modern_shell.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o
+.PHONY : src/shell_executables/modern_shell.cpp.o
+
+src/shell_executables/modern_shell.i: src/shell_executables/modern_shell.cpp.i
+.PHONY : src/shell_executables/modern_shell.i
+
+# target to preprocess a source file
+src/shell_executables/modern_shell.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.i
+.PHONY : src/shell_executables/modern_shell.cpp.i
+
+src/shell_executables/modern_shell.s: src/shell_executables/modern_shell.cpp.s
+.PHONY : src/shell_executables/modern_shell.s
+
+# target to generate assembly for a file
+src/shell_executables/modern_shell.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.s
+.PHONY : src/shell_executables/modern_shell.cpp.s
+
+src/shell_executables/phoenix_animator.o: src/shell_executables/phoenix_animator.cpp.o
+.PHONY : src/shell_executables/phoenix_animator.o
+
+# target to build an object file
+src/shell_executables/phoenix_animator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o
+.PHONY : src/shell_executables/phoenix_animator.cpp.o
+
+src/shell_executables/phoenix_animator.i: src/shell_executables/phoenix_animator.cpp.i
+.PHONY : src/shell_executables/phoenix_animator.i
+
+# target to preprocess a source file
+src/shell_executables/phoenix_animator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.i
+.PHONY : src/shell_executables/phoenix_animator.cpp.i
+
+src/shell_executables/phoenix_animator.s: src/shell_executables/phoenix_animator.cpp.s
+.PHONY : src/shell_executables/phoenix_animator.s
+
+# target to generate assembly for a file
+src/shell_executables/phoenix_animator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.s
+.PHONY : src/shell_executables/phoenix_animator.cpp.s
+
+src/shell_executables/syntax_highlighter.o: src/shell_executables/syntax_highlighter.cpp.o
+.PHONY : src/shell_executables/syntax_highlighter.o
+
+# target to build an object file
+src/shell_executables/syntax_highlighter.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o
+.PHONY : src/shell_executables/syntax_highlighter.cpp.o
+
+src/shell_executables/syntax_highlighter.i: src/shell_executables/syntax_highlighter.cpp.i
+.PHONY : src/shell_executables/syntax_highlighter.i
+
+# target to preprocess a source file
+src/shell_executables/syntax_highlighter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.i
+.PHONY : src/shell_executables/syntax_highlighter.cpp.i
+
+src/shell_executables/syntax_highlighter.s: src/shell_executables/syntax_highlighter.cpp.s
+.PHONY : src/shell_executables/syntax_highlighter.s
+
+# target to generate assembly for a file
+src/shell_executables/syntax_highlighter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.s
+.PHONY : src/shell_executables/syntax_highlighter.cpp.s
+
+src/shell_executables/terminal_input.o: src/shell_executables/terminal_input.cpp.o
+.PHONY : src/shell_executables/terminal_input.o
+
+# target to build an object file
+src/shell_executables/terminal_input.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o
+.PHONY : src/shell_executables/terminal_input.cpp.o
+
+src/shell_executables/terminal_input.i: src/shell_executables/terminal_input.cpp.i
+.PHONY : src/shell_executables/terminal_input.i
+
+# target to preprocess a source file
+src/shell_executables/terminal_input.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.i
+.PHONY : src/shell_executables/terminal_input.cpp.i
+
+src/shell_executables/terminal_input.s: src/shell_executables/terminal_input.cpp.s
+.PHONY : src/shell_executables/terminal_input.s
+
+# target to generate assembly for a file
+src/shell_executables/terminal_input.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.s
+.PHONY : src/shell_executables/terminal_input.cpp.s
+
+src/shell_executables/utf8_processor.o: src/shell_executables/utf8_processor.cpp.o
+.PHONY : src/shell_executables/utf8_processor.o
+
+# target to build an object file
+src/shell_executables/utf8_processor.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o
+.PHONY : src/shell_executables/utf8_processor.cpp.o
+
+src/shell_executables/utf8_processor.i: src/shell_executables/utf8_processor.cpp.i
+.PHONY : src/shell_executables/utf8_processor.i
+
+# target to preprocess a source file
+src/shell_executables/utf8_processor.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.i
+.PHONY : src/shell_executables/utf8_processor.cpp.i
+
+src/shell_executables/utf8_processor.s: src/shell_executables/utf8_processor.cpp.s
+.PHONY : src/shell_executables/utf8_processor.s
+
+# target to generate assembly for a file
+src/shell_executables/utf8_processor.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.s
+.PHONY : src/shell_executables/utf8_processor.cpp.s
 
 src/write_ahead_log.o: src/write_ahead_log.cpp.o
 .PHONY : src/write_ahead_log.o
@@ -693,18 +693,9 @@ help:
 	@echo "... src/analyzer.o"
 	@echo "... src/analyzer.i"
 	@echo "... src/analyzer.s"
-	@echo "... src/animator.o"
-	@echo "... src/animator.i"
-	@echo "... src/animator.s"
-	@echo "... src/autosuggestion_manager.o"
-	@echo "... src/autosuggestion_manager.i"
-	@echo "... src/autosuggestion_manager.s"
 	@echo "... src/buffer_pool.o"
 	@echo "... src/buffer_pool.i"
 	@echo "... src/buffer_pool.s"
-	@echo "... src/completion_engine.o"
-	@echo "... src/completion_engine.i"
-	@echo "... src/completion_engine.s"
 	@echo "... src/database.o"
 	@echo "... src/database.i"
 	@echo "... src/database.s"
@@ -723,39 +714,48 @@ help:
 	@echo "... src/fractal_bplus_tree.o"
 	@echo "... src/fractal_bplus_tree.i"
 	@echo "... src/fractal_bplus_tree.s"
-	@echo "... src/hisory_manager.o"
-	@echo "... src/hisory_manager.i"
-	@echo "... src/hisory_manager.s"
-	@echo "... src/line_renderer.o"
-	@echo "... src/line_renderer.i"
-	@echo "... src/line_renderer.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/modern_shell.o"
-	@echo "... src/modern_shell.i"
-	@echo "... src/modern_shell.s"
 	@echo "... src/page.o"
 	@echo "... src/page.i"
 	@echo "... src/page.s"
 	@echo "... src/parser.o"
 	@echo "... src/parser.i"
 	@echo "... src/parser.s"
-	@echo "... src/phoenix_animator.o"
-	@echo "... src/phoenix_animator.i"
-	@echo "... src/phoenix_animator.s"
 	@echo "... src/scanner.o"
 	@echo "... src/scanner.i"
 	@echo "... src/scanner.s"
-	@echo "... src/syntax_highlighter.o"
-	@echo "... src/syntax_highlighter.i"
-	@echo "... src/syntax_highlighter.s"
-	@echo "... src/terminal_input.o"
-	@echo "... src/terminal_input.i"
-	@echo "... src/terminal_input.s"
-	@echo "... src/utf8_processor.o"
-	@echo "... src/utf8_processor.i"
-	@echo "... src/utf8_processor.s"
+	@echo "... src/shell_executables/animator.o"
+	@echo "... src/shell_executables/animator.i"
+	@echo "... src/shell_executables/animator.s"
+	@echo "... src/shell_executables/autosuggestion_manager.o"
+	@echo "... src/shell_executables/autosuggestion_manager.i"
+	@echo "... src/shell_executables/autosuggestion_manager.s"
+	@echo "... src/shell_executables/completion_engine.o"
+	@echo "... src/shell_executables/completion_engine.i"
+	@echo "... src/shell_executables/completion_engine.s"
+	@echo "... src/shell_executables/hisory_manager.o"
+	@echo "... src/shell_executables/hisory_manager.i"
+	@echo "... src/shell_executables/hisory_manager.s"
+	@echo "... src/shell_executables/line_renderer.o"
+	@echo "... src/shell_executables/line_renderer.i"
+	@echo "... src/shell_executables/line_renderer.s"
+	@echo "... src/shell_executables/modern_shell.o"
+	@echo "... src/shell_executables/modern_shell.i"
+	@echo "... src/shell_executables/modern_shell.s"
+	@echo "... src/shell_executables/phoenix_animator.o"
+	@echo "... src/shell_executables/phoenix_animator.i"
+	@echo "... src/shell_executables/phoenix_animator.s"
+	@echo "... src/shell_executables/syntax_highlighter.o"
+	@echo "... src/shell_executables/syntax_highlighter.i"
+	@echo "... src/shell_executables/syntax_highlighter.s"
+	@echo "... src/shell_executables/terminal_input.o"
+	@echo "... src/shell_executables/terminal_input.i"
+	@echo "... src/shell_executables/terminal_input.s"
+	@echo "... src/shell_executables/utf8_processor.o"
+	@echo "... src/shell_executables/utf8_processor.i"
+	@echo "... src/shell_executables/utf8_processor.s"
 	@echo "... src/write_ahead_log.o"
 	@echo "... src/write_ahead_log.i"
 	@echo "... src/write_ahead_log.s"
