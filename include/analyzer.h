@@ -64,6 +64,7 @@ class SematicAnalyzer{
         //**********************************************************************
         void validateLikeOperation(AST::LikeOp& likeOp, const DatabaseSchema::Table* table);
         void validateCharacterClassSyntax(const std::string& pattern);
+        void validateIsOperation(AST::BinaryOp& isOp, const DatabaseSchema::Table* table);
 		//metod to analyze insert statement analysis
 		void analyzeInsert(AST::InsertStatement& insertStmt);
 		void analyzeCreate(AST::CreateTableStatement& createStmt);

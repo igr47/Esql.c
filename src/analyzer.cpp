@@ -479,6 +479,86 @@ void SematicAnalyzer::validateInOperation(AST::InOp& inOp, const DatabaseSchema:
 }
 
 void SematicAnalyzer::validateNotOperation(AST::NotOp& notOp, const DatabaseSchema::Table* table) {
+    validateExpression(*notOp.expr, table);
+
+    auto exprType = getValueType(*notOp.expr);
+
+    // NOT can be applied to:
+    // 1. Boolean expressions
+    // 2. Comparison operations (which return boolean)
+    // 3. IN operations (which return boolean)
+    // 4. BETWEEN operations (which return boolean)
+    // 5. LIKE operations (which return boolean)
+    // 6. IS operations (which return boolean)
+
+    bool isValid = false;
+
+    // Check if it's explicitly boolean
+    if (exprType == DatabaseSchema::Column::BOOLEAN) {
+        isValid = true;
+    }
+    // Check if it's a comparison operation
+    else if (auto* binaryOp = dynamic_cast<AST::BinaryOp*>(notOp.expr.get())) {
+        if (isComparisonOperator(binaryOp->op.type) ||
+            binaryOp->op.type == Token::Type::IN ||
+            binaryOp->op.type == Token::Type::BETWEEN ||
+            binaryOp->op.type == Token::Type::LIKE ||
+            binaryOp->op.type == Token::Type::IS ||
+            binaryOp->op.type == Token::Type::IS_NULL ||
+            binaryOp->op.type == Token::Type::IS_NOT_NULL ||
+            binaryOp->op.type == Token::Type::IS_TRUE ||
+            binaryOp->op.type == Token::Type::IS_FALSE ||
+            binaryOp->op.type == Token::Type::IS_NOT_TRUE ||
+            binaryOp->op.type == Token::Type::IS_NOT_FALSE) {
+            isValid = true;
+        }
+    }
+    // Check if it's IN, BETWEEN, LIKE operations
+    else if (dynamic_cast<AST::InOp*>(notOp.expr.get()) ||
+             dynamic_cast<AST::BetweenOp*>(notOp.expr.get()) ||
+             dynamic_cast<AST::LikeOp*>(notOp.expr.get()) ||
+             dynamic_cast<AST::NotOp*>(notOp.expr.get())) { // NOT can be nested
+        isValid = true;
+    }
+
+    if (!isValid) {
+        throw SematicError("NOT operator can only be applied to boolean expressions, comparisons, IN, BETWEEN, LIKE, or IS operations");
+    }
+}
+
+void SematicAnalyzer::validateIsOperation(AST::BinaryOp& isOp, const DatabaseSchema::Table* table) {
+    validateExpression(*isOp.left, table);
+    validateExpression(*isOp.right, table);
+    
+    auto leftType = getValueType(*isOp.left);
+    
+    // IS NULL/IS NOT NULL can be applied to any nullable type
+    if (isOp.op.type == Token::Type::IS_NULL || isOp.op.type == Token::Type::IS_NOT_NULL) {
+        // Any type can be checked for NULL
+        return;
+    }
+    
+    // IS TRUE/IS FALSE require boolean-compatible expressions
+    if (isOp.op.type == Token::Type::IS_TRUE || isOp.op.type == Token::Type::IS_FALSE ||
+        isOp.op.type == Token::Type::IS_NOT_TRUE || isOp.op.type == Token::Type::IS_NOT_FALSE) {
+        
+        if (leftType != DatabaseSchema::Column::BOOLEAN) {
+            // Check if it can be implicitly converted to boolean
+            if (!isImplicitlyBoolean(*isOp.left)) {
+                throw SematicError("IS TRUE/IS FALSE operations require boolean-compatible expressions");
+            }
+        }
+        return;
+    }
+    
+    // Regular IS comparison - types should be comparable
+    auto rightType = getValueType(*isOp.right);
+    if (!areTypesComparable(leftType, rightType)) {
+        throw SematicError("Incompatible types in IS comparison");
+    }
+}
+
+/*void SematicAnalyzer::validateNotOperation(AST::NotOp& notOp, const DatabaseSchema::Table* table) {
 	validateExpression(*notOp.expr , table);
 
 	//NOT operator  should be implemented to a boolean expression
@@ -503,7 +583,7 @@ void SematicAnalyzer::validateNotOperation(AST::NotOp& notOp, const DatabaseSche
 		}
 		throw SematicError("NOT operator can only be applied to boolean expressions");
 	}
-}
+}*/
 void SematicAnalyzer::validateLiteral(const AST::Literal& literal, const DatabaseSchema::Table* table) {
     switch (literal.token.type) {
         case Token::Type::STRING_LITERAL:
@@ -625,6 +705,10 @@ void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op, const DatabaseS
                               " and " + std::to_string(static_cast<int>(rightType)));
         }
         return;
+    }
+    if (op.op.type == Token::Type::IS || op.op.type == Token::Type::IS_NOT ||op.op.type == Token::Type::IS_NULL || op.op.type == Token::Type::IS_NOT_NULL ||op.op.type == Token::Type::IS_TRUE || op.op.type == Token::Type::IS_NOT_TRUE ||op.op.type == Token::Type::IS_FALSE || op.op.type == Token::Type::IS_NOT_FALSE) {
+        validateIsOperation(op, table);
+        return; // Skip regular binary validation
     }
 
     // Check operator is valid for the operator types

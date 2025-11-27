@@ -1123,7 +1123,39 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 	else if (op.type == Token::Type::IS){
 		consume(Token::Type::IS);
 
-		if(match(Token::Type::NOT)){
+        bool isNot = false;
+        if (match(Token::Type::NOT)) {
+            consume(Token::Type::NOT);
+            isNot = true;
+        }
+
+        // Handle IS NULL, IS TRUE, IS FALSE
+        if (match(Token::Type::NULL_TOKEN)) {
+            consume(Token::Type::NULL_TOKEN);
+            // Create a special IS NULL/IS NOT NULL operation
+            auto nullLiteral = std::make_unique<AST::Literal>(Token(Token::Type::NULL_TOKEN, "NULL",op.line, op.column));
+            Token isOpToken = isNot ? Token(Token::Type::IS_NOT_NULL, "IS NOT NULL", op.line, op.column) : Token(Token::Type::IS_NULL, "IS NULL", op.line, op.column);
+            left = std::make_unique<AST::BinaryOp>(isOpToken, std::move(left), std::move(nullLiteral));
+        } else if (match(Token::Type::TRUE)) {
+                consume (Token::Type::TRUE);
+                auto trueLiteral = std::make_unique<AST::Literal>(Token(Token::Type::TRUE, "TRUE", op.line, op.column));
+                Token isOpToken = isNot ? Token(Token::Type::IS_NOT_TRUE, "IS NOT TRUE", op.line, op.column) : Token(Token::Type::IS_TRUE, "IS TRUE", op.line, op.column);
+                left = std::make_unique<AST::BinaryOp>(isOpToken, std::move(left), std::move(trueLiteral));
+        } else if (match(Token::Type::FALSE)) {
+                consume(Token::Type::FALSE);
+                auto falseLiteral = std::make_unique<AST::Literal>(Token(Token::Type::FALSE, "FALSE", op.line, op.column));
+                Token isOpToken = isNot ? Token(Token::Type::IS_NOT_FALSE, "IS NOT FALSE", op.line, op.column) : Token(Token::Type::IS_FALSE, "IS FALSE", op.line, op.column);
+                left = std::make_unique<AST::BinaryOp>(isOpToken, std::move(left), std::move(falseLiteral));
+        } else {
+                // Regular IS comparison with another expression
+                auto right = parseBinaryExpression(precedence + 1);
+                Token isOpToken = isNot ? Token(Token::Type::IS_NOT, "IS NOT", op.line, op.column) : Token(Token::Type::IS, "IS", op.line, op.column);
+                left = std::make_unique<AST::BinaryOp>(isOpToken, std::move(left), std::move(right));
+       }
+       continue;
+    }
+   
+		/*if(match(Token::Type::NOT)){
 			consume(Token::Type::NOT);
 			auto right = parseBinaryExpression(precedence+1);
 			Token isNotToken = Token(Token::Type::IS_NOT, "IS NOT", op.line, op.column);
@@ -1133,7 +1165,7 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 			left = std::make_unique<AST::BinaryOp>(op, std::move(left),std::move(right));
 		}
 		continue;
-	}
+	}*/
 
         // Handle regular binary operators
         if (isBinaryOperator(op.type)) {
@@ -1309,14 +1341,20 @@ int Parse::getPrecedence(Token::Type type) {
         case Token::Type::NOT: return 3;
         case Token::Type::EQUAL:
         case Token::Type::NOT_EQUAL:
-	case Token::Type::IS: 
-	case Token::Type::IS_NOT: return 4;
+	    case Token::Type::IS: 
+        case Token::Type::IS_NULL:
+        case Token::Type::IS_NOT_NULL:
+        case Token::Type::IS_TRUE:
+        case Token::Type::IS_NOT_TRUE:
+        case Token::Type::IS_FALSE:
+        case Token::Type::IS_NOT_FALSE:
+	    case Token::Type::IS_NOT: return 4;
         case Token::Type::LESS:
         case Token::Type::LESS_EQUAL:
         case Token::Type::GREATER:
         case Token::Type::GREATER_EQUAL: return 5;
         case Token::Type::BETWEEN:
-	case Token::Type::IN:
+	    case Token::Type::IN:
         case Token::Type::LIKE: return 6;
         case Token::Type::PLUS:
         case Token::Type::MINUS: return 7;
@@ -1342,10 +1380,16 @@ bool Parse::isBinaryOperator(Token::Type type) {
         case Token::Type::SLASH:
         case Token::Type::AND:
         case Token::Type::OR:
-	case Token::Type::LIKE:
-	case Token::Type::IS:
-	case Token::Type::IS_NOT:
-	case Token::Type::MOD:
+	    case Token::Type::LIKE:
+	    case Token::Type::IS:
+	    case Token::Type::IS_NOT:
+        case Token::Type::IS_NULL:
+        case Token::Type::IS_NOT_NULL:
+        case Token::Type::IS_TRUE:
+        case Token::Type::IS_NOT_TRUE:
+        case Token::Type::IS_FALSE:
+        case Token::Type::IS_NOT_FALSE:
+	    case Token::Type::MOD:
             return true;
         case Token::Type::BETWEEN:
         case Token::Type::IN:

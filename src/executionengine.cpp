@@ -2927,7 +2927,30 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
                 } catch (...) {
                     throw std::runtime_error("Cannot divide non-numeric values");
                 }
-
+            case Token::Type::IS_NULL:
+                return (left == "NULL") ? "true" : "false";
+            case Token::Type::IS_NOT_NULL:
+                return (left != "NULL") ? "true" : "false";
+            case Token::Type::IS_TRUE: {
+                 bool isTrue = (left == "true" || left == "1" || left == "TRUE");
+                 return isTrue ? "true" : "false";
+            }
+            case Token::Type::IS_NOT_TRUE: {
+                 bool isTrue = (left == "true" || left == "1" || left == "TRUE");
+                 return (!isTrue) ? "true" : "false";
+            }
+            case Token::Type::IS_FALSE: {
+                 bool isFalse = (left == "false" || left == "0" || left == "FALSE");
+                 return isFalse ? "true" : "false";
+            }
+            case Token::Type::IS_NOT_FALSE: {
+                 bool isFalse = (left == "false" || left == "0" || left == "FALSE");
+                 return (!isFalse) ? "true" : "false";
+            }
+            case Token::Type::IS:
+                      return (left == right) ? "true" : "false";
+            case Token::Type::IS_NOT:
+                 return (left != right) ? "true" : "false";
             default:
                 throw std::runtime_error("Unsupported binary operator: " + binOp->op.lexeme);
         }
