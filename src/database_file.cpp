@@ -174,7 +174,7 @@ void DatabaseFile::write_page(uint32_t page_id, const Page* page) {
     file.seekp(offset);
     
     if (!file) {
-        std::cout << "DEBUG DatabaseFile::write_page: Seek failed, clearing errors" << std::endl;
+        //std::cout << "DEBUG DatabaseFile::write_page: Seek failed, clearing errors" << std::endl;
         file.clear();
         file.seekp(offset);
     }
@@ -242,7 +242,7 @@ uint32_t DatabaseFile::allocate_schema_page() {
     if (!free_schema_pages.empty()) {
         uint32_t page_id = free_schema_pages.back();
         free_schema_pages.pop_back();
-        std::cout << "DEBUG: Reusing schema page " << page_id << std::endl;
+        //std::cout << "DEBUG: Reusing schema page " << page_id << std::endl;
         return page_id;
     }
     
@@ -262,7 +262,7 @@ void DatabaseFile::free_schema_page(uint32_t page_id) {
             free_page.initialize(page_id, PageType::FREE_PAGE, 0);
             write_page(page_id, &free_page);
 
-            std::cout << "DEBUG: Freed schema page " << page_id << std::endl;
+            //std::cout << "DEBUG: Freed schema page " << page_id << std::endl;
         }
     }
 }
@@ -271,7 +271,7 @@ uint32_t DatabaseFile::allocate_table_id() {
     if (!free_table_ids.empty()) {
         uint32_t table_id = free_table_ids.back();
         free_table_ids.pop_back();
-        std::cout << "DEBUG: Reusing table ID " << table_id << std::endl;
+        //std::cout << "DEBUG: Reusing table ID " << table_id << std::endl;
         return table_id;
     }
 
@@ -283,7 +283,7 @@ void DatabaseFile::free_table_id(uint32_t table_id) {
     if (table_id > 0 && table_id < table_directory.next_table_id) {
         if (std::find(free_table_ids.begin(), free_table_ids.end(), table_id) == free_table_ids.end()) {
             free_table_ids.push_back(table_id);
-            std::cout << "DEBUG: Freed table ID " << table_id << " for reuse" << std::endl;
+            //std::cout << "DEBUG: Freed table ID " << table_id << " for reuse" << std::endl;
         }
     }
 }
@@ -318,7 +318,7 @@ void DatabaseFile::load_schema_page_tracking() {
     }
 
     std::sort(free_table_ids.begin(), free_table_ids.end());
-    std::cout << "DEBUG: Loaded " << free_schema_pages.size() << " free schema pages and " << free_table_ids.size() << " free table IDs" << std::endl;
+    //std::cout << "DEBUG: Loaded " << free_schema_pages.size() << " free schema pages and " << free_table_ids.size() << " free table IDs" << std::endl;
 }
 
 
@@ -335,7 +335,7 @@ void DatabaseFile::free_page(uint32_t page_id) {
         
         save_free_page_list();
         
-        std::cout << "DEBUG: Freed page " << page_id << " added to free list" << std::endl;
+        //std::cout << "DEBUG: Freed page " << page_id << " added to free list" << std::endl;
     }
 }
 
@@ -429,8 +429,8 @@ uint32_t DatabaseFile::allocate_table_page_range(uint32_t table_id) {
                 // Store the mapping
                 table_id_to_range[table_id] = allocated_range;
                 
-                std::cout << "DEBUG: Reusing available range " << allocated_range.start_page 
-                          << "-" << allocated_range.end_page << " for table " << table_id << std::endl;
+                //std::cout << "DEBUG: Reusing available range " << allocated_range.start_page 
+                          //<< "-" << allocated_range.end_page << " for table " << table_id << std::endl;
                 
                 return allocated_range.start_page;
             }
@@ -517,8 +517,8 @@ uint32_t DatabaseFile::create_table(const std::string& table_name) {
     
     write_table_directory();
     
-    std::cout << "Created table '" << table_name << "' with ID " << table_id 
-              << ", root page " << root_page_id << std::endl;
+    //std::cout << "Created table '" << table_name << "' with ID " << table_id 
+              //<< ", root page " << root_page_id << std::endl;
     
     return table_id;
 }
@@ -531,7 +531,7 @@ void DatabaseFile::drop_table(const std::string& table_name) {
     
     uint32_t table_id = it->second;
     
-    std::cout << "DEBUG: DatabaseFile dropping table '" << table_name << "' with ID " << table_id << std::endl;
+    //std::cout << "DEBUG: DatabaseFile dropping table '" << table_name << "' with ID " << table_id << std::endl;
 
     uint32_t schema_page_id = SCHEMA_PAGE_START + (table_id % MAX_SCHEMA_PAGES);
     free_schema_page(schema_page_id);
@@ -604,7 +604,7 @@ void DatabaseFile::drop_table(const std::string& table_name) {
     write_table_directory();
     save_free_page_list();
     
-    std::cout << "DatabaseFile: Table '" << table_name << "' dropped, range available for reuse" << std::endl;
+    //std::cout << "DatabaseFile: Table '" << table_name << "' dropped, range available for reuse" << std::endl;
 }
 
 
@@ -716,7 +716,7 @@ void DatabaseFile::read_table_directory() {
 
     auto original_pos = file.tellg();
 
-    std::cout << "DEBUG: Reading table directory from offset " << PAGE_SIZE << std::endl;
+    //std::cout << "DEBUG: Reading table directory from offset " << PAGE_SIZE << std::endl;
 
     
     file.seekg(PAGE_SIZE);
@@ -728,9 +728,9 @@ void DatabaseFile::read_table_directory() {
         return;
     }
 
-    std::cout << "DEBUG: Successfully read table directory" << std::endl;
-    std::cout << "DEBUG: Read num_tables = " << table_directory.num_tables << std::endl;
-    std::cout << "DEBUG: Read next_table_id = " << table_directory.next_table_id << std::endl;
+    //std::cout << "DEBUG: Successfully read table directory" << std::endl;
+    //std::cout << "DEBUG: Read num_tables = " << table_directory.num_tables << std::endl;
+    //std::cout << "DEBUG: Read next_table_id = " << table_directory.next_table_id << std::endl;
 
     file.seekg(original_pos);
 }
@@ -766,7 +766,7 @@ uint64_t DatabaseFile::get_file_size() const {
     auto current_pos = file.tellg();
 
     if (current_pos == -1) {
-        std::cout << "DEBUG DatabaseFile::get_file_size: tellg() failed, clearing error flags" << std::endl;
+        //std::cout << "DEBUG DatabaseFile::get_file_size: tellg() failed, clearing error flags" << std::endl;
         file.clear();
     }
     
@@ -780,7 +780,7 @@ uint64_t DatabaseFile::get_file_size() const {
 
     uint64_t size = file.tellg();
     if (size == static_cast<uint64_t>(-1)) {
-        std::cout << "DEBUG DatabaseFile::get_file_size: tellg() returned -1" << std::endl;
+        //std::cout << "DEBUG DatabaseFile::get_file_size: tellg() returned -1" << std::endl;
         file.clear();
         size = 0;
     }
@@ -790,7 +790,7 @@ uint64_t DatabaseFile::get_file_size() const {
         file.seekg(current_pos);
     }
 
-    std::cout << "DEBUG DatabaseFile::get_file_size: returning " << size << std::endl;
+    //std::cout << "DEBUG DatabaseFile::get_file_size: returning " << size << std::endl;
     return size;
 }
 
@@ -884,8 +884,8 @@ void DatabaseFile::extend_file(uint32_t additional_pages) {
     }
     
     uint64_t new_size = current_size + (additional_pages * PAGE_SIZE);
-    std::cout << "DEBUG DatabaseFile::extend_file: Extending from " << current_size 
-              << " to " << new_size << " bytes" << std::endl;
+    //std::cout << "DEBUG DatabaseFile::extend_file: Extending from " << current_size 
+              //<< " to " << new_size << " bytes" << std::endl;
     
     // Extend the file by writing zeros
     file.seekp(current_size);
@@ -908,8 +908,8 @@ void DatabaseFile::extend_file(uint32_t additional_pages) {
     
     write_header();
     
-    std::cout << "DEBUG DatabaseFile::extend_file: Extended to " << new_size 
-              << " bytes, " << db_header.total_pages << " pages" << std::endl;
+    //std::cout << "DEBUG DatabaseFile::extend_file: Extended to " << new_size 
+              //<< " bytes, " << db_header.total_pages << " pages" << std::endl;
 }
 
 void DatabaseFile::validate_page_id(uint32_t page_id) const {
