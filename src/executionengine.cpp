@@ -1037,7 +1037,7 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
                 aggColumnName = aggregate->function.lexeme + "(" + aggregate->argument->toString() + ")";
             } else {
                 aggColumnName = aggregate->function.lexeme + "()";
-            }
+            } 
             
             std::string aggValue = calculateAggregate(aggregate, groupData);
             result[aggColumnName] = aggValue;
@@ -1046,6 +1046,10 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
             if (aggregate->argument2) {
                 result[aggregate->argument2->toString()] = aggValue;
             }
+        }
+        else if (auto* caseExpr = dynamic_cast<const AST::CaseExpression*>(col.get())) {
+            std::string caseResult = evaluateExpression(caseExpr, groupRow);
+            result[col->toString()] = caseResult;
         }
         else if (auto* ident = dynamic_cast<const AST::Identifier*>(col.get())) {
             // Group by column - already added above
@@ -2608,7 +2612,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
         } else {
             for (const auto& [condition, result] : caseExpr->whenClauses) {
                 std::string condResult = evaluateExpression(condition.get(), row);
-                if (condResult == "true" || condResult == "1") {
+                if (condResult == "true" || condResult == "1" || condResult == "TRUE") {
                     return evaluateExpression(result.get(), row);
                 }
             }
