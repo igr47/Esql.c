@@ -101,12 +101,38 @@ void SematicAnalyzer::validateGroupByClause(AST::SelectStatement& selectStmt){
 
 	for(const auto& column : selectStmt.groupBy->columns){
 		validateExpression(*column,currentTable);
+        if (auto* caseExpr = dynamic_cast<AST::CaseExpression*>(column.get())) {
+            validateCaseExpressionForGroupBy(*caseExpr);
+        }
 		if (auto* ident = dynamic_cast<AST::Identifier*>(column.get())){
 			if(!columnExists(ident->token.lexeme)){
 				throw SematicError("Column '" + ident->token.lexeme + "' In GROUP B clause does not exist");
 			}
 		}
 	}
+}
+
+void SematicAnalyzer::validateCaseExpressionForGroupBy(AST::CaseExpression& caseExpr) {
+    // Validate that all result types in CASE are compatible for grouping
+    DatabaseSchema::Column::Type firstType = DatabaseSchema::Column::STRING; // Default
+    
+    if (!caseExpr.whenClauses.empty()) {
+        firstType = getValueType(*caseExpr.whenClauses[0].second);
+        
+        for (size_t i = 1; i < caseExpr.whenClauses.size(); ++i) {
+            auto currentType = getValueType(*caseExpr.whenClauses[i].second);
+            if (!areTypesCompatible(firstType, currentType)) {
+                throw SematicError("Inconsistent types in CASE expression used in GROUP BY");
+            }
+        }
+    }
+
+    if (caseExpr.elseClause) {
+        auto elseType = getValueType(*caseExpr.elseClause);
+        if (!areTypesCompatible(firstType, elseType)) {
+            throw SematicError("ELSE clause type incompatible with WHEN clauses in GROUP BY CASE expression");
+        }
+    }
 }
 
 void SematicAnalyzer::validateHavingClause(AST::SelectStatement& selectStmt){

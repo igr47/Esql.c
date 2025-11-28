@@ -15,6 +15,11 @@ else()
     message(WARNING "Readline not found. Using basic input mode.")
 endif()
 
+# Execution Engine sources
+file(GLOB EXECUTION_ENGINE_SOURCES 
+    "src/execution_engine/*.cpp"
+)
+
 #Shell executables
 file(GLOB SHELL_SOURCES 
     "src/shell_executables/*.cpp"
@@ -24,7 +29,6 @@ set(CORE_SOURCES
     src/scanner.cpp
     src/parser.cpp
     src/analyzer.cpp     
-    src/executionengine.cpp
     src/diskstorage.cpp
     src/database_file.cpp      
     src/write_ahead_log.cpp  
@@ -39,6 +43,7 @@ set(CORE_SOURCES
 # Combine all sources
 set(ALL_SOURCES
     ${CORE_SOURCES}
+    ${EXECUTION_ENGINE_SOURCES}
     ${SHELL_SOURCES}
 )
 
@@ -47,6 +52,7 @@ add_executable(e_sql ${ALL_SOURCES})
 target_include_directories(e_sql PRIVATE 
     include
     include/shell_includes
+    include/execution_engine_includes
 )
 
 if(READLINE_LIBRARY AND READLINE_INCLUDE_DIR)
