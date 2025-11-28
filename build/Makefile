@@ -273,29 +273,269 @@ src/diskstorage.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/diskstorage.cpp.s
 .PHONY : src/diskstorage.cpp.s
 
-src/executionengine.o: src/executionengine.cpp.o
-.PHONY : src/executionengine.o
+src/execution_engine/constraint_validation.o: src/execution_engine/constraint_validation.cpp.o
+.PHONY : src/execution_engine/constraint_validation.o
 
 # target to build an object file
-src/executionengine.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/executionengine.cpp.o
-.PHONY : src/executionengine.cpp.o
+src/execution_engine/constraint_validation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o
+.PHONY : src/execution_engine/constraint_validation.cpp.o
 
-src/executionengine.i: src/executionengine.cpp.i
-.PHONY : src/executionengine.i
+src/execution_engine/constraint_validation.i: src/execution_engine/constraint_validation.cpp.i
+.PHONY : src/execution_engine/constraint_validation.i
 
 # target to preprocess a source file
-src/executionengine.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/executionengine.cpp.i
-.PHONY : src/executionengine.cpp.i
+src/execution_engine/constraint_validation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.i
+.PHONY : src/execution_engine/constraint_validation.cpp.i
 
-src/executionengine.s: src/executionengine.cpp.s
-.PHONY : src/executionengine.s
+src/execution_engine/constraint_validation.s: src/execution_engine/constraint_validation.cpp.s
+.PHONY : src/execution_engine/constraint_validation.s
 
 # target to generate assembly for a file
-src/executionengine.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/executionengine.cpp.s
-.PHONY : src/executionengine.cpp.s
+src/execution_engine/constraint_validation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.s
+.PHONY : src/execution_engine/constraint_validation.cpp.s
+
+src/execution_engine/execute_database_operations.o: src/execution_engine/execute_database_operations.cpp.o
+.PHONY : src/execution_engine/execute_database_operations.o
+
+# target to build an object file
+src/execution_engine/execute_database_operations.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o
+.PHONY : src/execution_engine/execute_database_operations.cpp.o
+
+src/execution_engine/execute_database_operations.i: src/execution_engine/execute_database_operations.cpp.i
+.PHONY : src/execution_engine/execute_database_operations.i
+
+# target to preprocess a source file
+src/execution_engine/execute_database_operations.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.i
+.PHONY : src/execution_engine/execute_database_operations.cpp.i
+
+src/execution_engine/execute_database_operations.s: src/execution_engine/execute_database_operations.cpp.s
+.PHONY : src/execution_engine/execute_database_operations.s
+
+# target to generate assembly for a file
+src/execution_engine/execute_database_operations.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.s
+.PHONY : src/execution_engine/execute_database_operations.cpp.s
+
+src/execution_engine/execute_delete.o: src/execution_engine/execute_delete.cpp.o
+.PHONY : src/execution_engine/execute_delete.o
+
+# target to build an object file
+src/execution_engine/execute_delete.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o
+.PHONY : src/execution_engine/execute_delete.cpp.o
+
+src/execution_engine/execute_delete.i: src/execution_engine/execute_delete.cpp.i
+.PHONY : src/execution_engine/execute_delete.i
+
+# target to preprocess a source file
+src/execution_engine/execute_delete.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.i
+.PHONY : src/execution_engine/execute_delete.cpp.i
+
+src/execution_engine/execute_delete.s: src/execution_engine/execute_delete.cpp.s
+.PHONY : src/execution_engine/execute_delete.s
+
+# target to generate assembly for a file
+src/execution_engine/execute_delete.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.s
+.PHONY : src/execution_engine/execute_delete.cpp.s
+
+src/execution_engine/execute_insert.o: src/execution_engine/execute_insert.cpp.o
+.PHONY : src/execution_engine/execute_insert.o
+
+# target to build an object file
+src/execution_engine/execute_insert.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o
+.PHONY : src/execution_engine/execute_insert.cpp.o
+
+src/execution_engine/execute_insert.i: src/execution_engine/execute_insert.cpp.i
+.PHONY : src/execution_engine/execute_insert.i
+
+# target to preprocess a source file
+src/execution_engine/execute_insert.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.i
+.PHONY : src/execution_engine/execute_insert.cpp.i
+
+src/execution_engine/execute_insert.s: src/execution_engine/execute_insert.cpp.s
+.PHONY : src/execution_engine/execute_insert.s
+
+# target to generate assembly for a file
+src/execution_engine/execute_insert.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.s
+.PHONY : src/execution_engine/execute_insert.cpp.s
+
+src/execution_engine/execute_select.o: src/execution_engine/execute_select.cpp.o
+.PHONY : src/execution_engine/execute_select.o
+
+# target to build an object file
+src/execution_engine/execute_select.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o
+.PHONY : src/execution_engine/execute_select.cpp.o
+
+src/execution_engine/execute_select.i: src/execution_engine/execute_select.cpp.i
+.PHONY : src/execution_engine/execute_select.i
+
+# target to preprocess a source file
+src/execution_engine/execute_select.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.i
+.PHONY : src/execution_engine/execute_select.cpp.i
+
+src/execution_engine/execute_select.s: src/execution_engine/execute_select.cpp.s
+.PHONY : src/execution_engine/execute_select.s
+
+# target to generate assembly for a file
+src/execution_engine/execute_select.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.s
+.PHONY : src/execution_engine/execute_select.cpp.s
+
+src/execution_engine/execute_table_operations.o: src/execution_engine/execute_table_operations.cpp.o
+.PHONY : src/execution_engine/execute_table_operations.o
+
+# target to build an object file
+src/execution_engine/execute_table_operations.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o
+.PHONY : src/execution_engine/execute_table_operations.cpp.o
+
+src/execution_engine/execute_table_operations.i: src/execution_engine/execute_table_operations.cpp.i
+.PHONY : src/execution_engine/execute_table_operations.i
+
+# target to preprocess a source file
+src/execution_engine/execute_table_operations.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.i
+.PHONY : src/execution_engine/execute_table_operations.cpp.i
+
+src/execution_engine/execute_table_operations.s: src/execution_engine/execute_table_operations.cpp.s
+.PHONY : src/execution_engine/execute_table_operations.s
+
+# target to generate assembly for a file
+src/execution_engine/execute_table_operations.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.s
+.PHONY : src/execution_engine/execute_table_operations.cpp.s
+
+src/execution_engine/execute_update.o: src/execution_engine/execute_update.cpp.o
+.PHONY : src/execution_engine/execute_update.o
+
+# target to build an object file
+src/execution_engine/execute_update.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o
+.PHONY : src/execution_engine/execute_update.cpp.o
+
+src/execution_engine/execute_update.i: src/execution_engine/execute_update.cpp.i
+.PHONY : src/execution_engine/execute_update.i
+
+# target to preprocess a source file
+src/execution_engine/execute_update.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.i
+.PHONY : src/execution_engine/execute_update.cpp.i
+
+src/execution_engine/execute_update.s: src/execution_engine/execute_update.cpp.s
+.PHONY : src/execution_engine/execute_update.s
+
+# target to generate assembly for a file
+src/execution_engine/execute_update.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.s
+.PHONY : src/execution_engine/execute_update.cpp.s
+
+src/execution_engine/executionengine_base.o: src/execution_engine/executionengine_base.cpp.o
+.PHONY : src/execution_engine/executionengine_base.o
+
+# target to build an object file
+src/execution_engine/executionengine_base.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o
+.PHONY : src/execution_engine/executionengine_base.cpp.o
+
+src/execution_engine/executionengine_base.i: src/execution_engine/executionengine_base.cpp.i
+.PHONY : src/execution_engine/executionengine_base.i
+
+# target to preprocess a source file
+src/execution_engine/executionengine_base.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.i
+.PHONY : src/execution_engine/executionengine_base.cpp.i
+
+src/execution_engine/executionengine_base.s: src/execution_engine/executionengine_base.cpp.s
+.PHONY : src/execution_engine/executionengine_base.s
+
+# target to generate assembly for a file
+src/execution_engine/executionengine_base.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.s
+.PHONY : src/execution_engine/executionengine_base.cpp.s
+
+src/execution_engine/expression_evaluation.o: src/execution_engine/expression_evaluation.cpp.o
+.PHONY : src/execution_engine/expression_evaluation.o
+
+# target to build an object file
+src/execution_engine/expression_evaluation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o
+.PHONY : src/execution_engine/expression_evaluation.cpp.o
+
+src/execution_engine/expression_evaluation.i: src/execution_engine/expression_evaluation.cpp.i
+.PHONY : src/execution_engine/expression_evaluation.i
+
+# target to preprocess a source file
+src/execution_engine/expression_evaluation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.i
+.PHONY : src/execution_engine/expression_evaluation.cpp.i
+
+src/execution_engine/expression_evaluation.s: src/execution_engine/expression_evaluation.cpp.s
+.PHONY : src/execution_engine/expression_evaluation.s
+
+# target to generate assembly for a file
+src/execution_engine/expression_evaluation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.s
+.PHONY : src/execution_engine/expression_evaluation.cpp.s
+
+src/execution_engine/helper_methods.o: src/execution_engine/helper_methods.cpp.o
+.PHONY : src/execution_engine/helper_methods.o
+
+# target to build an object file
+src/execution_engine/helper_methods.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o
+.PHONY : src/execution_engine/helper_methods.cpp.o
+
+src/execution_engine/helper_methods.i: src/execution_engine/helper_methods.cpp.i
+.PHONY : src/execution_engine/helper_methods.i
+
+# target to preprocess a source file
+src/execution_engine/helper_methods.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.i
+.PHONY : src/execution_engine/helper_methods.cpp.i
+
+src/execution_engine/helper_methods.s: src/execution_engine/helper_methods.cpp.s
+.PHONY : src/execution_engine/helper_methods.s
+
+# target to generate assembly for a file
+src/execution_engine/helper_methods.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.s
+.PHONY : src/execution_engine/helper_methods.cpp.s
+
+src/execution_engine/pattern_matching.o: src/execution_engine/pattern_matching.cpp.o
+.PHONY : src/execution_engine/pattern_matching.o
+
+# target to build an object file
+src/execution_engine/pattern_matching.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o
+.PHONY : src/execution_engine/pattern_matching.cpp.o
+
+src/execution_engine/pattern_matching.i: src/execution_engine/pattern_matching.cpp.i
+.PHONY : src/execution_engine/pattern_matching.i
+
+# target to preprocess a source file
+src/execution_engine/pattern_matching.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.i
+.PHONY : src/execution_engine/pattern_matching.cpp.i
+
+src/execution_engine/pattern_matching.s: src/execution_engine/pattern_matching.cpp.s
+.PHONY : src/execution_engine/pattern_matching.s
+
+# target to generate assembly for a file
+src/execution_engine/pattern_matching.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.s
+.PHONY : src/execution_engine/pattern_matching.cpp.s
 
 src/fractal_bplus_tree.o: src/fractal_bplus_tree.cpp.o
 .PHONY : src/fractal_bplus_tree.o
@@ -488,6 +728,30 @@ src/shell_executables/completion_engine.s: src/shell_executables/completion_engi
 src/shell_executables/completion_engine.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.s
 .PHONY : src/shell_executables/completion_engine.cpp.s
+
+src/shell_executables/help_system.o: src/shell_executables/help_system.cpp.o
+.PHONY : src/shell_executables/help_system.o
+
+# target to build an object file
+src/shell_executables/help_system.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o
+.PHONY : src/shell_executables/help_system.cpp.o
+
+src/shell_executables/help_system.i: src/shell_executables/help_system.cpp.i
+.PHONY : src/shell_executables/help_system.i
+
+# target to preprocess a source file
+src/shell_executables/help_system.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.i
+.PHONY : src/shell_executables/help_system.cpp.i
+
+src/shell_executables/help_system.s: src/shell_executables/help_system.cpp.s
+.PHONY : src/shell_executables/help_system.s
+
+# target to generate assembly for a file
+src/shell_executables/help_system.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.s
+.PHONY : src/shell_executables/help_system.cpp.s
 
 src/shell_executables/hisory_manager.o: src/shell_executables/hisory_manager.cpp.o
 .PHONY : src/shell_executables/hisory_manager.o
@@ -708,9 +972,39 @@ help:
 	@echo "... src/diskstorage.o"
 	@echo "... src/diskstorage.i"
 	@echo "... src/diskstorage.s"
-	@echo "... src/executionengine.o"
-	@echo "... src/executionengine.i"
-	@echo "... src/executionengine.s"
+	@echo "... src/execution_engine/constraint_validation.o"
+	@echo "... src/execution_engine/constraint_validation.i"
+	@echo "... src/execution_engine/constraint_validation.s"
+	@echo "... src/execution_engine/execute_database_operations.o"
+	@echo "... src/execution_engine/execute_database_operations.i"
+	@echo "... src/execution_engine/execute_database_operations.s"
+	@echo "... src/execution_engine/execute_delete.o"
+	@echo "... src/execution_engine/execute_delete.i"
+	@echo "... src/execution_engine/execute_delete.s"
+	@echo "... src/execution_engine/execute_insert.o"
+	@echo "... src/execution_engine/execute_insert.i"
+	@echo "... src/execution_engine/execute_insert.s"
+	@echo "... src/execution_engine/execute_select.o"
+	@echo "... src/execution_engine/execute_select.i"
+	@echo "... src/execution_engine/execute_select.s"
+	@echo "... src/execution_engine/execute_table_operations.o"
+	@echo "... src/execution_engine/execute_table_operations.i"
+	@echo "... src/execution_engine/execute_table_operations.s"
+	@echo "... src/execution_engine/execute_update.o"
+	@echo "... src/execution_engine/execute_update.i"
+	@echo "... src/execution_engine/execute_update.s"
+	@echo "... src/execution_engine/executionengine_base.o"
+	@echo "... src/execution_engine/executionengine_base.i"
+	@echo "... src/execution_engine/executionengine_base.s"
+	@echo "... src/execution_engine/expression_evaluation.o"
+	@echo "... src/execution_engine/expression_evaluation.i"
+	@echo "... src/execution_engine/expression_evaluation.s"
+	@echo "... src/execution_engine/helper_methods.o"
+	@echo "... src/execution_engine/helper_methods.i"
+	@echo "... src/execution_engine/helper_methods.s"
+	@echo "... src/execution_engine/pattern_matching.o"
+	@echo "... src/execution_engine/pattern_matching.i"
+	@echo "... src/execution_engine/pattern_matching.s"
 	@echo "... src/fractal_bplus_tree.o"
 	@echo "... src/fractal_bplus_tree.i"
 	@echo "... src/fractal_bplus_tree.s"
@@ -735,6 +1029,9 @@ help:
 	@echo "... src/shell_executables/completion_engine.o"
 	@echo "... src/shell_executables/completion_engine.i"
 	@echo "... src/shell_executables/completion_engine.s"
+	@echo "... src/shell_executables/help_system.o"
+	@echo "... src/shell_executables/help_system.i"
+	@echo "... src/shell_executables/help_system.s"
 	@echo "... src/shell_executables/hisory_manager.o"
 	@echo "... src/shell_executables/hisory_manager.i"
 	@echo "... src/shell_executables/hisory_manager.s"

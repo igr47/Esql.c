@@ -1,6 +1,7 @@
 #include "help_system.h"
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 // ANSI color codes
 #define COLOR_RESET   "\033[0m"
