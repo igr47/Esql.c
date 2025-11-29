@@ -162,6 +162,7 @@ private:
 
     int prompt_row_ = 0;  // Current prompt row position
     int prompt_col_ = 1;  // Current prompt column position
+    int previous_render_lines_ = 1;   // Track previous render lines for proper clearing
 
     // State
     std::string current_db_;
