@@ -86,7 +86,55 @@ namespace colors {
     static constexpr const char* LAVENDER = "\033[38;5;183m";
     static constexpr const char* MINT = "\033[38;5;85m";
     static constexpr const char* CORAL = "\033[38;5;209m";
-    static constexpr const char* GOLD = "\033[38;5;220m";         // Gold
+    static constexpr const char* GOLD = "\033[38;5;220m"; 
+    
+    static constexpr const char* DIM = "\033[2m";
+    static constexpr const char* ITALIC = "\033[3m";
+    static constexpr const char* UNDERLINE = "\033[4m";
+
+    static constexpr const char* BRIGHT_GREEN = "\033[92m";
+    static constexpr const char* BRIGHT_YELLOW = "\033[93m";
+    static constexpr const char* BRIGHT_BLUE = "\033[94m";
+    static constexpr const char* BRIGHT_MAGENTA = "\033[95m";
+    static constexpr const char* BRIGHT_CYAN = "\033[96m";
+    static constexpr const char* BRIGHT_WHITE = "\033[97m";
+
+        // Professional gradient palettes
+    static constexpr const char* GRADIENT_BLUE_1 = "\033[38;5;39m";
+    static constexpr const char* GRADIENT_BLUE_2 = "\033[38;5;45m";
+    static constexpr const char* GRADIENT_BLUE_3 = "\033[38;5;51m";
+    static constexpr const char* GRADIENT_BLUE_4 = "\033[38;5;87m";
+
+    static constexpr const char* GRADIENT_PURPLE_1 = "\033[38;5;99m";
+    static constexpr const char* GRADIENT_PURPLE_2 = "\033[38;5;105m";
+    static constexpr const char* GRADIENT_PURPLE_3 = "\033[38;5;111m";
+    static constexpr const char* GRADIENT_PURPLE_4 = "\033[38;5;117m";
+    static constexpr const char* GRADIENT_CYAN_1 = "\033[38;5;43m";
+    static constexpr const char* GRADIENT_CYAN_2 = "\033[38;5;49m";
+    static constexpr const char* GRADIENT_CYAN_3 = "\033[38;5;50m";
+    static constexpr const char* GRADIENT_CYAN_4 = "\033[38;5;51m";
+
+    static constexpr const char* GRADIENT_GREEN_1 = "\033[38;5;46m";
+    static constexpr const char* GRADIENT_GREEN_2 = "\033[38;5;47m";
+    static constexpr const char* GRADIENT_GREEN_3 = "\033[38;5;48m";
+    static constexpr const char* GRADIENT_GREEN_4 = "\033[38;5;49m";
+    static constexpr const char* GRADIENT_ORANGE_1 = "\033[38;5;202m";
+    static constexpr const char* GRADIENT_ORANGE_2 = "\033[38;5;208m";
+    static constexpr const char* GRADIENT_ORANGE_3 = "\033[38;5;214m";
+    static constexpr const char* GRADIENT_ORANGE_4 = "\033[38;5;220m";
+
+    static constexpr const char* GRADIENT_MAGENTA_1 = "\033[38;5;127m";
+    static constexpr const char* GRADIENT_MAGENTA_2 = "\033[38;5;129m";
+    static constexpr const char* GRADIENT_MAGENTA_3 = "\033[38;5;165m";
+    static constexpr const char* GRADIENT_MAGENTA_4 = "\033[38;5;201m";
+
+        // Premium accent colors
+    static constexpr const char* PREMIUM_GOLD = "\033[38;5;220m";
+    static constexpr const char* PREMIUM_SILVER = "\033[38;5;255m";
+    static constexpr const char* PREMIUM_EMERALD = "\033[38;5;46m";
+    static constexpr const char* PREMIUM_SAPPHIRE = "\033[38;5;27m";
+    static constexpr const char* PREMIUM_RUBY = "\033[38;5;196m";
+
 }
 
 } // namespace esql

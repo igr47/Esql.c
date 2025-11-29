@@ -16,7 +16,7 @@
 #endif
 
 ModernShell::ModernShell(Database& db) 
-    : db_(db), current_db_("default"), completion_engine_(db), autosuggestion_manager_(history_)  {
+    : db_(db), current_db_("default"), completion_engine_(db), autosuggestion_manager_(history_), gradient_system_()  {
     
     // Initialize terminal
     terminal_.enable_raw_mode();
@@ -224,46 +224,6 @@ void ModernShell::scroll_input_area(int lines_to_scroll) {
 /*
  * Methods to ensure that when auto suggetion  spans multiple lines the lines beyond the current input are clered well so as to avoid displaying them even when the suggestion becomes small
 */
-/*int ModernShell::calculate_rendered_lines(const std::string& input, const std::string& prompt) {
-    if (input.empty()) return 1;
-
-    // Calculate prompt width without ANSI codes
-    std::string clean_prompt = esql::UTF8Processor::strip_ansi(prompt);
-    int prompt_width = esql::UTF8Processor::display_width(clean_prompt);
-
-    // Calculate total display width including autosuggestion
-    std::string display_text = input;
-    if (current_suggestion_.active && input == current_suggestion_.prefix) {
-        display_text += current_suggestion_.suggestion.substr(current_suggestion_.display_start);
-    }
-
-    int display_width = esql::UTF8Processor::display_width(display_text);
-
-    // First line available width (accounting for prompt)
-    int first_line_width = terminal_width_ - prompt_width;
-    if (first_line_width < 1) first_line_width = 1;
-
-    // Continuation line width (full terminal width for wrapped content)
-    int continuation_width = terminal_width_;
-
-    // Calculate total lines needed
-    int lines = 1;
-    int remaining_width = display_width;
-
-    if (remaining_width > first_line_width) {
-        remaining_width -= first_line_width;
-        lines++;
-
-        // Calculate additional continuation lines
-        while (remaining_width > continuation_width) {
-            remaining_width -= continuation_width;
-            lines++;
-        }
-    }
-
-    return lines;
-}*/
-
 int ModernShell::calculate_rendered_lines(const std::string& input, const std::string& prompt) {
     if (input.empty()) return 1;
 
@@ -462,125 +422,6 @@ void ModernShell::update_screen() {
     last_cursor_pos_ = cursor_pos_;
     current_prompt_ = current_prompt;
 }
-
-/*void ModernShell::update_screen() {
-        // If in multiline mode, we need special handling for display
-    if (in_multiline_mode_ && !multiline_buffer_.empty()) {
-        // For multiline mode, we need to display all accumulated lines
-        move_to_prompt_position();
-        
-        std::string current_prompt = build_prompt();
-        std::cout << "\033[K" << current_prompt;
-        
-        // Display all previous multiline buffers
-        for (size_t i = 0; i < multiline_buffer_.size(); ++i) {
-            std::string colored_line = highlighter_.highlight(multiline_buffer_[i]);
-            //std::cout << colored_line << "\n";
-            std::cout << colored_line << "\n\033[K";  //Clear each line after content
-
-                        // Print continuation prefix
-            if (use_colors_) {
-                std::cout << esql::colors::GRAY << " -> " << esql::colors::RESET;
-            } else {
-                std::cout << " -> ";
-            }
-        }
-
-        // Display current input with highlighting
-        std::string colored_input = highlighter_.highlight(current_input_);
-        //std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
-        std::cout << colored_input << "\033[K";  // Clear to end of line
-        std::cout << colored_input;
-
-        // Clear any remaining characters from previous input
-        if (last_rendered_input_.length() > current_input_.length()) {
-            int chars_to_clear = last_rendered_input_.length() - current_input_.length();
-            std::cout << std::string(chars_to_clear, ' ') << "\033[K";;
-        }
-
-        // Position cursor correctly
-        int cursor_screen_pos = esql::UTF8Processor::display_width(
-            esql::UTF8Processor::strip_ansi(" -> ")) +  // Continuation prefix
-            esql::UTF8Processor::display_width(
-                esql::UTF8Processor::strip_ansi(current_input_.substr(0, cursor_pos_)));
-
-        // Calculate which row we're on (prompt row + number of multiline buffers)
-        int current_row = prompt_row_ + static_cast<int>(multiline_buffer_.size());
-        std::cout << "\033[" << current_row << ";" << (prompt_col_ + cursor_screen_pos) << "H";
-
-        std::cout.flush();
-
-        // Update last rendered state
-        last_rendered_input_ = current_input_;
-        last_cursor_pos_ = cursor_pos_;
-        current_prompt_ = current_prompt;
-        return;
-    }
-    // Move to where the prompt is currently located
-    move_to_prompt_position();
-    
-    std::string current_prompt = build_prompt();
-    //std::string colored_input = highlighter_.highlight(current_input_);
-    std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
-
-    // Calculate how many lines the previous render occupied
-    int previous_lines = calculate_rendered_lines(last_rendered_input_, current_prompt_);
-    int current_lines = calculate_rendered_lines(current_input_, current_prompt);
-
-       // Clear ALL lines that might have been used previously
-    for (int i = 0; i < previous_lines; i++) {
-        if (i > 0) {
-            // Move to continuation line
-            std::cout << "\033[" << (prompt_row_ + i) << ";1H";
-        }
-        // Clear the entire line
-        std::cout << "\033[K";
-        
-    }
-
-        // Move back to prompt position
-    move_to_prompt_position();
-    
-    // Clear from prompt position to end of line
-    std::cout << "\033[K" << current_prompt;
-    
-    // Output colored input
-    std::cout << colored_input << "\033[K";
-    
-    // Clear any remaining characters from previous input
-    size_t current_display_length = esql::UTF8Processor::display_width(current_input_);
-    if (current_suggestion_.active && current_input_ == current_suggestion_.prefix) {
-        current_display_length +=  esql::UTF8Processor::display_width(current_suggestion_.suggestion.substr(current_suggestion_.display_start));
-    }
-
-    size_t last_display_length = esql::UTF8Processor::display_width(last_rendered_input_);
-    if (current_suggestion_.active && last_rendered_input_ == current_suggestion_.prefix) {
-        last_display_length += esql::UTF8Processor::display_width(current_suggestion_.suggestion.substr(current_suggestion_.display_start));
-    }
-    
-    if (last_display_length > current_display_length) {
-        int chars_to_clear = last_display_length - current_display_length;
-        std::cout << std::string(chars_to_clear, ' ') << "\033[K";
-     }
-
-    // Position cursor correctly within the input
-    int cursor_screen_pos = esql::UTF8Processor::display_width(
-        esql::UTF8Processor::strip_ansi(current_prompt)) +
-        esql::UTF8Processor::display_width(
-            esql::UTF8Processor::strip_ansi(current_input_.substr(0, cursor_pos_)));
-
-    // Move cursor to correct position relative to prompt start
-    std::cout << "\033[" << prompt_row_ << ";" << (prompt_col_ + cursor_screen_pos) << "H";
-
-    std::cout.flush();
-
-    // Update last rendered state
-    last_rendered_input_ = current_input_;
-    last_cursor_pos_ = cursor_pos_;
-    current_prompt_ = current_prompt;
-}*/
-
-
 
 void ModernShell::refresh_display(bool force_redraw) {
     ensure_input_space();
@@ -829,74 +670,6 @@ void ModernShell::clear_autosuggestion() {
     current_suggestion_.prefix.clear();
 }
 
-/*std::string ModernShell::render_with_spell_check(const std::string& input) {
-    if (!use_colors_ || input.empty()) {
-        return highlighter_.highlight(input);
-    }
-
-    auto misspellings = spell_checker_.check_spelling(input);
-    if (misspellings.empty()) {
-        return highlighter_.highlight(input);
-    }
-
-    // Apply syntax highlighting first
-    std::string highlighted = highlighter_.highlight(input);
-
-    // If no misspellings found after highlighting, return early
-    if (misspellings.empty()) {
-        return highlighted;
-    }
-
-    // Apply spell check highlighting on top of syntax highlighting
-    std::string result;
-    size_t last_pos = 0;
-
-    for (const auto& [start, end] : misspellings) {
-        // Add text before misspelling
-        result += highlighted.substr(last_pos, start - last_pos);
-
-        // Add misspelled word with red color
-        std::string misspelled_word = input.substr(start, end - start);
-        result += esql::colors::BRIGHT_RED + misspelled_word + esql::colors::RESET;
-
-        last_pos = end;
-    }
-
-    // Add remaining text
-    if (last_pos < highlighted.length()) {
-        result += highlighted.substr(last_pos);
-    }
-
-    return result;
-}*/
-
-/*std::string ModernShell::render_with_spell_check(const std::string& input) {
-    if (!use_colors_ || input.empty()) {
-        return highlighter_.highlight(input);
-    }
-
-    auto misspellings = spell_checker_.check_spelling(input);
-    if (misspellings.empty()) {
-        return highlighter_.highlight(input);
-    }
-
-    std::string result = highlighter_.highlight(input);
-
-    // Use a simple bright red color for misspelled words
-    for (auto it = misspellings.rbegin(); it != misspellings.rend(); ++it) {
-        size_t start = it->first;
-        size_t end = it->second;
-
-        std::string before = result.substr(0, start);
-        std::string after = result.substr(end);
-        std::string misspelled_word = input.substr(start, end - start);
-        std::string colored_word = esql::colors::BRIGHT_RED + misspelled_word + esql::colors::RESET; // Bright red
-
-        result = before + colored_word + after;
-    }
-
-    return result;
-}*/
 
 std::string ModernShell::render_with_spell_check(const std::string& input) {
     if (!use_colors_ || input.empty()) {
@@ -1221,7 +994,286 @@ void ModernShell::execute_command(const std::string& command) {
     //ensure_input_space();
 }
 
+ModernShell::GradientSystem::GradientSystem() {
+    presets[GradientType::BLUE_OCEAN] = {
+        {esql::colors::GRADIENT_BLUE_1, esql::colors::GRADIENT_BLUE_2, esql::colors::GRADIENT_BLUE_3, esql::colors::GRADIENT_BLUE_4},
+        "Blue Ocean"
+    };
+
+    presets[GradientType::PURPLE_DAWN] = {
+        {esql::colors::GRADIENT_PURPLE_1, esql::colors::GRADIENT_PURPLE_2, esql::colors::GRADIENT_PURPLE_3, esql::colors::GRADIENT_PURPLE_4},
+        "Purple Dawn"
+    };
+    presets[GradientType::CYAN_AURORA] = {
+        {esql::colors::GRADIENT_CYAN_1, esql::colors::GRADIENT_CYAN_2, esql::colors::GRADIENT_CYAN_3, esql::colors::GRADIENT_CYAN_4},
+        "Cyan Aurora"
+    };
+
+    presets[GradientType::GREEN_FOREST] = {
+        {esql::colors::GRADIENT_GREEN_1, esql::colors::GRADIENT_GREEN_2, esql::colors::GRADIENT_GREEN_3, esql::colors::GRADIENT_GREEN_4},
+        "Green Forest"
+    };
+
+    presets[GradientType::ORANGE_SUNSET] = {
+        {esql::colors::GRADIENT_ORANGE_1, esql::colors::GRADIENT_ORANGE_2, esql::colors::GRADIENT_ORANGE_3, esql::colors::GRADIENT_ORANGE_4},
+        "Orange Sunset"
+    };
+
+    presets[GradientType::MAGENTA_NEBULA] = {
+        {esql::colors::GRADIENT_MAGENTA_1, esql::colors::GRADIENT_MAGENTA_2, esql::colors::GRADIENT_MAGENTA_3, esql::colors::GRADIENT_MAGENTA_4},
+        "Magenta Nebula"
+    };
+
+    presets[GradientType::PREMIUM_GOLD] = {
+        {esql::colors::GRADIENT_ORANGE_1, esql::colors::PREMIUM_GOLD, esql::colors::BRIGHT_YELLOW, esql::colors::PREMIUM_GOLD},
+        "Premium Gold"
+    };
+}
+
+const ModernShell::GradientSystem::GradientPreset& ModernShell::GradientSystem::get_preset(GradientType type) const {
+    auto it = presets.find(type);
+    if (it != presets.end()) {
+        return it->second;
+    }
+    // Fallback to blue ocean
+    return presets.at(GradientType::BLUE_OCEAN);
+}
+
+std::string ModernShell::GradientSystem::apply_gradient(const std::string& text, GradientType type, bool smooth) const {
+    const auto& preset = get_preset(type);
+    if (text.empty() || preset.colors.empty()) {
+        return text;
+    }
+
+    std::string result;
+    const auto& colors = preset.colors;
+    size_t color_count = colors.size();
+    if (smooth) {
+        // Smooth gradient - interpolate between colors
+        for (size_t i = 0; i < text.length(); ++i) {
+            double ratio = static_cast<double>(i) / std::max(1.0, static_cast<double>(text.length() - 1));
+            size_t color_index = static_cast<size_t>(ratio * (color_count - 1));
+            result += std::string(colors[color_index]) + text[i];
+        }
+    } else {
+        // Segmented gradient
+        size_t segment_length = std::max(size_t(1), text.length() / color_count);
+        for (size_t i = 0; i < text.length(); ++i) {
+            size_t color_index = (i / segment_length) % color_count;
+                       result += std::string(colors[color_index]) + text[i];
+        }
+    }
+
+    result += esql::colors::RESET;
+    return result;
+}
+
+std::string ModernShell::GradientSystem::apply_vertical_gradient(const std::vector<std::string>& lines, GradientType type) const {
+    const auto& preset = get_preset(type);
+    if (lines.empty() || preset.colors.empty()) {
+        return "";
+    }
+
+    std::string result;
+    const auto& colors = preset.colors;
+    size_t color_count = colors.size();
+
+    for (size_t line_idx = 0; line_idx < lines.size(); ++line_idx) {
+        double ratio = static_cast<double>(line_idx) / std::max(1.0, static_cast<double>(lines.size() - 1));
+        size_t color_index = static_cast<size_t>(ratio * (color_count - 1));
+        result += std::string(colors[color_index]) + lines[line_idx] + esql::colors::RESET + "\n";
+    }
+
+    return result;
+}
+
+// Helper gradient methods
+std::string ModernShell::apply_text_gradient(const std::string& text, const std::vector<const char*>& colors, bool smooth) const {
+    if (colors.empty() || text.empty()) {
+        return text;
+    }
+
+    std::string result;
+    size_t color_count = colors.size();
+
+    if (smooth) {
+        for (size_t i = 0; i < text.length(); ++i) {
+            double ratio = static_cast<double>(i) / std::max(1.0, static_cast<double>(text.length() - 1));
+            size_t color_index = static_cast<size_t>(ratio * (color_count - 1));
+            result += std::string(colors[color_index]) + text[i];
+        }
+    } else {
+        size_t segment_length = std::max(size_t(1), text.length() / color_count);
+        for (size_t i = 0; i < text.length(); ++i) {
+            size_t color_index = (i / segment_length) % color_count;
+            result += std::string(colors[color_index]) + text[i];
+        }
+    }
+
+    result += esql::colors::RESET;
+    return result;
+}
+
+std::string ModernShell::apply_character_gradient(const std::string& text, const std::vector<const char*>& colors) const {
+    if (colors.empty() || text.empty()) {
+        return text;
+    }
+
+    std::string result;
+    size_t color_count = colors.size();
+
+    for (size_t i = 0; i < text.length(); ++i) {
+        size_t color_index = i % color_count;
+        result += std::string(colors[color_index]) + text[i];
+    }
+
+    result += esql::colors::RESET;
+    return result;
+}
+
 void ModernShell::print_banner() {
+    terminal_.clear_screen();
+
+    if (use_colors_) {
+        // Position cursor at top
+        std::cout << "\033[1;1H";
+
+        // Create Phoenix animator
+        PhoenixAnimator phoenix_animator(terminal_width_);
+
+        // ESQL logo (6 lines) - Apply gradient to logo only
+        std::vector<std::string> esql_logo = {
+            "   ███████╗███████╗ ██████╗ ██╗   ",
+            "   ██╔════╝██╔════╝██╔═══██╗██║   ",
+            "   █████╗  ███████╗██║   ██║██║   ",
+            "   ██╔══╝  ╚════██║██║   ██║██║   ",
+            "   ███████╗███████║╚██████╔╝███████╗",
+            "   ╚══════╝╚══════╝ ╚═════╝ ╚══════╝"
+        };
+
+        // Apply gradient to ESQL logo
+        std::vector<std::string> gradient_logo = esql_logo;
+        for (size_t i = 0; i < gradient_logo.size(); ++i) {
+            gradient_logo[i] = gradient_system_.apply_gradient(
+                gradient_logo[i], 
+                GradientSystem::GradientType::CYAN_AURORA, 
+                false  // Segmented gradient for better readability
+            );
+        }
+
+        int esql_height = esql_logo.size();
+        int phoenix_height = phoenix_animator.get_current_frame().size();
+
+        // Calculate positioning - align bases with 0 free space
+        int phoenix_start_row = 1; // Phoenix starts at row 1
+        int esql_start_row = 1 + (phoenix_height - esql_height); // ESQL starts at row 14 (1 + 13)
+
+        int phoenix_start_col = terminal_width_ - 45;
+        if (phoenix_start_col < 40) phoenix_start_col = 40;
+
+        // Draw Phoenix art (19 lines starting from row 1) - NO GRADIENT (keep original fire effect)
+        for (int i = 0; i < phoenix_height; ++i) {
+            std::cout << "\033[" << (phoenix_start_row + i) << ";" << phoenix_start_col << "H";
+            std::string colored_line = phoenix_animator.apply_gradient(
+                phoenix_animator.get_current_frame()[i], i * 2);
+            std::cout << colored_line;
+        }
+
+        // Draw ESQL logo with gradient (6 lines starting from row 14)
+        for (int i = 0; i < esql_height; ++i) {
+            std::cout << "\033[" << (esql_start_row + i) << ";1H";
+            std::cout << gradient_logo[i]; // Use gradient version
+        }
+
+        // Header box with gradient
+        int header_start_line = phoenix_start_row + phoenix_height + 1; // 1 + 19 + 1 = 21
+        std::cout << "\033[" << header_start_line << ";1H";
+
+        // Apply gradient to header text only (not the box borders)
+        std::string title_line1 = "    E N H A N C E D   ES Q L   S H E L L  ";
+        std::string title_line2 = "        H4CK3R  STYL3  V3RSI0N         ";
+        
+        std::string gradient_title1 = gradient_system_.apply_gradient(
+            title_line1, GradientSystem::GradientType::PURPLE_DAWN, true);
+        std::string gradient_title2 = gradient_system_.apply_gradient(
+            title_line2, GradientSystem::GradientType::ORANGE_SUNSET, true);
+
+        std::cout << esql::colors::CYAN << "╔═══════════════════════════════════════╗\n";
+        std::cout << "║" << gradient_title1 << esql::colors::CYAN << "║\n";
+        std::cout << "║" << gradient_title2 << esql::colors::CYAN << "║\n";
+        std::cout << "╚═══════════════════════════════════════╝\n" << esql::colors::RESET;
+
+        // Status messages with subtle gradients
+        int status_start_line = header_start_line + 4; // 21 + 4 = 25
+        std::cout << "\033[" << status_start_line << ";1H";
+
+        // Apply subtle gradients to status messages
+        std::vector<std::string> status_messages = {
+            "Type 'help' for commands, 'exit' to quit",
+            "Initializing ESQL Database Matrix...",
+            "Quantum ESQL Processor: ONLINE",
+            "Syntax Highlighting: ACTIVATED"
+        };
+
+        for (size_t i = 0; i < status_messages.size(); ++i) {
+            std::cout << esql::colors::RED << "[*] ";
+            std::string gradient_msg = gradient_system_.apply_gradient(
+                status_messages[i], 
+                GradientSystem::GradientType::BLUE_OCEAN, 
+                true
+            );
+            std::cout << gradient_msg << esql::colors::RESET << "\n";
+        }
+
+        std::cout.flush();
+
+        // STEP 1: Phoenix fire effect comes to life for 3 seconds after "Syntax Highlighting"
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::thread phoenix_thread([&phoenix_animator, phoenix_start_row, phoenix_start_col]() {
+            phoenix_animator.animate_fire_effect(3000);
+        });
+        phoenix_thread.join();
+
+        // STEP 2: First line animation - NO GRADIENT (keep original animation)
+        int anim1_line = status_start_line + 4;
+        std::cout << "\033[" << anim1_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
+        std::cout.flush();
+
+        ConsoleAnimator animator1(terminal_width_);
+        animator1.animateText("Forged from the fires of performance for the warriors of the digital age", 4000);
+
+        // STEP 3: Second line animation - NO GRADIENT (keep original wave animation)
+        int anim2_line = anim1_line + 1;
+        std::cout << "\033[" << anim2_line << ";1H";
+        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
+        std::cout.flush();
+
+        WaveAnimator animator2(terminal_width_);
+        animator2.waveAnimation("accessing the esql framework console", 2);
+
+        // STEP 4: Final connection line with subtle gradient
+        int conn_line = anim2_line + 1;
+        std::cout << "\033[" << conn_line << ";1H";
+        
+        std::string connection_text = "Connected to: " + current_db_ + " ●";
+        std::string gradient_connection = gradient_system_.apply_gradient(
+            connection_text, 
+            GradientSystem::GradientType::GREEN_FOREST, 
+            true
+        );
+        
+        std::cout << esql::colors::MAGENTA << "[+] " << gradient_connection 
+                  << esql::colors::RESET << "\n\n";
+
+    } else {
+        // Fallback for no colors
+        std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
+        std::cout << "Connected to: " << current_db_ << "\n\n";
+    }
+}
+
+/*void ModernShell::print_banner() {
     terminal_.clear_screen();
 
     if (use_colors_) {
@@ -1332,7 +1384,7 @@ void ModernShell::print_banner() {
         std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
         std::cout << "Connected to: " << current_db_ << "\n\n";
     }
-}
+}*/
 
 void ModernShell::print_prompt() {
     std::cout << build_prompt();
@@ -1343,6 +1395,30 @@ void ModernShell::clear_screen() {
 }
 
 std::string ModernShell::build_prompt() const {
+    std::string time_str = get_current_time();
+    std::string prompt;
+
+    if (use_colors_) {
+        // Apply gradient to time portion only
+        std::string gradient_time = gradient_system_.apply_gradient(
+            "[" + time_str + "]",
+            GradientSystem::GradientType::BLUE_OCEAN,
+            false
+        );
+
+        prompt = gradient_time + " " +
+                 std::string(esql::colors::GREEN) + "• " +
+                 esql::colors::RESET +
+                 std::string(esql::colors::GRAY) + current_db_ +
+                 esql::colors::RESET + "> ";
+    } else {
+        prompt = "[" + time_str + "] • " + current_db_ + "> ";
+    }
+
+    return prompt;
+}
+
+/*std::string ModernShell::build_prompt() const {
     std::string time_str = get_current_time();
     std::string prompt;
     
@@ -1358,7 +1434,7 @@ std::string ModernShell::build_prompt() const {
     }
     
     return prompt;
-}
+}*/
 
 std::string ModernShell::get_current_time() const {
     auto now = std::chrono::system_clock::now();
