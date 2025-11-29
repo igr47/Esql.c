@@ -224,7 +224,7 @@ void ModernShell::scroll_input_area(int lines_to_scroll) {
 /*
  * Methods to ensure that when auto suggetion  spans multiple lines the lines beyond the current input are clered well so as to avoid displaying them even when the suggestion becomes small
 */
-int ModernShell::calculate_rendered_lines(const std::string& input, const std::string& prompt) {
+/*int ModernShell::calculate_rendered_lines(const std::string& input, const std::string& prompt) {
     if (input.empty()) return 1;
 
     // Calculate prompt width without ANSI codes
@@ -262,6 +262,49 @@ int ModernShell::calculate_rendered_lines(const std::string& input, const std::s
     }
 
     return lines;
+}*/
+
+int ModernShell::calculate_rendered_lines(const std::string& input, const std::string& prompt) {
+    if (input.empty()) return 1;
+
+    // Calculate prompt width without ANSI codes
+    std::string clean_prompt = esql::UTF8Processor::strip_ansi(prompt);
+    int prompt_width = esql::UTF8Processor::display_width(clean_prompt);
+
+    // Calculate total display width including autosuggestion
+    std::string display_text = input;
+
+    // Only include suggestion if it's active and matches current input
+    if (current_suggestion_.active && input == current_suggestion_.prefix) {
+        display_text += current_suggestion_.suggestion.substr(current_suggestion_.display_start);
+    }
+
+    int display_width = esql::UTF8Processor::display_width(display_text);
+
+    // First line available width (accounting for prompt)
+    int first_line_width = terminal_width_ - prompt_width;
+    if (first_line_width < 1) first_line_width = 1;
+
+    // Continuation line width (full terminal width for wrapped content)
+    int continuation_width = terminal_width_;
+
+    // Calculate total lines needed
+    int lines = 1;
+    int remaining_width = display_width;
+
+    if (remaining_width > first_line_width) {
+        remaining_width -= first_line_width;
+        lines++;
+
+        // Calculate additional continuation lines
+        while (remaining_width > continuation_width) {
+            remaining_width -= continuation_width;
+            lines++;
+        }
+    }
+
+
+    return lines;
 }
 
 void ModernShell::clear_previous_lines(int previous_lines, int current_lines) {
@@ -281,6 +324,146 @@ void ModernShell::clear_previous_lines(int previous_lines, int current_lines) {
 }
 
 void ModernShell::update_screen() {
+    // If in multiline mode, we need special handling for display
+    if (in_multiline_mode_ && !multiline_buffer_.empty()) {
+        // For multiline mode, we need to display all accumulated lines
+        move_to_prompt_position();
+
+        std::string current_prompt = build_prompt();
+        std::cout << "\033[K" << current_prompt;
+
+        // Display all previous multiline buffers
+        for (size_t i = 0; i < multiline_buffer_.size(); ++i) {
+            std::string colored_line = highlighter_.highlight(multiline_buffer_[i]);
+            std::cout << colored_line << "\n\033[K";
+
+            // Print continuation prefix for the next buffer line
+            if (i < multiline_buffer_.size() - 1) {
+                if (use_colors_) {
+                    std::cout << esql::colors::GRAY << " -> " << esql::colors::RESET;
+                } else {
+                    std::cout << " -> ";
+                }
+            }
+        }
+
+        // Print continuation prefix for current input line
+        if (use_colors_) {
+            std::cout << esql::colors::GRAY << " -> " << esql::colors::RESET;
+        } else {
+            std::cout << " -> ";
+        }
+
+        // Display current input with highlighting - no suggestions in multiline mode
+        std::string colored_input = highlighter_.highlight(current_input_);
+        std::cout << colored_input << "\033[K";
+
+        // Clear any remaining characters from previous input
+        if (last_rendered_input_.length() > current_input_.length()) {
+            int chars_to_clear = last_rendered_input_.length() - current_input_.length();
+            std::cout << std::string(chars_to_clear, ' ') << "\033[K";
+        }
+
+        // Position cursor correctly
+        int cursor_screen_pos = esql::UTF8Processor::display_width(
+            esql::UTF8Processor::strip_ansi(" -> ")) +
+            esql::UTF8Processor::display_width(
+                esql::UTF8Processor::strip_ansi(current_input_.substr(0, cursor_pos_)));
+
+        // Calculate which row we're on (prompt row + number of multiline buffers)
+        int current_row = prompt_row_ + static_cast<int>(multiline_buffer_.size());
+        std::cout << "\033[" << current_row << ";" << (prompt_col_ + cursor_screen_pos) << "H";
+
+        std::cout.flush();
+
+        // Update tracked render lines for multiline mode
+        previous_render_lines_ = static_cast<int>(multiline_buffer_.size()) + 1;
+
+        // Update last rendered state
+        last_rendered_input_ = current_input_;
+        last_cursor_pos_ = cursor_pos_;
+        current_prompt_ = current_prompt;
+        return;
+    }
+
+    // NORMAL MODE
+    move_to_prompt_position();
+
+    std::string current_prompt = build_prompt();
+    std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
+
+    // Calculate how many lines the CURRENT render will use
+    int current_lines = calculate_rendered_lines(current_input_, current_prompt);
+
+    // Use tracked previous render lines instead of recalculating
+    int previous_lines = previous_render_lines_;
+
+    // Clear ALL previous lines, even if current uses fewer
+    for (int i = 0; i < previous_lines; i++) {
+        if (i > 0) {
+            // Move to continuation line
+            std::cout << "\033[" << (prompt_row_ + i) << ";1H";
+        }
+        // Clear the entire line
+        std::cout << "\033[K";
+    }
+
+    // If we cleared more lines than we're using now, clear any extra lines
+    if (previous_lines > current_lines) {
+        for (int i = current_lines; i < previous_lines; i++) {
+            std::cout << "\033[" << (prompt_row_ + i) << ";1H";
+            std::cout << "\033[K";
+        }
+    }
+
+    // Move back to prompt position
+    move_to_prompt_position();
+
+    // Clear from prompt position to end of line
+    std::cout << "\033[K" << current_prompt;
+
+    // Output colored input
+    std::cout << colored_input << "\033[K";
+
+    // Clear any remaining characters from previous input
+    int current_display_length = esql::UTF8Processor::display_width(current_input_);
+    if (current_suggestion_.active && current_input_ == current_suggestion_.prefix) {
+        current_display_length += esql::UTF8Processor::display_width(
+            current_suggestion_.suggestion.substr(current_suggestion_.display_start));
+    }
+
+    int last_display_length = esql::UTF8Processor::display_width(last_rendered_input_);
+    if (current_suggestion_.active && last_rendered_input_ == current_suggestion_.prefix) {
+        last_display_length += esql::UTF8Processor::display_width(
+            current_suggestion_.suggestion.substr(current_suggestion_.display_start));
+    }
+
+    if (last_display_length > current_display_length) {
+        int chars_to_clear = last_display_length - current_display_length;
+        std::cout << std::string(chars_to_clear, ' ') << "\033[K";
+    }
+
+    // Position cursor correctly within the input
+    int cursor_screen_pos = esql::UTF8Processor::display_width(
+        esql::UTF8Processor::strip_ansi(current_prompt)) +
+        esql::UTF8Processor::display_width(
+            esql::UTF8Processor::strip_ansi(current_input_.substr(0, cursor_pos_)));
+
+    // Move cursor to correct position relative to prompt start
+    std::cout << "\033[" << prompt_row_ << ";" << (prompt_col_ + cursor_screen_pos) << "H";
+
+    std::cout.flush();
+
+    // Update the tracked previous render lines
+    previous_render_lines_ = current_lines;
+
+    // Update last rendered state
+    last_rendered_input_ = current_input_;
+    last_cursor_pos_ = cursor_pos_;
+    current_prompt_ = current_prompt;
+}
+
+/*void ModernShell::update_screen() {
         // If in multiline mode, we need special handling for display
     if (in_multiline_mode_ && !multiline_buffer_.empty()) {
         // For multiline mode, we need to display all accumulated lines
@@ -292,7 +475,7 @@ void ModernShell::update_screen() {
         // Display all previous multiline buffers
         for (size_t i = 0; i < multiline_buffer_.size(); ++i) {
             std::string colored_line = highlighter_.highlight(multiline_buffer_[i]);
-            std::cout << colored_line << "\n";
+            //std::cout << colored_line << "\n";
             std::cout << colored_line << "\n\033[K";  //Clear each line after content
 
                         // Print continuation prefix
@@ -304,15 +487,15 @@ void ModernShell::update_screen() {
         }
 
         // Display current input with highlighting
-        //istd::string colored_input = highlighter_.highlight(current_input_);
-        std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
+        std::string colored_input = highlighter_.highlight(current_input_);
+        //std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
         std::cout << colored_input << "\033[K";  // Clear to end of line
         std::cout << colored_input;
 
         // Clear any remaining characters from previous input
         if (last_rendered_input_.length() > current_input_.length()) {
             int chars_to_clear = last_rendered_input_.length() - current_input_.length();
-            std::cout << std::string(chars_to_clear, ' ');
+            std::cout << std::string(chars_to_clear, ' ') << "\033[K";;
         }
 
         // Position cursor correctly
@@ -352,10 +535,7 @@ void ModernShell::update_screen() {
         }
         // Clear the entire line
         std::cout << "\033[K";
-        // If this isn't the last line, move to next
-        if (i < previous_lines - 1) {
-            std::cout << "\n";
-        }
+        
     }
 
         // Move back to prompt position
@@ -368,18 +548,18 @@ void ModernShell::update_screen() {
     std::cout << colored_input << "\033[K";
     
     // Clear any remaining characters from previous input
-    size_t current_total_length = current_input_.length();
+    size_t current_display_length = esql::UTF8Processor::display_width(current_input_);
     if (current_suggestion_.active && current_input_ == current_suggestion_.prefix) {
-        current_total_length += current_suggestion_.suggestion.length() - current_suggestion_.display_start;
+        current_display_length +=  esql::UTF8Processor::display_width(current_suggestion_.suggestion.substr(current_suggestion_.display_start));
     }
 
-    size_t last_total_length = last_rendered_input_.length();
+    size_t last_display_length = esql::UTF8Processor::display_width(last_rendered_input_);
     if (current_suggestion_.active && last_rendered_input_ == current_suggestion_.prefix) {
-        last_total_length += current_suggestion_.suggestion.length() - current_suggestion_.display_start;
+        last_display_length += esql::UTF8Processor::display_width(current_suggestion_.suggestion.substr(current_suggestion_.display_start));
     }
     
-    if (last_rendered_input_.length() > current_input_.length()) {
-        int chars_to_clear = last_rendered_input_.length() - current_input_.length();
+    if (last_display_length > current_display_length) {
+        int chars_to_clear = last_display_length - current_display_length;
         std::cout << std::string(chars_to_clear, ' ') << "\033[K";
      }
 
@@ -398,7 +578,7 @@ void ModernShell::update_screen() {
     last_rendered_input_ = current_input_;
     last_cursor_pos_ = cursor_pos_;
     current_prompt_ = current_prompt;
-}
+}*/
 
 
 
@@ -663,10 +843,26 @@ std::string ModernShell::render_with_suggestion(const std::string& input,
         result += esql::colors::GRAY + suggestion_part + esql::colors::RESET;
     }
 
-      result += "\033[K";
-
     return result;
 }
+
+/*std::string ModernShell::render_with_suggestion(const std::string& input,
+                                              const esql::AutoSuggestion& suggestion) {
+    if (!suggestion.active || input != suggestion.prefix) {
+        return highlighter_.highlight(input);
+    }
+
+    // Render input normally, then add suggestion in gray
+    std::string result = highlighter_.highlight(input);
+
+    if (suggestion.display_start < suggestion.suggestion.length()) {
+        std::string suggestion_part = suggestion.suggestion.substr(suggestion.display_start);
+        result += esql::colors::GRAY + suggestion_part + esql::colors::RESET;
+    }
+
+
+    return result;
+}*/
 
 void ModernShell::handle_navigation(esql::KeyCode key) {
     switch (key) {
