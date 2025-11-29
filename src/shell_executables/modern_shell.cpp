@@ -1390,6 +1390,60 @@ std::string ModernShell::build_prompt() const {
     std::string prompt;
 
     if (use_colors_) {
+        // Apply gradient to time and database parts separately, exclude bullet
+        std::string time_part = gradient_system_.apply_gradient(
+            "[" + time_str + "]",
+            GradientSystem::GradientType::BLUE_OCEAN,
+            false
+        );
+
+        std::string db_part = gradient_system_.apply_gradient(
+            current_db_ + ">",
+            GradientSystem::GradientType::CYAN_AURORA,
+            false
+        );
+
+        prompt = time_part + " " +
+                 std::string(esql::colors::GREEN) + "•" + esql::colors::RESET + " " +
+                 db_part + " ";
+    } else {
+        prompt = "[" + time_str + "] • " + current_db_ + "> ";
+    }
+
+    return prompt;
+}
+
+/*std::string ModernShell::build_prompt() const {
+    std::string time_str = get_current_time();
+    std::string prompt;
+
+    if (use_colors_) {
+        std::string full_prompt = "[" + time_str + "] • " + current_db_ + "> ";
+
+        // Use a sophisticated two-color gradient
+        std::vector<const char*> professional_colors = {
+            esql::colors::GRADIENT_BLUE_1,
+            esql::colors::GRADIENT_CYAN_1,
+            esql::colors::GRADIENT_PURPLE_1
+        };
+
+        prompt = gradient_system_.apply_gradient(
+            full_prompt,
+            GradientSystem::GradientType::BLUE_OCEAN,
+            true
+        );
+    } else {
+        prompt = "[" + time_str + "] • " + current_db_ + "> ";
+    }
+
+    return prompt;
+}*/
+
+/*std::string ModernShell::build_prompt() const {
+    std::string time_str = get_current_time();
+    std::string prompt;
+
+    if (use_colors_) {
         // Apply gradient to time portion only
         std::string gradient_time = gradient_system_.apply_gradient(
             "[" + time_str + "]",
@@ -1407,7 +1461,7 @@ std::string ModernShell::build_prompt() const {
     }
 
     return prompt;
-}
+}*/
 
 /*std::string ModernShell::build_prompt() const {
     std::string time_str = get_current_time();
