@@ -1131,6 +1131,7 @@ std::string ModernShell::apply_character_gradient(const std::string& text, const
     return result;
 }
 
+
 void ModernShell::print_banner() {
     terminal_.clear_screen();
 
@@ -1150,16 +1151,6 @@ void ModernShell::print_banner() {
             "   ███████╗███████║╚██████╔╝███████╗",
             "   ╚══════╝╚══════╝ ╚═════╝ ╚══════╝"
         };
-
-        // Apply gradient to ESQL logo
-        std::vector<std::string> gradient_logo = esql_logo;
-        for (size_t i = 0; i < gradient_logo.size(); ++i) {
-            gradient_logo[i] = gradient_system_.apply_gradient(
-                gradient_logo[i], 
-                GradientSystem::GradientType::CYAN_AURORA, 
-                false  // Segmented gradient for better readability
-            );
-        }
 
         int esql_height = esql_logo.size();
         int phoenix_height = phoenix_animator.get_current_frame().size();
@@ -1182,7 +1173,7 @@ void ModernShell::print_banner() {
         // Draw ESQL logo with gradient (6 lines starting from row 14)
         for (int i = 0; i < esql_height; ++i) {
             std::cout << "\033[" << (esql_start_row + i) << ";1H";
-            std::cout << gradient_logo[i]; // Use gradient version
+            std::cout << esql::colors::GRAY << esql_logo[i] << esql::colors::RESET; // Use gradient version
         }
 
         // Header box with gradient
@@ -1445,6 +1436,43 @@ std::string ModernShell::get_current_time() const {
 }
 
 void ModernShell::show_help() {
+    std::cout << "\n";
+
+    // Apply gradient to help title
+    std::string help_title = "Available commands:";
+    std::string gradient_title = gradient_system_.apply_gradient(
+        help_title, GradientSystem::GradientType::CYAN_AURORA, false);
+    std::cout << gradient_title << "\n";
+
+    const std::vector<std::pair<std::string, std::string>> commands = {
+        {"SELECT", "Query data from tables"},
+        {"INSERT", "Add new records"},
+        {"UPDATE", "Modify existing records"},
+        {"DELETE", "Remove records"},
+        {"CREATE", "Create tables/databases"},
+        {"DROP", "Remove tables/databases"},
+        {"ALTER", "Modify table structure"},
+        {"USE", "Switch databases"},
+        {"SHOW", "Display database info"},
+        {"DESCRIBE", "Show table structure"},
+        {"HELP", "Show this help"},
+        {"EXIT/QUIT", "Quit the shell"},
+        {"CLEAR", "Clear the screen"}
+    };
+
+    for (const auto& [cmd, desc] : commands) {
+        // Apply gradient to command names
+        std::string gradient_cmd = gradient_system_.apply_gradient(
+            cmd, GradientSystem::GradientType::MAGENTA_NEBULA, false);
+
+        std::cout << "  " << gradient_cmd
+                  << (use_colors_ ? esql::colors::GREEN : "") << " - " << desc
+                  << (use_colors_ ? esql::colors::RESET : "") << "\n";
+    }
+    std::cout << "\n";
+}
+
+/*void ModernShell::show_help() {
     std::cout << "\n" << (use_colors_ ? esql::colors::CYAN : "") << "Available commands:" 
               << (use_colors_ ? esql::colors::RESET : "") << "\n";
     
@@ -1470,7 +1498,7 @@ void ModernShell::show_help() {
                   << (use_colors_ ? esql::colors::RESET : "") << "\n";
     }
     std::cout << "\n";
-}
+}*/
 
 void ModernShell::set_current_database(const std::string& db_name) {
     current_db_ = db_name;
@@ -1536,6 +1564,8 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
     std::cout << "|";
     for (size_t i = 0; i < result.columns.size(); ++i) {
         std::cout << (use_colors_ ? esql::colors::MAGENTA : "") << std::left << std::setw(widths[i]) << result.columns[i] << (use_colors_ ? esql::colors::CYAN : "") << "|";
+        //std::string gradient_header = gradient_system_.apply_gradient(result.columns[i],GradientSystem::GradientType::PURPLE_DAWN,false);
+        //std::cout << std::left << std::setw(widths[i]) << gradient_header << (use_colors_ ? esql::colors::CYAN : "") << "|";
     }
 
     std::cout << (use_colors_ ? esql::colors::RESET : "") << "\n";
