@@ -27,6 +27,7 @@ private:
     static const std::unordered_set<std::string> conditionals;
     static const std::unordered_set<std::string> aggregate_functions;
     static const std::unordered_set<std::string> operators;
+    static const std::unordered_set<std::string> helpers;
     
     // Token processing
     void process_word(const std::string& word, std::string& result);

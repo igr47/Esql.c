@@ -81,6 +81,11 @@ namespace colors {
     static constexpr const char* BOLD_GREEN = "\033[1;32m";
     static constexpr const char* BOLD_MAGENTA = "\033[1;35m";
     static constexpr const char* BOLD_RED = "\033[1;31m";
+    static constexpr const char* TEAL = "\033[38;5;43m";
+    static constexpr const char* LAVENDER = "\033[38;5;183m";
+    static constexpr const char* MINT = "\033[38;5;85m";
+    static constexpr const char* CORAL = "\033[38;5;209m";
+    static constexpr const char* GOLD = "\033[38;5;220m";         // Gold
 }
 
 } // namespace esql
