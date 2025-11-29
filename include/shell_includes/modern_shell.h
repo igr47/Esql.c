@@ -77,6 +77,31 @@ private:
             cursor.y = 0;
         }
     };
+
+    class GradientSystem {
+        public:
+            enum class GradientType {
+                BLUE_OCEAN,
+                PURPLE_DAWN,
+                CYAN_AURORA,
+                GREEN_FOREST,
+                ORANGE_SUNSET,
+                MAGENTA_NEBULA,
+                PREMIUM_GOLD
+            };
+
+            struct GradientPreset {
+                std::vector<const char*> colors;
+                std::string name;
+            };
+
+            std::unordered_map<GradientType, GradientPreset> presets;
+
+            GradientSystem();
+            const GradientPreset& get_preset(GradientType type) const;
+            std::string apply_gradient(const std::string& text, GradientType type, bool smooth = true) const;
+            std::string apply_vertical_gradient(const std::vector<std::string>& lines, GradientType type) const;
+    };
     
     // Main loop
     void run_interactive();
@@ -144,6 +169,10 @@ private:
     esql::KeyCode convert_char_to_keycode(char c);
     esql::KeyCode handle_escape_sequence();
     bool handle_possible_resize();
+
+    std::string apply_text_gradient(const std::string& text, const std::vector<const char*>& colors, bool smooth = true) const;
+    std::string apply_character_gradient(const std::string& text, const std::vector<const char*>& colors) const;
+    void print_gradient_banner();
     
     // Core components
     Database& db_;
@@ -154,6 +183,7 @@ private:
     esql::CompletionEngine completion_engine_;
     esql::AutoSuggestionManager autosuggestion_manager_;
     esql::SpellChecker spell_checker_;
+    GradientSystem gradient_system_;
 
     // Autosuggestion state
     esql::AutoSuggestion current_suggestion_;
