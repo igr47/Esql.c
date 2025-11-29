@@ -6,13 +6,17 @@ namespace esql {
 
 // SQL language definitions
 const std::unordered_set<std::string> SyntaxHighlighter::keywords = {
-    "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
+    "SELECT", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
     "DELETE", "CREATE", "TABLE", "DATABASE", "DROP", "ALTER", "ADD", "RENAME",
     "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", 
-    "DATABASES", "BY", "ORDER", "GROUP", "HAVING", "BULK", "ROW", "TABLES", 
+    "DATABASES", "BULK", "ROW", "TABLES", 
     "STRUCTURE", "INDEX", "VIEW", "TRUNCATE", "COMMIT", "ROLLBACK", "BEGIN",
-    "TRANSACTION", "GRANT", "REVOKE", "EXPLAIN", "WITH", "RECURSIVE", "JOIN",
+    "TRANSACTION", "GRANT", "REVOKE", "EXPLAIN","RECURSIVE", "JOIN",
     "LEFT", "RIGHT", "INNER", "OUTER", "CROSS", "NATURAL", "ON", "USING"
+};
+
+const std::unordered_set<std::string> SyntaxHighlighter::helpers = {
+    "FROM","WHERE","ORDER","BY","GROUP","HAVING","DISTINCT","WITH"
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::datatypes = {
@@ -24,18 +28,19 @@ const std::unordered_set<std::string> SyntaxHighlighter::datatypes = {
 const std::unordered_set<std::string> SyntaxHighlighter::constraints = {
     "PRIMARY", "KEY", "FOREIGN", "REFERENCES", "UNIQUE", "CHECK",
     "NOT", "NULL", "DEFAULT", "AUTO_INCREMENT", "IDENTITY",
-    "CONSTRAINT", "CASCADE", "RESTRICT", "SET", "NULL"
+    "CONSTRAINT", "CASCADE", "RESTRICT", "SET", "NULL","GENERATE_DATE",
+    "GENERATE_DATE_TIME","GENERATE_UUID"
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::conditionals = {
     "AND", "OR", "NOT", "IS", "LIKE", "IN", "BETWEEN", "EXISTS",
     "ANY", "ALL", "SOME", "CASE", "WHEN", "THEN", "ELSE", "END",
-    "TRUE", "FALSE", "UNKNOWN", "NULLIF", "COALESCE"
+    "UNKNOWN", "NULLIF", "COALESCE","TRUE","FALSE"
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::aggregate_functions = {
     "COUNT", "SUM", "AVG", "MIN", "MAX", "STDDEV", "VARIANCE",
-    "GROUP_CONCAT", "STRING_AGG", "ARRAY_AGG", "JSON_AGG"
+    "GROUP_CONCAT", "STRING_AGG", "ARRAY_AGG", "JSON_AGG","ASC","DESC"
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::operators = {
@@ -105,7 +110,7 @@ std::string SyntaxHighlighter::highlight(const std::string& input) {
         }
         
         if (state.in_string) {
-            result += apply_color(std::string(1, c), colors::YELLOW);
+            result += apply_color(std::string(1, c), colors::MINT);
             continue;
         }
         
@@ -172,13 +177,16 @@ void SyntaxHighlighter::process_word(const std::string& word, std::string& resul
         result += apply_color(word, colors::BOLD_CYAN);
     }
     else if (conditionals.find(upper_word) != conditionals.end()) {
-        result += apply_color(word, colors::CYAN);
+        result += apply_color(word, colors::TEAL);
     }
     else if (aggregate_functions.find(upper_word) != aggregate_functions.end()) {
         result += apply_color(word, colors::BOLD_GREEN);
     }
     else if (operators.find(upper_word) != operators.end()) {
         result += apply_color(word, colors::GRAY);
+    }
+    else if (helpers.find(upper_word) != helpers.end()) {
+        result += apply_color(word, colors::LAVENDER);
     }
     else {
         // Check if it's a quoted identifier
@@ -187,7 +195,7 @@ void SyntaxHighlighter::process_word(const std::string& word, std::string& resul
             result += apply_color(word, colors::YELLOW);
         } else {
             // Unquoted identifier (table/column name)
-            result += apply_color(word, colors::YELLOW);
+            result += apply_color(word, colors::GOLD);
         }
     }
 }
