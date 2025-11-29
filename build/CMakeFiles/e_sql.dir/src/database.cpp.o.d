@@ -364,4 +364,5 @@ CMakeFiles/e_sql.dir/src/database.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/this_thread_sleep.h \
   /home/igiris/git_projects/Esql.c/include/shell_includes/completion_engine.h \
   /home/igiris/git_projects/Esql.c/include/shell_includes/autosuggestion_manager.h \
-  /home/igiris/git_projects/Esql.c/include/shell_includes/phoenix_animator.h
+  /home/igiris/git_projects/Esql.c/include/shell_includes/phoenix_animator.h \
+  /home/igiris/git_projects/Esql.c/include/shell_includes/spell_checker.h

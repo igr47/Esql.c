@@ -829,21 +829,134 @@ void ModernShell::clear_autosuggestion() {
     current_suggestion_.prefix.clear();
 }
 
-std::string ModernShell::render_with_suggestion(const std::string& input,
-                                              const esql::AutoSuggestion& suggestion) {
-    if (!suggestion.active || input != suggestion.prefix) {
+/*std::string ModernShell::render_with_spell_check(const std::string& input) {
+    if (!use_colors_ || input.empty()) {
         return highlighter_.highlight(input);
     }
 
-    // Render input normally, then add suggestion in gray
-    std::string result = highlighter_.highlight(input);
+    auto misspellings = spell_checker_.check_spelling(input);
+    if (misspellings.empty()) {
+        return highlighter_.highlight(input);
+    }
 
-    if (suggestion.display_start < suggestion.suggestion.length()) {
-        std::string suggestion_part = suggestion.suggestion.substr(suggestion.display_start);
-        result += esql::colors::GRAY + suggestion_part + esql::colors::RESET;
+    // Apply syntax highlighting first
+    std::string highlighted = highlighter_.highlight(input);
+
+    // If no misspellings found after highlighting, return early
+    if (misspellings.empty()) {
+        return highlighted;
+    }
+
+    // Apply spell check highlighting on top of syntax highlighting
+    std::string result;
+    size_t last_pos = 0;
+
+    for (const auto& [start, end] : misspellings) {
+        // Add text before misspelling
+        result += highlighted.substr(last_pos, start - last_pos);
+
+        // Add misspelled word with red color
+        std::string misspelled_word = input.substr(start, end - start);
+        result += esql::colors::BRIGHT_RED + misspelled_word + esql::colors::RESET;
+
+        last_pos = end;
+    }
+
+    // Add remaining text
+    if (last_pos < highlighted.length()) {
+        result += highlighted.substr(last_pos);
     }
 
     return result;
+}*/
+
+/*std::string ModernShell::render_with_spell_check(const std::string& input) {
+    if (!use_colors_ || input.empty()) {
+        return highlighter_.highlight(input);
+    }
+
+    auto misspellings = spell_checker_.check_spelling(input);
+    if (misspellings.empty()) {
+        return highlighter_.highlight(input);
+    }
+
+    std::string result = highlighter_.highlight(input);
+
+    // Use a simple bright red color for misspelled words
+    for (auto it = misspellings.rbegin(); it != misspellings.rend(); ++it) {
+        size_t start = it->first;
+        size_t end = it->second;
+
+        std::string before = result.substr(0, start);
+        std::string after = result.substr(end);
+        std::string misspelled_word = input.substr(start, end - start);
+        std::string colored_word = esql::colors::BRIGHT_RED + misspelled_word + esql::colors::RESET; // Bright red
+
+        result = before + colored_word + after;
+    }
+
+    return result;
+}*/
+
+std::string ModernShell::render_with_spell_check(const std::string& input) {
+    if (!use_colors_ || input.empty()) {
+        return highlighter_.highlight(input);
+    }
+
+    auto misspellings = spell_checker_.check_spelling(input);
+    if (misspellings.empty()) {
+        return highlighter_.highlight(input);
+    }
+
+    // Build the result by processing the input character by character
+    std::string result;
+    size_t current_pos = 0;
+
+    // Sort misspellings by start position to process in order
+    std::vector<std::pair<size_t, size_t>> sorted_misspellings(misspellings.begin(), misspellings.end());
+    std::sort(sorted_misspellings.begin(), sorted_misspellings.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    for (const auto& [start, end] : sorted_misspellings) {
+        // Highlight text before this misspelling
+        if (current_pos < start) {
+            std::string before_misspelling = input.substr(current_pos, start - current_pos);
+            result += highlighter_.highlight(before_misspelling);
+        }
+
+        // Highlight the misspelled word in red
+        std::string misspelled_word = input.substr(start, end - start);
+        result += esql::colors::BRIGHT_RED + misspelled_word + esql::colors::RESET;
+
+        current_pos = end;
+    }
+
+    // Highlight any remaining text after the last misspelling
+    if (current_pos < input.length()) {
+        std::string remaining = input.substr(current_pos);
+        result += highlighter_.highlight(remaining);
+    }
+
+    return result;
+}
+
+std::string ModernShell::render_with_suggestion(const std::string& input,
+                                              const esql::AutoSuggestion& suggestion) {
+    std::string base_render;
+
+    if (!suggestion.active || input != suggestion.prefix) {
+        base_render = render_with_spell_check(input);
+    } else {
+        // Render input with spell check, then add suggestion
+        base_render = render_with_spell_check(input);
+
+        if (suggestion.display_start < suggestion.suggestion.length()) {
+            std::string suggestion_part = suggestion.suggestion.substr(suggestion.display_start);
+            base_render += esql::colors::GRAY + suggestion_part + esql::colors::RESET;
+        }
+    }
+
+    return base_render;
 }
 
 /*std::string ModernShell::render_with_suggestion(const std::string& input,

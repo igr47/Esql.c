@@ -506,10 +506,24 @@ CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.s"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/igiris/git_projects/Esql.c/src/shell_executables/phoenix_animator.cpp -o CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.s
 
+CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o: CMakeFiles/e_sql.dir/flags.make
+CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/spell_checker.cpp
+CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/spell_checker.cpp
+
+CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/igiris/git_projects/Esql.c/src/shell_executables/spell_checker.cpp > CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.i
+
+CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/igiris/git_projects/Esql.c/src/shell_executables/spell_checker.cpp -o CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.s
+
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/syntax_highlighter.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/syntax_highlighter.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.i: cmake_force
@@ -523,7 +537,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/terminal_input.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/terminal_input.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.i: cmake_force
@@ -537,7 +551,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/utf8_processor.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/utf8_processor.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.i: cmake_force
@@ -581,6 +595,7 @@ e_sql_OBJECTS = \
 "CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o" \
 "CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o" \
 "CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o" \
+"CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o" \
 "CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o" \
 "CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o" \
 "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o"
@@ -619,6 +634,7 @@ e_sql: CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o
+e_sql: CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o
@@ -626,7 +642,7 @@ e_sql: CMakeFiles/e_sql.dir/build.make
 e_sql: CMakeFiles/e_sql.dir/compiler_depend.ts
 e_sql: /usr/lib/x86_64-linux-gnu/libreadline.so
 e_sql: CMakeFiles/e_sql.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Linking CXX executable e_sql"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Linking CXX executable e_sql"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/e_sql.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

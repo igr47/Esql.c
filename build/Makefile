@@ -849,6 +849,30 @@ src/shell_executables/phoenix_animator.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.s
 .PHONY : src/shell_executables/phoenix_animator.cpp.s
 
+src/shell_executables/spell_checker.o: src/shell_executables/spell_checker.cpp.o
+.PHONY : src/shell_executables/spell_checker.o
+
+# target to build an object file
+src/shell_executables/spell_checker.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o
+.PHONY : src/shell_executables/spell_checker.cpp.o
+
+src/shell_executables/spell_checker.i: src/shell_executables/spell_checker.cpp.i
+.PHONY : src/shell_executables/spell_checker.i
+
+# target to preprocess a source file
+src/shell_executables/spell_checker.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.i
+.PHONY : src/shell_executables/spell_checker.cpp.i
+
+src/shell_executables/spell_checker.s: src/shell_executables/spell_checker.cpp.s
+.PHONY : src/shell_executables/spell_checker.s
+
+# target to generate assembly for a file
+src/shell_executables/spell_checker.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.s
+.PHONY : src/shell_executables/spell_checker.cpp.s
+
 src/shell_executables/syntax_highlighter.o: src/shell_executables/syntax_highlighter.cpp.o
 .PHONY : src/shell_executables/syntax_highlighter.o
 
@@ -1044,6 +1068,9 @@ help:
 	@echo "... src/shell_executables/phoenix_animator.o"
 	@echo "... src/shell_executables/phoenix_animator.i"
 	@echo "... src/shell_executables/phoenix_animator.s"
+	@echo "... src/shell_executables/spell_checker.o"
+	@echo "... src/shell_executables/spell_checker.i"
+	@echo "... src/shell_executables/spell_checker.s"
 	@echo "... src/shell_executables/syntax_highlighter.o"
 	@echo "... src/shell_executables/syntax_highlighter.i"
 	@echo "... src/shell_executables/syntax_highlighter.s"

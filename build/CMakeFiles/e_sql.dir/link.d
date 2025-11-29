@@ -33,6 +33,7 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o \
+  CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o \
@@ -133,6 +134,8 @@ CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o:
 CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o:
 
 CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o:
+
+CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o:
 
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o:
 

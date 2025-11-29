@@ -11,6 +11,7 @@
 #include "completion_engine.h"
 #include "autosuggestion_manager.h"
 #include "phoenix_animator.h"
+#include "spell_checker.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -104,6 +105,10 @@ private:
     void clear_autosuggestion();
     std::string render_with_suggestion(const std::string& input, const esql::AutoSuggestion& suggestion);
 
+    // Spell checking
+    std::string render_with_spell_check(const std::string& input);
+    void enable_spell_check(bool enable) { spell_checker_.enable_spell_check(enable); }
+
     void ensure_input_space();  // Only check space for input area
     void scroll_input_area(int lines_to_scroll);   // Scroll only when absolutely necessary
 
@@ -148,6 +153,7 @@ private:
     esql::UTF8Processor utf8_processor_;
     esql::CompletionEngine completion_engine_;
     esql::AutoSuggestionManager autosuggestion_manager_;
+    esql::SpellChecker spell_checker_;
 
     // Autosuggestion state
     esql::AutoSuggestion current_suggestion_;

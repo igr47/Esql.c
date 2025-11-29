@@ -38,6 +38,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/igiris/git_projects/Esql.c/src/shell_executables/line_renderer.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/shell_executables/modern_shell.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/shell_executables/phoenix_animator.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/shell_executables/spell_checker.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/shell_executables/syntax_highlighter.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/shell_executables/terminal_input.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/shell_executables/utf8_processor.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o.d"
