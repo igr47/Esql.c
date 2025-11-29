@@ -293,6 +293,7 @@ void ModernShell::update_screen() {
         for (size_t i = 0; i < multiline_buffer_.size(); ++i) {
             std::string colored_line = highlighter_.highlight(multiline_buffer_[i]);
             std::cout << colored_line << "\n";
+            std::cout << colored_line << "\n\033[K";  //Clear each line after content
 
                         // Print continuation prefix
             if (use_colors_) {
@@ -305,6 +306,7 @@ void ModernShell::update_screen() {
         // Display current input with highlighting
         //istd::string colored_input = highlighter_.highlight(current_input_);
         std::string colored_input = render_with_suggestion(current_input_, current_suggestion_);
+        std::cout << colored_input << "\033[K";  // Clear to end of line
         std::cout << colored_input;
 
         // Clear any remaining characters from previous input
@@ -350,6 +352,10 @@ void ModernShell::update_screen() {
         }
         // Clear the entire line
         std::cout << "\033[K";
+        // If this isn't the last line, move to next
+        if (i < previous_lines - 1) {
+            std::cout << "\n";
+        }
     }
 
         // Move back to prompt position
@@ -359,7 +365,7 @@ void ModernShell::update_screen() {
     std::cout << "\033[K" << current_prompt;
     
     // Output colored input
-    std::cout << colored_input;
+    std::cout << colored_input << "\033[K";
     
     // Clear any remaining characters from previous input
     size_t current_total_length = current_input_.length();
@@ -374,7 +380,7 @@ void ModernShell::update_screen() {
     
     if (last_rendered_input_.length() > current_input_.length()) {
         int chars_to_clear = last_rendered_input_.length() - current_input_.length();
-        std::cout << std::string(chars_to_clear, ' ');
+        std::cout << std::string(chars_to_clear, ' ') << "\033[K";
      }
 
     // Position cursor correctly within the input
@@ -500,11 +506,9 @@ void ModernShell::handle_enter() {
     //std::cout << "\n"; // Ensure we're on a new line
     int current_row, current_col;
     terminal_.get_cursor_position(current_row, current_col);
-    if (current_row >= terminal_height_ - 2) {
+    if (current_row >= terminal_height_ - 1) {
         std::cout << "\n";
-    } else {
-        std::cout << "\r\n"; // Just carriage return + newline, no extra spaces
-    }
+    } 
     print_prompt();
     update_prompt_position();
 
@@ -658,6 +662,8 @@ std::string ModernShell::render_with_suggestion(const std::string& input,
         std::string suggestion_part = suggestion.suggestion.substr(suggestion.display_start);
         result += esql::colors::GRAY + suggestion_part + esql::colors::RESET;
     }
+
+      result += "\033[K";
 
     return result;
 }
@@ -903,7 +909,7 @@ void ModernShell::execute_command(const std::string& command) {
     
     // Ensure we're ready for next input
     //std::cout << std::endl;
-    ensure_input_space();
+    //ensure_input_space();
 }
 
 void ModernShell::print_banner() {
