@@ -8,7 +8,7 @@ namespace esql {
 const std::unordered_set<std::string> SyntaxHighlighter::keywords = {
     "SELECT", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
     "DELETE", "CREATE", "TABLE", "DATABASE", "DROP", "ALTER", "ADD", "RENAME",
-    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP", "DISTINCT", 
+    "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP",
     "DATABASES", "BULK", "ROW", "TABLES", 
     "STRUCTURE", "INDEX", "VIEW", "TRUNCATE", "COMMIT", "ROLLBACK", "BEGIN",
     "TRANSACTION", "GRANT", "REVOKE", "EXPLAIN","RECURSIVE", "JOIN",
@@ -16,7 +16,7 @@ const std::unordered_set<std::string> SyntaxHighlighter::keywords = {
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::helpers = {
-    "FROM","WHERE","ORDER","BY","GROUP","HAVING","DISTINCT","WITH"
+    "FROM","WHERE","ORDER","BY","GROUP","HAVING","DISTINCT","WITH","OFFSET","LIMIT","DISTINCT"
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::datatypes = {
