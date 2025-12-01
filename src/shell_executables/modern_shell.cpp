@@ -1650,7 +1650,7 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
     std::cout << (use_colors_ ? esql::colors::GRAY : "") << "> " << result.rows.size() << " row" << (result.rows.size() != 1 ? "s" : "") << " in " << std::fixed << std::setprecision(4) << duration << "s" << (use_colors_ ? esql::colors::RESET : "") << "\n";
 }
 
-// New helper methods for smart column sizing
+// helper methods for smart column sizing
 size_t ModernShell::calculate_reasonable_content_width(const std::string& value) {
     if (value.empty()) return 4; // "NULL" or empty
 
@@ -1704,7 +1704,7 @@ size_t ModernShell::apply_smart_maximums(const std::string& column_name, size_t 
     }
 }
 
-// Improved format_cell_value to show more content
+//format_cell_value to show more content
 std::string ModernShell::format_cell_value(const std::string& value, size_t max_width) {
     if (value.empty()) return "NULL";
     if (value.length() <= max_width) return value;
