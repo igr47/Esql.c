@@ -172,19 +172,20 @@ namespace AST{
             std::unique_ptr<Expression> caseExpression; // For simple case
             std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whenClauses;
             std::unique_ptr<Expression> elseClause;
+            std::string alias; 
 
             std::unique_ptr<Expression> clone() const override {
                 std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> clonedWhens;
                 for (const auto& when : whenClauses) {
                     clonedWhens.emplace_back(when.first->clone(), when.second->clone());
                 }
-                return std::make_unique<CaseExpression>(caseExpression ? caseExpression->clone() : nullptr, std::move(clonedWhens),elseClause ? elseClause->clone() : nullptr);
+                return std::make_unique<CaseExpression>(caseExpression ? caseExpression->clone() : nullptr, std::move(clonedWhens),elseClause ? elseClause->clone() : nullptr, alias);
             }
 
-            CaseExpression(std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whens,std::unique_ptr<Expression> elseExpr) : caseExpression(nullptr),whenClauses(std::move(whens)), elseClause(std::move(elseExpr)) {}
+            CaseExpression(std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whens,std::unique_ptr<Expression> elseExpr, const std::string& alias = "") : caseExpression(nullptr),whenClauses(std::move(whens)), elseClause(std::move(elseExpr)), alias(alias) {}
 
             // Construction for simple case
-            CaseExpression(std::unique_ptr<Expression> caseExpr,std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whens,std::unique_ptr<Expression> elseExpr) : caseExpression(std::move(caseExpr)), whenClauses(std::move(whens)), elseClause(std::move(elseExpr)) {}
+            CaseExpression(std::unique_ptr<Expression> caseExpr,std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whens,std::unique_ptr<Expression> elseExpr, const std::string& alias = "") : caseExpression(std::move(caseExpr)), whenClauses(std::move(whens)), elseClause(std::move(elseExpr)), alias(alias) {}
 
             std::string toString() const override {
                 std::string result = "CASE";
@@ -197,7 +198,12 @@ namespace AST{
                 if (elseClause) {
                     result += "ELSE" + elseClause->toString() + " ";
                 }
-                return result + "END";
+                result += "END";
+                if (!alias.empty()) {
+                    result += " AS " + alias;
+                }
+                return result;
+                //return result + "END";
             }
     };
 
@@ -315,6 +321,38 @@ namespace AST{
         public:
             std::string dbName;
     };
+
+    class SelectStatement;
+
+    class CommonTableExpression {
+        public:
+            std::string name;
+            std::vector<std::string> columns;
+            std::unique_ptr<Statement> query;
+    };
+
+
+    class WithClause {
+        public:
+            std::vector<CommonTableExpression> ctes;
+            WithClause(std::vector<CommonTableExpression> c) : ctes(std::move(c)) {}
+    };
+    
+    // Join Clause
+    class JoinClause {
+        public:
+            enum Type { INNER, LEFT, RIGHT, FULL };
+            
+            Type type = INNER;
+            std::unique_ptr<Expression> table;
+            std::unique_ptr<Expression> condition;
+            
+            JoinClause() = default;
+            JoinClause(Type t, std::unique_ptr<Expression> tab, std::unique_ptr<Expression> cond)
+                : type(t), table(std::move(tab)), condition(std::move(cond)) {}
+    };
+
+
 	class SelectStatement:public Statement{
 		public:
 			std::vector<std::unique_ptr<Expression>> columns;
@@ -328,6 +366,8 @@ namespace AST{
 			std::unique_ptr<Expression> limit;
 			std::unique_ptr<Expression> offset;
 			bool distinct = false;
+            std::unique_ptr<WithClause> withClause;
+            std::vector<std::unique_ptr<JoinClause>> joins; 
 	};
 	class AggregateExpression : public Expression{
 		public:
@@ -360,6 +400,123 @@ namespace AST{
 				return result;
 			}
 	};
+
+    class WindowFunction : public Expression {
+        public:
+            Token function;
+            std::unique_ptr<Expression> argument;
+            std::vector<std::unique_ptr<Expression>> partitionBy;
+            std::vector<std::pair<std::unique_ptr<Expression>, bool>> orderBy;
+            std::unique_ptr<Expression> nTileValue;
+
+            std::unique_ptr<Expression> clone() const override {
+                std::vector<std::unique_ptr<Expression>> clonedPartition;
+                for (const auto& expr : partitionBy) {
+                    clonedPartition.push_back(expr->clone());
+                }
+                std::vector<std::pair<std::unique_ptr<Expression>, bool>> clonedOrder;
+                for (const auto& expr : orderBy) {
+                    clonedOrder.emplace_back(expr.first->clone(), expr.second);
+                }
+
+                return std::make_unique<WindowFunction>(
+                        function,
+                        argument ? argument->clone() : nullptr,
+                        std::move(clonedPartition),
+                        std::move(clonedOrder),
+                        nTileValue ? nTileValue->clone() : nullptr
+                        );
+            }
+
+            WindowFunction(Token func, std::unique_ptr<Expression> arg, std::vector<std::unique_ptr<Expression>> partition, std::vector<std::pair<std::unique_ptr<Expression>, bool>> order, std::unique_ptr<Expression> nTile = nullptr) : function(func), argument(std::move(arg)),partitionBy(std::move(partition)), orderBy(std::move(order)), nTileValue(std::move(nTile)) {}
+
+            std::string toString() const override {
+                std::string result = function.lexeme + "(";
+                if (argument) result += argument->toString();
+                result += ") OVER (";
+
+                if (!partitionBy.empty()) {
+                    result += "PARTITION BY";
+                    for (size_t i = 0; i < partitionBy.size(); ++i) {
+                        if(i > 0) result += ", ";
+                        result += partitionBy[i]->toString();
+                    }
+                }
+
+                if (!orderBy.empty()) {
+                    if (!partitionBy.empty()) result += " ";
+                    result += "ORDER BY ";
+                    for (size_t i = 0; i < orderBy.size(); ++i) {
+                        if (i > 0) result += ", ";
+                        result += orderBy[i].first->toString();
+                        result += orderBy[i].second ? " ASC" : " DESC";
+                    }
+                }
+
+                result += ")";
+                return result;
+            }
+    };
+
+    // Date Function
+    class DateFunction : public Expression {
+        public:
+            Token function;
+            std::unique_ptr<Expression> argument;
+
+            std::unique_ptr<Expression> clone() const override {
+                return std::make_unique<DateFunction>(function, argument->clone());
+            }
+
+            DateFunction(Token func, std::unique_ptr<Expression> arg) : function(func), argument(std::move(arg)) {}
+
+            std::string toString() const override {
+                return function.lexeme + "(" + argument->toString() + ")";
+            }
+    };
+
+    class StatisticalExpression : public Expression {
+        public:
+            enum class StatType {
+                STDDEV, VARIANCE, PERCENTILE, CORRELATION, REGRESSION
+            };
+
+            StatType type;
+            std::unique_ptr<Expression> argument;
+            std::unique_ptr<Expression> argument2; //For correlation
+            std::unique_ptr<Expression> alias;     // For AS alias
+            double percentileValue; // For percentile
+
+            std::unique_ptr<Expression> clone() const override {
+                return std::make_unique<StatisticalExpression>(
+                        type,
+                        argument ? argument->clone() : nullptr,
+                        argument2 ? argument2->clone() : nullptr,
+                        alias ? alias->clone() : nullptr,
+                        percentileValue
+                        );
+            }
+
+            StatisticalExpression(StatType t, std::unique_ptr<Expression> arg1, std::unique_ptr<Expression> arg2 = nullptr, std::unique_ptr<Expression> al = nullptr,  double percentile = 0.5) : type(t), argument(std::move(arg1)), argument2(std::move(arg2)),alias(std::move(al)), percentileValue(percentile) {}
+
+            std::string toString() const override {
+                std::string typeStr;
+                switch(type) {
+                    case StatType::STDDEV: typeStr = "STDDEV"; break;
+                    case StatType::VARIANCE: typeStr = "VARIANCE"; break;
+                    case StatType::PERCENTILE:
+                              typeStr = "PERCENTILE_CONT(" + std::to_string(percentileValue) + ")";
+                              break;
+                    case StatType::CORRELATION: typeStr = "CORR"; break;
+                    case StatType::REGRESSION: typeStr = "REGR_SLOPE"; break;
+                }
+                std::string result = typeStr + "(" + (argument ? argument->toString() : "") + (argument2 ? ", " + argument2->toString() : "") + ")";
+            if (alias) {
+                result += " AS " + alias->toString();
+            }
+            return result;
+            }
+    };
 
 	class UpdateStatement:public Statement{
 		public:
@@ -479,6 +636,9 @@ class Parse{
 		std::unique_ptr<AST::HavingClause> parseHavingClause();
 		std::unique_ptr<AST::OrderByClause> parseOrderByClause();
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
+        //*****************HELPER METHODS FOR SELECT*****************************
+        std::unique_ptr<AST::WithClause> parseWithClause(); 
+        std::unique_ptr<AST::JoinClause> parseJoinClause();
 		std::unique_ptr<AST::UpdateStatement> parseUpdateStatement();
 		std::unique_ptr<AST::DeleteStatement> parseDeleteStatement();
 		std::unique_ptr<AST::DropStatement> parseDropStatement();
@@ -497,6 +657,8 @@ class Parse{
 		std::unique_ptr<AST::Expression> parseFromClause();
         // Case expressions in UPDATE
         std::unique_ptr<AST::Expression> parseCaseExpression();
+        std::unique_ptr<AST::Expression> parseStatisticalFunction();
+        std::unique_ptr<AST::Expression> parseWindowFunction();
 		//std::unique_ptr<AST::Expression> parseExpression();
 		std::unique_ptr<AST::Expression> parseBinaryExpression(int minPrecedence);
         std::unique_ptr<AST::Expression> parseLikePattern();

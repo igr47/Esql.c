@@ -85,8 +85,11 @@ private:
         AST::OrderByClause* orderBy);
     bool isAggregateFunction(const std::string& functionName);
     std::vector<std::vector<std::string>> applyDistinct(const std::vector<std::vector<std::string>>& rows);
-    std::string calculateAggregate(const AST::AggregateExpression* aggregate,
-                                 const std::vector<std::unordered_map<std::string, std::string>>& groupData);
+    std::string calculateAggregate(const AST::AggregateExpression* aggregate, const std::vector<std::unordered_map<std::string, std::string>>& groupData);
+
+    std::string calculateAggregateWithCase(const AST::AggregateExpression* aggregate, const AST::CaseExpression* caseExpr,const std::vector<std::unordered_map<std::string, std::string>>& groupData);
+    std::string calculateAggregateForExpression(const AST::AggregateExpression* aggregate,const std::vector<std::unordered_map<std::string, std::string>>& groupData);
+    double evaluateNumericCaseExpression(const AST::CaseExpression* caseExpr,const std::unordered_map<std::string, std::string>& row);
 
     // Expression evaluation
     std::vector<std::string> evaluateSelectColumns(
@@ -172,6 +175,103 @@ private:
                         const std::string& context);
 
     std::unordered_map<std::string, std::unique_ptr<AST::Expression>> checkExpressionCache;
+
+    // Analytical query execution    
+    bool hasWindowFunctions(const AST::SelectStatement& stmt);
+    bool hasWindowFunctions(const AST::Expression* expr);
+    bool hasStatisticalFunctions(const AST::SelectStatement& stmt);
+    std::string evaluateCaseExpression(const AST::CaseExpression* caseExpr,const std::unordered_map<std::string, std::string>& row);
+
+        // Analytical function processing
+    std::vector<std::unordered_map<std::string, std::string>> processAnalyticalFunctions(const std::vector<std::unordered_map<std::string, std::string>>& data, const std::vector<std::unique_ptr<AST::Expression>>& columns);
+
+    // Window function processing
+    std::vector<std::unordered_map<std::string, std::string>> processWindowFunctions(
+        std::vector<std::unordered_map<std::string, std::string>>& data,
+        const std::vector<std::unique_ptr<AST::Expression>>& columns);
+
+    std::vector<std::unordered_map<std::string, std::string>> processStatisticalFunctions(const std::vector<std::unordered_map<std::string, std::string>>& data,const std::vector<std::unique_ptr<AST::Expression>>& columns);
+
+    std::vector<std::unordered_map<std::string, std::string>> processDateFunctions(const std::vector<std::unordered_map<std::string, std::string>>& data,const std::vector<std::unique_ptr<AST::Expression>>& columns);
+
+        // Window function implementations
+    std::vector<std::vector<std::unordered_map<std::string, std::string>>> partitionData(const std::vector<std::unordered_map<std::string, std::string>>& data,const std::vector<std::unique_ptr<AST::Expression>>& partitionBy);
+
+    std::vector<std::unordered_map<std::string, std::string>> sortPartition(std::vector<std::unordered_map<std::string, std::string>>& partition,const std::vector<std::pair<std::unique_ptr<AST::Expression>, bool>>& orderBy);
+
+    void applyWindowFunction(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc,const std::string& resultColumn);
+
+    void applyRank(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc, const std::string& resultColumn);
+
+    void applyDenseRank(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc, const std::string& resultColumn);
+
+     void applyNTile(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc, const std::string& resultColumn);
+
+    void applyLag(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc,const std::string& resultColumn);
+
+    void applyLead(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc,const std::string& resultColumn);
+
+    void applyFirstValue(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc,const std::string& resultColumn);
+
+    void applyLastValue(std::vector<std::unordered_map<std::string, std::string>>& partition,const AST::WindowFunction* windowFunc,const std::string& resultColumn);
+
+    // Statistical function implementations
+    void applyStdDev(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::StatisticalExpression* statFunc,const std::string& resultColumn);
+
+    void applyVariance(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::StatisticalExpression* statFunc,const std::string& resultColumn);
+
+    void applyPercentile(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::StatisticalExpression* statFunc,const std::string& resultColumn);
+
+    void applyCorrelation(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::StatisticalExpression* statFunc,const std::string& resultColumn);
+
+     void applyRegression(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::StatisticalExpression* statFunc, const std::string& resultColumn);
+
+    double calculateCorrelation(const std::vector<double>& x, const std::vector<double>& y);
+    double calculateRegressionSlope(const std::vector<double>& x, const std::vector<double>& y);
+
+    // Date function implementations
+    void applyJulianDay(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::DateFunction* dateFunc,const std::string& resultColumn);
+     
+    void applyJulianDay(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+
+    void applySubstr(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+
+    // Join implementations
+    std::vector<std::unordered_map<std::string, std::string>> executeJoins(const std::vector<std::unordered_map<std::string, std::string>>& leftData,const std::vector<std::unique_ptr<AST::JoinClause>>& joins);
+
+    std::vector<std::unordered_map<std::string, std::string>> executeInnerJoin(const std::vector<std::unordered_map<std::string, std::string>>& leftData,const std::vector<std::unordered_map<std::string, std::string>>& rightData,const AST::Expression* condition);
+
+    std::vector<std::unordered_map<std::string, std::string>> executeLeftJoin(const std::vector<std::unordered_map<std::string, std::string>>& leftData,const std::vector<std::unordered_map<std::string, std::string>>& rightData,const AST::Expression* condition);
+
+    std::vector<std::unordered_map<std::string, std::string>> executeRightJoin(const std::vector<std::unordered_map<std::string, std::string>>& leftData,const std::vector<std::unordered_map<std::string, std::string>>& rightData,const AST::Expression* condition);
+
+    std::vector<std::unordered_map<std::string, std::string>> executeFullJoin(const std::vector<std::unordered_map<std::string, std::string>>& leftData,const std::vector<std::unordered_map<std::string, std::string>>& rightData,const AST::Expression* condition);
+
+        // Helper methods
+    std::vector<std::unordered_map<std::string, std::string>> recombinePartitions(const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& partitions);
+
+    ResultSet executeAnalyticalSelect(AST::SelectStatement& stmt);
+    void applyRowNumber(std::vector<std::unordered_map<std::string, std::string>>& partition, const AST::WindowFunction* windowFunc,const std::string& resultColumn);
+
+    // Date functions
+    void applyYear(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+    void applyMonth(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+    void applyDay(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+    void applyNow(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+    
+    // String functions
+    void applyConcat(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+    void applyLength(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
+    
+    std::string calculateGroupStdDev(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);
+    std::string calculateGroupVariance(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);
+    std::string calculateGroupPercentile(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);
+    std::string calculateGroupCorrelation(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);
+    std::string calculateGroupRegression(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);
+
+    ResultSet executeWithCTE(AST::SelectStatement& stmt);
+    std::string formatStatisticalValue(double value);
+    std::vector<double> extractNumericValues(const std::vector<std::unordered_map<std::string, std::string>>& group,const AST::Expression* expr,ExecutionEngine* engine);
 };
 
 #endif

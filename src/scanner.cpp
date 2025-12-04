@@ -110,7 +110,12 @@ void Lexer::initializeKeyWords(){
         {"GENERATE_DATE",Token::Type::GENERATE_DATE},
         {"GENERATE_DATE_TIME",Token::Type::GENERATE_DATE_TIME},
         {"GENERATE_UUID",Token::Type::GENERATE_UUID},
-        {"STRUCTURE",Token::Type::STRUCTURE}
+        {"STRUCTURE",Token::Type::STRUCTURE},
+        {"STDDEV", Token::Type::STDDEV},
+        {"VARIANCE", Token::Type::VARIANCE},
+        {"PERCENTILE_CONT", Token::Type::PERCENTILE_CONT},
+        {"CORR", Token::Type::CORR},
+        {"REGR_SLOPE", Token::Type::REGR_SLOPE}
 	};
 }
 
