@@ -1453,19 +1453,49 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
         consume(Token::Type::L_PAREN);
         auto arg = parseExpression();
         consume(Token::Type::R_PAREN);
-        return std::make_unique<AST::DateFunction>(funcToken, std::move(arg));
+
+        std::unique_ptr<AST::Expression> aliasExpr = nullptr;
+        if (match(Token::Type::AS)) {
+            consume(Token::Type::AS);
+            aliasExpr = parseIdentifier();
+        }
+        return std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));
     } else if (matchAny({Token::Type::YEAR, Token::Type::MONTH, Token::Type::DAY,Token::Type::SUBSTR, Token::Type::CONCAT})) {
         Token funcToken = currentToken;
         consume(currentToken.type);
-        std::vector<std::unique_ptr<AST::Expression>> args;
-        if (!match(Token::Type::R_PAREN)) {
-            do { 
-                args.push_back(parseExpression());
-            } while (match(Token::Type::COMMA) && (consume(Token::Type::COMMA), true));
-        }
+        consume(Token::Type::L_PAREN);
+        auto arg = parseExpression();
         consume(Token::Type::R_PAREN);
 
-        return std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
+        std::unique_ptr<AST::Expression> aliasExpr = nullptr;
+        if (match(Token::Type::AS)) {
+            consume(Token::Type::AS);
+            aliasExpr = parseIdentifier();
+        }
+
+        std::vector<std::unique_ptr<AST::Expression>> args;
+        args.push_back(std::move(arg));
+        return std::make_unique<AST::FunctionCall>(funcToken,std::move(args), std::move(aliasExpr));
+    } else if (match(Token::Type::NOW)) {
+        Token funcToken = currentToken;
+        consume(Token::Type::NOW);
+        
+        // Handle optional parentheses
+        if (match(Token::Type::L_PAREN)) {
+            consume(Token::Type::L_PAREN);
+            consume(Token::Type::R_PAREN);
+        }
+        std::unique_ptr<AST::Expression> aliasExpr = nullptr;
+        if (match(Token::Type::AS)) {
+            consume(Token::Type::AS);
+            aliasExpr = parseIdentifier();
+        }
+
+        return std::make_unique<AST::FunctionCall>(
+            funcToken,
+            std::vector<std::unique_ptr<AST::Expression>>{},
+            std::move(aliasExpr)
+        );
 	}else{
 		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
 	}

@@ -16,7 +16,8 @@ const std::unordered_set<std::string> SyntaxHighlighter::keywords = {
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::helpers = {
-    "FROM","WHERE","ORDER","BY","GROUP","HAVING","DISTINCT","WITH","OFFSET","LIMIT","DISTINCT","AS"
+    "FROM","WHERE","ORDER","BY","GROUP","HAVING","DISTINCT","WITH","OFFSET","LIMIT",
+    "DISTINCT","AS","YEAR","DAY","MONTH","JULIANDAY","NOW"
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::datatypes = {

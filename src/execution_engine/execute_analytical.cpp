@@ -1011,6 +1011,16 @@ ExecutionEngine::ResultSet ExecutionEngine::executeAnalyticalSelect(AST::SelectS
                 colName = statExpr->alias->toString();
             }
         }
+        else if (auto* dateFunc = dynamic_cast<const AST::DateFunction*>(col.get())) {
+            if (dateFunc->alias) {
+                colName = dateFunc->alias->toString();
+            }
+        }
+        else if (auto* funcCall = dynamic_cast<const AST::FunctionCall*>(col.get())) {
+            if (funcCall->alias) {
+                colName = funcCall->alias->toString();
+            }
+        }
         else if (auto* aggExpr = dynamic_cast<const AST::AggregateExpression*>(col.get())) {
             if (aggExpr->argument2) { // argument2 is used as alias in aggregates
                 colName = aggExpr->argument2->toString();
