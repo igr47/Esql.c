@@ -49,6 +49,20 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
                     displayName = "CASE";
                     originalName = caseExpr->toString();
                 }
+            } else if (auto* dateFunc = dynamic_cast<const AST::DateFunction*>(col.get())) {
+                if (dateFunc->alias) {
+                    displayName = dateFunc->alias->toString();
+                } else {
+                    displayName = col->toString();
+                }
+                originalName = col->toString();
+            } else if (auto* funcCall = dynamic_cast<const AST::FunctionCall*>(col.get())) {
+                if (funcCall->alias) {
+                    displayName = funcCall->alias->toString();
+                } else {
+                    displayName = col->toString();
+                }
+                originalName = col->toString();
             } else if (auto* statExpr = dynamic_cast<const AST::StatisticalExpression*>(col.get())) {
                 if (statExpr->alias) {
                     displayName = statExpr->alias->toString();
@@ -548,6 +562,20 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
                 // Statistical expression with optional alias
                 if (statExpr->alias) {
                     displayName = statExpr->alias->toString();
+                } else {
+                    displayName = originalExpr;
+                }
+            }
+            else if (auto* dateFunc = dynamic_cast<const AST::DateFunction*>(col.get())) {
+                if (dateFunc->alias) {
+                    displayName = dateFunc->alias->toString();
+                } else {
+                    displayName = originalExpr;
+                }
+            }
+            else if (auto* funcCall = dynamic_cast<const AST::FunctionCall*>(col.get())) {
+                if (funcCall->alias) {
+                    displayName = funcCall->alias->toString();
                 } else {
                     displayName = originalExpr;
                 }

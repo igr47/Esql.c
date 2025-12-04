@@ -56,6 +56,49 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
         return "NULL";*/
     } else if(auto* funcCall = dynamic_cast<const AST::FunctionCall*>(expr)) {
         std::string functionName = funcCall->function.lexeme;
+        std::string result;
+
+        // Add to existing function handling
+        if (functionName == "YEAR") {
+            std::string dateStr = evaluateExpression(funcCall->arguments[0].get(), row);
+            try {
+                DateTime dt(dateStr);
+                result = std::to_string(dt.getYear());
+            } catch (...) {
+                result = "NULL";
+            }
+        }
+        else if (functionName == "MONTH") {
+            std::string dateStr = evaluateExpression(funcCall->arguments[0].get(), row);
+            try {
+                DateTime dt(dateStr);
+                result = std::to_string(dt.getMonth());
+            } catch (...) {
+                result = "NULL";
+            }
+        }
+        else if (functionName == "DAY") {
+            std::string dateStr = evaluateExpression(funcCall->arguments[0].get(), row);
+            try {
+                DateTime dt(dateStr);
+                result = std::to_string(dt.getDay());
+            } catch (...) {
+                result = "NULL";
+            }
+        }
+        else if (functionName == "NOW") {
+            DateTime now = DateTime::now();
+            result = now.toString();
+        }
+
+        // Store with alias if available
+        if (funcCall->alias) {
+            std::string aliasName = funcCall->alias->toString();
+            // Store in result context if needed
+        }
+
+        return result;
+        /*std::string functionName = funcCall->function.lexeme;
         std::vector<std::string> args;
         for (const auto& arg : funcCall->arguments) {
             args.push_back(evaluateExpression(arg.get(), row));
@@ -84,7 +127,22 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
                 }
             }
             // Will come back to add another other functions
-         }
+         }*/
+    }else if (auto* dateFunc = dynamic_cast<const AST::DateFunction*>(expr)) {
+        std::string result;
+        if (dateFunc->function.type == Token::Type::JULIANDAY) {
+            std::string dateStr = evaluateExpression(dateFunc->argument.get(), row);
+            try {
+                DateTime dt(dateStr);
+                result = std::to_string(dt.toJulianDay());
+            } catch (...) {
+                result = "NULL";
+            }
+        }
+
+        if (dateFunc->alias) {
+            std::string aliasName = dateFunc->alias->toString();
+        }return result;
     } else if(auto* likeOp = dynamic_cast<const AST::LikeOp*>(expr)) {
         return evaluateLikeOperation(likeOp, row);
     } else if (auto* aggregate = dynamic_cast<const AST::AggregateExpression*>(expr)) {

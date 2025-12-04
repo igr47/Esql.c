@@ -115,7 +115,12 @@ void Lexer::initializeKeyWords(){
         {"VARIANCE", Token::Type::VARIANCE},
         {"PERCENTILE_CONT", Token::Type::PERCENTILE_CONT},
         {"CORR", Token::Type::CORR},
-        {"REGR_SLOPE", Token::Type::REGR_SLOPE}
+        {"REGR_SLOPE", Token::Type::REGR_SLOPE},
+        {"YEAR", Token::Type::YEAR},
+        {"MONTH", Token::Type::MONTH},
+        {"DAY", Token::Type::DAY},
+        {"NOW", Token::Type::NOW},
+        {"JULIANDAY", Token::Type::JULIANDAY}
 	};
 }
 

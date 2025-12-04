@@ -211,16 +211,17 @@ namespace AST{
         public: 
             Token function;
             std::vector<std::unique_ptr<Expression>> arguments;
+            std::unique_ptr<Expression> alias;
 
             std::unique_ptr<Expression> clone() const override {
                 std::vector<std::unique_ptr<Expression>> clonedArgs;
                 for (const auto& arg : arguments) {
                     clonedArgs.push_back(arg->clone());
                 }
-                return std::make_unique<FunctionCall>(function,std::move(clonedArgs));
+                return std::make_unique<FunctionCall>(function,std::move(clonedArgs),alias ? alias->clone() : nullptr);
             }
 
-            FunctionCall(Token func, std::vector<std::unique_ptr<Expression>> args) : function(func), arguments(std::move(args)) {}
+            FunctionCall(Token func, std::vector<std::unique_ptr<Expression>> args, std::unique_ptr<Expression> al = nullptr) : function(func), arguments(std::move(args)),  alias(std::move(al)) {}
 
             std::string toString() const override {
                 std::string result = function.lexeme + "(";
@@ -228,7 +229,11 @@ namespace AST{
                     result += arguments[i]->toString();
                     if (i < arguments.size() - 1) result += ", ";
                 }
-                return result + ")";
+                 result += ")";
+                 if (alias) {
+                     result += " AS " + alias->toString();
+                 }
+                 return result;
             }
     };
 
@@ -463,15 +468,20 @@ namespace AST{
         public:
             Token function;
             std::unique_ptr<Expression> argument;
+            std::unique_ptr<Expression> alias;
 
             std::unique_ptr<Expression> clone() const override {
-                return std::make_unique<DateFunction>(function, argument->clone());
+                return std::make_unique<DateFunction>(function, argument->clone(), alias ? alias->clone() : nullptr);
             }
 
-            DateFunction(Token func, std::unique_ptr<Expression> arg) : function(func), argument(std::move(arg)) {}
+            DateFunction(Token func, std::unique_ptr<Expression> arg,std::unique_ptr<Expression> al = nullptr) : function(func), argument(std::move(arg)), alias(std::move(al)) {}
 
             std::string toString() const override {
-                return function.lexeme + "(" + argument->toString() + ")";
+                std::string result = function.lexeme + "(" + argument->toString() + ")";
+                if (alias) {
+                    result += " AS " + alias->toString();
+                }
+                return result;
             }
     };
 
