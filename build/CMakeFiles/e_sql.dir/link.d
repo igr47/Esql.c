@@ -15,6 +15,7 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/database_schema.cpp.o \
   CMakeFiles/e_sql.dir/src/main.cpp.o \
   CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o \
+  CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o \
   CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o \
   CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o \
   CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o \
@@ -98,6 +99,8 @@ CMakeFiles/e_sql.dir/src/database_schema.cpp.o:
 CMakeFiles/e_sql.dir/src/main.cpp.o:
 
 CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o:
+
+CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o:
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o:
 

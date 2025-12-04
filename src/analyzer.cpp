@@ -622,6 +622,79 @@ bool SematicAnalyzer::columnExists(const std::string& columnName) const{
 	return false;
 }
 
+
+void SematicAnalyzer::validateWithClause(AST::WithClause& withClause) {
+    std::set<std::string> cteNames;
+
+    for (const auto& cte : withClause.ctes) {
+        if (cteNames.count(cte.name)) {
+            throw SematicError("Duplicate CTE name: " + cte.name);
+        }
+        cteNames.insert(cte.name);
+
+        // Analyze CTE query
+        auto tempTable = std::make_unique<DatabaseSchema::Table>();
+        tempTable->name = cte.name;
+
+        // Store CTE for reference in main query
+        cteTables[cte.name] = std::move(tempTable);
+    }
+}
+
+void SematicAnalyzer::validateJoinClause(AST::JoinClause& joinClause) {
+    // Validate table exists
+    if (auto* ident = dynamic_cast<AST::Identifier*>(joinClause.table.get())) {
+        if (!storage.tableExists(db.currentDatabase(), ident->token.lexeme)) {
+            throw SematicError("Table or CTE not found: " + ident->token.lexeme);
+        }
+    }
+
+    // Validate condition
+    validateExpression(*joinClause.condition, currentTable);
+}
+
+void SematicAnalyzer::validateWindowFunction(AST::WindowFunction& windowFunc,
+                                           const DatabaseSchema::Table* table) {
+    if (windowFunc.argument) {
+        validateExpression(*windowFunc.argument, table);
+    }
+
+    for (const auto& expr : windowFunc.partitionBy) {
+        validateExpression(*expr, table);
+    }
+
+    for (const auto& [expr, _] : windowFunc.orderBy) {
+        validateExpression(*expr, table);
+    }
+
+        // Function-specific validation
+    std::string funcName = windowFunc.function.lexeme;
+    if (funcName == "NTILE") {
+        if (!windowFunc.argument) {
+            throw SematicError("NTILE requires an argument");
+        }
+        // Argument should be numeric
+        auto argType = getValueType(*windowFunc.argument);
+        if (argType != DatabaseSchema::Column::INTEGER) {
+            throw SematicError("NTILE argument must be integer");
+        }
+    }
+}
+
+void SematicAnalyzer::validateDateFunction(AST::DateFunction& dateFunc, const DatabaseSchema::Table* table) {
+    validateExpression(*dateFunc.argument, table);
+
+    // JULIANDAY argument should be a date
+    if (dateFunc.function.type == Token::Type::JULIANDAY) {
+        auto argType = getValueType(*dateFunc.argument);
+        if (argType != DatabaseSchema::Column::DATE && argType != DatabaseSchema::Column::DATETIME && argType != DatabaseSchema::Column::STRING) {
+            throw SematicError("JULIANDAY requires date or string argument");
+        }
+    }
+}
+
+
+
 void SematicAnalyzer::validateBinaryOperation(AST::BinaryOp& op, const DatabaseSchema::Table* table) {
     validateExpression(*op.left, table);
     validateExpression(*op.right, table);

@@ -14,6 +14,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/e_sql.dir/src/diskstorage.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o"
   "CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o.d"
+  "CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o"
+  "CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o"
   "CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o"

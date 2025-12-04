@@ -297,6 +297,30 @@ src/execution_engine/constraint_validation.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.s
 .PHONY : src/execution_engine/constraint_validation.cpp.s
 
+src/execution_engine/execute_analytical.o: src/execution_engine/execute_analytical.cpp.o
+.PHONY : src/execution_engine/execute_analytical.o
+
+# target to build an object file
+src/execution_engine/execute_analytical.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o
+.PHONY : src/execution_engine/execute_analytical.cpp.o
+
+src/execution_engine/execute_analytical.i: src/execution_engine/execute_analytical.cpp.i
+.PHONY : src/execution_engine/execute_analytical.i
+
+# target to preprocess a source file
+src/execution_engine/execute_analytical.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.i
+.PHONY : src/execution_engine/execute_analytical.cpp.i
+
+src/execution_engine/execute_analytical.s: src/execution_engine/execute_analytical.cpp.s
+.PHONY : src/execution_engine/execute_analytical.s
+
+# target to generate assembly for a file
+src/execution_engine/execute_analytical.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.s
+.PHONY : src/execution_engine/execute_analytical.cpp.s
+
 src/execution_engine/execute_database_operations.o: src/execution_engine/execute_database_operations.cpp.o
 .PHONY : src/execution_engine/execute_database_operations.o
 
@@ -999,6 +1023,9 @@ help:
 	@echo "... src/execution_engine/constraint_validation.o"
 	@echo "... src/execution_engine/constraint_validation.i"
 	@echo "... src/execution_engine/constraint_validation.s"
+	@echo "... src/execution_engine/execute_analytical.o"
+	@echo "... src/execution_engine/execute_analytical.i"
+	@echo "... src/execution_engine/execute_analytical.s"
 	@echo "... src/execution_engine/execute_database_operations.o"
 	@echo "... src/execution_engine/execute_database_operations.i"
 	@echo "... src/execution_engine/execute_database_operations.s"

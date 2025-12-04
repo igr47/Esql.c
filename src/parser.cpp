@@ -227,6 +227,12 @@ std::unique_ptr<AST::OrderByClause> Parse::parseOrderByClause() {
 
 std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	auto stmt=std::make_unique<AST::SelectStatement>();
+
+    // Parse WITH clause if present
+    if (match(Token::Type::WITH)) {
+        stmt->withClause = parseWithClause();
+    }
+
 	//parse select clause
 	consume(Token::Type::SELECT);
 	if(match(Token::Type::DISTINCT)){
@@ -235,24 +241,44 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	}
 	if(match(Token::Type::ASTERIST)){
 		consume(Token::Type::ASTERIST);
+
+        // Check if there's a comma after * (invalid syntax)
+        if (match(Token::Type::COMMA)) {
+            throw ParseError(currentToken.line, currentToken.column,"Cannot mix * with other columns in SELECT list");
+        }
 	}else{
 		//lexer.restoreState(savePos, saveLine, saveCol);
 		//parse the first expression to see if it followed by AS
-		//auto firstExpr = parseExpression();
 		Token nextToken = peekToken();
 
 		if(nextToken.type == Token::Type::AS){
+            std::cout << "DEBUG: Entered AS statement evaluation." << std::endl;
 			stmt->newCols = parseColumnListAs();
 		}
 		else{
+            std::cout << "DEBUG: Entered Column list parsing." << std::endl;
 	        stmt->columns=parseColumnList();
+            if (match(Token::Type::AS)) {
+                stmt->newCols = parseColumnListAs();
+            }
+            std::cout << "DEBUG: Finished column list parsing." << std::endl;
 		}
+
+
 
 	}
 
 	//parse From clause
 	consume(Token::Type::FROM);
 	stmt->from=parseFromClause();
+
+        // Parse JOIN clauses
+    while (matchAny({Token::Type::INNER, Token::Type::LEFT,
+                     Token::Type::RIGHT, Token::Type::FULL,
+                     Token::Type::JOIN})) {
+        stmt->joins.push_back(std::move(parseJoinClause()));
+    }
+
 	//parse optional WHERE clause
 	if(match(Token::Type::WHERE)){
 		consume(Token::Type::WHERE);
@@ -986,13 +1012,16 @@ std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::par
 }
 
 std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList() {
+    std::cout << "DEBUG: Entered the parseColumnList() method" << std::endl;
 	std::vector<std::unique_ptr<AST::Expression>> columns;
 
 	do{
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
+        std::cout << "DEBUG: Starting prseExpression() method." << std::endl;
 		columns.push_back(parseExpression());
+        std::cout << "DEBUG: Finished parseExpression() method." << std::endl;
 	}while(match(Token::Type::COMMA));
 	return columns;
 }
@@ -1032,6 +1061,191 @@ std::unique_ptr<AST::Expression> Parse::parseCharacterClassPattern(const std::st
     // Charachter class expansion will be taken care off in the execution enging
     return std::make_unique<AST::CharClass>(pattern);
 }
+
+std::unique_ptr<AST::Expression> Parse::parseWindowFunction() {
+    Token funcToken = currentToken;
+    consume(currentToken.type);
+
+    std::unique_ptr<AST::Expression> arg = nullptr;
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+        if (!match(Token::Type::R_PAREN)) {
+            arg = parseExpression();
+        }
+        consume(Token::Type::R_PAREN);
+    }
+    
+    consume(Token::Type::OVER);
+    consume(Token::Type::L_PAREN);
+
+    std::vector<std::unique_ptr<AST::Expression>> partitionBy;
+    std::vector<std::pair<std::unique_ptr<AST::Expression>, bool>> orderBy;
+
+    // Parse PARTITION BY
+    if (match(Token::Type::PARTITION)) {
+        consume(Token::Type::PARTITION);
+        consume(Token::Type::BY);
+
+        do {
+            if (match(Token::Type::COMMA)) consume(Token::Type::COMMA);
+            partitionBy.push_back(parseExpression());
+        } while (match(Token::Type::COMMA));
+    }
+
+    // Parse ORDER BY
+    if (match(Token::Type::ORDER)) {
+        consume(Token::Type::ORDER);
+        consume(Token::Type::BY);
+
+        do {
+            if (match(Token::Type::COMMA)) consume(Token::Type::COMMA);
+            auto expr = parseExpression();
+            bool ascending = true;
+
+            if (match(Token::Type::ASC)) {
+                consume(Token::Type::ASC);
+                ascending = true;
+            } else if (match(Token::Type::DESC)) {
+                consume(Token::Type::DESC);
+                ascending = false;
+            }
+
+            orderBy.emplace_back(std::move(expr), ascending);
+        } while (match(Token::Type::COMMA));
+    }
+
+    consume(Token::Type::R_PAREN);
+
+    return std::make_unique<AST::WindowFunction>(funcToken, std::move(arg), std::move(partitionBy), std::move(orderBy));
+}
+
+std::unique_ptr<AST::WithClause> Parse::parseWithClause() {
+    consume(Token::Type::WITH);
+
+    std::vector<AST::CommonTableExpression> ctes;
+
+    do {
+        if (match(Token::Type::COMMA)) {
+            consume(Token::Type::COMMA);
+        }
+
+        AST::CommonTableExpression cte;
+        cte.name = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+
+        // Optional column list
+        if (match(Token::Type::L_PAREN)) {
+            consume(Token::Type::L_PAREN);
+            do {
+                cte.columns.push_back(currentToken.lexeme);
+                consume(Token::Type::IDENTIFIER);
+            } while (match(Token::Type::COMMA) && (consume(Token::Type::COMMA), true));
+            consume(Token::Type::R_PAREN);
+        }
+
+        consume(Token::Type::AS);
+        consume(Token::Type::L_PAREN);
+        cte.query = parseSelectStatement();
+        consume(Token::Type::R_PAREN);
+
+        ctes.push_back(std::move(cte));
+    } while (match(Token::Type::COMMA));
+    return std::make_unique<AST::WithClause>(std::move(ctes));
+}
+
+// Parse join clause
+std::unique_ptr<AST::JoinClause> Parse::parseJoinClause() {
+    auto joinClause = std::make_unique<AST::JoinClause>();
+
+    // Parse Join type
+    if (match(Token::Type::INNER)) {
+        joinClause->type = AST::JoinClause::INNER;
+        consume(Token::Type::INNER);
+    } else if (match(Token::Type::LEFT)) {
+        consume(Token::Type::LEFT);
+        if (match(Token::Type::OUTER)) {
+            consume(Token::Type::OUTER);
+        }
+        joinClause->type = AST::JoinClause::LEFT;
+    } else if (match(Token::Type::RIGHT)) {
+        consume(Token::Type::RIGHT);
+        if (match(Token::Type::OUTER)) {
+            consume(Token::Type::OUTER);
+        }
+        joinClause->type = AST::JoinClause::RIGHT;
+    } else if (match(Token::Type::FULL)) {
+        consume(Token::Type::FULL);
+        if (match(Token::Type::OUTER)) {
+            consume(Token::Type::OUTER);
+        }
+        joinClause->type = AST::JoinClause::FULL;
+    }
+
+    consume(Token::Type::JOIN);
+
+    // Parse table
+    joinClause->table = parseExpression();
+
+        // Parse ON Condition
+    consume(Token::Type::ON);
+    joinClause->condition = parseExpression();
+
+    return joinClause;
+}
+
+
+
+std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
+    std::cout << "DEBUG: Reached Statistical function parsing";
+    Token funcToken = currentToken;
+    AST::StatisticalExpression::StatType statType;
+
+    switch(funcToken.type) {
+        case Token::Type::STDDEV: statType = AST::StatisticalExpression::StatType::STDDEV; break;
+        case Token::Type::VARIANCE: statType = AST::StatisticalExpression::StatType::VARIANCE; break;
+        case Token::Type::PERCENTILE_CONT: statType= AST::StatisticalExpression::StatType::PERCENTILE; break;
+        case Token::Type::CORR: statType= AST::StatisticalExpression::StatType::CORRELATION; break;
+        case Token::Type::REGR_SLOPE: statType = AST::StatisticalExpression::StatType::REGRESSION; break;
+        default: throw ParseError(currentToken.line, currentToken.column, "Unkown statistical function");
+    }
+
+    std::cout << "DEBUG: Consumed Token: currentToken.type "<< std::endl;
+    consume(currentToken.type);
+    consume(Token::Type::L_PAREN);
+    std::cout << "DEBUG: Consumed ( Token : " << std::endl;
+    std::cout << "DUBUG: Starting parsing parseExpression()" <<std::endl;
+    auto arg1 = parseExpression();
+    std::cout << "DEBUG: Parsed parseExpression()" << std::endl;
+    std::unique_ptr<AST::Expression> arg2= nullptr;
+    double percentile = 0.5;
+
+    if (statType == AST::StatisticalExpression::StatType::PERCENTILE) {
+        consume(Token::Type::COMMA);
+        if (match(Token::Type::NUMBER_LITERAL)) {
+            try {
+                percentile = std::stod(currentToken.lexeme);
+                consume(Token::Type::NUMBER_LITERAL);
+            } catch (...) {
+                throw ParseError(currentToken.line, currentToken.column, "Invalid percentile value");
+            }
+        }
+    } else if (statType == AST::StatisticalExpression::StatType::CORRELATION || statType == AST::StatisticalExpression::StatType::REGRESSION) {
+        consume(Token::Type::COMMA);
+        arg2 = parseExpression();
+    }
+
+    std::cout << "DEBUG: Reached the end and returning the constructor." << std::endl;
+    consume(Token::Type::R_PAREN);
+
+    std::unique_ptr<AST::Expression> aliasExpr = nullptr;
+    if(match(Token::Type::AS)){
+        consume(Token::Type::AS);
+        aliasExpr = parseIdentifier();
+    }
+
+    return std::make_unique<AST::StatisticalExpression>(statType, std::move(arg1), std::move(arg2),std::move(aliasExpr), percentile);
+}
+
 
 std::unique_ptr<AST::Expression> Parse::parseExpression(){
 	return parseBinaryExpression(1);
@@ -1229,6 +1443,29 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
         consume(Token::Type::R_PAREN);
 
         return std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
+    } else if (matchAny({Token::Type::ROW_NUMBER, Token::Type::RANK, Token::Type::DENSE_RANK, Token::Type::LAG, Token::Type::LEAD, Token::Type::FIRST_VALUE, Token::Type::LAST_VALUE})) {
+        return parseWindowFunction();
+    } else if (matchAny({Token::Type::STDDEV, Token::Type::VARIANCE, Token::Type::PERCENTILE_CONT, Token::Type::CORR, Token::Type::REGR_SLOPE})) {
+        return parseStatisticalFunction();
+    } else if (match(Token::Type::JULIANDAY)) {
+        Token funcToken = currentToken;
+        consume(Token::Type::JULIANDAY);
+        consume(Token::Type::L_PAREN);
+        auto arg = parseExpression();
+        consume(Token::Type::R_PAREN);
+        return std::make_unique<AST::DateFunction>(funcToken, std::move(arg));
+    } else if (matchAny({Token::Type::YEAR, Token::Type::MONTH, Token::Type::DAY,Token::Type::SUBSTR, Token::Type::CONCAT})) {
+        Token funcToken = currentToken;
+        consume(currentToken.type);
+        std::vector<std::unique_ptr<AST::Expression>> args;
+        if (!match(Token::Type::R_PAREN)) {
+            do { 
+                args.push_back(parseExpression());
+            } while (match(Token::Type::COMMA) && (consume(Token::Type::COMMA), true));
+        }
+        consume(Token::Type::R_PAREN);
+
+        return std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
 	}else{
 		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
 	}
@@ -1243,40 +1480,102 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 
 // Method for parsing Conditionals
 std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
+    std::cout << "DEBUG: Reached parseCaseExpression() method and consuming CASE." << std::endl;
     consume(Token::Type::CASE);
+    std::cout << "DEBUG: Consumed CASE clause." << std::endl;
 
     std::vector<std::pair<std::unique_ptr<AST::Expression>,std::unique_ptr<AST::Expression>>> whenClauses;
     std::unique_ptr<AST::Expression> elseClause = nullptr;
 
     //Parse optional CASE expressions (for simple CASE)
     std::unique_ptr<AST::Expression> caseExpression = nullptr;
-    if (!match(Token::Type::WHEN) && !match(Token::Type::END)) {
+    if (!match(Token::Type::WHEN) /*&& !match(Token::Type::END)*/) {
         caseExpression = parseExpression();
     }
 
     // Parse WHEN clauses
+    std::cout << "DEBUG: Consuming WHEN clause." << std::endl;
     while (match(Token::Type::WHEN)) {
         consume(Token::Type::WHEN);
+        std::cout << "DEBUG: Consumed WHEN. eNTERING EXPRESSION PARSING" << std::endl;
         auto condition = parseExpression();
+        std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
+        std::cout << "DEBUG: Consuming THEN." << std::endl;
         consume (Token::Type::THEN);
+        std::cout << "DEBUG: Consumed THEN. Starting parseExpression()." << std::endl;
         auto result = parseExpression();
+        std::cout << "DEBUG: Completed ParseExpression()." << std::endl;
         whenClauses.emplace_back(std::move(condition), std::move(result));
     }
 
     // Parse ELSE clause
+     std::cout << "DEBUG: Consuming ELSE clause." << std::endl;
     if (match(Token::Type::ELSE)) {
         consume(Token::Type::ELSE);
+        std::cout << "DEBUG: Consumed ELSE. eNTERING EXPRESSION PARSING" << std::endl;
         elseClause = parseExpression();
+        std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
     }
 
-    consume(Token::Type::END);
-    if (caseExpression) {
-        // Simple CASE: CASE expr WHEN value THEN result...
-        return std::make_unique<AST::CaseExpression>(std::move(caseExpression),std::move(whenClauses),std::move(elseClause));
-    } else {
-        // SErced CASE: CASE WHEN condition THEN result...
-        return std::make_unique<AST::CaseExpression>(std::move(whenClauses), std::move(elseClause));
+
+    // Must have END
+    if (!match(Token::Type::END)) {
+        throw ParseError(currentToken.line, currentToken.column,"Expected END to close CASE expression");
     }
+
+     std::cout << "DEBUG: Consuming END clause." << std::endl;
+    consume(Token::Type::END);
+    std::cout << "DEBUG: Completed END expression" << std::endl;
+
+        // Validate we have at least one WHEN clause or an ELSE
+    if (whenClauses.empty() && !elseClause) {
+        throw ParseError(currentToken.line, currentToken.column,"CASE expression must have at least one WHEN clause or an ELSE clause");
+    }
+
+    std::string alias;
+    if (match(Token::Type::AS)) {
+    std::cout << "DEBUG: Found AS clause after CASE expression." << std::endl;
+    consume(Token::Type::AS);
+
+    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+        alias = currentToken.lexeme;
+        // Remove quotes
+        if (alias.size() >= 2 &&
+            ((alias[0] == '\'' && alias.back() == '\'') ||
+             (alias[0] == '"' && alias.back() == '"'))) {
+            alias = alias.substr(1, alias.size() - 2);
+        }
+        consume(currentToken.type);
+        std::cout << "DEBUG: Found string literal alias: " << alias << std::endl;
+    } else if (match(Token::Type::IDENTIFIER)) {
+        alias = currentToken.lexeme;
+        consume(Token::Type::IDENTIFIER);
+        std::cout << "DEBUG: Found identifier alias: " << alias << std::endl;
+    } else {
+        throw ParseError(currentToken.line, currentToken.column,
+                       "Expected column alias after AS");
+    }
+    }
+
+    std::cout << "DEBUG: Returning parsed Expressions." << std::endl;
+    if (caseExpression) {
+        if (!alias.empty()) {
+            // Simple CASE with no alias: CASE expr WHEN value THEN result...
+            return std::make_unique<AST::CaseExpression>(std::move(caseExpression),std::move(whenClauses),std::move(elseClause),alias);
+        } else {
+            return std::make_unique<AST::CaseExpression>(std::move(caseExpression),std::move(whenClauses),std::move(elseClause));
+        }
+    } else {
+        if (!alias.empty()) {
+            // SErced CASE: CASE WHEN condition THEN result...
+            return std::make_unique<AST::CaseExpression>(std::move(whenClauses), std::move(elseClause),alias);
+        } else {
+            return std::make_unique<AST::CaseExpression>(std::move(whenClauses), std::move(elseClause));
+        }
+    }
+
+
+    std::cout << "DEBUG: Finished parsing CASE expression." << std::endl;
 }
 
 std::unique_ptr<AST::Expression> Parse::parseIdentifier(){

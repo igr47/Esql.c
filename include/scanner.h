@@ -12,6 +12,27 @@ class Token{
             // Conditionals
             CASE,WHEN,THEN,ELSE,END,ROUND,LOWER,UPPER,SUBSTRING,LIKE,
 
+            // Window Functions
+            ROW_NUMBER, RANK, DENSE_RANK, NTILE,LAG, LEAD, FIRST_VALUE, LAST_VALUE,OVER, PARTITION, WITHIN,
+
+            // Date Functions
+            JULIANDAY, YEAR, MONTH, DAY,NOW, CURRENT_DATE, CURRENT_TIMESTAMP,
+
+            // String Functions
+            SUBSTR, CONCAT, LENGTH,
+
+            // Join Keywords
+            INNER, LEFT, RIGHT, FULL, OUTER, JOIN, ON,
+
+            // CTE
+            WITH,
+
+            // Other Functions
+            NULLIF, COALESCE,
+
+            // Statisticl fuctions
+            STDDEV,VARIANCE,PERCENTILE_CONT,CORR,REGR_SLOPE,
+
             // IS operations
             IS_NULL,IS_NOT_NULL,IS_TRUE,IS_NOT_TRUE,IS_FALSE,IS_NOT_FALSE,
             // Auto generations

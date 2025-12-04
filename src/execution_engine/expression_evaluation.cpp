@@ -32,7 +32,9 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 
     // Handle CASE expressions
     if (auto* caseExpr = dynamic_cast<const AST::CaseExpression*>(expr)) {
-        if (caseExpr->caseExpression) { 
+        std::cout << "DEBUG: evaluateExpression - Found CASE expression" << std::endl;
+        return evaluateCaseExpression(caseExpr, row);
+        /*if (caseExpr->caseExpression) { 
             std::string caseValue = evaluateExpression(caseExpr->caseExpression.get(), row);
             for (const auto& [condition, result] : caseExpr->whenClauses) {
                 std::string whenValue = evaluateExpression(condition.get(),row);
@@ -51,7 +53,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
         if (caseExpr->elseClause) {
             return evaluateExpression(caseExpr->elseClause.get(), row);
         }
-        return "NULL";
+        return "NULL";*/
     } else if(auto* funcCall = dynamic_cast<const AST::FunctionCall*>(expr)) {
         std::string functionName = funcCall->function.lexeme;
         std::vector<std::string> args;

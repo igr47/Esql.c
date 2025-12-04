@@ -21,6 +21,7 @@ class SematicAnalyzer{
 		//DiskStorage& storage;
         fractal::DiskStorage& storage;
 		const DatabaseSchema::Table* currentTable=nullptr;
+        std::unordered_map<std::string, std::unique_ptr<DatabaseSchema::Table>> cteTables;
 		//method for DATABASE management
 		void analyzeCreateDatabase(AST::CreateDatabaseStatement& createdbstmt);
 		//method for show database
@@ -52,6 +53,11 @@ class SematicAnalyzer{
         bool isTypeCompatibleForAssignment(DatabaseSchema::Column::Type columnType, DatabaseSchema::Column::Type valueType);
         bool isImplicitlyBoolean(const AST::Expression& expr);
         std::string typeToString(DatabaseSchema::Column::Type type) const;
+        void validateWithClause(AST::WithClause& withClause);
+        void validateJoinClause(AST::JoinClause& joinClause);
+        void validateWindowFunction(AST::WindowFunction& windowFunc, const DatabaseSchema::Table* table);
+        void validateDateFunction(AST::DateFunction& dateFunc, const DatabaseSchema::Table* table);
+
 		//void validateColumnReference(AST::Expression& expr);
 		void validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table);
 		void validateBinaryOperation(AST::BinaryOp&,const DatabaseSchema::Table* table);
