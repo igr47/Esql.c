@@ -1116,7 +1116,13 @@ std::unique_ptr<AST::Expression> Parse::parseWindowFunction() {
 
     consume(Token::Type::R_PAREN);
 
-    return std::make_unique<AST::WindowFunction>(funcToken, std::move(arg), std::move(partitionBy), std::move(orderBy));
+    std::unique_ptr<AST::Expression> aliasExpr = nullptr;
+    if (match(Token::Type::AS)) {
+        consume(Token::Type::AS);
+        aliasExpr = parseIdentifier();
+    }
+
+    return std::make_unique<AST::WindowFunction>(funcToken, std::move(arg), std::move(partitionBy), std::move(orderBy),std::move(aliasExpr));
 }
 
 std::unique_ptr<AST::WithClause> Parse::parseWithClause() {
@@ -1459,7 +1465,8 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
             consume(Token::Type::AS);
             aliasExpr = parseIdentifier();
         }
-        return std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));
+        //return std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));
+        left = std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));
     } else if (matchAny({Token::Type::YEAR, Token::Type::MONTH, Token::Type::DAY,Token::Type::SUBSTR, Token::Type::CONCAT})) {
         Token funcToken = currentToken;
         consume(currentToken.type);
@@ -1502,7 +1509,22 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 
 	Token next = peekToken();
 	if(isBinaryOperator(next.type)){
-		return parseBinaryExpression(0);
+
+        auto currentLeft = std::move(left);
+
+        std::cout << " DEBUG: Reached the operator." << std::endl;
+        Token op = currentToken;
+        std::cout << "DEBUG: Starting to consume operator" << std::endl;
+        advance(); // Consume the operator
+        std::cout << "DEBUG: Completed consuming operator" << std::endl;
+
+        // Parse the right side with appropriate precedence
+        int precedence = getPrecedence(op.type);
+        auto right = parseBinaryExpression(precedence + 1);
+
+        // Create the binary expression
+        return std::make_unique<AST::BinaryOp>(op, std::move(currentLeft), std::move(right));
+		//return parseBinaryExpression(0);
 		//return left;
 	}
 	return left;

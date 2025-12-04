@@ -413,6 +413,7 @@ namespace AST{
             std::vector<std::unique_ptr<Expression>> partitionBy;
             std::vector<std::pair<std::unique_ptr<Expression>, bool>> orderBy;
             std::unique_ptr<Expression> nTileValue;
+            std::unique_ptr<Expression> alias; 
 
             std::unique_ptr<Expression> clone() const override {
                 std::vector<std::unique_ptr<Expression>> clonedPartition;
@@ -429,11 +430,12 @@ namespace AST{
                         argument ? argument->clone() : nullptr,
                         std::move(clonedPartition),
                         std::move(clonedOrder),
-                        nTileValue ? nTileValue->clone() : nullptr
+                        nTileValue ? nTileValue->clone() : nullptr,
+                        alias ? alias->clone() : nullptr
                         );
             }
 
-            WindowFunction(Token func, std::unique_ptr<Expression> arg, std::vector<std::unique_ptr<Expression>> partition, std::vector<std::pair<std::unique_ptr<Expression>, bool>> order, std::unique_ptr<Expression> nTile = nullptr) : function(func), argument(std::move(arg)),partitionBy(std::move(partition)), orderBy(std::move(order)), nTileValue(std::move(nTile)) {}
+            WindowFunction(Token func, std::unique_ptr<Expression> arg, std::vector<std::unique_ptr<Expression>> partition, std::vector<std::pair<std::unique_ptr<Expression>, bool>> order, std::unique_ptr<Expression> nTile = nullptr, std::unique_ptr<Expression> al = nullptr) : function(func), argument(std::move(arg)),partitionBy(std::move(partition)), orderBy(std::move(order)), nTileValue(std::move(nTile)),alias(std::move(al)) {}
 
             std::string toString() const override {
                 std::string result = function.lexeme + "(";
@@ -459,6 +461,9 @@ namespace AST{
                 }
 
                 result += ")";
+                if (alias) {
+                    result += " AS " + alias->toString();
+                }
                 return result;
             }
     };

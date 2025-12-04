@@ -1032,9 +1032,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeAnalyticalSelect(AST::SelectS
             }
         }
         else if (auto* windowFunc = dynamic_cast<const AST::WindowFunction*>(col.get())) {
-            /*if (windowFunc->alias) {
+            if (windowFunc->alias) {
                 colName = windowFunc->alias->toString();
-            }*/
+            }
         }
         
         result.columns.push_back(colName);
