@@ -41,7 +41,10 @@ const std::unordered_set<std::string> SyntaxHighlighter::conditionals = {
 
 const std::unordered_set<std::string> SyntaxHighlighter::aggregate_functions = {
     "COUNT", "SUM", "AVG", "MIN", "MAX", "STDDEV", "VARIANCE",
-    "GROUP_CONCAT", "STRING_AGG", "ARRAY_AGG", "JSON_AGG","ASC","DESC"
+    "GROUP_CONCAT", "STRING_AGG", "ARRAY_AGG", "JSON_AGG","ASC","DESC",
+     "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE","LAG", "LEAD", "FIRST_VALUE", 
+     "LAST_VALUE","OVER", "PARTITION", "WITHIN"
+
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::operators = {

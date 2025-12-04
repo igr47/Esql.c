@@ -63,6 +63,13 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
                     displayName = col->toString();
                 }
                 originalName = col->toString();
+            } else if (auto* windowFunc = dynamic_cast<const AST::WindowFunction*>(col.get())) {
+                if (windowFunc->alias) {
+                    displayName = windowFunc->alias->toString();
+                } else {
+                    displayName = col->toString();
+                }
+                originalName = col->toString();
             } else if (auto* statExpr = dynamic_cast<const AST::StatisticalExpression*>(col.get())) {
                 if (statExpr->alias) {
                     displayName = statExpr->alias->toString();
@@ -569,6 +576,13 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
             else if (auto* dateFunc = dynamic_cast<const AST::DateFunction*>(col.get())) {
                 if (dateFunc->alias) {
                     displayName = dateFunc->alias->toString();
+                } else {
+                    displayName = originalExpr;
+                }
+            }
+            else if (auto* windowFunc = dynamic_cast<const AST::WindowFunction*>(col.get())) {
+                if (windowFunc->alias) {
+                    displayName = windowFunc->alias->toString();
                 } else {
                     displayName = originalExpr;
                 }

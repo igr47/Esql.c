@@ -120,7 +120,18 @@ void Lexer::initializeKeyWords(){
         {"MONTH", Token::Type::MONTH},
         {"DAY", Token::Type::DAY},
         {"NOW", Token::Type::NOW},
-        {"JULIANDAY", Token::Type::JULIANDAY}
+        {"JULIANDAY", Token::Type::JULIANDAY},
+        {"ROW_NUMBER", Token::Type::ROW_NUMBER},
+        {"RANK", Token::Type::RANK},
+        {"DENSE_RANK", Token::Type::DENSE_RANK},
+        {"NTILE", Token::Type::NTILE},
+        {"LAG", Token::Type::LAG},
+        {"LEAD", Token::Type::LEAD},
+        {"FIRST_VALUE", Token::Type::FIRST_VALUE},
+        {"LAST_VALUE", Token::Type::LAST_VALUE},
+        {"OVER", Token::Type::OVER},
+        {"PARTITION", Token::Type::PARTITION},
+        {"WITHIN", Token::Type::WITHIN}
 	};
 }
 
