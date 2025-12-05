@@ -131,7 +131,10 @@ void Lexer::initializeKeyWords(){
         {"LAST_VALUE", Token::Type::LAST_VALUE},
         {"OVER", Token::Type::OVER},
         {"PARTITION", Token::Type::PARTITION},
-        {"WITHIN", Token::Type::WITHIN}
+        {"WITHIN", Token::Type::WITHIN},
+        {"SUBSTR", Token::Type::SUBSTR},
+        {"CONCANT", Token::Type::CONCAT},
+        {"LENGTH", Token::Type::LENGTH}
 	};
 }
 
