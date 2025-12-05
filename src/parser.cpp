@@ -1418,7 +1418,8 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		}
 
 
-		return std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg),std::move(expre), isCountAll);
+		//return std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg),std::move(expre), isCountAll);
+        left = std::make_unique<AST::AggregateExpression>(funcToken, std::move(arg),std::move(expre), isCountAll);
 	}else if(match(Token::Type::IDENTIFIER)){
 		//return parseIdentifier();
 		left = parseIdentifier();
@@ -1448,11 +1449,14 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
         }
         consume(Token::Type::R_PAREN);
 
-        return std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
+        //return std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
+        left = std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
     } else if (matchAny({Token::Type::ROW_NUMBER, Token::Type::RANK, Token::Type::DENSE_RANK, Token::Type::LAG, Token::Type::LEAD, Token::Type::FIRST_VALUE, Token::Type::LAST_VALUE})) {
-        return parseWindowFunction();
+        //return parseWindowFunction();
+         left = parseWindowFunction();
     } else if (matchAny({Token::Type::STDDEV, Token::Type::VARIANCE, Token::Type::PERCENTILE_CONT, Token::Type::CORR, Token::Type::REGR_SLOPE})) {
-        return parseStatisticalFunction();
+        //return parseStatisticalFunction();
+          left = parseStatisticalFunction();
     } else if (match(Token::Type::JULIANDAY)) {
         Token funcToken = currentToken;
         consume(Token::Type::JULIANDAY);
@@ -1482,7 +1486,11 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 
         std::vector<std::unique_ptr<AST::Expression>> args;
         args.push_back(std::move(arg));
-        return std::make_unique<AST::FunctionCall>(funcToken,std::move(args), std::move(aliasExpr));
+        //return std::make_unique<AST::FunctionCall>(funcToken,std::move(args), std::move(aliasExpr));
+        left = std::make_unique<AST::FunctionCall>(
+            funcToken,
+            std::vector<std::unique_ptr<AST::Expression>>{},
+            std::move(aliasExpr));
     } else if (match(Token::Type::NOW)) {
         Token funcToken = currentToken;
         consume(Token::Type::NOW);
@@ -1507,8 +1515,13 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
 	}
 
-	Token next = peekToken();
-	if(isBinaryOperator(next.type)){
+    Token next = peekToken();
+    if(isBinaryOperator(next.type)){
+        // Don't consume the operator here - let parseBinaryExpression handle it
+        // Just return what we've parsed so far
+        return left;
+    }
+	/*if(isBinaryOperator(next.type)){
 
         auto currentLeft = std::move(left);
 
@@ -1526,7 +1539,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
         return std::make_unique<AST::BinaryOp>(op, std::move(currentLeft), std::move(right));
 		//return parseBinaryExpression(0);
 		//return left;
-	}
+	}*/
 	return left;
 }
 

@@ -593,9 +593,16 @@ void ExecutionEngine::applyJulianDay(std::vector<std::unordered_map<std::string,
         std::string dateStr = evaluateExpression(dateFunc->argument.get(), row);
         
         try {
-            DateTime dt(dateStr);
-            double julianDay = dt.toJulianDay();
-            row[resultColumn] = std::to_string(julianDay);
+            // Handle special case for "now" string
+            if (dateStr == "now" || dateStr == "\"now\"") {
+                DateTime now = DateTime::now();
+                double julianDay = now.toJulianDay();
+                row[resultColumn] = std::to_string(julianDay);
+            } else {
+                DateTime dt(dateStr);
+                double julianDay = dt.toJulianDay();
+                row[resultColumn] = std::to_string(julianDay);
+            }
         } catch (...) {
             row[resultColumn] = "NULL";
         }
@@ -608,9 +615,15 @@ void ExecutionEngine::applyJulianDay(std::vector<std::unordered_map<std::string,
         std::string dateStr = evaluateExpression(funcCall->arguments[0].get(), row);
 
         try {
-            DateTime dt(dateStr);
-            double julianDay = dt.toJulianDay();
-            row[resultColumn] = std::to_string(julianDay);
+            if (dateStr == "now" || dateStr == "\"now\"") {
+                DateTime now = DateTime::now();
+                double julianDay = now.toJulianDay();
+                row[resultColumn] = std::to_string(julianDay);
+            } else {
+                DateTime dt(dateStr);
+                double julianDay = dt.toJulianDay();
+                row[resultColumn] = std::to_string(julianDay);
+            }
         } catch (...) {
             row[resultColumn] = "NULL";
         }

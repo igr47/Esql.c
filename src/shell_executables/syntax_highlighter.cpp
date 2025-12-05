@@ -43,7 +43,8 @@ const std::unordered_set<std::string> SyntaxHighlighter::aggregate_functions = {
     "COUNT", "SUM", "AVG", "MIN", "MAX", "STDDEV", "VARIANCE",
     "GROUP_CONCAT", "STRING_AGG", "ARRAY_AGG", "JSON_AGG","ASC","DESC",
      "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE","LAG", "LEAD", "FIRST_VALUE", 
-     "LAST_VALUE","OVER", "PARTITION", "WITHIN"
+     "LAST_VALUE","OVER", "PARTITION", "WITHIN","PERCENTILE_CONT","SUBSTR",
+     "CONCANT","LENGTH"
 
 };
 

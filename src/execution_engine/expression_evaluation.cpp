@@ -277,14 +277,34 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 
             case Token::Type::PLUS:
                 try {
-                    return std::to_string(std::stod(left) + std::stod(right));
+                    bool isLeftJulian = (left.find("245") == 0); // Julian days start with ~245...
+                    bool isRightJulian = (right.find("245") == 0);
+
+                    if (isLeftJulian || isRightJulian) {
+                        double leftNum = std::stod(left);
+                        double rightNum = std::stod(right);
+                        double result = leftNum + rightNum;
+                        return std::to_string(result);
+                    } else {
+                        return std::to_string(std::stod(left) + std::stod(right));
+                    }
                 } catch (...) {
                     return left + right; // String concatenation
                 }
 
             case Token::Type::MINUS:
                 try {
-                    return std::to_string(std::stod(left) - std::stod(right));
+                    bool isLeftJulian = (left.find("245") == 0); // Julian days start with ~245...
+                    bool isRightJulian = (right.find("245") == 0);
+
+                    if (isLeftJulian || isRightJulian) {
+                        double leftNum = std::stod(left);
+                        double rightNum = std::stod(right);
+                        double result = leftNum - rightNum;
+                        return std::to_string(result);
+                    } else {
+                        return std::to_string(std::stod(left) - std::stod(right));
+                    }
                 } catch (...) {
                     throw std::runtime_error("Cannot subtract non-numeric values");
                 }
