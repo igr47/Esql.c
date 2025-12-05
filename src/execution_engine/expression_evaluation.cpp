@@ -32,7 +32,7 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
 
     // Handle CASE expressions
     if (auto* caseExpr = dynamic_cast<const AST::CaseExpression*>(expr)) {
-        std::cout << "DEBUG: evaluateExpression - Found CASE expression" << std::endl;
+        //std::cout << "DEBUG: evaluateExpression - Found CASE expression" << std::endl;
         return evaluateCaseExpression(caseExpr, row);
         /*if (caseExpr->caseExpression) { 
             std::string caseValue = evaluateExpression(caseExpr->caseExpression.get(), row);
