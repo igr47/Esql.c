@@ -252,16 +252,16 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 		Token nextToken = peekToken();
 
 		if(nextToken.type == Token::Type::AS){
-            std::cout << "DEBUG: Entered AS statement evaluation." << std::endl;
+            //std::cout << "DEBUG: Entered AS statement evaluation." << std::endl;
 			stmt->newCols = parseColumnListAs();
 		}
 		else{
-            std::cout << "DEBUG: Entered Column list parsing." << std::endl;
+            //std::cout << "DEBUG: Entered Column list parsing." << std::endl;
 	        stmt->columns=parseColumnList();
             if (match(Token::Type::AS)) {
                 stmt->newCols = parseColumnListAs();
             }
-            std::cout << "DEBUG: Finished column list parsing." << std::endl;
+            //std::cout << "DEBUG: Finished column list parsing." << std::endl;
 		}
 
 
@@ -1012,16 +1012,16 @@ std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::par
 }
 
 std::vector<std::unique_ptr<AST::Expression>> Parse::parseColumnList() {
-    std::cout << "DEBUG: Entered the parseColumnList() method" << std::endl;
+    //std::cout << "DEBUG: Entered the parseColumnList() method" << std::endl;
 	std::vector<std::unique_ptr<AST::Expression>> columns;
 
 	do{
 		if(match(Token::Type::COMMA)){
 			consume(Token::Type::COMMA);
 		}
-        std::cout << "DEBUG: Starting prseExpression() method." << std::endl;
+        //std::cout << "DEBUG: Starting prseExpression() method." << std::endl;
 		columns.push_back(parseExpression());
-        std::cout << "DEBUG: Finished parseExpression() method." << std::endl;
+        //std::cout << "DEBUG: Finished parseExpression() method." << std::endl;
 	}while(match(Token::Type::COMMA));
 	return columns;
 }
@@ -1202,7 +1202,7 @@ std::unique_ptr<AST::JoinClause> Parse::parseJoinClause() {
 
 
 std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
-    std::cout << "DEBUG: Reached Statistical function parsing";
+    //std::cout << "DEBUG: Reached Statistical function parsing";
     Token funcToken = currentToken;
     AST::StatisticalExpression::StatType statType;
 
@@ -1215,13 +1215,13 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
         default: throw ParseError(currentToken.line, currentToken.column, "Unkown statistical function");
     }
 
-    std::cout << "DEBUG: Consumed Token: currentToken.type "<< std::endl;
+    //std::cout << "DEBUG: Consumed Token: currentToken.type "<< std::endl;
     consume(currentToken.type);
     consume(Token::Type::L_PAREN);
-    std::cout << "DEBUG: Consumed ( Token : " << std::endl;
-    std::cout << "DUBUG: Starting parsing parseExpression()" <<std::endl;
+    //std::cout << "DEBUG: Consumed ( Token : " << std::endl;
+    //std::cout << "DUBUG: Starting parsing parseExpression()" <<std::endl;
     auto arg1 = parseExpression();
-    std::cout << "DEBUG: Parsed parseExpression()" << std::endl;
+    //std::cout << "DEBUG: Parsed parseExpression()" << std::endl;
     std::unique_ptr<AST::Expression> arg2= nullptr;
     double percentile = 0.5;
 
@@ -1240,7 +1240,7 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
         arg2 = parseExpression();
     }
 
-    std::cout << "DEBUG: Reached the end and returning the constructor." << std::endl;
+    //std::cout << "DEBUG: Reached the end and returning the constructor." << std::endl;
     consume(Token::Type::R_PAREN);
 
     std::unique_ptr<AST::Expression> aliasExpr = nullptr;
@@ -1545,9 +1545,9 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 
 // Method for parsing Conditionals
 std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
-    std::cout << "DEBUG: Reached parseCaseExpression() method and consuming CASE." << std::endl;
+    //std::cout << "DEBUG: Reached parseCaseExpression() method and consuming CASE." << std::endl;
     consume(Token::Type::CASE);
-    std::cout << "DEBUG: Consumed CASE clause." << std::endl;
+    //std::cout << "DEBUG: Consumed CASE clause." << std::endl;
 
     std::vector<std::pair<std::unique_ptr<AST::Expression>,std::unique_ptr<AST::Expression>>> whenClauses;
     std::unique_ptr<AST::Expression> elseClause = nullptr;
@@ -1559,27 +1559,27 @@ std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
     }
 
     // Parse WHEN clauses
-    std::cout << "DEBUG: Consuming WHEN clause." << std::endl;
+    //std::cout << "DEBUG: Consuming WHEN clause." << std::endl;
     while (match(Token::Type::WHEN)) {
         consume(Token::Type::WHEN);
-        std::cout << "DEBUG: Consumed WHEN. eNTERING EXPRESSION PARSING" << std::endl;
+        //std::cout << "DEBUG: Consumed WHEN. eNTERING EXPRESSION PARSING" << std::endl;
         auto condition = parseExpression();
-        std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
-        std::cout << "DEBUG: Consuming THEN." << std::endl;
+        //std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
+        //std::cout << "DEBUG: Consuming THEN." << std::endl;
         consume (Token::Type::THEN);
-        std::cout << "DEBUG: Consumed THEN. Starting parseExpression()." << std::endl;
+        //std::cout << "DEBUG: Consumed THEN. Starting parseExpression()." << std::endl;
         auto result = parseExpression();
-        std::cout << "DEBUG: Completed ParseExpression()." << std::endl;
+        //std::cout << "DEBUG: Completed ParseExpression()." << std::endl;
         whenClauses.emplace_back(std::move(condition), std::move(result));
     }
 
     // Parse ELSE clause
-     std::cout << "DEBUG: Consuming ELSE clause." << std::endl;
+     //std::cout << "DEBUG: Consuming ELSE clause." << std::endl;
     if (match(Token::Type::ELSE)) {
         consume(Token::Type::ELSE);
-        std::cout << "DEBUG: Consumed ELSE. eNTERING EXPRESSION PARSING" << std::endl;
+        //std::cout << "DEBUG: Consumed ELSE. eNTERING EXPRESSION PARSING" << std::endl;
         elseClause = parseExpression();
-        std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
+        //std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
     }
 
 
@@ -1588,9 +1588,9 @@ std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
         throw ParseError(currentToken.line, currentToken.column,"Expected END to close CASE expression");
     }
 
-     std::cout << "DEBUG: Consuming END clause." << std::endl;
+     //std::cout << "DEBUG: Consuming END clause." << std::endl;
     consume(Token::Type::END);
-    std::cout << "DEBUG: Completed END expression" << std::endl;
+    //std::cout << "DEBUG: Completed END expression" << std::endl;
 
         // Validate we have at least one WHEN clause or an ELSE
     if (whenClauses.empty() && !elseClause) {
@@ -1599,7 +1599,7 @@ std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
 
     std::string alias;
     if (match(Token::Type::AS)) {
-    std::cout << "DEBUG: Found AS clause after CASE expression." << std::endl;
+    //std::cout << "DEBUG: Found AS clause after CASE expression." << std::endl;
     consume(Token::Type::AS);
 
     if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
@@ -1611,18 +1611,18 @@ std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
             alias = alias.substr(1, alias.size() - 2);
         }
         consume(currentToken.type);
-        std::cout << "DEBUG: Found string literal alias: " << alias << std::endl;
+        //std::cout << "DEBUG: Found string literal alias: " << alias << std::endl;
     } else if (match(Token::Type::IDENTIFIER)) {
         alias = currentToken.lexeme;
         consume(Token::Type::IDENTIFIER);
-        std::cout << "DEBUG: Found identifier alias: " << alias << std::endl;
+        //std::cout << "DEBUG: Found identifier alias: " << alias << std::endl;
     } else {
         throw ParseError(currentToken.line, currentToken.column,
                        "Expected column alias after AS");
     }
     }
 
-    std::cout << "DEBUG: Returning parsed Expressions." << std::endl;
+    //std::cout << "DEBUG: Returning parsed Expressions." << std::endl;
     if (caseExpression) {
         if (!alias.empty()) {
             // Simple CASE with no alias: CASE expr WHEN value THEN result...
@@ -1640,7 +1640,7 @@ std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
     }
 
 
-    std::cout << "DEBUG: Finished parsing CASE expression." << std::endl;
+    //std::cout << "DEBUG: Finished parsing CASE expression." << std::endl;
 }
 
 std::unique_ptr<AST::Expression> Parse::parseIdentifier(){

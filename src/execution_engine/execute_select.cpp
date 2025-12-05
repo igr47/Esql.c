@@ -658,26 +658,19 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
 
         // Calculate all aggregates for this group
         // Use stmt.columns for calculation, not stmt.newCols
-        /*const auto& columnsToCalculate = stmt.newCols.empty() ? stmt.columns :
-            [&]() -> std::vector<std::unique_ptr<AST::Expression>> {
-                std::vector<std::unique_ptr<AST::Expression>> cols;
-                for (const auto& col : stmt.newCols) {
-                    cols.push_back(col.first->clone());
-                }
-                return cols;
-            }();*/
+        
         std::vector<std::unique_ptr<AST::Expression>> columnsToCalculate;
-if (stmt.newCols.empty()) {
-    // Clone from stmt.columns
-    for (const auto& col : stmt.columns) {
-        columnsToCalculate.push_back(col->clone());
-    }
-} else {
-    // Clone from stmt.newCols
-    for (const auto& col : stmt.newCols) {
-        columnsToCalculate.push_back(col.first->clone());
-    }
-}
+        if (stmt.newCols.empty()) {
+            // Clone from stmt.columns
+            for (const auto& col : stmt.columns) {
+                columnsToCalculate.push_back(col->clone());
+            }
+        } else {
+            // Clone from stmt.newCols
+            for (const auto& col : stmt.newCols) {
+                columnsToCalculate.push_back(col.first->clone());
+            }
+        }
 
         for (const auto& col : columnsToCalculate) {
             std::string colKey = col->toString();
@@ -957,46 +950,6 @@ std::vector<double> ExecutionEngine::extractNumericValues(const std::vector<std:
     return values;
 }
 
-/*std::string ExecutionEngine::evaluateCaseExpression(const AST::CaseExpression* caseExpr, const std::unordered_map<std::string, std::string>& row) {
-    // Simple CASE: CASE expr WHEN value THEN result...
-    if (caseExpr->caseExpression) {
-        std::string caseValue = evaluateExpression(caseExpr->caseExpression.get(), row);
-
-        for (const auto& [condition, result] : caseExpr->whenClauses) {
-            std::string whenValue = evaluateExpression(condition.get(), row);
-            
-            // Handle different comparison scenarios
-            bool match = false;
-            if (isNumericString(caseValue) && isNumericString(whenValue)) {
-                match = (std::stod(caseValue) == std::stod(whenValue));
-            } else {
-                match = (caseValue == whenValue);
-            }
-            
-            if (match) {
-                return evaluateExpression(result.get(), row);
-            }
-        }
-    }
-    
-    // Searched CASE: CASE WHEN condition THEN result...
-    else {
-        for (const auto& [condition, result] : caseExpr->whenClauses) {
-            std::string condResult = evaluateExpression(condition.get(), row);
-            bool conditionTrue = (condResult == "true" || condResult == "1" ||condResult == "TRUE" || condResult == "t");
-            if (conditionTrue) {
-                return evaluateExpression(result.get(), row);
-            }
-        }
-    }
-    
-    // ELSE clause
-    if (caseExpr->elseClause) {
-        return evaluateExpression(caseExpr->elseClause.get(), row);
-    }
-    
-    return "NULL";
-}*/
 
 std::string ExecutionEngine::calculateAggregateWithCase(const AST::AggregateExpression* aggregate,const AST::CaseExpression* caseExpr,const std::vector<std::unordered_map<std::string, std::string>>& groupData) {
 
