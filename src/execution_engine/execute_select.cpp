@@ -104,6 +104,18 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
             columnMapping.emplace_back(displayName, originalName);
         }
     }
+
+    std::cout << "DEBUG: Column mapping for window function test:" << std::endl;
+for (const auto& col : stmt.columns) {
+    if (auto* wf = dynamic_cast<const AST::WindowFunction*>(col.get())) {
+        std::cout << "  Window function: " << wf->toString() << std::endl;
+        if (wf->alias) {
+            std::cout << "    Has alias: " << wf->alias->toString() << std::endl;
+        } else {
+            std::cout << "    No alias" << std::endl;
+        }
+    }
+}
     
     bool hasAnalyticalFunctions = hasWindowFunctions(stmt) || hasStatisticalFunctions(stmt);
 

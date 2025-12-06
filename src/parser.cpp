@@ -1122,7 +1122,7 @@ std::unique_ptr<AST::Expression> Parse::parseWindowFunction() {
         aliasExpr = parseIdentifier();
     }
 
-    return std::make_unique<AST::WindowFunction>(funcToken, std::move(arg), std::move(partitionBy), std::move(orderBy),std::move(aliasExpr));
+    return std::make_unique<AST::WindowFunction>(funcToken, std::move(arg), std::move(partitionBy), std::move(orderBy),nullptr,std::move(aliasExpr));
 }
 
 std::unique_ptr<AST::WithClause> Parse::parseWithClause() {
