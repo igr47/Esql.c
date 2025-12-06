@@ -81,6 +81,11 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
                 originalName = ident->token.lexeme;
                 displayName = ident->token.lexeme;
             } else if (auto binaryOp = dynamic_cast<AST::BinaryOp*>(col.get())) {
+                    if (binaryOp->alias) {
+                        displayName = binaryOp->alias->toString();
+                    } else {
+                        displayName = col->toString();
+                    }
                 if (isAggregateFunction(binaryOp->op.lexeme)) {
                     if (auto leftIdent = dynamic_cast<AST::Identifier*>(binaryOp->left.get())) {
                         originalName = leftIdent->token.lexeme;

@@ -59,7 +59,77 @@ std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
         std::string result;
 
         // Add to existing function handling
-        if (functionName == "YEAR") {
+        if (functionName == "SUBSTR" || functionName == "SUBSTRING") {
+            if (funcCall->arguments.size() < 2) {
+                throw std::runtime_error("SUBSTR requires at least 2 arguments");
+            }
+
+            std::string str = evaluateExpression(funcCall->arguments[0].get(), row);
+            std::string startStr = evaluateExpression(funcCall->arguments[1].get(), row);
+
+            try {
+                int start = std::stoi(startStr);
+                int length = str.length();
+                if (funcCall->arguments.size() > 2) {
+                    std::string lengthStr = evaluateExpression(funcCall->arguments[2].get(), row);
+                    length = std::stoi(lengthStr);
+                }
+
+                // SQL SUBSTR uses 1-based indexing
+                if (start < 1 || start > str.length() || length < 0) {
+                    result = "";
+                } else {
+                    size_t startIdx = start - 1;  // Convert to 0-based
+                    size_t endIdx = std::min(startIdx + static_cast<size_t>(length), str.length());
+                    result = str.substr(startIdx, endIdx - startIdx);
+                }
+            } catch (...) {
+                result = "NULL";
+            }
+        } else if (functionName == "CONCAT") {
+            if (funcCall->arguments.empty()) {
+                return "";
+            }
+
+            result = "";
+            for (const auto& arg : funcCall->arguments) {
+                std::string argValue = evaluateExpression(arg.get(), row);
+
+                // Handle NULL values in CONCAT (SQL concatenation with NULL returns NULL)
+                if (argValue == "NULL") {
+                    return "NULL";
+                }
+
+                result += argValue;
+            }
+        } else if (functionName == "LENGTH" || functionName == "LEN") {
+            if (funcCall->arguments.empty()) {
+                return "NULL";
+            }
+            std::string str = evaluateExpression(funcCall->arguments[0].get(), row);
+            if (str == "NULL") return "NULL";
+            result = std::to_string(str.length());
+        } else if (functionName == "UPPER") {
+            if (funcCall->arguments.empty()) {
+                return "NULL";
+            }
+            std::string str = evaluateExpression(funcCall->arguments[0].get(), row);
+            if (str == "NULL") return "NULL";
+        
+            std::string upperStr = str;
+            std::transform(upperStr.begin(), upperStr.end(), upperStr.begin(), ::toupper);
+            result = upperStr;
+        } else if (functionName == "LOWER") {
+            if (funcCall->arguments.empty()) {
+                return "NULL";
+            }
+            std::string str = evaluateExpression(funcCall->arguments[0].get(), row);
+            if (str == "NULL") return "NULL";
+        
+            std::string lowerStr = str;
+            std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
+            result = lowerStr;
+        } else if (functionName == "YEAR") {
             std::string dateStr = evaluateExpression(funcCall->arguments[0].get(), row);
             try {
                 DateTime dt(dateStr);

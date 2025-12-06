@@ -9,7 +9,7 @@ namespace AST{
 	Literal::Literal(const Token& token):token(token){}
 	Identifier::Identifier(const Token& token):token(token){}
 
-	BinaryOp::BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right): op(op),left(std::move(left)),right(std::move(right)){}
+	BinaryOp::BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right, std::unique_ptr<Expression> al): op(op),left(std::move(left)),right(std::move(right)), alias(std::move(al)){}
 };
 
 Parse::Parse(Lexer& lexer) : lexer(lexer),currentToken(lexer.nextToken()),previousToken_(Token(Token::Type::ERROR,"",0,0)){}
@@ -1199,7 +1199,16 @@ std::unique_ptr<AST::JoinClause> Parse::parseJoinClause() {
     return joinClause;
 }
 
-
+std::vector<std::unique_ptr<AST::Expression>> Parse::parseFunctionArguments() {
+    std::vector<std::unique_ptr<AST::Expression>> args;
+        
+    if (!match(Token::Type::R_PAREN)) {
+        do {
+            args.push_back(parseExpression());
+        } while (match(Token::Type::COMMA) && (consume(Token::Type::COMMA), true));
+    }
+    return args;
+}
 
 std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
     //std::cout << "DEBUG: Reached Statistical function parsing";
@@ -1254,7 +1263,22 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
 
 
 std::unique_ptr<AST::Expression> Parse::parseExpression(){
-	return parseBinaryExpression(1);
+	//return parseBinaryExpression(1);
+        auto expr = parseBinaryExpression(1);
+
+    // Check for alias after the full expression
+    if (match(Token::Type::AS)) {
+        consume(Token::Type::AS);
+        auto aliasExpr = parseIdentifier();
+
+        // If the expression is a BinaryOp, add alias to it
+        if (auto* binaryOp = dynamic_cast<AST::BinaryOp*>(expr.get())) {
+            binaryOp->alias = std::move(aliasExpr);
+        }
+        // You might want to handle other expression types too
+    }
+
+    return expr;
 }
 
 
@@ -1360,11 +1384,19 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 		continue;
 	}*/
 
+    std::unique_ptr<AST::Expression> aliasExpr = nullptr;
+    if (match(Token::Type::AS)) {
+        consume(Token::Type::AS);
+        aliasExpr = parseIdentifier();
+    }
+
         // Handle regular binary operators
         if (isBinaryOperator(op.type)) {
             advance(); // Consume the operator
             auto right = parseBinaryExpression(precedence + 1);
-            left = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right));
+            //left = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right));
+            auto binaryOp = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right), std::move(aliasExpr));
+            left = std::move(binaryOp);
         } else {
             break;
         }
@@ -1451,7 +1483,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 
         //return std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
         left = std::make_unique<AST::FunctionCall>(funcToken, std::move(args));
-    } else if (matchAny({Token::Type::ROW_NUMBER, Token::Type::RANK, Token::Type::DENSE_RANK, Token::Type::LAG, Token::Type::LEAD, Token::Type::FIRST_VALUE, Token::Type::LAST_VALUE})) {
+    } else if (matchAny({Token::Type::ROW_NUMBER, Token::Type::RANK, Token::Type::DENSE_RANK, Token::Type::LAG, Token::Type::LEAD, Token::Type::FIRST_VALUE, Token::Type::LAST_VALUE,Token::Type::NTILE})) {
         //return parseWindowFunction();
          left = parseWindowFunction();
     } else if (matchAny({Token::Type::STDDEV, Token::Type::VARIANCE, Token::Type::PERCENTILE_CONT, Token::Type::CORR, Token::Type::REGR_SLOPE})) {
@@ -1471,12 +1503,15 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
         }
         //return std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));
         left = std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));
-    } else if (matchAny({Token::Type::YEAR, Token::Type::MONTH, Token::Type::DAY,Token::Type::SUBSTR, Token::Type::CONCAT})) {
+    } else if (matchAny({Token::Type::YEAR, Token::Type::MONTH, Token::Type::DAY,Token::Type::SUBSTR, Token::Type::CONCAT, Token::Type::LENGTH,Token::Type::LOWER,Token::Type::UPPER})) {
         Token funcToken = currentToken;
         consume(currentToken.type);
+        std::vector<std::unique_ptr<AST::Expression>> args;
         consume(Token::Type::L_PAREN);
-        auto arg = parseExpression();
+        args = parseFunctionArguments(); 
         consume(Token::Type::R_PAREN);
+        //auto arg = parseExpression();
+        //consume(Token::Type::R_PAREN);
 
         std::unique_ptr<AST::Expression> aliasExpr = nullptr;
         if (match(Token::Type::AS)) {
@@ -1484,13 +1519,14 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
             aliasExpr = parseIdentifier();
         }
 
-        std::vector<std::unique_ptr<AST::Expression>> args;
-        args.push_back(std::move(arg));
+        //std::vector<std::unique_ptr<AST::Expression>> args;
+        //args.push_back(std::move(arg));
         //return std::make_unique<AST::FunctionCall>(funcToken,std::move(args), std::move(aliasExpr));
-        left = std::make_unique<AST::FunctionCall>(
+        left = std::make_unique<AST::FunctionCall>(funcToken, std::move(args), std::move(aliasExpr));
+        /*left = std::make_unique<AST::FunctionCall>(
             funcToken,
             std::vector<std::unique_ptr<AST::Expression>>{},
-            std::move(aliasExpr));
+            std::move(aliasExpr));*/
     } else if (match(Token::Type::NOW)) {
         Token funcToken = currentToken;
         consume(Token::Type::NOW);
