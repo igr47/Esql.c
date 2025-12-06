@@ -133,8 +133,9 @@ void Lexer::initializeKeyWords(){
         {"PARTITION", Token::Type::PARTITION},
         {"WITHIN", Token::Type::WITHIN},
         {"SUBSTR", Token::Type::SUBSTR},
-        {"CONCANT", Token::Type::CONCAT},
-        {"LENGTH", Token::Type::LENGTH}
+        {"CONCAT", Token::Type::CONCAT},
+        {"LENGTH", Token::Type::LENGTH},
+        {"UPPER", Token::Type::UPPER}
 	};
 }
 

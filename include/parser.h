@@ -267,14 +267,19 @@ namespace AST{
 		public:
 			Token op;
 			std::unique_ptr<Expression> clone() const override {
-				return std::make_unique<BinaryOp>(op, left->clone(),right->clone());
+				return std::make_unique<BinaryOp>(op, left->clone(),right->clone(),alias ? alias->clone() : nullptr);
 			}
 			std::unique_ptr<Expression> left;
 			std::unique_ptr<Expression> right;
+            std::unique_ptr<Expression> alias;
 
-			BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right);
+			BinaryOp(Token op,std::unique_ptr<Expression> left,std::unique_ptr<Expression> right,std::unique_ptr<Expression> al = nullptr);
 			std::string toString() const override{
-				return left->toString()+" "+op.lexeme+" "+right->toString();
+                std::string result = left->toString()+" "+op.lexeme+" "+right->toString();
+            if (alias) {
+                result += " AS " + alias->toString();
+            }
+            return result;
 			}
 	};
 	class ColumnReference : public Expression {
@@ -651,6 +656,7 @@ class Parse{
 		std::unique_ptr<AST::HavingClause> parseHavingClause();
 		std::unique_ptr<AST::OrderByClause> parseOrderByClause();
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
+        std::vector<std::unique_ptr<AST::Expression>> parseFunctionArguments();
         //*****************HELPER METHODS FOR SELECT*****************************
         std::unique_ptr<AST::WithClause> parseWithClause(); 
         std::unique_ptr<AST::JoinClause> parseJoinClause();

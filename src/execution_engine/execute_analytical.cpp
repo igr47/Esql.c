@@ -79,7 +79,13 @@ std::vector<std::unordered_map<std::string, std::string>> ExecutionEngine::proce
     
     for (size_t colIdx = 0; colIdx < columns.size(); ++colIdx) {
         if (auto* windowFunc = dynamic_cast<const AST::WindowFunction*>(columns[colIdx].get())) {
-            std::string resultColumn = columns[colIdx]->toString();
+            //std::string resultColumn = columns[colIdx]->toString();
+            std::string resultColumn;
+            if (windowFunc->alias) {
+                resultColumn = windowFunc->alias->toString();
+            } else {
+                resultColumn = columns[colIdx]->toString();
+            }
             
             // Partition data
             auto partitions = partitionData(data, windowFunc->partitionBy);
@@ -109,7 +115,14 @@ std::vector<std::unordered_map<std::string, std::string>> ExecutionEngine::proce
     
     for (size_t colIdx = 0; colIdx < columns.size(); ++colIdx) {
         if (auto* statFunc = dynamic_cast<const AST::StatisticalExpression*>(columns[colIdx].get())) {
-            std::string resultColumn = columns[colIdx]->toString();
+            //std::string resultColumn = columns[colIdx]->toString();
+            // Use alias if available
+            std::string resultColumn;
+            if (statFunc->alias) {
+                resultColumn = statFunc->alias->toString();
+            } else {
+                resultColumn = columns[colIdx]->toString();
+            }
             
             switch(statFunc->type) {
                 case AST::StatisticalExpression::StatType::STDDEV:
@@ -143,14 +156,30 @@ std::vector<std::unordered_map<std::string, std::string>> ExecutionEngine::proce
         if (auto* funcCall = dynamic_cast<const AST::FunctionCall*>(columns[colIdx].get())) {
             std::string funcName = funcCall->function.lexeme;
 
+                        // Determine result column name
+            std::string resultColumn;
+            if (funcCall->alias) {
+                resultColumn = funcCall->alias->toString();
+            } else {
+                resultColumn = columns[colIdx]->toString();
+            }
+
             if (funcName == "JULIANDAY") {
-                applyJulianDay(result, funcCall, columns[colIdx]->toString());
+                applyJulianDay(result, funcCall, /*columns[colIdx]->toString()*/resultColumn);
             } else if (funcName == "SUBSTR") {
-                applySubstr(result, funcCall, columns[colIdx]->toString());
+                applySubstr(result, funcCall, /*columns[colIdx]->toString()*/resultColumn);
             }
         } else if (auto* dateFunc = dynamic_cast<const AST::DateFunction*>(columns[colIdx].get())) {
+                       // Determine result column name
+            std::string resultColumn;
+            if (dateFunc->alias) {
+                resultColumn = dateFunc->alias->toString();
+            } else {
+                resultColumn = columns[colIdx]->toString();
+            }
+
             if (dateFunc->function.type == Token::Type::JULIANDAY) {
-                applyJulianDay(result, dateFunc, columns[colIdx]->toString());
+                applyJulianDay(result, dateFunc, /*columns[colIdx]->toString()*/resultColumn);
             }
         }
     }
