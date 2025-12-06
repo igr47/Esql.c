@@ -1262,6 +1262,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeAnalyticalSelect(AST::SelectS
                                 aliasKey = statExpr->alias->toString();
                             }
                         }
+
                         
                         // First check if it's in the current row (for window functions)
                         auto rowIt = row.find(colKey);
