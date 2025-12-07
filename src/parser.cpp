@@ -97,7 +97,7 @@ std::unique_ptr<AST::Expression> Parse::parseValue() {
         throw ParseError(
             currentToken.line,
             currentToken.column,
-            "String value must be quoted. Did you mean '" + 
+            "String value must be quoted. Did you mean '" +
             currentToken.lexeme + "'?"
         );
     }
@@ -378,7 +378,7 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement() {
 	//parse the INSERT statement
 	consume(Token::Type::INSERT);
 	consume(Token::Type::INTO);
-	
+
 	stmt->table = currentToken.lexeme;
 	consume(Token::Type::IDENTIFIER);
 
@@ -601,7 +601,7 @@ std::unique_ptr<AST::ShowTableStatement> Parse::parseShowTableStatement() {
 
 std::unique_ptr<AST::ShowTableStructureStatement> Parse::parseShowTableStructureStatement() {
     auto stmt = std::make_unique<AST::ShowTableStructureStatement>();
-    
+
     consume(Token::Type::STRUCTURE);
     stmt->tableName = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
@@ -858,12 +858,12 @@ void Parse::parseSingleRowUpdate(AST::BulkUpdateStatement& stmt) {
     while (match(Token::Type::COMMA)) {
         // Use peekToken to look ahead and check if the next token is ROW
         Token nextToken = peekToken();
-        
+
         // If the next token after comma is ROW, this comma separates row updates, not set clauses
         if (nextToken.type == Token::Type::ROW) {
             break; // Exit the loop to let the outer loop handle the next ROW
         }
-        
+
         // Otherwise, this comma separates set clauses within the same row
         consume(Token::Type::COMMA);
         parseSingleSetClause(updateSpec);
@@ -874,14 +874,14 @@ void Parse::parseSingleRowUpdate(AST::BulkUpdateStatement& stmt) {
 
 std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
     auto stmt = std::make_unique<AST::BulkUpdateStatement>();
-    
+
     stmt->table = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
     consume(Token::Type::SET);
 
     bool wasInValueContext = inValueContext;
     inValueContext = true;
-    
+
     try {
         // Parse first row update
         parseSingleRowUpdate(*stmt);
@@ -893,11 +893,11 @@ std::unique_ptr<AST::BulkUpdateStatement> Parse::parseBulkUpdateStatement() {
             if (nextToken.type != Token::Type::ROW) {
                 throw ParseError(currentToken.line, currentToken.column, "Expected ROW after comma in BULK UPDATE");
             }
-        
+
             consume(Token::Type::COMMA);
             parseSingleRowUpdate(*stmt);
         }
-        
+
         inValueContext = wasInValueContext;
         return stmt;
     } catch (...) {
@@ -910,12 +910,12 @@ void Parse::parseSingleSetClause(AST::BulkUpdateStatement::UpdateSpec& updateSpe
     std::string column = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
     consume(Token::Type::EQUAL);
-    
+
     bool wasInValueContext = inValueContext;
     inValueContext = true;
-    
+
     updateSpec.setClauses.emplace_back(column, parseExpression());
-    
+
     inValueContext = wasInValueContext;
 }
 
@@ -953,16 +953,16 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
 
 std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::parseColumnListAs() {
     std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> newColumns;
-    
+
     do {
         if (match(Token::Type::COMMA)) {
             consume(Token::Type::COMMA);
         }
 
         std::unique_ptr<AST::Expression> expr;
-        
+
         // Check for aggregate functions first
-        if (matchAny({Token::Type::COUNT, Token::Type::SUM, Token::Type::AVG, 
+        if (matchAny({Token::Type::COUNT, Token::Type::SUM, Token::Type::AVG,
                      Token::Type::MIN, Token::Type::MAX})) {
             Token funcToken = currentToken;
             advance();  // Consume the function name
@@ -993,8 +993,8 @@ std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::par
             consume(Token::Type::AS);
             if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
                 alias = currentToken.lexeme;
-                if (alias.size() > 2 && 
-                    ((alias[0] == '\'' && alias.back() == '\'') || 
+                if (alias.size() > 2 &&
+                    ((alias[0] == '\'' && alias.back() == '\'') ||
                      (alias[0] == '"' && alias.back() == '"'))) {
                     alias = alias.substr(1, alias.size() - 2);
                 }
@@ -1007,7 +1007,7 @@ std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::par
 
         newColumns.emplace_back(std::move(expr), alias);
     } while (match(Token::Type::COMMA));
-    
+
     return newColumns;
 }
 
@@ -1074,7 +1074,7 @@ std::unique_ptr<AST::Expression> Parse::parseWindowFunction() {
         }
         consume(Token::Type::R_PAREN);
     }
-    
+
     consume(Token::Type::OVER);
     consume(Token::Type::L_PAREN);
 
@@ -1201,7 +1201,7 @@ std::unique_ptr<AST::JoinClause> Parse::parseJoinClause() {
 
 std::vector<std::unique_ptr<AST::Expression>> Parse::parseFunctionArguments() {
     std::vector<std::unique_ptr<AST::Expression>> args;
-        
+
     if (!match(Token::Type::R_PAREN)) {
         do {
             args.push_back(parseExpression());
@@ -1227,6 +1227,7 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
     //std::cout << "DEBUG: Consumed Token: currentToken.type "<< std::endl;
     consume(currentToken.type);
     consume(Token::Type::L_PAREN);
+
     //std::cout << "DEBUG: Consumed ( Token : " << std::endl;
     //std::cout << "DUBUG: Starting parsing parseExpression()" <<std::endl;
     auto arg1 = parseExpression();
@@ -1235,7 +1236,9 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
     double percentile = 0.5;
 
     if (statType == AST::StatisticalExpression::StatType::PERCENTILE) {
-        consume(Token::Type::COMMA);
+        if (match(Token::Type::COMMA)) {
+            consume(Token::Type::COMMA);
+        }
         if (match(Token::Type::NUMBER_LITERAL)) {
             try {
                 percentile = std::stod(currentToken.lexeme);
@@ -1244,13 +1247,35 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
                 throw ParseError(currentToken.line, currentToken.column, "Invalid percentile value");
             }
         }
+        consume(Token::Type::R_PAREN);
+
+        // Parse WITHIN GROUP clause
+        if (match(Token::Type::WITHIN)) {
+            consume(Token::Type::WITHIN);
+            consume(Token::Type::GROUP);
+            consume(Token::Type::L_PAREN);
+
+            // Parse ORDER BY clause
+            consume(Token::Type::ORDER);
+            consume(Token::Type::BY);
+
+            // Parse the ordering expression (salary in your example)
+            arg1 = parseExpression();
+
+            // Parse ASC/DESC if present
+            if (match(Token::Type::ASC) || match(Token::Type::DESC)) {
+                advance();  // Consume ASC/DESC
+            }
+
+            consume(Token::Type::R_PAREN);
+        }
     } else if (statType == AST::StatisticalExpression::StatType::CORRELATION || statType == AST::StatisticalExpression::StatType::REGRESSION) {
         consume(Token::Type::COMMA);
         arg2 = parseExpression();
+        consume(Token::Type::R_PAREN);
     }
 
     //std::cout << "DEBUG: Reached the end and returning the constructor." << std::endl;
-    consume(Token::Type::R_PAREN);
 
     std::unique_ptr<AST::Expression> aliasExpr = nullptr;
     if(match(Token::Type::AS)){
@@ -1283,9 +1308,9 @@ std::unique_ptr<AST::Expression> Parse::parseExpression(){
 
 
 std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence) {
-    // Parse left side 
+    // Parse left side
     std::unique_ptr<AST::Expression> left;
-    
+
     if (match(Token::Type::NOT)) {
         consume(Token::Type::NOT);
         auto expr = parseBinaryExpression(getPrecedence(Token::Type::NOT) + 1);
@@ -1298,7 +1323,7 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
     while (true) {
         Token op = currentToken;
         int precedence = getPrecedence(op.type);
-        
+
         // Stop if precedence is too low or not a binary operator
         if (precedence < minPrecedence || !isBinaryOperator(op.type)) {
             break;
@@ -1309,7 +1334,7 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
             consume(Token::Type::BETWEEN);
             auto lower = parseBinaryExpression(precedence+1);
             if (!match(Token::Type::AND)) {
-                throw ParseError(currentToken.line, currentToken.column, 
+                throw ParseError(currentToken.line, currentToken.column,
                                "Expected AND after BETWEEN lower bound");
             }
             consume(Token::Type::AND);
@@ -1327,12 +1352,12 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
             consume(Token::Type::IN);
             consume(Token::Type::L_PAREN);
             std::vector<std::unique_ptr<AST::Expression>> values;
-            
+
             // Parse values inside IN clause
             do {
                 values.push_back(parseExpression());
             } while (match(Token::Type::COMMA) && (consume(Token::Type::COMMA), true));
-            
+
             consume(Token::Type::R_PAREN);
             left = std::make_unique<AST::InOp>(std::move(left), std::move(values));
             continue;
@@ -1371,7 +1396,7 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
        }
        continue;
     }
-   
+
 		/*if(match(Token::Type::NOT)){
 			consume(Token::Type::NOT);
 			auto right = parseBinaryExpression(precedence+1);
@@ -1401,7 +1426,7 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
             break;
         }
     }
-    
+
     return left;
 }
 
@@ -1508,7 +1533,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
         consume(currentToken.type);
         std::vector<std::unique_ptr<AST::Expression>> args;
         consume(Token::Type::L_PAREN);
-        args = parseFunctionArguments(); 
+        args = parseFunctionArguments();
         consume(Token::Type::R_PAREN);
         //auto arg = parseExpression();
         //consume(Token::Type::R_PAREN);
@@ -1530,7 +1555,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
     } else if (match(Token::Type::NOW)) {
         Token funcToken = currentToken;
         consume(Token::Type::NOW);
-        
+
         // Handle optional parentheses
         if (match(Token::Type::L_PAREN)) {
             consume(Token::Type::L_PAREN);
@@ -1600,7 +1625,7 @@ std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
         consume(Token::Type::WHEN);
         //std::cout << "DEBUG: Consumed WHEN. eNTERING EXPRESSION PARSING" << std::endl;
         auto condition = parseExpression();
-        //std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
+        //std::cout << "DEBUG: Parsed parseExpression()." << std::endl;
         //std::cout << "DEBUG: Consuming THEN." << std::endl;
         consume (Token::Type::THEN);
         //std::cout << "DEBUG: Consumed THEN. Starting parseExpression()." << std::endl;
@@ -1615,7 +1640,7 @@ std::unique_ptr<AST::Expression> Parse::parseCaseExpression() {
         consume(Token::Type::ELSE);
         //std::cout << "DEBUG: Consumed ELSE. eNTERING EXPRESSION PARSING" << std::endl;
         elseClause = parseExpression();
-        //std::cout << "DEBUG: Parsed parseExpression()." << std::endl; 
+        //std::cout << "DEBUG: Parsed parseExpression()." << std::endl;
     }
 
 
@@ -1689,7 +1714,7 @@ std::unique_ptr<AST::Expression> Parse::parseLiteral() {
     if (match(Token::Type::NUMBER_LITERAL)) {
         advance();
     }
-    else if (match(Token::Type::STRING_LITERAL) || 
+    else if (match(Token::Type::STRING_LITERAL) ||
              match(Token::Type::DOUBLE_QUOTED_STRING)) {
         advance();
     }
@@ -1714,7 +1739,7 @@ int Parse::getPrecedence(Token::Type type) {
         case Token::Type::NOT: return 3;
         case Token::Type::EQUAL:
         case Token::Type::NOT_EQUAL:
-	    case Token::Type::IS: 
+	    case Token::Type::IS:
         case Token::Type::IS_NULL:
         case Token::Type::IS_NOT_NULL:
         case Token::Type::IS_TRUE:
