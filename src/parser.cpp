@@ -252,6 +252,7 @@ std::unique_ptr<AST::OrderByClause> Parse::parseOrderByClause() {
 	consume(Token::Type::ORDER);
 	consume(Token::Type::BY);
 
+
 	std::vector<std::pair<std::unique_ptr<AST::Expression>, bool>> columns;
 	do{
 		if(match(Token::Type::COMMA)){
@@ -271,6 +272,7 @@ std::unique_ptr<AST::OrderByClause> Parse::parseOrderByClause() {
 
 		columns.emplace_back(std::move(expr),ascending);
 	}while(match(Token::Type::COMMA));
+
 	return std::make_unique<AST::OrderByClause>(std::move(columns));
 }
 
@@ -1277,14 +1279,14 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
         default: throw ParseError(currentToken.line, currentToken.column, "Unkown statistical function");
     }
 
-    //std::cout << "DEBUG: Consumed Token: currentToken.type "<< std::endl;
+    std::cout << "DEBUG: Consumed Token: currentToken.type "<< std::endl;
     consume(currentToken.type);
     consume(Token::Type::L_PAREN);
 
-    //std::cout << "DEBUG: Consumed ( Token : " << std::endl;
-    //std::cout << "DUBUG: Starting parsing parseExpression()" <<std::endl;
+    std::cout << "DEBUG: Consumed ( Token : " << std::endl;
+    std::cout << "DUBUG: Starting parsing parseExpression()" <<std::endl;
     auto arg1 = parseExpression();
-    //std::cout << "DEBUG: Parsed parseExpression()" << std::endl;
+    std::cout << "DEBUG: Parsed parseExpression()" << std::endl;
     std::unique_ptr<AST::Expression> arg2= nullptr;
     double percentile = 0.5;
 
@@ -1300,26 +1302,39 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
                 throw ParseError(currentToken.line, currentToken.column, "Invalid percentile value");
             }
         }
-        consume(Token::Type::R_PAREN);
+
+        Token nextToken = peekToken();
+
+        //consume(Token::Type::R_PAREN);
+        //std::cout << "DEBUG: Consumed R_PAREN" << std::endl;
 
         // Parse WITHIN GROUP clause
-        if (match(Token::Type::WITHIN)) {
+        if (nextToken.type == Token::Type::WITHIN) {
+            consume(Token::Type::R_PAREN);
+
             consume(Token::Type::WITHIN);
+            std::cout << "DEBUG: Found and consumed WITHIN" << std::endl;
             consume(Token::Type::GROUP);
             consume(Token::Type::L_PAREN);
+            std::cout << "DEBUG: Found and consumes L_paren" << std::endl;
 
             // Parse ORDER BY clause
             consume(Token::Type::ORDER);
             consume(Token::Type::BY);
+            std::cout << "DEBUG: Consumed ORDER BY" << std::endl;
 
             // Parse the ordering expression (salary in your example)
-            arg1 = parseExpression();
+            arg2 = parseExpression();
 
             // Parse ASC/DESC if present
             if (match(Token::Type::ASC) || match(Token::Type::DESC)) {
+                std::cout << "DEBUG: Found ASC/DEC";
                 advance();  // Consume ASC/DESC
             }
 
+            consume(Token::Type::R_PAREN);
+            std::cout << "DEBUG: Consumed R_PAREN" << std::endl;
+        } else {
             consume(Token::Type::R_PAREN);
         }
     } else if (statType == AST::StatisticalExpression::StatType::CORRELATION || statType == AST::StatisticalExpression::StatType::REGRESSION) {
@@ -1328,11 +1343,12 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
         consume(Token::Type::R_PAREN);
     }
 
-    //std::cout << "DEBUG: Reached the end and returning the constructor." << std::endl;
+    std::cout << "DEBUG: Reached the end and returning the constructor." << std::endl;
 
     std::unique_ptr<AST::Expression> aliasExpr = nullptr;
     if(match(Token::Type::AS)){
         consume(Token::Type::AS);
+        std::cout << "DEBUG: Found and consumed AS expression" << std::endl;
         aliasExpr = parseIdentifier();
     }
 
@@ -1345,8 +1361,15 @@ std::unique_ptr<AST::Expression> Parse::parseExpression(){
         //return parseBinaryExpression(1);
         auto expr = parseBinaryExpression(1);
 
+        if(pendingAlias) {
+            if (auto* binaryOp = dynamic_cast<AST::BinaryOp*>(expr.get())) {
+                binaryOp->alias = std::move(pendingAlias);
+            }
+        }
+        return expr;
+
         // Check for alias after the full expression
-        if (match(Token::Type::AS)) {
+        /*if (match(Token::Type::AS)) {
             consume(Token::Type::AS);
             auto aliasExpr = parseIdentifier();
 
@@ -1355,9 +1378,9 @@ std::unique_ptr<AST::Expression> Parse::parseExpression(){
                 binaryOp->alias = std::move(aliasExpr);
             }
             // You might want to handle other expression types too
-        }
+        }*/
 
-        return expr;
+        //return expr;
     } catch(const ParseError&) {
         throw; // Re-throw ParseError
     } catch (const std::exception& e) {
@@ -1469,19 +1492,19 @@ std::unique_ptr<AST::Expression> Parse::parseBinaryExpression(int minPrecedence)
 		continue;
 	}*/
 
-    std::unique_ptr<AST::Expression> aliasExpr = nullptr;
+    /*std::unique_ptr<AST::Expression> aliasExpr = nullptr;
     if (match(Token::Type::AS)) {
         consume(Token::Type::AS);
         aliasExpr = parseIdentifier();
-    }
+    }*/
 
         // Handle regular binary operators
         if (isBinaryOperator(op.type)) {
             advance(); // Consume the operator
             auto right = parseBinaryExpression(precedence + 1);
-            //left = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right));
-            auto binaryOp = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right), std::move(aliasExpr));
-            left = std::move(binaryOp);
+            left = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right));
+            //auto binaryOp = std::make_unique<AST::BinaryOp>(op, std::move(left), std::move(right), std::move(aliasExpr));
+            //left = std::move(binaryOp);
         } else {
             break;
         }
@@ -1588,6 +1611,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
         if (match(Token::Type::AS)) {
             consume(Token::Type::AS);
             aliasExpr = parseIdentifier();
+            pendingAlias = aliasExpr->clone();
         }
         //return std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));
         left = std::make_unique<AST::DateFunction>(funcToken, std::move(arg),std::move(aliasExpr));

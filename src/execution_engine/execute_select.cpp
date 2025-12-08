@@ -93,7 +93,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
                     displayName = binaryOp->op.lexeme + "(" + binaryOp->left->toString() + ")";
                 } else {
                     originalName = col->toString();
-                    displayName = col->toString();
+                    //displayName = col->toString();
                 }
             } else {
                 originalName = col->toString();
@@ -105,18 +105,8 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelect(AST::SelectStatement& 
         }
     }
 
-    std::cout << "DEBUG: Column mapping for window function test:" << std::endl;
-for (const auto& col : stmt.columns) {
-    if (auto* wf = dynamic_cast<const AST::WindowFunction*>(col.get())) {
-        std::cout << "  Window function: " << wf->toString() << std::endl;
-        if (wf->alias) {
-            std::cout << "    Has alias: " << wf->alias->toString() << std::endl;
-        } else {
-            std::cout << "    No alias" << std::endl;
-        }
-    }
-}
-    
+
+
     bool hasAnalyticalFunctions = hasWindowFunctions(stmt) || hasStatisticalFunctions(stmt);
 
     bool hasStatisticalOnly = hasStatisticalFunctions(stmt) && !hasWindowFunctions(stmt);
@@ -173,14 +163,14 @@ for (const auto& col : stmt.columns) {
 
         if (include) {
             std::vector<std::string> resultRow;
-        
+
             // If we have column aliases (SELECT ... AS ...), use them
             if (!stmt.newCols.empty()) {
                 for (const auto& col : stmt.newCols) {
                     std::string value = evaluateExpression(col.first.get(), row);
                     resultRow.push_back(value);
                 }
-            } 
+            }
             // Otherwise, use the columnMapping approach for regular columns
             else {
                 for (const auto& [displayName, originalName] : columnMapping) {
@@ -193,7 +183,7 @@ for (const auto& col : stmt.columns) {
                         // Column not found - need to find the corresponding expression and evaluate it
                         // // Find the expression that matches this displayName
                         std::unique_ptr<AST::Expression> exprToEvaluate = nullptr;
-                    
+
                         // Search through stmt.columns to find the expression
                         for (const auto& col : stmt.columns) {
                             if (col->toString() == originalName) {
@@ -208,7 +198,7 @@ for (const auto& col : stmt.columns) {
                                 }
                             }
                         }
-                    
+
                         if (exprToEvaluate) {
                             std::string value = evaluateExpression(exprToEvaluate.get(), row);
                             resultRow.push_back(value);
@@ -349,8 +339,8 @@ for (const auto& col : stmt.columns) {
     bool hasStatistical = hasStatisticalFunctions(stmt);
 
     // Handle column aliases for aggregates
-    std::vector<std::pair<std::string, std::string>> columnMapping; 
-    
+    std::vector<std::pair<std::string, std::string>> columnMapping;
+
     // Process SELECT columns with aliases
     if (!stmt.newCols.empty()) {
         // Handle column aliases
@@ -366,7 +356,7 @@ for (const auto& col : stmt.columns) {
 	    }else{
 		    displayName = col.second;
 	    }
-            
+
             result.columns.push_back(displayName);
             columnMapping.emplace_back(displayName,col.first->toString());
         }
@@ -399,7 +389,7 @@ for (const auto& col : stmt.columns) {
             columnMapping.emplace_back(displayName,* originalExpr*col->toString());
         }
     }
-   
+
 
     // Group data
     auto groupedData = groupRows(filteredData, groupColumns);
@@ -675,7 +665,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
 
         // Calculate all aggregates for this group
         // Use stmt.columns for calculation, not stmt.newCols
-        
+
         std::vector<std::unique_ptr<AST::Expression>> columnsToCalculate;
         if (stmt.newCols.empty()) {
             // Clone from stmt.columns
@@ -1141,12 +1131,12 @@ double ExecutionEngine::evaluateNumericCaseExpression(const AST::CaseExpression*
 std::string ExecutionEngine::calculateAggregate(
     const AST::AggregateExpression* aggregate,
     const std::vector<std::unordered_map<std::string, std::string>>& groupData) {
-    
+
     if (!aggregate) {
         return "NULL";
     }
 
-    
+
     std::string functionName = aggregate->function.lexeme;
 
     // Handle CASE expressions inside aggregates
@@ -1155,7 +1145,7 @@ std::string ExecutionEngine::calculateAggregate(
     }
 
     std::string columnName;
-    
+
     // Get the column name for the aggregate argument
     if (aggregate->isCountAll) {
         columnName = "*";
@@ -1168,7 +1158,7 @@ std::string ExecutionEngine::calculateAggregate(
             //return "NULL";
         }
     }
-    
+
     // Calculate the aggregate based on function type
     if (functionName == "COUNT") {
         if (aggregate->isCountAll) {
@@ -1263,9 +1253,9 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
     const std::vector<std::unique_ptr<AST::Expression>>& columns,
     const std::unordered_map<std::string, std::string>& groupRow,
     const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData) {
-    
+
     std::unordered_map<std::string, std::string> result;
-    
+
     // Find the correct group data for this groupRow
     const std::vector<std::unordered_map<std::string, std::string>>* actualGroupData = nullptr;
     for (const auto& group : groupedData) {
@@ -1311,11 +1301,11 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
                 }
             } else {
                 aggColumnName = aggregate->function.lexeme + "()";
-            } 
-            
+            }
+
             std::string aggValue = calculateAggregate(aggregate, groupData);
             result[aggColumnName] = aggValue;
-            
+
             // Store with alias if available
             if (aggregate->argument2) {
                 result[aggregate->argument2->toString()] = aggValue;
@@ -1336,7 +1326,7 @@ std::unordered_map<std::string, std::string> ExecutionEngine::evaluateAggregateF
             result[col->toString()] = evaluateExpression(col.get(), groupRow);
         }
     }
-    
+
     return result;
 }
 
