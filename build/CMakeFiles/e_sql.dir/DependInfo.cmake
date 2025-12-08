@@ -43,6 +43,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/igiris/git_projects/Esql.c/src/shell_executables/syntax_highlighter.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/shell_executables/terminal_input.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/shell_executables/utf8_processor.cpp" "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/token_utils.cpp" "CMakeFiles/e_sql.dir/src/token_utils.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/token_utils.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp" "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o.d"
   "" "e_sql" "gcc" "CMakeFiles/e_sql.dir/link.d"
   )

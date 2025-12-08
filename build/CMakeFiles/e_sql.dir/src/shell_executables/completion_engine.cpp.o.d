@@ -157,6 +157,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_vector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_bvector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/vector.tcc \
+  /home/igiris/git_projects/Esql.c/include/token_utils.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/stdexcept \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/exception \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception_ptr.h \

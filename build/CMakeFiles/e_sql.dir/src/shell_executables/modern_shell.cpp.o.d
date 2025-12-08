@@ -244,6 +244,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/enable_special_members.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/node_handle.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/erase_if.h \
+  /home/igiris/git_projects/Esql.c/include/token_utils.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/memory \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tempbuf.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_raw_storage_iter.h \

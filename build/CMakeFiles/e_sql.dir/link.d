@@ -3,6 +3,7 @@ e_sql: \
   /lib/x86_64-linux-gnu/crti.o \
   /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o \
   CMakeFiles/e_sql.dir/src/scanner.cpp.o \
+  CMakeFiles/e_sql.dir/src/token_utils.cpp.o \
   CMakeFiles/e_sql.dir/src/parser.cpp.o \
   CMakeFiles/e_sql.dir/src/analyzer.cpp.o \
   CMakeFiles/e_sql.dir/src/diskstorage.cpp.o \
@@ -75,6 +76,8 @@ e_sql: \
 /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o:
 
 CMakeFiles/e_sql.dir/src/scanner.cpp.o:
+
+CMakeFiles/e_sql.dir/src/token_utils.cpp.o:
 
 CMakeFiles/e_sql.dir/src/parser.cpp.o:
 

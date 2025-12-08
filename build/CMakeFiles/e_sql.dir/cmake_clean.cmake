@@ -70,6 +70,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o"
   "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o.d"
+  "CMakeFiles/e_sql.dir/src/token_utils.cpp.o"
+  "CMakeFiles/e_sql.dir/src/token_utils.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o"
   "CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o.d"
   "e_sql"

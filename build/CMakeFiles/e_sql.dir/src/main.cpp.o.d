@@ -211,6 +211,7 @@ CMakeFiles/e_sql.dir/src/main.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_vector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_bvector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/vector.tcc \
+  /home/igiris/git_projects/Esql.c/include/token_utils.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/memory \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tempbuf.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_raw_storage_iter.h \

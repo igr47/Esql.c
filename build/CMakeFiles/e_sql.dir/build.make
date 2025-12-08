@@ -86,10 +86,24 @@ CMakeFiles/e_sql.dir/src/scanner.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/e_sql.dir/src/scanner.cpp.s"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/igiris/git_projects/Esql.c/src/scanner.cpp -o CMakeFiles/e_sql.dir/src/scanner.cpp.s
 
+CMakeFiles/e_sql.dir/src/token_utils.cpp.o: CMakeFiles/e_sql.dir/flags.make
+CMakeFiles/e_sql.dir/src/token_utils.cpp.o: /home/igiris/git_projects/Esql.c/src/token_utils.cpp
+CMakeFiles/e_sql.dir/src/token_utils.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/e_sql.dir/src/token_utils.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/token_utils.cpp.o -MF CMakeFiles/e_sql.dir/src/token_utils.cpp.o.d -o CMakeFiles/e_sql.dir/src/token_utils.cpp.o -c /home/igiris/git_projects/Esql.c/src/token_utils.cpp
+
+CMakeFiles/e_sql.dir/src/token_utils.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/e_sql.dir/src/token_utils.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/igiris/git_projects/Esql.c/src/token_utils.cpp > CMakeFiles/e_sql.dir/src/token_utils.cpp.i
+
+CMakeFiles/e_sql.dir/src/token_utils.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/e_sql.dir/src/token_utils.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/igiris/git_projects/Esql.c/src/token_utils.cpp -o CMakeFiles/e_sql.dir/src/token_utils.cpp.s
+
 CMakeFiles/e_sql.dir/src/parser.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/parser.cpp.o: /home/igiris/git_projects/Esql.c/src/parser.cpp
 CMakeFiles/e_sql.dir/src/parser.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/e_sql.dir/src/parser.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/e_sql.dir/src/parser.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/parser.cpp.o -MF CMakeFiles/e_sql.dir/src/parser.cpp.o.d -o CMakeFiles/e_sql.dir/src/parser.cpp.o -c /home/igiris/git_projects/Esql.c/src/parser.cpp
 
 CMakeFiles/e_sql.dir/src/parser.cpp.i: cmake_force
@@ -103,7 +117,7 @@ CMakeFiles/e_sql.dir/src/parser.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/analyzer.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/analyzer.cpp.o: /home/igiris/git_projects/Esql.c/src/analyzer.cpp
 CMakeFiles/e_sql.dir/src/analyzer.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/e_sql.dir/src/analyzer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/e_sql.dir/src/analyzer.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/analyzer.cpp.o -MF CMakeFiles/e_sql.dir/src/analyzer.cpp.o.d -o CMakeFiles/e_sql.dir/src/analyzer.cpp.o -c /home/igiris/git_projects/Esql.c/src/analyzer.cpp
 
 CMakeFiles/e_sql.dir/src/analyzer.cpp.i: cmake_force
@@ -117,7 +131,7 @@ CMakeFiles/e_sql.dir/src/analyzer.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/diskstorage.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/diskstorage.cpp.o: /home/igiris/git_projects/Esql.c/src/diskstorage.cpp
 CMakeFiles/e_sql.dir/src/diskstorage.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/e_sql.dir/src/diskstorage.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/e_sql.dir/src/diskstorage.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/diskstorage.cpp.o -MF CMakeFiles/e_sql.dir/src/diskstorage.cpp.o.d -o CMakeFiles/e_sql.dir/src/diskstorage.cpp.o -c /home/igiris/git_projects/Esql.c/src/diskstorage.cpp
 
 CMakeFiles/e_sql.dir/src/diskstorage.cpp.i: cmake_force
@@ -131,7 +145,7 @@ CMakeFiles/e_sql.dir/src/diskstorage.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/database_file.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/database_file.cpp.o: /home/igiris/git_projects/Esql.c/src/database_file.cpp
 CMakeFiles/e_sql.dir/src/database_file.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/e_sql.dir/src/database_file.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/e_sql.dir/src/database_file.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/database_file.cpp.o -MF CMakeFiles/e_sql.dir/src/database_file.cpp.o.d -o CMakeFiles/e_sql.dir/src/database_file.cpp.o -c /home/igiris/git_projects/Esql.c/src/database_file.cpp
 
 CMakeFiles/e_sql.dir/src/database_file.cpp.i: cmake_force
@@ -145,7 +159,7 @@ CMakeFiles/e_sql.dir/src/database_file.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o: /home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp
 CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o -MF CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o.d -o CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o -c /home/igiris/git_projects/Esql.c/src/write_ahead_log.cpp
 
 CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.i: cmake_force
@@ -159,7 +173,7 @@ CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o: /home/igiris/git_projects/Esql.c/src/buffer_pool.cpp
 CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o -MF CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o.d -o CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o -c /home/igiris/git_projects/Esql.c/src/buffer_pool.cpp
 
 CMakeFiles/e_sql.dir/src/buffer_pool.cpp.i: cmake_force
@@ -173,7 +187,7 @@ CMakeFiles/e_sql.dir/src/buffer_pool.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/page.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/page.cpp.o: /home/igiris/git_projects/Esql.c/src/page.cpp
 CMakeFiles/e_sql.dir/src/page.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/e_sql.dir/src/page.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/e_sql.dir/src/page.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/page.cpp.o -MF CMakeFiles/e_sql.dir/src/page.cpp.o.d -o CMakeFiles/e_sql.dir/src/page.cpp.o -c /home/igiris/git_projects/Esql.c/src/page.cpp
 
 CMakeFiles/e_sql.dir/src/page.cpp.i: cmake_force
@@ -187,7 +201,7 @@ CMakeFiles/e_sql.dir/src/page.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o: /home/igiris/git_projects/Esql.c/src/fractal_bplus_tree.cpp
 CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o -MF CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o.d -o CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.o -c /home/igiris/git_projects/Esql.c/src/fractal_bplus_tree.cpp
 
 CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.i: cmake_force
@@ -201,7 +215,7 @@ CMakeFiles/e_sql.dir/src/fractal_bplus_tree.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/database.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/database.cpp.o: /home/igiris/git_projects/Esql.c/src/database.cpp
 CMakeFiles/e_sql.dir/src/database.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/e_sql.dir/src/database.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/e_sql.dir/src/database.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/database.cpp.o -MF CMakeFiles/e_sql.dir/src/database.cpp.o.d -o CMakeFiles/e_sql.dir/src/database.cpp.o -c /home/igiris/git_projects/Esql.c/src/database.cpp
 
 CMakeFiles/e_sql.dir/src/database.cpp.i: cmake_force
@@ -215,7 +229,7 @@ CMakeFiles/e_sql.dir/src/database.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/database_schema.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/database_schema.cpp.o: /home/igiris/git_projects/Esql.c/src/database_schema.cpp
 CMakeFiles/e_sql.dir/src/database_schema.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/e_sql.dir/src/database_schema.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/e_sql.dir/src/database_schema.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/database_schema.cpp.o -MF CMakeFiles/e_sql.dir/src/database_schema.cpp.o.d -o CMakeFiles/e_sql.dir/src/database_schema.cpp.o -c /home/igiris/git_projects/Esql.c/src/database_schema.cpp
 
 CMakeFiles/e_sql.dir/src/database_schema.cpp.i: cmake_force
@@ -229,7 +243,7 @@ CMakeFiles/e_sql.dir/src/database_schema.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/main.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/main.cpp.o: /home/igiris/git_projects/Esql.c/src/main.cpp
 CMakeFiles/e_sql.dir/src/main.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/e_sql.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/e_sql.dir/src/main.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/main.cpp.o -MF CMakeFiles/e_sql.dir/src/main.cpp.o.d -o CMakeFiles/e_sql.dir/src/main.cpp.o -c /home/igiris/git_projects/Esql.c/src/main.cpp
 
 CMakeFiles/e_sql.dir/src/main.cpp.i: cmake_force
@@ -243,7 +257,7 @@ CMakeFiles/e_sql.dir/src/main.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/constraint_validation.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/constraint_validation.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.i: cmake_force
@@ -257,7 +271,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.s: cmake_for
 CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/execute_analytical.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/execute_analytical.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.i: cmake_force
@@ -271,7 +285,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/execute_analytical.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/execute_database_operations.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/execute_database_operations.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.i: cmake_force
@@ -285,7 +299,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/execute_database_operations.cpp.s: cma
 CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/execute_delete.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/execute_delete.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.i: cmake_force
@@ -299,7 +313,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/execute_delete.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/execute_insert.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/execute_insert.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.i: cmake_force
@@ -313,7 +327,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/execute_insert.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/execute_select.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/execute_select.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.i: cmake_force
@@ -327,7 +341,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/execute_select.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/execute_table_operations.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/execute_table_operations.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.i: cmake_force
@@ -341,7 +355,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/execute_table_operations.cpp.s: cmake_
 CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/execute_update.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/execute_update.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.i: cmake_force
@@ -355,7 +369,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/execute_update.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/executionengine_base.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/executionengine_base.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.i: cmake_force
@@ -369,7 +383,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/executionengine_base.cpp.s: cmake_forc
 CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/expression_evaluation.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/expression_evaluation.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.i: cmake_force
@@ -383,7 +397,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/expression_evaluation.cpp.s: cmake_for
 CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/helper_methods.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/helper_methods.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.i: cmake_force
@@ -397,7 +411,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/helper_methods.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o: /home/igiris/git_projects/Esql.c/src/execution_engine/pattern_matching.cpp
 CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Building CXX object CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o -MF CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o.d -o CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.o -c /home/igiris/git_projects/Esql.c/src/execution_engine/pattern_matching.cpp
 
 CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.i: cmake_force
@@ -411,7 +425,7 @@ CMakeFiles/e_sql.dir/src/execution_engine/pattern_matching.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/animator.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_26) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/animator.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.i: cmake_force
@@ -425,7 +439,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/animator.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/autosuggestion_manager.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_26) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_27) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/autosuggestion_manager.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.i: cmake_force
@@ -439,7 +453,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/autosuggestion_manager.cpp.s: cmake_f
 CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/completion_engine.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_27) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_28) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/completion_engine.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.i: cmake_force
@@ -453,7 +467,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/completion_engine.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/help_system.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_28) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/help_system.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.i: cmake_force
@@ -467,7 +481,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/help_system.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/hisory_manager.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/hisory_manager.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.i: cmake_force
@@ -481,7 +495,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/hisory_manager.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/line_renderer.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/line_renderer.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.i: cmake_force
@@ -495,7 +509,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/line_renderer.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/modern_shell.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/modern_shell.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.i: cmake_force
@@ -509,7 +523,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/phoenix_animator.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/phoenix_animator.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.i: cmake_force
@@ -523,7 +537,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/phoenix_animator.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/spell_checker.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/spell_checker.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.i: cmake_force
@@ -537,7 +551,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/syntax_highlighter.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/syntax_highlighter.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.i: cmake_force
@@ -551,7 +565,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/terminal_input.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/terminal_input.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.i: cmake_force
@@ -565,7 +579,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o: /home/igiris/git_projects/Esql.c/src/shell_executables/utf8_processor.cpp
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_37) "Building CXX object CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o -MF CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o.d -o CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o -c /home/igiris/git_projects/Esql.c/src/shell_executables/utf8_processor.cpp
 
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.i: cmake_force
@@ -579,6 +593,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.s: cmake_force
 # Object files for target e_sql
 e_sql_OBJECTS = \
 "CMakeFiles/e_sql.dir/src/scanner.cpp.o" \
+"CMakeFiles/e_sql.dir/src/token_utils.cpp.o" \
 "CMakeFiles/e_sql.dir/src/parser.cpp.o" \
 "CMakeFiles/e_sql.dir/src/analyzer.cpp.o" \
 "CMakeFiles/e_sql.dir/src/diskstorage.cpp.o" \
@@ -619,6 +634,7 @@ e_sql_OBJECTS = \
 e_sql_EXTERNAL_OBJECTS =
 
 e_sql: CMakeFiles/e_sql.dir/src/scanner.cpp.o
+e_sql: CMakeFiles/e_sql.dir/src/token_utils.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/parser.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/analyzer.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/diskstorage.cpp.o
@@ -658,7 +674,7 @@ e_sql: CMakeFiles/e_sql.dir/build.make
 e_sql: CMakeFiles/e_sql.dir/compiler_depend.ts
 e_sql: /usr/lib/x86_64-linux-gnu/libreadline.so
 e_sql: CMakeFiles/e_sql.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_37) "Linking CXX executable e_sql"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_38) "Linking CXX executable e_sql"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/e_sql.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

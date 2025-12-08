@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 #include "scanner.h"
+#include "token_utils.h"
 #include <stdexcept>
 #include <memory>
 #include <vector>
@@ -172,7 +173,7 @@ namespace AST{
             std::unique_ptr<Expression> caseExpression; // For simple case
             std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> whenClauses;
             std::unique_ptr<Expression> elseClause;
-            std::string alias; 
+            std::string alias;
 
             std::unique_ptr<Expression> clone() const override {
                 std::vector<std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>> clonedWhens;
@@ -208,7 +209,7 @@ namespace AST{
     };
 
     class FunctionCall : public Expression {
-        public: 
+        public:
             Token function;
             std::vector<std::unique_ptr<Expression>> arguments;
             std::unique_ptr<Expression> alias;
@@ -347,16 +348,16 @@ namespace AST{
             std::vector<CommonTableExpression> ctes;
             WithClause(std::vector<CommonTableExpression> c) : ctes(std::move(c)) {}
     };
-    
+
     // Join Clause
     class JoinClause {
         public:
             enum Type { INNER, LEFT, RIGHT, FULL };
-            
+
             Type type = INNER;
             std::unique_ptr<Expression> table;
             std::unique_ptr<Expression> condition;
-            
+
             JoinClause() = default;
             JoinClause(Type t, std::unique_ptr<Expression> tab, std::unique_ptr<Expression> cond)
                 : type(t), table(std::move(tab)), condition(std::move(cond)) {}
@@ -377,7 +378,7 @@ namespace AST{
 			std::unique_ptr<Expression> offset;
 			bool distinct = false;
             std::unique_ptr<WithClause> withClause;
-            std::vector<std::unique_ptr<JoinClause>> joins; 
+            std::vector<std::unique_ptr<JoinClause>> joins;
 	};
 	class AggregateExpression : public Expression{
 		public:
@@ -386,7 +387,7 @@ namespace AST{
 			std::unique_ptr<Expression> argument2;
 			bool isCountAll = false;
 
-			
+
 			std::unique_ptr<Expression> clone() const override {
 				return std::make_unique<AggregateExpression>(function,argument ? argument->clone() : nullptr , argument2 ? argument2->clone() : nullptr ,isCountAll);
 			}
@@ -418,7 +419,7 @@ namespace AST{
             std::vector<std::unique_ptr<Expression>> partitionBy;
             std::vector<std::pair<std::unique_ptr<Expression>, bool>> orderBy;
             std::unique_ptr<Expression> nTileValue;
-            std::unique_ptr<Expression> alias; 
+            std::unique_ptr<Expression> alias;
 
             std::unique_ptr<Expression> clone() const override {
                 std::vector<std::unique_ptr<Expression>> clonedPartition;
@@ -615,14 +616,49 @@ class ParseError : public std::runtime_error {
 public:
     size_t line;
     size_t column;
-    
-    ParseError(size_t line, size_t column, const std::string& message)
-        : std::runtime_error(message), line(line), column(column) {}
-    
+    std::string expected;
+    std::string got;
+    std::string context;
+
+    ParseError(size_t line,size_t column,const std::string& message) : std::runtime_error(formatBasicMessage(line,column,message)),
+        line(line),column(column),expected(""),got(""),context("") {}
+
+    ParseError(size_t line, size_t column, const std::string& expected, const std::string& got, const std::string& context = "")
+        : std::runtime_error(formatMessage(line, column, expected, got, context)),
+          line(line), column(column), expected(expected), got(got), context(context) {}
+
+    static std::string formatBasicMessage(size_t line, size_t column, const std::string& message) {
+
+        return "Parse error at line " + std::to_string(line) +
+               ", column " + std::to_string(column) + ": " + message;
+    }
+
+    static std::string formatMessage(size_t line, size_t column, const std::string& expected,const std::string& got,const std::string& context = "") {
+        std::string message = "Parse error at line " + std::to_string(line) + ", column " + std::to_string(column) + ":\n";
+
+        if (!context.empty()) {
+            message += "  Context: " + context + "\n";
+        }
+
+        message += "  Expected: " + expected + "\n";
+        message += "  Got: '" + got + "'";
+
+        return message;
+    }
+
     // Helper function to format the error message
     std::string fullMessage() const {
-        return "Parse error at line " + std::to_string(line) + ", column " + std::to_string(column) + ": " + what();
+        return  what();
     }
+
+    /*std::string formatExpectedTokens(const std::vector<Token::Type>& types);
+    ParseError createUnexpectedTokenError(const Token& token, const std::string& context = "");
+    ParseError createExpectedTokenError(const Token& token, Token::Type expected, const std::string& context = "");
+    ParseError createExpectedOneOfError(const Token& token,const std::vector<Token::Type>& expected,const std::string& context = "");
+    ParseError createSyntaxError(const Token& token, const std::string& message,const std::string& context = "");*/
+
+
+
 };
 class Parse{
 	public:
@@ -634,9 +670,14 @@ class Parse{
 		Token currentToken;
 		Token previousToken_;
 		bool inValueContext=false;
-		
+
 		const Token& previousToken() const;
 		std::unique_ptr<AST::Expression> parseValue();
+        std::string formatExpectedTokens(const std::vector<Token::Type>& types) const;
+        ParseError createUnexpectedTokenError(const Token& token, const std::string& context = "") const;
+        ParseError createExpectedTokenError(const Token& token, Token::Type expected, const std::string& context = "") const;
+        ParseError createExpectedOneOfError(const Token& token, const std::vector<Token::Type>& expected, const std::string& context = "") const;
+        ParseError createSyntaxError(const Token& token, const std::string& message, const std::string& context = "") const;
 		void consume(Token::Type expected);
 		Token peekToken();
 		void advance();
@@ -658,7 +699,7 @@ class Parse{
 		std::unique_ptr<AST::SelectStatement> parseSelectStatement();
         std::vector<std::unique_ptr<AST::Expression>> parseFunctionArguments();
         //*****************HELPER METHODS FOR SELECT*****************************
-        std::unique_ptr<AST::WithClause> parseWithClause(); 
+        std::unique_ptr<AST::WithClause> parseWithClause();
         std::unique_ptr<AST::JoinClause> parseJoinClause();
 		std::unique_ptr<AST::UpdateStatement> parseUpdateStatement();
 		std::unique_ptr<AST::DeleteStatement> parseDeleteStatement();

@@ -155,6 +155,7 @@ CMakeFiles/e_sql.dir/src/parser.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_vector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_bvector.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/vector.tcc \
+  /home/igiris/git_projects/Esql.c/include/token_utils.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/stdexcept \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/exception \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/exception_ptr.h \
@@ -212,9 +213,8 @@ CMakeFiles/e_sql.dir/src/parser.cpp.o: \
   /usr/lib/llvm-19/lib/clang/19/include/stdint.h /usr/include/stdint.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/iostream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/sstream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ios \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ios_base.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_classes.h \
@@ -233,6 +233,9 @@ CMakeFiles/e_sql.dir/src/parser.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/locale_facets.tcc \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/basic_ios.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ostream \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/ostream.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/istream.tcc
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/istream.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/sstream.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/iostream

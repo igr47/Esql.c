@@ -969,6 +969,30 @@ src/shell_executables/utf8_processor.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.s
 .PHONY : src/shell_executables/utf8_processor.cpp.s
 
+src/token_utils.o: src/token_utils.cpp.o
+.PHONY : src/token_utils.o
+
+# target to build an object file
+src/token_utils.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/token_utils.cpp.o
+.PHONY : src/token_utils.cpp.o
+
+src/token_utils.i: src/token_utils.cpp.i
+.PHONY : src/token_utils.i
+
+# target to preprocess a source file
+src/token_utils.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/token_utils.cpp.i
+.PHONY : src/token_utils.cpp.i
+
+src/token_utils.s: src/token_utils.cpp.s
+.PHONY : src/token_utils.s
+
+# target to generate assembly for a file
+src/token_utils.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/token_utils.cpp.s
+.PHONY : src/token_utils.cpp.s
+
 src/write_ahead_log.o: src/write_ahead_log.cpp.o
 .PHONY : src/write_ahead_log.o
 
@@ -1107,6 +1131,9 @@ help:
 	@echo "... src/shell_executables/utf8_processor.o"
 	@echo "... src/shell_executables/utf8_processor.i"
 	@echo "... src/shell_executables/utf8_processor.s"
+	@echo "... src/token_utils.o"
+	@echo "... src/token_utils.i"
+	@echo "... src/token_utils.s"
 	@echo "... src/write_ahead_log.o"
 	@echo "... src/write_ahead_log.i"
 	@echo "... src/write_ahead_log.s"
