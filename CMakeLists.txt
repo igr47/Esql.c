@@ -16,28 +16,29 @@ else()
 endif()
 
 # Execution Engine sources
-file(GLOB EXECUTION_ENGINE_SOURCES 
+file(GLOB EXECUTION_ENGINE_SOURCES
     "src/execution_engine/*.cpp"
 )
 
 #Shell executables
-file(GLOB SHELL_SOURCES 
+file(GLOB SHELL_SOURCES
     "src/shell_executables/*.cpp"
 )
 
 set(CORE_SOURCES
     src/scanner.cpp
+    src/token_utils.cpp
     src/parser.cpp
-    src/analyzer.cpp     
+    src/analyzer.cpp
     src/diskstorage.cpp
-    src/database_file.cpp      
-    src/write_ahead_log.cpp  
+    src/database_file.cpp
+    src/write_ahead_log.cpp
     src/buffer_pool.cpp
-    src/page.cpp  
+    src/page.cpp
     src/fractal_bplus_tree.cpp
-    src/database.cpp    
+    src/database.cpp
     src/database_schema.cpp
-    src/main.cpp  
+    src/main.cpp
 )
 
 # Combine all sources
@@ -49,7 +50,7 @@ set(ALL_SOURCES
 
 add_executable(e_sql ${ALL_SOURCES})
 
-target_include_directories(e_sql PRIVATE 
+target_include_directories(e_sql PRIVATE
     include
     include/shell_includes
     include/execution_engine_includes

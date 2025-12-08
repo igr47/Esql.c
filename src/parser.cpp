@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "scanner.h"
+#include <sstream>
 #include <string>
 #include <stdexcept>
 #include <vector>
@@ -14,7 +15,14 @@ namespace AST{
 
 Parse::Parse(Lexer& lexer) : lexer(lexer),currentToken(lexer.nextToken()),previousToken_(Token(Token::Type::ERROR,"",0,0)){}
 std::unique_ptr<AST::Statement> Parse::parse(){
-	return parseStatement();
+    try {
+        return parseStatement();
+    } catch (const ParseError& e) {
+        // Add context about which statement was being parsed
+        std::string context = "While parsing " + (previousToken_.lexeme.empty() ? "query" : previousToken_.lexeme) +
+                             " statement";
+        throw ParseError(e.line, e.column, std::string(e.what()) + "\n  " + context);
+    }
 }
 std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	if(match(Token::Type::SELECT)){
@@ -68,7 +76,7 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	}else if(match(Token::Type::ALTER)){
 		return parseAlterTableStatement();
 	}
-	throw std::runtime_error("unexpected token at start of statement");
+	   throw createSyntaxError(currentToken, "Expected statement (SELECT, UPDATE, DELETE, INSERT, CREATE, etc.)","Start of query");
 }
 
 std::unique_ptr<AST::Expression> Parse::parseValue() {
@@ -106,12 +114,53 @@ std::unique_ptr<AST::Expression> Parse::parseValue() {
         currentToken.column,
         "Unexpected token in value position. Expected quoted string or number"
     );
+
+    throw createExpectedOneOfError(currentToken,{Token::Type::STRING_LITERAL, Token::Type::DOUBLE_QUOTED_STRING,
+         Token::Type::NUMBER_LITERAL, Token::Type::TRUE, Token::Type::FALSE},"In value position");
 }
+
+// Error helper functions
+std::string Parse::formatExpectedTokens(const std::vector<Token::Type>& types) const {
+    std::stringstream ss;
+    for (size_t i = 0; i < types.size(); ++i) {
+        if (i > 0) {
+            if (i == types.size() - 1) {
+                ss << " or ";
+            } else {
+                ss << ", ";
+            }
+        }
+        ss << TokenUtils::typeToString(types[i]);
+    }
+    return ss.str();
+}
+
+ParseError Parse::createUnexpectedTokenError(const Token& token, const std::string& context) const{
+    return ParseError(token.line, token.column, TokenUtils::getTokenDescription(token),token.lexeme,context);
+}
+
+ParseError Parse::createExpectedTokenError(const Token& token, Token::Type expected, const std::string& context) const {
+    return ParseError(token.line, token.column,TokenUtils::typeToString(expected),TokenUtils::getTokenDescription(token),context);
+}
+
+
+ParseError Parse::createExpectedOneOfError(const Token& token, const std::vector<Token::Type>& expected,const std::string& context) const {
+    return ParseError(token.line, token.column,
+                     formatExpectedTokens(expected),
+                     TokenUtils::getTokenDescription(token),
+                     context);
+}
+
+ParseError Parse::createSyntaxError(const Token& token, const std::string& message,const std::string& context) const {
+    return ParseError(token.line, token.column, message + ", got " +
+                     TokenUtils::getTokenDescription(token), context);
+}
+
 void Parse::consume(Token::Type expected){
 	if(currentToken.type==expected){
 		advance();
 	}else{
-		throw std::runtime_error("Unexpected token at line "+ std::to_string(currentToken.line) +",column ," +std::to_string(currentToken.column));
+		throw createExpectedTokenError(currentToken, expected, "Syntax error");
 	}
 }
 const Token& Parse::previousToken() const{
@@ -231,6 +280,10 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
     // Parse WITH clause if present
     if (match(Token::Type::WITH)) {
         stmt->withClause = parseWithClause();
+    }
+
+    if (!match(Token::Type::SELECT)) {
+        throw createExpectedTokenError(currentToken, Token::Type::SELECT, "Start of SELECT statement");
     }
 
 	//parse select clause
@@ -1288,22 +1341,29 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
 
 
 std::unique_ptr<AST::Expression> Parse::parseExpression(){
-	//return parseBinaryExpression(1);
+    try {
+        //return parseBinaryExpression(1);
         auto expr = parseBinaryExpression(1);
 
-    // Check for alias after the full expression
-    if (match(Token::Type::AS)) {
-        consume(Token::Type::AS);
-        auto aliasExpr = parseIdentifier();
+        // Check for alias after the full expression
+        if (match(Token::Type::AS)) {
+            consume(Token::Type::AS);
+            auto aliasExpr = parseIdentifier();
 
-        // If the expression is a BinaryOp, add alias to it
-        if (auto* binaryOp = dynamic_cast<AST::BinaryOp*>(expr.get())) {
-            binaryOp->alias = std::move(aliasExpr);
+            // If the expression is a BinaryOp, add alias to it
+            if (auto* binaryOp = dynamic_cast<AST::BinaryOp*>(expr.get())) {
+                binaryOp->alias = std::move(aliasExpr);
+            }
+            // You might want to handle other expression types too
         }
-        // You might want to handle other expression types too
-    }
 
-    return expr;
+        return expr;
+    } catch(const ParseError&) {
+        throw; // Re-throw ParseError
+    } catch (const std::exception& e) {
+        // Convert any other exception to ParseError
+        throw ParseError(currentToken.line, currentToken.column,std::string("Error parsing expression: ") + e.what());
+    }
 }
 
 
@@ -1485,6 +1545,9 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		left = parseLiteral();
 	}else if(match(Token::Type::L_PAREN)){
 		consume(Token::Type::L_PAREN);
+        if (!match(Token::Type::R_PAREN)) {
+            throw createExpectedTokenError(currentToken, Token::Type::R_PAREN,"To close parenthesized expression");
+        }
 		//auto expr=parseExpression();
 		left = parseExpression();
 		consume(Token::Type::R_PAREN);
@@ -1572,8 +1635,8 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
             std::vector<std::unique_ptr<AST::Expression>>{},
             std::move(aliasExpr)
         );
-	}else{
-		throw std::runtime_error("Expected expression at line " + std::to_string(currentToken.line) + ",column, " + std::to_string(currentToken.column));
+	}else {
+        throw createSyntaxError(currentToken, "Expected expression (identifier, literal, function, etc.)","In expression");
 	}
 
     Token next = peekToken();
