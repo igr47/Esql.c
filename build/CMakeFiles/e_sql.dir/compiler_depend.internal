@@ -10754,5 +10754,6 @@ e_sql
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o
+ /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/token_utils.cpp.o
  /home/igiris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o
 

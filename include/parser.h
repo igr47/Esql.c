@@ -670,6 +670,7 @@ class Parse{
 		Token currentToken;
 		Token previousToken_;
 		bool inValueContext=false;
+        std::unique_ptr<AST::Expression> pendingAlias = nullptr;
 
 		const Token& previousToken() const;
 		std::unique_ptr<AST::Expression> parseValue();

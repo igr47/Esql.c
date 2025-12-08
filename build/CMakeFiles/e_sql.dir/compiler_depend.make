@@ -10716,6 +10716,7 @@ e_sql: /lib/x86_64-linux-gnu/Scrt1.o \
   CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o \
+  CMakeFiles/e_sql.dir/src/token_utils.cpp.o \
   CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o
 
 
@@ -11568,6 +11569,8 @@ CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o:
 /usr/include/c++/15/bits/parse_numbers.h:
 
 /usr/include/c++/15/bits/quoted_string.h:
+
+CMakeFiles/e_sql.dir/src/token_utils.cpp.o:
 
 /usr/include/ctype.h:
 
