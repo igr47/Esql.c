@@ -41,6 +41,98 @@ void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
 		}
 	}
 }
+
+bool SematicAnalyzer::isColumnAlias(const std::string& name) const {
+    return columnAliases.find(name) != columnAliases.end();
+}
+
+// Check if name is either a column or alias
+bool SematicAnalyzer::isValidColumnOrAlias(const std::string& name) const {
+    return columnExists(name) || isColumnAlias(name);
+}
+
+// Collect column alises from SELECT clause
+void SematicAnalyzer::collectColumnAliases(AST::SelectStatement& selectStmt) {
+    columnAliases.clear();
+    aliasExpressions.clear();
+
+    // Collect aliases from regular columns
+    for (auto& column : selectStmt.columns) {
+        if (auto* binaryOp = dynamic_cast<AST::BinaryOp*>(column.get())) {
+            if (binaryOp->alias) {
+                std::string aliasName = binaryOp->alias->toString();
+                DatabaseSchema::Column::Type columnType = getValueType(*binaryOp);
+                columnAliases[aliasName] = columnType;
+                aliasExpressions[aliasName] = binaryOp->clone();
+            }
+                 } else if (auto* aggregate = dynamic_cast<AST::AggregateExpression*>(column.get())) {
+            // Check for aggregate function with alias
+            if (aggregate->argument2) {
+                std::string aliasName = aggregate->argument2->toString();
+                DatabaseSchema::Column::Type columnType = getValueType(*aggregate);
+                columnAliases[aliasName] = columnType;
+                aliasExpressions[aliasName] = aggregate->clone();
+            }
+        } else if (auto* funcCall = dynamic_cast<AST::FunctionCall*>(column.get())) {
+            if (funcCall->alias) {
+                std::string aliasName = funcCall->alias->toString();
+                DatabaseSchema::Column::Type columnType = getValueType(*funcCall);
+                columnAliases[aliasName] = columnType;
+                aliasExpressions[aliasName] = funcCall->clone();
+            }
+                 } else if (auto* caseExpr = dynamic_cast<AST::CaseExpression*>(column.get())) {
+            if (!caseExpr->alias.empty()) {
+                std::string aliasName = caseExpr->alias;
+                DatabaseSchema::Column::Type columnType = getValueType(*caseExpr);
+                columnAliases[aliasName] = columnType;
+                aliasExpressions[aliasName] = caseExpr->clone();
+            }
+        } else if (auto* statExpr = dynamic_cast<AST::StatisticalExpression*>(column.get())) {
+            if (statExpr->alias) {
+                std::string aliasName = statExpr->alias->toString();
+                DatabaseSchema::Column::Type columnType = getValueType(*statExpr);
+                columnAliases[aliasName] = columnType;
+                aliasExpressions[aliasName] = statExpr->clone();
+            }
+                 } else if (auto* dateFunc = dynamic_cast<AST::DateFunction*>(column.get())) {
+            if (dateFunc->alias) {
+                std::string aliasName = dateFunc->alias->toString();
+                DatabaseSchema::Column::Type columnType = getValueType(*dateFunc);
+                columnAliases[aliasName] = columnType;
+                aliasExpressions[aliasName] = dateFunc->clone();
+            }
+        } else if (auto* windowFunc = dynamic_cast<AST::WindowFunction*>(column.get())) {
+            if (windowFunc->alias) {
+                std::string aliasName = windowFunc->alias->toString();
+                DatabaseSchema::Column::Type columnType = getValueType(*windowFunc);
+                columnAliases[aliasName] = columnType;
+                aliasExpressions[aliasName] = windowFunc->clone();
+            }
+                 } else if (auto* ident = dynamic_cast<AST::Identifier*>(column.get())) {
+            // For simple column references without aliases, the column name itself
+            // can be used as an alias in ORDER BY, GROUP BY
+            std::string colName = ident->token.lexeme;
+            DatabaseSchema::Column::Type columnType = getValueType(*ident);
+            columnAliases[colName] = columnType;
+            aliasExpressions[colName] = ident->clone();
+        }
+    }
+       // Also check the newCols vector for aliases (if you're using that)
+    for (auto& [expr, alias] : selectStmt.newCols) {
+        if (!alias.empty()) {
+            DatabaseSchema::Column::Type columnType = getValueType(*expr);
+            columnAliases[alias] = columnType;
+            aliasExpressions[alias] = expr->clone();
+        }
+    }
+
+    // Debug output
+    /*std::cout << "DEBUG: Collected " << columnAliases.size() << " column aliases" << std::endl;
+    for (const auto& [alias, type] : columnAliases) {
+        std::cout << "  - " << alias << " : " << typeToString(type) << std::endl;
+    }*/
+}
+
 //parse method for create database
 void SematicAnalyzer::analyzeCreateDatabase(AST::CreateDatabaseStatement& createdbstmt){
 	if(storage.databaseExists(createdbstmt.dbName)){
@@ -75,9 +167,16 @@ void SematicAnalyzer::ensureDatabaseSelected() const{
 }
 //parent method for analysis of select statement
 void SematicAnalyzer::analyzeSelect(AST::SelectStatement& selectStmt){
+    // Clear previous aliases
+    columnAliases.clear();
+    aliasExpressions.clear();
 
 	validateFromClause(selectStmt);
 	validateSelectColumns(selectStmt);
+
+    // Collect column aliases AFTER validating columns
+    collectColumnAliases(selectStmt);
+
 	if(selectStmt.distinct){
 		validateDistinctUsage(selectStmt);
 	}
@@ -105,6 +204,7 @@ void SematicAnalyzer::validateGroupByClause(AST::SelectStatement& selectStmt){
             validateCaseExpressionForGroupBy(*caseExpr);
         }
 		if (auto* ident = dynamic_cast<AST::Identifier*>(column.get())){
+
 			if(!columnExists(ident->token.lexeme)){
 				throw SematicError("Column '" + ident->token.lexeme + "' In GROUP B clause does not exist");
 			}
@@ -115,10 +215,10 @@ void SematicAnalyzer::validateGroupByClause(AST::SelectStatement& selectStmt){
 void SematicAnalyzer::validateCaseExpressionForGroupBy(AST::CaseExpression& caseExpr) {
     // Validate that all result types in CASE are compatible for grouping
     DatabaseSchema::Column::Type firstType = DatabaseSchema::Column::STRING; // Default
-    
+
     if (!caseExpr.whenClauses.empty()) {
         firstType = getValueType(*caseExpr.whenClauses[0].second);
-        
+
         for (size_t i = 1; i < caseExpr.whenClauses.size(); ++i) {
             auto currentType = getValueType(*caseExpr.whenClauses[i].second);
             if (!areTypesCompatible(firstType, currentType)) {
@@ -163,6 +263,41 @@ bool SematicAnalyzer::isAggregateExpression(const AST::Expression& expr) const{
 }
 
 void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
+    if(!selectStmt.orderBy) return;
+
+    for(auto& column_pair : selectStmt.orderBy->columns){
+        auto* column = column_pair.first.get();
+        validateExpression(*column,currentTable);
+
+        // Check if column exists in table, is an alias, or is in SELECT list
+        if(auto* ident = dynamic_cast<AST::Identifier*>(column)){
+            if (!isValidColumnOrAlias(ident->token.lexeme)) {
+                // Check if it's in the SELECT list by comparing expression strings
+                bool foundInSelect = false;
+                for (const auto& selectCol : selectStmt.columns) {
+                    if (selectCol->toString() == column->toString()) {
+                        foundInSelect = true;
+                        break;
+                            }
+                }
+
+                // Also check newCols if you use that
+                for (const auto& [expr, alias] : selectStmt.newCols) {
+                    if (!alias.empty() && alias == ident->token.lexeme) {
+                        foundInSelect = true;
+                        break;
+                    }
+                }
+
+                if (!foundInSelect) {
+                    throw SematicError("Column or alias '" + ident->token.lexeme +
+                                     "' in ORDER BY clause does not exist in SELECT list or table");
+                }
+        }
+        }
+    }
+}
+/*void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
 	if(!selectStmt.orderBy) return;
 
 	for(auto& column_pair : selectStmt.orderBy->columns){
@@ -185,7 +320,7 @@ void SematicAnalyzer::validateOrderByClause(AST::SelectStatement& selectStmt) {
 			}
 		}
 	}
-}
+}*/
 
 bool SematicAnalyzer::isAggregateFunction(const std::string& functionName) const{
 	static const std::set<std::string> aggregateFunctions ={
@@ -265,7 +400,7 @@ void SematicAnalyzer::validateSelectColumns(AST::SelectStatement& selectStmt){
 		}
 	}
     }
-					 
+
 }
 
 void SematicAnalyzer::validateCaseExpression(AST::CaseExpression& caseExpr, const DatabaseSchema::Table* table) {
@@ -420,7 +555,7 @@ void SematicAnalyzer::validateFunctionCall(AST::FunctionCall& funcCall, const Da
     }
     // Not added validation for other functions. wiLL come back later
 }
-	
+
 void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSchema::Table* table){
     if (auto* caseExpr = dynamic_cast<AST::CaseExpression*>(&expr)) {
         validateCaseExpression(*caseExpr, table);
@@ -448,6 +583,13 @@ void SematicAnalyzer::validateExpression(AST::Expression& expr,const DatabaseSch
 				// This is a boolean literal not an unquoted string
 				return;
 			}
+
+            // Check if it is a column alias
+            if (isColumnAlias(ident->token.lexeme)) {
+                // Valid column alias
+                return;
+            }
+
 			if(/*inValueContext &&*/ ident->token.lexeme.find(' ')==std::string::npos){
 				throw SematicError("String value'"+ ident->token.lexeme+ "'must be quoted.Did you mean '"+ ident->token.lexeme +"'?");
 			        throw SematicError("Unknown column in expression: "+ ident->token.lexeme);
@@ -555,19 +697,19 @@ void SematicAnalyzer::validateNotOperation(AST::NotOp& notOp, const DatabaseSche
 void SematicAnalyzer::validateIsOperation(AST::BinaryOp& isOp, const DatabaseSchema::Table* table) {
     validateExpression(*isOp.left, table);
     validateExpression(*isOp.right, table);
-    
+
     auto leftType = getValueType(*isOp.left);
-    
+
     // IS NULL/IS NOT NULL can be applied to any nullable type
     if (isOp.op.type == Token::Type::IS_NULL || isOp.op.type == Token::Type::IS_NOT_NULL) {
         // Any type can be checked for NULL
         return;
     }
-    
+
     // IS TRUE/IS FALSE require boolean-compatible expressions
     if (isOp.op.type == Token::Type::IS_TRUE || isOp.op.type == Token::Type::IS_FALSE ||
         isOp.op.type == Token::Type::IS_NOT_TRUE || isOp.op.type == Token::Type::IS_NOT_FALSE) {
-        
+
         if (leftType != DatabaseSchema::Column::BOOLEAN) {
             // Check if it can be implicitly converted to boolean
             if (!isImplicitlyBoolean(*isOp.left)) {
@@ -576,7 +718,7 @@ void SematicAnalyzer::validateIsOperation(AST::BinaryOp& isOp, const DatabaseSch
         }
         return;
     }
-    
+
     // Regular IS comparison - types should be comparable
     auto rightType = getValueType(*isOp.right);
     if (!areTypesComparable(leftType, rightType)) {
@@ -590,7 +732,7 @@ void SematicAnalyzer::validateLiteral(const AST::Literal& literal, const Databas
         case Token::Type::DOUBLE_QUOTED_STRING:
             // String literals are always valid in expressions
             break;
-            
+
         case Token::Type::NUMBER_LITERAL: {
             // Validate numeric format
             const std::string& numStr = literal.token.lexeme;
@@ -600,12 +742,12 @@ void SematicAnalyzer::validateLiteral(const AST::Literal& literal, const Databas
             }
             break;
         }
-            
+
         case Token::Type::TRUE:
         case Token::Type::FALSE:
             // Boolean literals are always valid
             break;
-            
+
         default:
             throw SematicError("Invalid literal type in expression");
     }
@@ -784,7 +926,7 @@ bool SematicAnalyzer::isComparisonOperator(Token::Type type) {
 		case Token::Type::IN:
         case Token::Type::LIKE:
 			return true;
-		default: 
+		default:
 			return false;
 	}
 }
@@ -803,7 +945,7 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
         // For AND/OR, check if both expressions can evaluate to boolean
         auto leftType = getValueType(left);
         auto rightType = getValueType(right);
-        
+
 	if(dynamic_cast<const AST::AggregateExpression*>(&left) || dynamic_cast<const AST::AggregateExpression*>(&right)){
 		if(isComparisonOperator(op)){
 			bool leftIsNumeric = (leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT);
@@ -813,12 +955,12 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
 		}
 	}
         // Allow if both are explicitly boolean, or if they are comparison operations
-        bool leftIsBoolean = (leftType == DatabaseSchema::Column::BOOLEAN) || 
+        bool leftIsBoolean = (leftType == DatabaseSchema::Column::BOOLEAN) ||
                             (dynamic_cast<const AST::BinaryOp*>(&left) && isComparisonOperator(dynamic_cast<const AST::BinaryOp*>(&left)->op.type));
-        
-        bool rightIsBoolean = (rightType == DatabaseSchema::Column::BOOLEAN) || 
+
+        bool rightIsBoolean = (rightType == DatabaseSchema::Column::BOOLEAN) ||
                              (dynamic_cast<const AST::BinaryOp*>(&right) && isComparisonOperator(dynamic_cast<const AST::BinaryOp*>(&right)->op.type));
-        
+
         return leftIsBoolean && rightIsBoolean;
     }
     auto leftType = getValueType(left);
@@ -835,9 +977,9 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
             case Token::Type::GREATER:
             case Token::Type::GREATER_EQUAL:
                 // Allow comparison for numeric and string types
-                return leftType == DatabaseSchema::Column::INTEGER || 
-                       leftType == DatabaseSchema::Column::FLOAT || 
-                       leftType == DatabaseSchema::Column::STRING || 
+                return leftType == DatabaseSchema::Column::INTEGER ||
+                       leftType == DatabaseSchema::Column::FLOAT ||
+                       leftType == DatabaseSchema::Column::STRING ||
                        leftType == DatabaseSchema::Column::TEXT;
             case Token::Type::AND:
             case Token::Type::OR:
@@ -853,13 +995,13 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
         case Token::Type::NOT_EQUAL:
             // Allow equality comparisons between compatible types
             return areTypesComparable(leftType, rightType);
-            
+
         case Token::Type::LESS:
         case Token::Type::LESS_EQUAL:
         case Token::Type::GREATER:
         case Token::Type::GREATER_EQUAL:
             // Only allow numeric comparisons for inequality operators
-               if  ((leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT) && 
+               if  ((leftType == DatabaseSchema::Column::INTEGER || leftType == DatabaseSchema::Column::FLOAT) &&
                    (rightType == DatabaseSchema::Column::INTEGER || rightType == DatabaseSchema::Column::FLOAT)){
 			   return true;
 		   }
@@ -873,12 +1015,12 @@ bool SematicAnalyzer::isValidOperation(Token::Type op, const AST::Expression& le
 			       (rightType == DatabaseSchema::Column::STRING || rightType == DatabaseSchema::Column::TEXT)){
 		       return true;
 	       }
-            
+
         case Token::Type::AND:
         case Token::Type::OR:
             // Boolean operations require both operands to be boolean
             return leftType == DatabaseSchema::Column::BOOLEAN && rightType == DatabaseSchema::Column::BOOLEAN;
-            
+
         default:
             return false;
     }
@@ -938,10 +1080,10 @@ void SematicAnalyzer::analyzeInsert(AST::InsertStatement& insertStmt) {
     // Validate each value against its corresponding column
     for (size_t row_idx = 0; row_idx < insertStmt.values.size(); ++row_idx) {
         size_t value_index = 0;
-        
+
         for (size_t col_idx = 0; col_idx < currentTable->columns.size(); ++col_idx) {
             const auto& column = currentTable->columns[col_idx];
-            
+
             // Skip AUTO_INCREMENT columns - they're handled by execution engine
             if (column.autoIncreament) {
                 continue;
@@ -1016,14 +1158,14 @@ void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
 
     std::vector<DatabaseSchema::Column> columns;
     std::string primaryKey;
-    
+
     for (auto& colDef : createStmt.columns) {
         DatabaseSchema::Column column;
         column.name = colDef.name;
-        
+
         try {
             column.type = DatabaseSchema::Column::parseType(colDef.type);
-            
+
             // Handle VARCHAR length
             if (colDef.type.find("VARCHAR") == 0) {
                 size_t openParen = colDef.type.find('(');
@@ -1047,7 +1189,7 @@ void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
     column.generateDateTime = false;
 	column.defaultValue = "";
 	column.constraints.clear();
-        
+
         // Handle constraints
         for (auto& constraint : colDef.constraints) {
 	    DatabaseSchema::Constraint dbConstraint;
@@ -1109,11 +1251,11 @@ void SematicAnalyzer::analyzeCreate(AST::CreateTableStatement& createStmt) {
 	if (column.isPrimaryKey && column.isNullable) {
 		throw SematicError("Primary Key column '" + column.name + "'cannot be nullable");
 	}
-        
+
         columns.push_back(column);
     }
 }
-	
+
 //Helper methods for INSERT analysis
 const DatabaseSchema::Column* SematicAnalyzer::findColumn(const std::string& name) const{
 	if(!currentTable)return nullptr;
@@ -1126,6 +1268,22 @@ const DatabaseSchema::Column* SematicAnalyzer::findColumn(const std::string& nam
 }
 
 DatabaseSchema::Column::Type SematicAnalyzer::getValueType(const AST::Expression& expr) {
+        // First, check if it's an identifier that might be an alias
+    if (auto* ident = dynamic_cast<const AST::Identifier*>(&expr)) {
+        std::string name = ident->token.lexeme;
+
+        // Check if it's a column alias
+        auto aliasIt = columnAliases.find(name);
+        if (aliasIt != columnAliases.end()) {
+            return aliasIt->second;
+        }
+
+        // If not an alias, check if it's a table column
+        if (auto* col = findColumn(name)) {
+            return col->type;
+        }
+    }
+
      if (auto* caseExpr = dynamic_cast<const AST::CaseExpression*>(&expr)) {
         //std::cout << "DEBUG getValueType: Processing CASE expression" << std::endl;
 
@@ -1487,7 +1645,7 @@ bool SematicAnalyzer::isTypeCompatibleForAssignment(DatabaseSchema::Column::Type
 
 void SematicAnalyzer::validateLikeOperation(AST::LikeOp& likeOp, const DatabaseSchema::Table* table) {
     validateExpression(*likeOp.left, table);
-    
+
     // For the right side, we need to handle both literals and character classes
     if (auto* literal = dynamic_cast<AST::Literal*>(likeOp.right.get())) {
         // Validate that it's a string literal
@@ -1495,7 +1653,7 @@ void SematicAnalyzer::validateLikeOperation(AST::LikeOp& likeOp, const DatabaseS
             literal->token.type != Token::Type::DOUBLE_QUOTED_STRING) {
             throw SematicError("LIKE pattern must be a string literal");
         }
-        
+
         // Validate character class syntax if present
         std::string pattern = literal->token.lexeme;
         if (pattern.find('[') != std::string::npos) {
@@ -1503,14 +1661,14 @@ void SematicAnalyzer::validateLikeOperation(AST::LikeOp& likeOp, const DatabaseS
         }
     }
     // Add validation for CharClass nodes if we implement them
-    
+
     // Both operands should be string types
     auto leftType = getValueType(*likeOp.left);
     auto rightType = getValueType(*likeOp.right);
-    
-    if (!(leftType == DatabaseSchema::Column::STRING || 
+
+    if (!(leftType == DatabaseSchema::Column::STRING ||
           leftType == DatabaseSchema::Column::TEXT) ||
-        !(rightType == DatabaseSchema::Column::STRING || 
+        !(rightType == DatabaseSchema::Column::STRING ||
           rightType == DatabaseSchema::Column::TEXT)) {
         throw SematicError("LIKE operator requires string operands");
     }
@@ -1519,7 +1677,7 @@ void SematicAnalyzer::validateLikeOperation(AST::LikeOp& likeOp, const DatabaseS
 void SematicAnalyzer::validateCharacterClassSyntax(const std::string& pattern) {
     size_t len = pattern.length();
     size_t i = 0;
-    
+
     while (i < len) {
         if (pattern[i] == '[') {
             i++;
@@ -1529,8 +1687,8 @@ void SematicAnalyzer::validateCharacterClassSyntax(const std::string& pattern) {
                 if (i + 2 < len && pattern[i + 1] == '-') {
                     // Validate range: start must be <= end
                     if (pattern[i] > pattern[i + 2]) {
-                        throw SematicError("Invalid character range in pattern: " + 
-                                          std::string(1, pattern[i]) + "-" + 
+                        throw SematicError("Invalid character range in pattern: " +
+                                          std::string(1, pattern[i]) + "-" +
                                           std::string(1, pattern[i + 2]));
                     }
                     i += 3;
@@ -1538,7 +1696,7 @@ void SematicAnalyzer::validateCharacterClassSyntax(const std::string& pattern) {
                     i++;
                 }
             }
-            
+
             if (i >= len || pattern[i] != ']') {
                 throw SematicError("Unclosed character class in LIKE pattern");
             }
@@ -1564,7 +1722,7 @@ void SematicAnalyzer::analyzeAlter(AST::AlterTableStatement& alterStmt) {
                 throw SematicError("Cannot drop primary key column: " + alterStmt.columnName);
             }*/
             break;
-            
+
         case AST::AlterTableStatement::RENAME:
             if (!columnExists(alterStmt.columnName)) {
                 throw SematicError("Column does not exist: " + alterStmt.columnName);
@@ -1576,7 +1734,7 @@ void SematicAnalyzer::analyzeAlter(AST::AlterTableStatement& alterStmt) {
                 throw SematicError("Cannot rename primary key column: " + alterStmt.columnName);
             }*/
             break;
-            
+
         case AST::AlterTableStatement::ADD:
             if (columnExists(alterStmt.columnName)) {
                 throw SematicError("Column already exists: " + alterStmt.columnName);
@@ -1587,7 +1745,7 @@ void SematicAnalyzer::analyzeAlter(AST::AlterTableStatement& alterStmt) {
                 throw SematicError("Invalid column type: " + alterStmt.type);
             }
             break;
-            
+
         default:
             throw SematicError("Unsupported Alter Table operation");
     }
@@ -1648,7 +1806,7 @@ void SematicAnalyzer::analyzeBulkUpdate(AST::BulkUpdateStatement& bulkUpdateStmt
                     continue;
                 }
             }
-            
+
 
             DatabaseSchema::Column::Type valueType = getValueType(*expr);
             if (!isTypeCompatible(column->type, valueType)) {

@@ -13,7 +13,7 @@ namespace fractal {
 }
 class SematicAnalyzer{
 	public:
-		SematicAnalyzer(Database& db,fractal::DiskStorage& storage);//was DatabseSchema& schema
+		SematicAnalyzer(Database& db,fractal::DiskStorage& storage);
 		void analyze(std::unique_ptr<AST::Statement>& stmt);
 	private:
 		DatabaseSchema schema;
@@ -22,6 +22,8 @@ class SematicAnalyzer{
         fractal::DiskStorage& storage;
 		const DatabaseSchema::Table* currentTable=nullptr;
         std::unordered_map<std::string, std::unique_ptr<DatabaseSchema::Table>> cteTables;
+        std::unordered_map<std::string, DatabaseSchema::Column::Type> columnAliases;
+        std::unordered_map<std::string, std::unique_ptr<AST::Expression>> aliasExpressions;
 		//method for DATABASE management
 		void analyzeCreateDatabase(AST::CreateDatabaseStatement& createdbstmt);
 		//method for show database
@@ -30,8 +32,11 @@ class SematicAnalyzer{
 		void analyzeShow(AST::ShowDatabaseStatement& showStmt);
         void analyzeShowTable(AST::ShowTableStatement& showStmt);
         void anlyzeShowTableStructure(AST::ShowTableStructureStatement& showStmt);
-        void analyzeShowDatabaseStructure(AST::ShowDatabaseStructure& showStmt); 
+        void analyzeShowDatabaseStructure(AST::ShowDatabaseStructure& showStmt);
 		void ensureDatabaseSelected() const;
+        void collectColumnAliases(AST::SelectStatement& selectStmt);
+        bool isColumnAlias(const std::string& name) const;
+        bool isValidColumnOrAlias(const std::string& name) const;
 		//method for select analysis
 		void analyzeSelect(AST::SelectStatement& selectStmt);
 		//child methode of analyzeselect

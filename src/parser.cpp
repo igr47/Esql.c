@@ -1305,12 +1305,12 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
 
         Token nextToken = peekToken();
 
-        //consume(Token::Type::R_PAREN);
+        consume(Token::Type::R_PAREN);
         //std::cout << "DEBUG: Consumed R_PAREN" << std::endl;
 
         // Parse WITHIN GROUP clause
-        if (nextToken.type == Token::Type::WITHIN) {
-            consume(Token::Type::R_PAREN);
+        if (match(Token::Type::WITHIN)) {
+            //consume(Token::Type::R_PAREN);
 
             consume(Token::Type::WITHIN);
             std::cout << "DEBUG: Found and consumed WITHIN" << std::endl;
@@ -1334,12 +1334,14 @@ std::unique_ptr<AST::Expression> Parse::parseStatisticalFunction() {
 
             consume(Token::Type::R_PAREN);
             std::cout << "DEBUG: Consumed R_PAREN" << std::endl;
-        } else {
-            consume(Token::Type::R_PAREN);
         }
     } else if (statType == AST::StatisticalExpression::StatType::CORRELATION || statType == AST::StatisticalExpression::StatType::REGRESSION) {
         consume(Token::Type::COMMA);
         arg2 = parseExpression();
+        consume(Token::Type::R_PAREN);
+    }
+
+    if (match(Token::Type::R_PAREN)){
         consume(Token::Type::R_PAREN);
     }
 
@@ -1579,7 +1581,7 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 		auto nullLiteral = std::make_unique<AST::Literal>(currentToken);
 		consume(Token::Type::NULL_TOKEN);
 		left = std::move(nullLiteral);
-    } else if (match(Token::Type::ROUND) || match(Token::Type::LOWER) || match(Token::Type::UPPER) || match(Token::Type::SUBSTRING)) {
+    } else if (match(Token::Type::ROUND) /*|| match(Token::Type::LOWER) || match(Token::Type::UPPER) || match(Token::Type::SUBSTRING)*/) {
         Token funcToken = currentToken;
         consume(currentToken.type);
         consume(Token::Type::L_PAREN);
