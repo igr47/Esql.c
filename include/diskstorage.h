@@ -28,7 +28,7 @@ namespace fractal {
                 std::unique_ptr<BufferPool> buffer_pool;
                 std::unique_ptr<WriteAheadLog> wal;
                 std::unordered_map<std::string, TableInfo> tables;
-                std::string filename; 
+                std::string filename;
                 bool needs_recovery;
 
                 DatabaseState() : needs_recovery(false) {}
@@ -51,7 +51,7 @@ namespace fractal {
             void createDatabase(const std::string& dbName);
             void useDatabase(const std::string& dbName);
             std::vector<std::string> listDatabases() const;
-            std::vector<std::string> getTableNames(const std::string& dbName) const; 
+            std::vector<std::string> getTableNames(const std::string& dbName) const;
             bool databaseExists(const std::string& dbName) const;
             bool tableExists(const std::string& dbName, const std::string& tableName) const;
             void cleanupTable(TableInfo& tableInfo);
@@ -69,6 +69,10 @@ namespace fractal {
             std::vector<std::unordered_map<std::string, std::string>> getTableData(const std::string& dbName, const std::string& tableName);
             const DatabaseSchema::Table* getTable(const std::string& dbName, const std::string& tableName) const;
             void loadExistingDatabases();
+            const std::vector<DatabaseSchema::Column>* getTableSchema(const std::string& dbName, const std::string& tableName) const;
+            size_t getTableRowCount(const std::string& dbName, const std::string& tableName) ;
+            std::vector<std::unordered_map<std::string, std::string>> sampleTableData(const std::string& dbName, const std::string& tableName, size_t sample_size);
+
 
             // Bulk operations
             void bulkInsert(const std::string& dbName, const std::string& tableName, const std::vector<std::unordered_map<std::string, std::string>>& rows);
@@ -93,7 +97,7 @@ namespace fractal {
             void compactDatabase(const std::string& dbName);
             void rebuildIndexes(const std::string& dbName, const std::string& tableName);
             void checkpoint();
-            void flushPendingChanges();   
+            void flushPendingChanges();
 
       private:
             // Core initialization
