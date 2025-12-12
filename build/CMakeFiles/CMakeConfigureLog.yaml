@@ -61,8 +61,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S"
-      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S"
+      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo"
+      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
       CMAKE_C_FLAGS: ""
@@ -72,14 +72,14 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S'
+        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo'
         
-        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_c2947/fast
-        /usr/bin/gmake  -f CMakeFiles/cmTC_c2947.dir/build.make CMakeFiles/cmTC_c2947.dir/build
-        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S'
-        Building C object CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o
-        /usr/bin/clang   -v -MD -MT CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
-        Debian clang version 19.1.7 (10)
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_076d6/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_076d6.dir/build.make CMakeFiles/cmTC_076d6.dir/build
+        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo'
+        Building C object CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o
+        /usr/bin/clang   -v -MD -MT CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        Debian clang version 19.1.7 (19)
         Target: x86_64-pc-linux-gnu
         Thread model: posix
         InstalledDir: /usr/lib/llvm-19/bin
@@ -89,7 +89,7 @@ events:
         Candidate multilib: .;@m64
         Selected multilib: .;@m64
          (in-process)
-         "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+         "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
         clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target x86_64-pc-linux-gnu
         ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include"
         ignoring nonexistent directory "/include"
@@ -100,9 +100,9 @@ events:
          /usr/include/x86_64-linux-gnu
          /usr/include
         End of search list.
-        Linking C executable cmTC_c2947
-        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c2947.dir/link.txt --verbose=1
-        Debian clang version 19.1.7 (10)
+        Linking C executable cmTC_076d6
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_076d6.dir/link.txt --verbose=1
+        Debian clang version 19.1.7 (19)
         Target: x86_64-pc-linux-gnu
         Thread model: posix
         InstalledDir: /usr/lib/llvm-19/bin
@@ -111,10 +111,10 @@ events:
         Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15
         Candidate multilib: .;@m64
         Selected multilib: .;@m64
-         "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c2947 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+         "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_076d6 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o
         GNU ld (GNU Binutils for Debian) 2.45
-        /usr/bin/clang  -v -Wl,-v CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -o cmTC_c2947
-        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S'
+        /usr/bin/clang  -v -Wl,-v CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -o cmTC_076d6
+        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo'
         
       exitCode: 0
   -
@@ -149,14 +149,14 @@ events:
       Parsed C implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
         linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
-        ignore line: [Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S']
+        ignore line: [Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo']
         ignore line: []
-        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_c2947/fast]
-        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_c2947.dir/build.make CMakeFiles/cmTC_c2947.dir/build]
-        ignore line: [gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S']
-        ignore line: [Building C object CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o]
-        ignore line: [/usr/bin/clang   -v -MD -MT CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
-        ignore line: [Debian clang version 19.1.7 (10)]
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_076d6/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_076d6.dir/build.make CMakeFiles/cmTC_076d6.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo']
+        ignore line: [Building C object CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/usr/bin/clang   -v -MD -MT CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [Debian clang version 19.1.7 (19)]
         ignore line: [Target: x86_64-pc-linux-gnu]
         ignore line: [Thread model: posix]
         ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
@@ -168,7 +168,7 @@ events:
         ignore line: [Selected multilib: .]
         ignore line: [@m64]
         ignore line: [ (in-process)]
-        ignore line: [ "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-IdnB1S -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [ "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-0Konyo -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
         ignore line: [clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target x86_64-pc-linux-gnu]
         ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include"]
         ignore line: [ignoring nonexistent directory "/include"]
@@ -179,9 +179,9 @@ events:
         ignore line: [ /usr/include/x86_64-linux-gnu]
         ignore line: [ /usr/include]
         ignore line: [End of search list.]
-        ignore line: [Linking C executable cmTC_c2947]
-        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c2947.dir/link.txt --verbose=1]
-        ignore line: [Debian clang version 19.1.7 (10)]
+        ignore line: [Linking C executable cmTC_076d6]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_076d6.dir/link.txt --verbose=1]
+        ignore line: [Debian clang version 19.1.7 (19)]
         ignore line: [Target: x86_64-pc-linux-gnu]
         ignore line: [Thread model: posix]
         ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
@@ -192,7 +192,7 @@ events:
         ignore line: [@m64]
         ignore line: [Selected multilib: .]
         ignore line: [@m64]
-        link line: [ "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_c2947 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+        link line: [ "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_076d6 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
           arg [/usr/bin/ld] ==> ignore
           arg [--hash-style=gnu] ==> ignore
           arg [--build-id] ==> ignore
@@ -203,7 +203,7 @@ events:
           arg [-dynamic-linker] ==> ignore
           arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_c2947] ==> ignore
+          arg [cmTC_076d6] ==> ignore
           arg [/lib/x86_64-linux-gnu/Scrt1.o] ==> obj [/lib/x86_64-linux-gnu/Scrt1.o]
           arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
           arg [/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o]
@@ -216,7 +216,7 @@ events:
           arg [-L/lib] ==> dir [/lib]
           arg [-L/usr/lib] ==> dir [/usr/lib]
           arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_c2947.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [CMakeFiles/cmTC_076d6.dir/CMakeCCompilerABI.c.o] ==> ignore
           arg [-lgcc] ==> lib [gcc]
           arg [--as-needed] ==> ignore
           arg [-lgcc_s] ==> lib [gcc_s]
@@ -262,8 +262,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT"
-      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT"
+      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb"
+      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
       CMAKE_CXX_FLAGS: ""
@@ -274,14 +274,14 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT'
+        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb'
         
-        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_28b93/fast
-        /usr/bin/gmake  -f CMakeFiles/cmTC_28b93.dir/build.make CMakeFiles/cmTC_28b93.dir/build
-        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT'
-        Building CXX object CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o
-        /usr/bin/clang++   -v -MD -MT CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
-        Debian clang version 19.1.7 (10)
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_1ad65/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_1ad65.dir/build.make CMakeFiles/cmTC_1ad65.dir/build
+        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb'
+        Building CXX object CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o
+        /usr/bin/clang++   -v -MD -MT CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        Debian clang version 19.1.7 (19)
         Target: x86_64-pc-linux-gnu
         Thread model: posix
         InstalledDir: /usr/lib/llvm-19/bin
@@ -291,7 +291,7 @@ events:
         Candidate multilib: .;@m64
         Selected multilib: .;@m64
          (in-process)
-         "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/backward -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+         "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/backward -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
         clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target x86_64-pc-linux-gnu
         ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include"
         ignoring nonexistent directory "/include"
@@ -305,9 +305,9 @@ events:
          /usr/include/x86_64-linux-gnu
          /usr/include
         End of search list.
-        Linking CXX executable cmTC_28b93
-        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_28b93.dir/link.txt --verbose=1
-        Debian clang version 19.1.7 (10)
+        Linking CXX executable cmTC_1ad65
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1ad65.dir/link.txt --verbose=1
+        Debian clang version 19.1.7 (19)
         Target: x86_64-pc-linux-gnu
         Thread model: posix
         InstalledDir: /usr/lib/llvm-19/bin
@@ -316,10 +316,10 @@ events:
         Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15
         Candidate multilib: .;@m64
         Selected multilib: .;@m64
-         "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_28b93 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+         "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_1ad65 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o
         GNU ld (GNU Binutils for Debian) 2.45
-        /usr/bin/clang++  -v -Wl,-v CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_28b93
-        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT'
+        /usr/bin/clang++  -v -Wl,-v CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1ad65
+        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb'
         
       exitCode: 0
   -
@@ -360,14 +360,14 @@ events:
       Parsed CXX implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
         linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
-        ignore line: [Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT']
+        ignore line: [Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb']
         ignore line: []
-        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_28b93/fast]
-        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_28b93.dir/build.make CMakeFiles/cmTC_28b93.dir/build]
-        ignore line: [gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT']
-        ignore line: [Building CXX object CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o]
-        ignore line: [/usr/bin/clang++   -v -MD -MT CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
-        ignore line: [Debian clang version 19.1.7 (10)]
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_1ad65/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_1ad65.dir/build.make CMakeFiles/cmTC_1ad65.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb']
+        ignore line: [Building CXX object CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/usr/bin/clang++   -v -MD -MT CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Debian clang version 19.1.7 (19)]
         ignore line: [Target: x86_64-pc-linux-gnu]
         ignore line: [Thread model: posix]
         ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
@@ -379,7 +379,7 @@ events:
         ignore line: [Selected multilib: .]
         ignore line: [@m64]
         ignore line: [ (in-process)]
-        ignore line: [ "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ccf4FT -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/backward -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [ "/usr/lib/llvm-19/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb -v -fcoverage-compilation-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-sxYXwb -resource-dir /usr/lib/llvm-19/lib/clang/19 -dependency-file CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15 -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/backward -internal-isystem /usr/lib/llvm-19/lib/clang/19/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
         ignore line: [clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target x86_64-pc-linux-gnu]
         ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include"]
         ignore line: [ignoring nonexistent directory "/include"]
@@ -393,9 +393,9 @@ events:
         ignore line: [ /usr/include/x86_64-linux-gnu]
         ignore line: [ /usr/include]
         ignore line: [End of search list.]
-        ignore line: [Linking CXX executable cmTC_28b93]
-        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_28b93.dir/link.txt --verbose=1]
-        ignore line: [Debian clang version 19.1.7 (10)]
+        ignore line: [Linking CXX executable cmTC_1ad65]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1ad65.dir/link.txt --verbose=1]
+        ignore line: [Debian clang version 19.1.7 (19)]
         ignore line: [Target: x86_64-pc-linux-gnu]
         ignore line: [Thread model: posix]
         ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
@@ -406,7 +406,7 @@ events:
         ignore line: [@m64]
         ignore line: [Selected multilib: .]
         ignore line: [@m64]
-        link line: [ "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_28b93 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+        link line: [ "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_1ad65 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib -v CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
           arg [/usr/bin/ld] ==> ignore
           arg [--hash-style=gnu] ==> ignore
           arg [--build-id] ==> ignore
@@ -417,7 +417,7 @@ events:
           arg [-dynamic-linker] ==> ignore
           arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_28b93] ==> ignore
+          arg [cmTC_1ad65] ==> ignore
           arg [/lib/x86_64-linux-gnu/Scrt1.o] ==> obj [/lib/x86_64-linux-gnu/Scrt1.o]
           arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
           arg [/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o]
@@ -430,7 +430,7 @@ events:
           arg [-L/lib] ==> dir [/lib]
           arg [-L/usr/lib] ==> dir [/usr/lib]
           arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_28b93.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [CMakeFiles/cmTC_1ad65.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
           arg [-lstdc++] ==> lib [stdc++]
           arg [-lm] ==> lib [m]
           arg [-lgcc_s] ==> lib [gcc_s]
@@ -465,4 +465,304 @@ events:
     message: |
       Running the CXX compiler's linker: "/usr/bin/ld" "-v"
       GNU ld (GNU Binutils for Debian) 2.45
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:130 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f"
+      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_4e00f/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_4e00f.dir/build.make CMakeFiles/cmTC_4e00f.dir/build
+        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f'
+        Building C object CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o
+        /usr/bin/clang   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o -c /home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f/OpenMPTryFlag.c
+        Linking C executable cmTC_4e00f
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4e00f.dir/link.txt --verbose=1
+        Debian clang version 19.1.7 (19)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/lib/llvm-19/bin
+        Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/14
+        Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15
+        Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_4e00f /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o -lomp -L/usr/lib/llvm-19/lib -lgcc --as-needed -lgcc_s --no-as-needed -lpthread -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+        /usr/bin/clang  -fopenmp=libomp -v CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o -o cmTC_4e00f
+        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:296 (message)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:130 (find_package)"
+    message: |
+      Parsed C OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_4e00f/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_4e00f.dir/build.make CMakeFiles/cmTC_4e00f.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f']
+        ignore line: [Building C object CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o]
+        ignore line: [/usr/bin/clang   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o -c /home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-iAr35f/OpenMPTryFlag.c]
+        ignore line: [Linking C executable cmTC_4e00f]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4e00f.dir/link.txt --verbose=1]
+        ignore line: [Debian clang version 19.1.7 (19)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/14]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15]
+        ignore line: [Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        link line: [ "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_4e00f /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o -lomp -L/usr/lib/llvm-19/lib -lgcc --as-needed -lgcc_s --no-as-needed -lpthread -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_4e00f] ==> ignore
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/15] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/15]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [CMakeFiles/cmTC_4e00f.dir/OpenMPTryFlag.c.o] ==> ignore
+          arg [-lomp] ==> lib [omp]
+          arg [-L/usr/lib/llvm-19/lib] ==> dir [/usr/lib/llvm-19/lib]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/15] ==> [/usr/lib/gcc/x86_64-linux-gnu/15]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/llvm-19/lib] ==> [/usr/lib/llvm-19/lib]
+        implicit libs: [omp;gcc;gcc_s;pthread;c;gcc;gcc_s]
+        implicit objs: []
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/15;/usr/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/lib;/usr/lib;/usr/lib/llvm-19/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:130 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K"
+      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_dc7d7/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_dc7d7.dir/build.make CMakeFiles/cmTC_dc7d7.dir/build
+        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K'
+        Building CXX object CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o
+        /usr/bin/clang++   -fopenmp=libomp -std=gnu++17 -MD -MT CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o -c /home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K/OpenMPTryFlag.cpp
+        Linking CXX executable cmTC_dc7d7
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_dc7d7.dir/link.txt --verbose=1
+        Debian clang version 19.1.7 (19)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/lib/llvm-19/bin
+        Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/14
+        Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15
+        Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_dc7d7 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o -lstdc++ -lm -lomp -L/usr/lib/llvm-19/lib -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+        /usr/bin/clang++  -fopenmp=libomp -v CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o -o cmTC_dc7d7
+        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:296 (message)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:130 (find_package)"
+    message: |
+      Parsed CXX OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_dc7d7/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_dc7d7.dir/build.make CMakeFiles/cmTC_dc7d7.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K']
+        ignore line: [Building CXX object CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o]
+        ignore line: [/usr/bin/clang++   -fopenmp=libomp -std=gnu++17 -MD -MT CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o -c /home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-qN5U6K/OpenMPTryFlag.cpp]
+        ignore line: [Linking CXX executable cmTC_dc7d7]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_dc7d7.dir/link.txt --verbose=1]
+        ignore line: [Debian clang version 19.1.7 (19)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/lib/llvm-19/bin]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/14]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15]
+        ignore line: [Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/15]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        link line: [ "/usr/bin/ld" --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_dc7d7 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/lib -L/usr/lib CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o -lstdc++ -lm -lomp -L/usr/lib/llvm-19/lib -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_dc7d7] ==> ignore
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/15] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/15]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [CMakeFiles/cmTC_dc7d7.dir/OpenMPTryFlag.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lomp] ==> lib [omp]
+          arg [-L/usr/lib/llvm-19/lib] ==> dir [/usr/lib/llvm-19/lib]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/15] ==> [/usr/lib/gcc/x86_64-linux-gnu/15]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/llvm-19/lib] ==> [/usr/lib/llvm-19/lib]
+        implicit libs: [stdc++;m;omp;gcc_s;gcc;pthread;c;gcc_s;gcc]
+        implicit objs: []
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/15;/usr/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/lib;/usr/lib;/usr/lib/llvm-19/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:456 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:596 (_OPENMP_GET_SPEC_DATE)"
+      - "CMakeLists.txt:130 (find_package)"
+    description: "Detecting C OpenMP version"
+    directories:
+      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-srFZ7N"
+      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-srFZ7N"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "OpenMP_SPECTEST_C_"
+      cached: true
+      stdout: |
+        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-srFZ7N'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_a71d1/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_a71d1.dir/build.make CMakeFiles/cmTC_a71d1.dir/build
+        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-srFZ7N'
+        Building C object CMakeFiles/cmTC_a71d1.dir/OpenMPCheckVersion.c.o
+        /usr/bin/clang   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_a71d1.dir/OpenMPCheckVersion.c.o -MF CMakeFiles/cmTC_a71d1.dir/OpenMPCheckVersion.c.o.d -o CMakeFiles/cmTC_a71d1.dir/OpenMPCheckVersion.c.o -c /home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-srFZ7N/OpenMPCheckVersion.c
+        Linking C executable cmTC_a71d1
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a71d1.dir/link.txt --verbose=1
+        /usr/bin/clang  -fopenmp=libomp CMakeFiles/cmTC_a71d1.dir/OpenMPCheckVersion.c.o -o cmTC_a71d1
+        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-srFZ7N'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:456 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:596 (_OPENMP_GET_SPEC_DATE)"
+      - "CMakeLists.txt:130 (find_package)"
+    description: "Detecting CXX OpenMP version"
+    directories:
+      source: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ux1hmd"
+      binary: "/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ux1hmd"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-19"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "OpenMP_SPECTEST_CXX_"
+      cached: true
+      stdout: |
+        Change Dir: '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ux1hmd'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_ab89f/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_ab89f.dir/build.make CMakeFiles/cmTC_ab89f.dir/build
+        gmake[1]: Entering directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ux1hmd'
+        Building CXX object CMakeFiles/cmTC_ab89f.dir/OpenMPCheckVersion.cpp.o
+        /usr/bin/clang++   -fopenmp=libomp -std=gnu++17 -MD -MT CMakeFiles/cmTC_ab89f.dir/OpenMPCheckVersion.cpp.o -MF CMakeFiles/cmTC_ab89f.dir/OpenMPCheckVersion.cpp.o.d -o CMakeFiles/cmTC_ab89f.dir/OpenMPCheckVersion.cpp.o -c /home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ux1hmd/OpenMPCheckVersion.cpp
+        Linking CXX executable cmTC_ab89f
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ab89f.dir/link.txt --verbose=1
+        /usr/bin/clang++  -fopenmp=libomp CMakeFiles/cmTC_ab89f.dir/OpenMPCheckVersion.cpp.o -o cmTC_ab89f
+        gmake[1]: Leaving directory '/home/igiris/git_projects/Esql.c/build/CMakeFiles/CMakeScratch/TryCompile-ux1hmd'
+        
+      exitCode: 0
 ...

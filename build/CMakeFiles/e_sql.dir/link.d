@@ -4,9 +4,13 @@ e_sql: \
   /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o \
   CMakeFiles/e_sql.dir/src/scanner.cpp.o \
   CMakeFiles/e_sql.dir/src/token_utils.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_parser.cpp.o \
   CMakeFiles/e_sql.dir/src/parser.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o \
   CMakeFiles/e_sql.dir/src/analyzer.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.o \
   CMakeFiles/e_sql.dir/src/diskstorage.cpp.o \
+  CMakeFiles/e_sql.dir/src/data_extractor.cpp.o \
   CMakeFiles/e_sql.dir/src/database_file.cpp.o \
   CMakeFiles/e_sql.dir/src/write_ahead_log.cpp.o \
   CMakeFiles/e_sql.dir/src/buffer_pool.cpp.o \
@@ -39,7 +43,17 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o \
   /usr/lib/x86_64-linux-gnu/libreadline.so \
+  /usr/local/lib/lib_lightgbm.a \
+  /usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.83.0 \
+  /usr/lib/x86_64-linux-gnu/libboost_system.so.1.83.0 \
+  /usr/lib/x86_64-linux-gnu/libboost_program_options.so.1.83.0 \
+  /lib/x86_64-linux-gnu/libomp.so \
+  /lib/x86_64-linux-gnu/libpthread.a \
+  /usr/lib/x86_64-linux-gnu/libboost_atomic.so.1.83.0 \
   /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so \
   /lib/x86_64-linux-gnu/libm.so \
   /lib/x86_64-linux-gnu/libm.so \
@@ -79,11 +93,19 @@ CMakeFiles/e_sql.dir/src/scanner.cpp.o:
 
 CMakeFiles/e_sql.dir/src/token_utils.cpp.o:
 
+CMakeFiles/e_sql.dir/src/ai_parser.cpp.o:
+
 CMakeFiles/e_sql.dir/src/parser.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o:
 
 CMakeFiles/e_sql.dir/src/analyzer.cpp.o:
 
+CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.o:
+
 CMakeFiles/e_sql.dir/src/diskstorage.cpp.o:
+
+CMakeFiles/e_sql.dir/src/data_extractor.cpp.o:
 
 CMakeFiles/e_sql.dir/src/database_file.cpp.o:
 
@@ -149,7 +171,27 @@ CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o:
 
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o:
 
+CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o:
+
 /usr/lib/x86_64-linux-gnu/libreadline.so:
+
+/usr/local/lib/lib_lightgbm.a:
+
+/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.83.0:
+
+/usr/lib/x86_64-linux-gnu/libboost_system.so.1.83.0:
+
+/usr/lib/x86_64-linux-gnu/libboost_program_options.so.1.83.0:
+
+/lib/x86_64-linux-gnu/libomp.so:
+
+/lib/x86_64-linux-gnu/libpthread.a:
+
+/usr/lib/x86_64-linux-gnu/libboost_atomic.so.1.83.0:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so:
 

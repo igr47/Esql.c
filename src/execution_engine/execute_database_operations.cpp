@@ -29,7 +29,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeShow(AST::ShowDatabaseStateme
     return result;
 }
 
-ExecutionEngine::ResultSet ExecutionEngine::executeShowTables(AST::ShowTableStatement& stmt) {    
+ExecutionEngine::ResultSet ExecutionEngine::executeShowTables(AST::ShowTableStatement& stmt) {
     std::vector<std::string> tables;
 
     try {
@@ -99,7 +99,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeShowTableStructure(AST::ShowT
     result.rows.push_back({"Columns", ""});
     result.rows.push_back({"Name", "Type", "Nullable", "Pk", "Unique", "AUTOInc", "Default", "GEN_DATE", "GEN_DATE_TIME","GEN_UUID"});
     result.rows.push_back({"----", "----", "--------", "---", "-----", "-------", "-------", "-------","--------------", "--------"});
-    
+
     // Column details
     for (const auto& column : table->columns) {
         std::vector<std::string> colInfo;
@@ -155,7 +155,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeShowDatabaseStructure(AST::Sh
                 const auto* tableInfo = storage.getTable(db.currentDatabase(), table);
                 if (tableInfo) {
                     totalColumns += tableInfo->columns.size();
-                } 
+                }
             } catch (...) {
                 // Skip tables that can't be accessed
             }

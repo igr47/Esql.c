@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_map>
 #include <chrono>
+#include <string>
 
 namespace esql {
 namespace ai {
@@ -14,10 +15,11 @@ struct Tensor {
     std::vector<size_t> shape;
 
     Tensor() = default;
+    Tensor(const std::vector<float>& d, const std::vector<size_t>& s) : data(d), shape(s) {}
     Tensor(std::vector<float>&& d,std::vector<size_t>&& s) : data(std::move(d)), shape(std::move(s)) {}
 
     size_t total_size() const {
-        size_t = 1;
+        size_t size = 1;
         for (auto& s : shape) size *= s;
         return size;
     }
@@ -30,7 +32,7 @@ enum class ModelType {
     LIGHTGBM,CATBOOST,XGBOOST,MINI_BERT,PROPHET_LIGHT,ONNX_MODEL,CUSTOM
 };
 
-struct ModelMetadta {
+struct ModelMetadata {
     std::string name;
     ModelType type;
     size_t input_size;
@@ -64,9 +66,9 @@ public:
 
 class IInferenceEngine {
 public:
-    virtual ~IInterfaceEngine() = default;
+    virtual ~IInferenceEngine() = default;
 
-    virtual std::unique_ptr<IModel> load_model(ModelType type, const std::string& path, const std::unordered_map<std::string, std::string>>& config = {}) = 0;
+    virtual std::unique_ptr<IModel> load_model(ModelType type, const std::string& path, const std::unordered_map<std::string, std::string>& config = {}) = 0;
     virtual std::vector<std::unique_ptr<IModel>> load_models(const std::vector<std::pair<ModelType, std::string>>& models) = 0;
 
     // Perfomance settings
@@ -87,3 +89,4 @@ public:
 
 } // namespace ai
 } // namespace esql
+#endif

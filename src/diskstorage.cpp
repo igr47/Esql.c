@@ -4,6 +4,8 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
+#include <random>
+#include <unordered_set>
 
 namespace {
     constexpr uint32_t SCHEMA_MAGIC = 0x53434845;
@@ -19,7 +21,7 @@ namespace fractal {
     DiskStorage::DiskStorage(const std::string& base_path) : base_path(base_path) {
         std::filesystem::create_directories(base_path);
         std::cout << "DiskStorage initialized with base path: " << base_path << std::endl;
-        
+
         // Scan for existing database files immediately
         loadExistingDatabases();
     }
@@ -51,7 +53,7 @@ namespace fractal {
 
             // Clear databases map to ensure proper destruction order
             databases.clear();
-            
+
             std::cout << "Shutdown completed successfully" << std::endl;
         } catch (const std::exception& e) {
             std::cerr << "Error during shutdown: " << e.what() << std::endl;
@@ -62,7 +64,7 @@ namespace fractal {
     // Database Operations
     void DiskStorage::createDatabase(const std::string& dbName) {
         //DeadlockDetector::register_lock_attempt(LockLevel::STORAGE, std::this_thread::get_id());
-        
+
         //HierarchicalUniqueLock<LockLevel::STORAGE> storage_lock(storage_mutex);
         //DeadlockDetector::register_lock_acquired(LockLevel::STORAGE, std::this_thread::get_id());
 
@@ -85,14 +87,14 @@ namespace fractal {
             //storage_lock.lock();
 
             // Release lock before initializing other components that might need  other locks
-            
+
 
             // Initialize other components
             initializeDatabaseComponents(dbName);
 
             std::cout << "Database created successfully: " << dbName << std::endl;
         } catch (const std::exception& e) {
-            
+
             databases.erase(dbName);
             throw std::runtime_error("Failed to create database '" + dbName + "': " + e.what());
         }
@@ -146,6 +148,66 @@ namespace fractal {
         return tableNames;
     }
 
+    const std::vector<DatabaseSchema::Column>* DiskStorage::getTableSchema(const std::string& dbName, const std::string& tableName) const {
+         //std::shared_lock lock(storage_mutex);
+         auto dbIt = databases.find(dbName);
+         if (dbIt == databases.end()) {
+                 return nullptr;
+         }
+
+         auto tableIt = dbIt->second.tables.find(tableName);
+         if (tableIt == dbIt->second.tables.end()) {
+                  return nullptr;
+         }
+
+         return &tableIt->second.columns;
+    }
+
+    size_t DiskStorage::getTableRowCount(const std::string& dbName, const std::string& tableName) {
+          //std::shared_lock lock(storage_mutex);
+
+          ensureDatabaseOpen(dbName);
+          const DatabaseState& dbState = getDatabase(dbName);
+          validateTableAccess(dbName, tableName);
+
+          const TableInfo& tableInfo = dbState.tables.at(tableName);
+
+          try {
+                auto raw_data = tableInfo.tree->scan_all(0);
+                return raw_data.size();
+          } catch (...) {
+                 return 0;
+          }
+    }
+
+    std::vector<std::unordered_map<std::string, std::string>> DiskStorage::sampleTableData(const std::string& dbName, const std::string& tableName, size_t sample_size) {
+
+         auto all_data = getTableData(dbName, tableName);
+
+        if (sample_size >= all_data.size()) {
+            return all_data;
+        }
+
+        // Simple random sampling
+        std::vector<std::unordered_map<std::string, std::string>> sample;
+        sample.reserve(sample_size);
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, all_data.size() - 1);
+        std::unordered_set<size_t> selected_indices;
+        while (selected_indices.size() < sample_size) {
+            selected_indices.insert(dis(gen));
+        }
+
+        for (size_t idx : selected_indices) {
+            sample.push_back(all_data[idx]);
+        }
+
+        return sample;
+    }
+
+
 
     bool DiskStorage::databaseExists(const std::string& dbName) const {
         //std::shared_lock lock(storage_mutex);
@@ -175,7 +237,7 @@ namespace fractal {
         }
 
         std::cout << "Creating table: " << name << " in database: " << dbName << std::endl;
-        
+
         try {
             // Create table in database file
             uint32_t table_id = dbState.db_file->create_table(name);
@@ -297,7 +359,7 @@ namespace fractal {
             throw std::runtime_error("Failed to update row " + std::to_string(row_id) + " in table '" + tableName + "': " + e.what());
         }
     }
-    
+
 
     // Query operations
     std::vector<std::unordered_map<std::string, std::string>> DiskStorage::getTableData(const std::string& dbName, const std::string& tableName) {
@@ -365,15 +427,15 @@ namespace fractal {
 
     void DiskStorage::loadExistingDatabases() {
         std::cout << "Loading existing databases from: " << base_path << std::endl;
-        
+
         for (const auto& entry : std::filesystem::directory_iterator(base_path)) {
             std::string stem = entry.path().stem().string();
             std::string extension = entry.path().extension().string();
-            
+
             // ONLY load .db files as databases
             if (entry.is_regular_file() && extension == ".db") {
                 std::string dbName;
-                
+
                 // Extract database name from filename
                 if (stem.find("mydb") == 0) {
                     dbName = stem.substr(4); // Remove "mydb" prefix
@@ -381,21 +443,21 @@ namespace fractal {
                 } else {
                     dbName = stem;
                 }
-                
+
                 std::cout << "  *** LOADING DATABASE: " << dbName << " from " << stem << ".db ***" << std::endl;
-                
+
                 if (databases.find(dbName) == databases.end()) {
                     try {
                         DatabaseState& dbState = databases[dbName];
                         dbState.filename = entry.path().string();
                         //dbState.needs_recovery = true;
-                        
+
                         dbState.db_file = std::make_unique<DatabaseFile>(dbState.filename);
                         dbState.db_file->open();
-                        
+
                         initializeDatabaseComponents(dbName);
                         //recoverDatabase(dbName);
-                        
+
                         databases[dbName] = std::move(dbState);
                         std::cout << "Successfully loaded database: " << dbName << std::endl;
                     } catch (const std::exception& e) {
@@ -412,7 +474,7 @@ namespace fractal {
                 }
             }
         }
-        
+
         std::cout << "Total databases loaded: " << databases.size() << std::endl;
     }
 
@@ -538,7 +600,7 @@ namespace fractal {
         if (!in_transaction) {
             throw std::runtime_error("No transaction in progress");
         }
-        
+
         try {
             // FLUSH ALL MESSAGES BEFORE COMMIT - This ensures data is visible
 
@@ -550,7 +612,7 @@ namespace fractal {
                 }
             }
 
-       
+
             flushPendingChanges();
 
             // Log transaction commit in all WALs
@@ -696,7 +758,7 @@ namespace fractal {
 
     void DiskStorage::initializeDatabaseComponents(const std::string& dbName) {
         DatabaseState& dbState = databases[dbName];
-        
+
         if (!dbState.db_file || !dbState.db_file->is_open()) {
             std::cerr << "ERROR: Database file is not valid in initializeDatabaseComponents!" << std::endl;
             // Recreate it if needed
@@ -805,7 +867,7 @@ namespace fractal {
 
         uint32_t actual_table_id = dbState.db_file->get_table_id(tableName);
 
-        // Create FractalBPlusTree 
+        // Create FractalBPlusTree
         tableInfo.tree = std::make_unique<FractalBPlusTree>(dbState.db_file.get(), dbState.buffer_pool.get(), dbState.wal.get(), dbName + "." + tableName, root_page_id,actual_table_id);
 
         dbState.tables[tableName] = std::move(tableInfo);
@@ -983,12 +1045,12 @@ std::unordered_map<std::string, std::string> DiskStorage::deserializeRow(
         //std::cout << "DEBUG: Attempting to deserialize schema for '" << tableName << "' from page " << page_id << std::endl;
 
         dbState.db_file->debug_page_access(page_id);
-        
+
         // First, check if the schema page exists and has data
         if (!schemaPageExists(dbName, page_id)) {
             throw std::runtime_error("Schema page " + std::to_string(page_id) + " does not exist or is empty");
         }
-        
+
         Page* page = dbState.buffer_pool->get_page(page_id);
         if (!page) {
             throw std::runtime_error("Schema page not found for table: " + tableName);

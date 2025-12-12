@@ -665,6 +665,24 @@ class Parse{
 		explicit Parse(Lexer& lexer);
 		std::unique_ptr<AST::Statement> parse();
 		std::unique_ptr<AST::Expression> parseExpression();
+
+        // Getter methods to use in he AI parse
+        Token getCurrentToken() const { return currentToken; }
+        Token getPreviousToken() const { return previousToken_; }
+        void setCurrentToken(const Token& token) { currentToken = token; }
+        void setPreviousToken(const Token& token) { previousToken_ = token; }
+
+        // Wrapper methods for private functions
+        bool checkMatch(Token::Type type) const { return match(type); }
+        bool checkMatchAny(const std::vector<Token::Type>& types) const { return matchAny(types); }
+        Token checkPeekToken() { return peekToken(); }
+        void consumeToken(Token::Type expected) { consume(expected); }
+        void advanceToken() { advance(); }
+
+        // Expression parsing wrapper
+        std::unique_ptr<AST::Expression> parseExpressionWrapper() { return parseExpression(); }
+        std::unique_ptr<AST::Expression> parseIdentifierWrapper() { return parseIdentifier(); }
+        std::unique_ptr<AST::Expression> parseValueWrapper() { return parseValue(); }
 	private:
 		Lexer& lexer;
 		Token currentToken;

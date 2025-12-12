@@ -129,6 +129,150 @@ e_sql/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/build
 .PHONY : e_sql/fast
 
+src/ai_analyzer.o: src/ai_analyzer.cpp.o
+.PHONY : src/ai_analyzer.o
+
+# target to build an object file
+src/ai_analyzer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o
+.PHONY : src/ai_analyzer.cpp.o
+
+src/ai_analyzer.i: src/ai_analyzer.cpp.i
+.PHONY : src/ai_analyzer.i
+
+# target to preprocess a source file
+src/ai_analyzer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.i
+.PHONY : src/ai_analyzer.cpp.i
+
+src/ai_analyzer.s: src/ai_analyzer.cpp.s
+.PHONY : src/ai_analyzer.s
+
+# target to generate assembly for a file
+src/ai_analyzer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.s
+.PHONY : src/ai_analyzer.cpp.s
+
+src/ai_executables/lightgbm_model.o: src/ai_executables/lightgbm_model.cpp.o
+.PHONY : src/ai_executables/lightgbm_model.o
+
+# target to build an object file
+src/ai_executables/lightgbm_model.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o
+.PHONY : src/ai_executables/lightgbm_model.cpp.o
+
+src/ai_executables/lightgbm_model.i: src/ai_executables/lightgbm_model.cpp.i
+.PHONY : src/ai_executables/lightgbm_model.i
+
+# target to preprocess a source file
+src/ai_executables/lightgbm_model.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.i
+.PHONY : src/ai_executables/lightgbm_model.cpp.i
+
+src/ai_executables/lightgbm_model.s: src/ai_executables/lightgbm_model.cpp.s
+.PHONY : src/ai_executables/lightgbm_model.s
+
+# target to generate assembly for a file
+src/ai_executables/lightgbm_model.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.s
+.PHONY : src/ai_executables/lightgbm_model.cpp.s
+
+src/ai_executables/model_registry.o: src/ai_executables/model_registry.cpp.o
+.PHONY : src/ai_executables/model_registry.o
+
+# target to build an object file
+src/ai_executables/model_registry.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o
+.PHONY : src/ai_executables/model_registry.cpp.o
+
+src/ai_executables/model_registry.i: src/ai_executables/model_registry.cpp.i
+.PHONY : src/ai_executables/model_registry.i
+
+# target to preprocess a source file
+src/ai_executables/model_registry.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.i
+.PHONY : src/ai_executables/model_registry.cpp.i
+
+src/ai_executables/model_registry.s: src/ai_executables/model_registry.cpp.s
+.PHONY : src/ai_executables/model_registry.s
+
+# target to generate assembly for a file
+src/ai_executables/model_registry.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.s
+.PHONY : src/ai_executables/model_registry.cpp.s
+
+src/ai_executables/schema_discovery.o: src/ai_executables/schema_discovery.cpp.o
+.PHONY : src/ai_executables/schema_discovery.o
+
+# target to build an object file
+src/ai_executables/schema_discovery.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o
+.PHONY : src/ai_executables/schema_discovery.cpp.o
+
+src/ai_executables/schema_discovery.i: src/ai_executables/schema_discovery.cpp.i
+.PHONY : src/ai_executables/schema_discovery.i
+
+# target to preprocess a source file
+src/ai_executables/schema_discovery.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.i
+.PHONY : src/ai_executables/schema_discovery.cpp.i
+
+src/ai_executables/schema_discovery.s: src/ai_executables/schema_discovery.cpp.s
+.PHONY : src/ai_executables/schema_discovery.s
+
+# target to generate assembly for a file
+src/ai_executables/schema_discovery.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.s
+.PHONY : src/ai_executables/schema_discovery.cpp.s
+
+src/ai_execution_engine.o: src/ai_execution_engine.cpp.o
+.PHONY : src/ai_execution_engine.o
+
+# target to build an object file
+src/ai_execution_engine.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.o
+.PHONY : src/ai_execution_engine.cpp.o
+
+src/ai_execution_engine.i: src/ai_execution_engine.cpp.i
+.PHONY : src/ai_execution_engine.i
+
+# target to preprocess a source file
+src/ai_execution_engine.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.i
+.PHONY : src/ai_execution_engine.cpp.i
+
+src/ai_execution_engine.s: src/ai_execution_engine.cpp.s
+.PHONY : src/ai_execution_engine.s
+
+# target to generate assembly for a file
+src/ai_execution_engine.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.s
+.PHONY : src/ai_execution_engine.cpp.s
+
+src/ai_parser.o: src/ai_parser.cpp.o
+.PHONY : src/ai_parser.o
+
+# target to build an object file
+src/ai_parser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_parser.cpp.o
+.PHONY : src/ai_parser.cpp.o
+
+src/ai_parser.i: src/ai_parser.cpp.i
+.PHONY : src/ai_parser.i
+
+# target to preprocess a source file
+src/ai_parser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_parser.cpp.i
+.PHONY : src/ai_parser.cpp.i
+
+src/ai_parser.s: src/ai_parser.cpp.s
+.PHONY : src/ai_parser.s
+
+# target to generate assembly for a file
+src/ai_parser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_parser.cpp.s
+.PHONY : src/ai_parser.cpp.s
+
 src/analyzer.o: src/analyzer.cpp.o
 .PHONY : src/analyzer.o
 
@@ -176,6 +320,30 @@ src/buffer_pool.s: src/buffer_pool.cpp.s
 src/buffer_pool.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/buffer_pool.cpp.s
 .PHONY : src/buffer_pool.cpp.s
+
+src/data_extractor.o: src/data_extractor.cpp.o
+.PHONY : src/data_extractor.o
+
+# target to build an object file
+src/data_extractor.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/data_extractor.cpp.o
+.PHONY : src/data_extractor.cpp.o
+
+src/data_extractor.i: src/data_extractor.cpp.i
+.PHONY : src/data_extractor.i
+
+# target to preprocess a source file
+src/data_extractor.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/data_extractor.cpp.i
+.PHONY : src/data_extractor.cpp.i
+
+src/data_extractor.s: src/data_extractor.cpp.s
+.PHONY : src/data_extractor.s
+
+# target to generate assembly for a file
+src/data_extractor.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/data_extractor.cpp.s
+.PHONY : src/data_extractor.cpp.s
 
 src/database.o: src/database.cpp.o
 .PHONY : src/database.o
@@ -1026,12 +1194,33 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... e_sql"
+	@echo "... src/ai_analyzer.o"
+	@echo "... src/ai_analyzer.i"
+	@echo "... src/ai_analyzer.s"
+	@echo "... src/ai_executables/lightgbm_model.o"
+	@echo "... src/ai_executables/lightgbm_model.i"
+	@echo "... src/ai_executables/lightgbm_model.s"
+	@echo "... src/ai_executables/model_registry.o"
+	@echo "... src/ai_executables/model_registry.i"
+	@echo "... src/ai_executables/model_registry.s"
+	@echo "... src/ai_executables/schema_discovery.o"
+	@echo "... src/ai_executables/schema_discovery.i"
+	@echo "... src/ai_executables/schema_discovery.s"
+	@echo "... src/ai_execution_engine.o"
+	@echo "... src/ai_execution_engine.i"
+	@echo "... src/ai_execution_engine.s"
+	@echo "... src/ai_parser.o"
+	@echo "... src/ai_parser.i"
+	@echo "... src/ai_parser.s"
 	@echo "... src/analyzer.o"
 	@echo "... src/analyzer.i"
 	@echo "... src/analyzer.s"
 	@echo "... src/buffer_pool.o"
 	@echo "... src/buffer_pool.i"
 	@echo "... src/buffer_pool.s"
+	@echo "... src/data_extractor.o"
+	@echo "... src/data_extractor.i"
+	@echo "... src/data_extractor.s"
 	@echo "... src/database.o"
 	@echo "... src/database.i"
 	@echo "... src/database.s"
