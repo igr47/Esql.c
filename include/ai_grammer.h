@@ -415,6 +415,7 @@ namespace AST {
     public:
         std::string model_name;
         std::string test_data_table;
+        std::unordered_map<std::string, std::string> metrics_options;
 
         //ModelMetricsStatement() = default;
         std::string toEsql() const override {
@@ -422,6 +423,17 @@ namespace AST {
 
             if (!test_data_table.empty()) {
                 result += " ON " + test_data_table;
+            }
+
+            if (!metrics_options.empty()) {
+                result += " WITH (";
+                bool first = true;
+                for (const auto& [key, value] : metrics_options) {
+                    if (!first) result += ", ";
+                    result += key + " = " + value;
+                    first = false;
+                }
+                result += ")";
             }
 
             return result;
@@ -432,12 +444,22 @@ namespace AST {
     public:
         std::string model_name;
         bool extended = false;
+        std::vector<std::string> sections; // e.g., "PARAMETERS", "FEATURES", "METRICS"
 
         std::string toEsql() const override {
             std::string result = "DESCRIBE MODEL " + model_name;
 
             if (extended) {
                 result += " EXTENDED";
+            }
+
+            if (!sections.empty()) {
+                result += " SECTIONS (";
+                for (size_t i = 0; i < sections.size(); ++i) {
+                    if (i > 0) result += ", ";
+                    result += sections[i];
+                }
+                result += ")";
             }
 
             return result;
@@ -451,6 +473,7 @@ namespace AST {
         std::vector<std::string> feature_columns;
         std::string analysis_type; // "CORRELATION", "IMPORTANCE", "CLUSTERING"
         std::unordered_map<std::string, std::string> options;
+        std::string output_format = "TABLE"; // TABLE, JSON, CHART
 
         std::string toEsql() const override {
            std::string result = "ANALYZE DATA " + table_name;
@@ -492,20 +515,29 @@ namespace AST {
         std::string pipeline_name;
         std::vector<std::pair<std::string, std::string>> steps; // step_type, config
         std::unordered_map<std::string, std::string> parameters;
+        std::string describtion;
+        bool replace = false;
 
         std::string toEsql() const override {
-           std::string result = "CREATE PIPELINE " + pipeline_name;
+            std::string result = replace ? "CREATE OR REPLACE PIPELINE " : "CREATE PIPELINE ";
+            result += pipeline_name;
 
-           if (!steps.empty()) {
+            if (!describtion.empty()) {
+                result += " DESCRIPTION '" + describtion + "'";
+            }
+
+            if (!steps.empty()) {
                 result += " STEPS (";
                 for (size_t i = 0; i < steps.size(); ++i) {
                     if (i > 0) result += ", ";
-                    result += steps[i].first + "(" + steps[i].second + ")";
+                    result += steps[i].first;
+                    if (!steps[i].second.empty()) {
+                        result += "(" + steps[i].second + ")";
+                    }
                 }
                 result += ")";
-           }
-
-           if (!parameters.empty()) {
+            }
+            if (!parameters.empty()) {
                 result += " WITH (";
                 bool first = true;
                 for (const auto& [key, value] : parameters) {
@@ -514,8 +546,36 @@ namespace AST {
                     first = false;
                 }
                 result += ")";
-           }
-           return result;
+            }
+
+            return result;
+        }
+
+    };
+
+    class BatchAIStatement : public AIStatement {
+    public:
+        std::string operation; // "TRAIN", "PREDICT", "EVALUATE"
+        std::vector<std::unique_ptr<AIStatement>> statements;
+        bool parallel = false;
+        int max_concurrent = 1;
+        std::string on_error = "CONTINUE"; // STOP, CONTINUE, ROLLBACK
+
+        std::string toEsql() const override {
+            std::string result = "BEGIN BATCH ";
+
+            if (parallel) {
+                result += "PARALLEL " + std::to_string(max_concurrent) + " ";
+            }
+
+            result += "ON ERROR " + on_error + "\n";
+
+            for (const auto& stmt : statements) {
+                result += "  " + stmt->toEsql() + ";\n";
+            }
+
+            result += "END BATCH";
+            return result;
         }
     };
 
@@ -603,24 +663,30 @@ namespace AST {
     public:
         enum class AIType {
             PREDICT, PROBABILITY, CONFIDENCE, ANOMALY_SCORE,
-            CLUSTER_ID, FORECAST_VALUE, RESIDUAL, INFLUENCE
+            CLUSTER_ID, FORECAST_VALUE, RESIDUAL, INFLUENCE,
+            SIMILARITY, RECOMMENDATION_SCORE
         };
 
         AIType ai_type;
         std::string model_name;
         std::vector<std::unique_ptr<Expression>> inputs;
+        std::unordered_map<std::string, std::string> options;
+        std::unique_ptr<Expression> alias;
 
         std::unique_ptr<Expression> clone() const override {
             std::vector<std::unique_ptr<Expression>> cloned_inputs;
             for (const auto& input : inputs) {
                 cloned_inputs.push_back(input->clone());
             }
-            return std::make_unique<AIScalarExpression>(ai_type, model_name, std::move(cloned_inputs));
+
+            auto cloned_alias = alias ? alias->clone() : nullptr;
+
+            return std::make_unique<AIScalarExpression>(ai_type, model_name, std::move(cloned_inputs), std::move(cloned_alias), options);
         }
 
         AIScalarExpression(AIType type, const std::string& model,
-                          std::vector<std::unique_ptr<Expression>> ins)
-            : ai_type(type), model_name(model), inputs(std::move(ins)) {}
+                          std::vector<std::unique_ptr<Expression>> ins,std::unique_ptr<Expression> al = nullptr,const std::unordered_map<std::string, std::string>& opts = {})
+            : ai_type(type), model_name(model), inputs(std::move(ins)), alias(std::move(al)), options(opts) {}
 
         std::string toString() const override {
             std::string type_str;
@@ -633,6 +699,8 @@ namespace AST {
                 case AIType::FORECAST_VALUE: type_str = "FORECAST"; break;
                 case AIType::RESIDUAL: type_str = "RESIDUAL"; break;
                 case AIType::INFLUENCE: type_str = "INFLUENCE"; break;
+                case AIType::SIMILARITY: type_str = "SIMILARITY"; break;
+                case AIType::RECOMMENDATION_SCORE: type_str = "RECOMMENDATION_SCORE"; break;
             }
 
             std::string result = type_str + "_USING_" + model_name + "(";
@@ -641,6 +709,21 @@ namespace AST {
                 if (i < inputs.size() - 1) result += ", ";
             }
             result += ")";
+
+            if (!options.empty()) {
+                result += " WITH (";
+                bool first = true;
+                for (const auto& [key, value] : options) {
+                    if (!first) result += ", ";
+                    result += key + " = " + value;
+                    first = false;
+                }
+                result += ")";
+            }
+
+            if (alias) {
+                result += " AS " + alias->toString();
+            }
             return result;
         }
     };

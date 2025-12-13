@@ -30,6 +30,13 @@ public:
     std::unique_ptr<AST::CreateModelStatement> parseCreateModel();
     std::unordered_map<std::string, std::string> parseAIOptions();
     std::unique_ptr<AST::AIFunctionCall> parseAIFunctionWithOptions();
+    std::unique_ptr<AST::DescribeModelStatement> parseDescribeModel();
+    std::unique_ptr<AST::AnalyzeDataStatement> parseAnalyzeData();
+    std::unique_ptr<AST::CreatePipelineStatement> parseCreatePipeline();
+    std::unique_ptr<AST::BatchAIStatement> parseBatchAI();
+    std::vector<std::string> parseAnalysisSections();
+    bool validateFeatureList(const std::vector<std::string>& features) const;
+
 
 
     // Parse AI functions in expressions (like PREDICT_USING_model(...))
