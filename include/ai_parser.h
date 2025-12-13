@@ -6,6 +6,7 @@
 #include "ai_grammer.h"
 #include <memory>
 #include <vector>
+#include <set>
 
 class AIParser {
 private:
@@ -26,9 +27,14 @@ public:
     std::unique_ptr<AST::ExplainStatement> parseExplain();
     std::unique_ptr<AST::ModelMetricsStatement> parseModelMetrics();
     std::unique_ptr<AST::FeatureImportanceStatement> parseFeatureImportance();
+    std::unique_ptr<AST::CreateModelStatement> parseCreateModel();
+    std::unordered_map<std::string, std::string> parseAIOptions();
+    std::unique_ptr<AST::AIFunctionCall> parseAIFunctionWithOptions();
+
 
     // Parse AI functions in expressions (like PREDICT_USING_model(...))
     std::unique_ptr<AST::Expression> parseAIFunction();
+    std::unique_ptr<AST::Expression> parseAIFunctionCall();
 
     // Helper methods
     std::unordered_map<std::string, std::string> parseHyperparameters();
@@ -36,6 +42,11 @@ public:
     std::string parseWhereClause();
 
 private:
+    AST::AIFunctionType parseAIFunctionType();
+    std::vector<std::unique_ptr<AST::Expression>> parseAIFunctionArguments();
+    std::string parseModelName();
+    bool isValidAIFunctionInContext() const;
+    bool isValidModelName(const std::string& name) const;
     // Helper for checking if next token matches
     bool lookaheadMatches(const std::vector<Token::Type>& types);
 

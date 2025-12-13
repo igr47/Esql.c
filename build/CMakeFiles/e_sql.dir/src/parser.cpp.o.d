@@ -213,6 +213,12 @@ CMakeFiles/e_sql.dir/src/parser.cpp.o: \
   /usr/lib/llvm-19/lib/clang/19/include/stdint.h /usr/include/stdint.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
+  /home/igiris/git_projects/Esql.c/include/ai_parser.h \
+  /home/igiris/git_projects/Esql.c/include/ai_grammer.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/set \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tree.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_set.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_multiset.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/sstream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ios \

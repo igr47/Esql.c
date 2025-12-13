@@ -740,6 +740,7 @@ class Parse{
         std::unique_ptr<AST::Expression> parseCaseExpression();
         std::unique_ptr<AST::Expression> parseStatisticalFunction();
         std::unique_ptr<AST::Expression> parseWindowFunction();
+        std::unique_ptr<AST::Expression> parseAIFunction();
 		//std::unique_ptr<AST::Expression> parseExpression();
 		std::unique_ptr<AST::Expression> parseBinaryExpression(int minPrecedence);
         std::unique_ptr<AST::Expression> parseLikePattern();

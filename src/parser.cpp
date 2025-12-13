@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "ai_parser.h"
 #include "scanner.h"
 #include <sstream>
 #include <string>
@@ -68,14 +69,19 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 			return parseShowTableStatement();
         } else if (match(Token::Type::TABLE)) {
             advance();
-            return parseShowTableStructureStatement();
+           return parseShowTableStructureStatement();
         } else if (match(Token::Type::DATABASE)) {
             advance();
             return parseShowDatabaseStructureStatement();
         }
 	}else if(match(Token::Type::ALTER)){
 		return parseAlterTableStatement();
-	}
+	} else if (match(Token::Type::CREATE_MODEL) || match(Token::Type::CREATE_OR_REPLACE) || match(Token::Type::TRAIN) ||
+            match(Token::Type::AI_TRAIN) ||match(Token::Type::DROP_MODEL) ||match(Token::Type::SHOW_MODELS) ||match(Token::Type::DESCRIBE_MODEL)) {
+
+            AIParser ai_parser(lexer,*this);
+            return ai_parser.parseAIStatement();
+    }
 	   throw createSyntaxError(currentToken, "Expected statement (SELECT, UPDATE, DELETE, INSERT, CREATE, etc.)","Start of query");
 }
 
@@ -821,6 +827,11 @@ std::unique_ptr<AST::AlterTableStatement> Parse::parseAlterTableStatement() {
     return stmt;
 }
 
+std::unique_ptr<AST::Expression> Parse::parseAIFunction() {
+    // Create AI expression parser and try to parse
+    AIParser ai_parser(lexer,*this);
+    return ai_parser.parseAIFunctionCall();
+}
 
 std::unique_ptr<AST::BulkInsertStatement> Parse::parseBulkInsertStatement() {
     auto stmt = std::make_unique<AST::BulkInsertStatement>();
@@ -1522,6 +1533,8 @@ std::unique_ptr<AST::Expression> Parse::parsePrimaryExpression(){
 
     if (match(Token::Type::CASE)) {
             return parseCaseExpression();
+    } else if (auto ai_func = parseAIFunction()) {
+        return ai_func;
     } else if (matchAny({Token::Type::COUNT,Token::Type::SUM,Token::Type::AVG,Token::Type::MIN,Token::Type::MAX})) {
 		//std::cout<< "DEBUG: Foung aggregate function: " <<currentToken.lexeme<<std::endl;
 		Token funcToken = currentToken;
