@@ -1,5 +1,6 @@
 #include "analyzer.h"
 #include "parser.h"
+#include "ai_analyzer.h"
 #include "database.h"
 #include <string>
 #include <set>
@@ -7,7 +8,7 @@
 #include <unordered_map>
 
 
-SematicAnalyzer::SematicAnalyzer(Database& db,fractal::DiskStorage& storage):db(db),storage(storage){}
+SematicAnalyzer::SematicAnalyzer(Database& db,fractal::DiskStorage& storage) : db(db),storage(storage), ai_analyzer_(std::make_unique<AIAnalyzer>(db,storage)){}
 //This is the entry point for the sematic analysis
 void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
 	if(auto createdb=dynamic_cast<AST::CreateDatabaseStatement*>(stmt.get())){
@@ -33,13 +34,21 @@ void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
 	        }else if(auto alter=dynamic_cast<AST::AlterTableStatement*>(stmt.get())){
 		        analyzeAlter(*alter);
 	        }else if (auto bulkInsert = dynamic_cast<AST::BulkInsertStatement*>(stmt.get())) {
-			analyzeBulkInsert(*bulkInsert);
-		}else if (auto bulkUpdate = dynamic_cast<AST::BulkUpdateStatement*>(stmt.get())) {
-			analyzeBulkUpdate(*bulkUpdate);
-		}else if (auto bulkDelete = dynamic_cast<AST::BulkDeleteStatement*>(stmt.get())) {
-			analyzeBulkDelete(*bulkDelete);
-		}
+			    analyzeBulkInsert(*bulkInsert);
+		    }else if (auto bulkUpdate = dynamic_cast<AST::BulkUpdateStatement*>(stmt.get())) {
+			    analyzeBulkUpdate(*bulkUpdate);
+		    }else if (auto bulkDelete = dynamic_cast<AST::BulkDeleteStatement*>(stmt.get())) {
+			    analyzeBulkDelete(*bulkDelete);
+		    }else if (isAIStatement(stmt.get())) {
+                ai_analyzer_->analyze(stmt);
+            }
 	}
+}
+
+SematicAnalyzer::~SematicAnalyzer() = default;
+
+bool SematicAnalyzer::isAIStatement(const AST::Statement* stmt) const {
+    return dynamic_cast<const AST::AIStatement*>(stmt) != nullptr;
 }
 
 bool SematicAnalyzer::isColumnAlias(const std::string& name) const {

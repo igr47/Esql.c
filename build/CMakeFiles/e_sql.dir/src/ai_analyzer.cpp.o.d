@@ -415,4 +415,20 @@ CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/opt_random.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/random.tcc \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/unordered_set \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/unordered_set.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/regex \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bitset \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/stack \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_stack.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_constants.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_error.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_automaton.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_automaton.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_scanner.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_scanner.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_compiler.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_compiler.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_executor.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/regex_executor.tcc

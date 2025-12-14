@@ -2,11 +2,14 @@
 #define ANALYZER_H
 #include "parser.h"
 #include "database_schema.h"
+//#include "ai_analyzer.h"
 #include "diskstorage.h"
 #include <unordered_map>
 #include <vector>
+#include <memory>
 #include <string>
 
+class AIAnalyzer;
 class Database;
 namespace fractal {
     class DiskStorage;
@@ -14,16 +17,21 @@ namespace fractal {
 class SematicAnalyzer{
 	public:
 		SematicAnalyzer(Database& db,fractal::DiskStorage& storage);
+        ~SematicAnalyzer();
 		void analyze(std::unique_ptr<AST::Statement>& stmt);
 	private:
 		DatabaseSchema schema;
 		Database& db;
 		//DiskStorage& storage;
         fractal::DiskStorage& storage;
+        std::unique_ptr<AIAnalyzer> ai_analyzer_;
 		const DatabaseSchema::Table* currentTable=nullptr;
         std::unordered_map<std::string, std::unique_ptr<DatabaseSchema::Table>> cteTables;
         std::unordered_map<std::string, DatabaseSchema::Column::Type> columnAliases;
         std::unordered_map<std::string, std::unique_ptr<AST::Expression>> aliasExpressions;
+
+        bool isAIStatement(const AST::Statement* stmt) const;
+
 		//method for DATABASE management
 		void analyzeCreateDatabase(AST::CreateDatabaseStatement& createdbstmt);
 		//method for show database
