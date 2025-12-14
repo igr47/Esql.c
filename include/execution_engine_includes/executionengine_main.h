@@ -16,16 +16,16 @@
 class ExecutionEngine {
 public:
     explicit ExecutionEngine(Database& db, fractal::DiskStorage& storage);
-    
+
     struct ResultSet {
         std::vector<std::string> columns;
         std::vector<std::vector<std::string>> rows;
         bool distinct = false;
-        
+
         ResultSet() = default;
         ResultSet(const std::vector<std::string>& cols, bool distinct = false) : columns(cols), distinct(distinct) {}
     };
-    
+
     ResultSet execute(std::unique_ptr<AST::Statement> stmt);
 
     // Transaction management
@@ -39,15 +39,15 @@ private:
     fractal::DiskStorage& storage;
     std::vector<std::unordered_map<std::string, std::string>> currentBatch;
     std::set<std::vector<std::string>> currentBatchPrimaryKeys;
-    
+
     // Forward declarations for all execution methods
     // (Implementation will be in separate .cpp files)
-    
+
     // Database operations
     ResultSet executeCreateDatabase(AST::CreateDatabaseStatement& stmt);
     ResultSet executeUse(AST::UseDatabaseStatement& stmt);
     ResultSet executeShow(AST::ShowDatabaseStatement& stmt);
-    ResultSet executeShowTables(AST::ShowTableStatement& stmt); 
+    ResultSet executeShowTables(AST::ShowTableStatement& stmt);
     ResultSet executeShowTableStructure(AST::ShowTableStructureStatement& stmt);
     ResultSet executeShowDatabaseStructure(AST::ShowDatabaseStructure& stmt);
     std::string getTypeString(DatabaseSchema::Column::Type type);
@@ -56,23 +56,34 @@ private:
     ResultSet executeCreateTable(AST::CreateTableStatement& stmt);
     ResultSet executeDropTable(AST::DropStatement& stmt);
     ResultSet executeAlterTable(AST::AlterTableStatement& stmt);
-    
+
+    /**
+    * Methods to process csv files.
+    * Processes data by removing things like quotes, and converts the data into insertable format.
+    * To handle very large datasets
+    */
+    std::vector<std::string> parseCSVLineAdvanced(const std::string& line, char delimiter = ',');
+    std::string trim(const std::string& str);
+    std::string processCSVValue(const std::string& csvValue, const DatabaseSchema::Column& column);
+    std::vector<int> mapColumns(const std::vector<std::string>& csvHeaders, const DatabaseSchema::Table* table,bool hasHeader);
+    ExecutionEngine::ResultSet executeCSVInsert(AST::InsertStatement& stmt);
+
     // Data manipulation operations
     ResultSet executeSelect(AST::SelectStatement& stmt);
     ResultSet executeInsert(AST::InsertStatement& stmt);
     ResultSet executeUpdate(AST::UpdateStatement& stmt);
     ResultSet executeDelete(AST::DeleteStatement& stmt);
-    
+
     // Bulk operations
     ResultSet executeBulkInsert(AST::BulkInsertStatement& stmt);
     ResultSet executeBulkUpdate(AST::BulkUpdateStatement& stmt);
     ResultSet executeBulkDelete(AST::BulkDeleteStatement& stmt);
-    
+
     // ALTER TABLE helper methods
     ResultSet handleAlterAdd(AST::AlterTableStatement* stmt);
     ResultSet handleAlterDrop(AST::AlterTableStatement* stmt);
     ResultSet handleAlterRename(AST::AlterTableStatement* stmt);
-    
+
     // SELECT helper methods
     ResultSet executeSelectWithAggregates(AST::SelectStatement& stmt);
     std::unordered_map<std::string, std::string> evaluateAggregateFunctions(const std::vector<std::unique_ptr<AST::Expression>>& columns,const std::unordered_map<std::string, std::string>& groupRow,const std::vector<std::vector<std::unordered_map<std::string, std::string>>>& groupedData);
@@ -99,19 +110,19 @@ private:
                             const std::unordered_map<std::string, std::string>& row);
     std::string evaluateExpression(const AST::Expression* expr,
                                  const std::unordered_map<std::string, std::string>& row);
-    std::string evaluateValue(const AST::Expression* expr, 
+    std::string evaluateValue(const AST::Expression* expr,
                             const std::unordered_map<std::string, std::string>& row);
     bool isNumericString(const std::string& str);
-    
+
     // Pattern matching
     bool simplePatternMatch(const std::string& str, const std::string& pattern);
     bool matchPattern(const std::string& str, const std::string& pattern,
                      size_t strPos, size_t patternPos,
                      bool startsWithAnchor, bool endsWithAnchor);
-    std::string expandCharacterClass(const std::string& charClass); 
+    std::string expandCharacterClass(const std::string& charClass);
     bool isRegexSpecialChar(char c);
     std::string likePatternToRegex(const std::string& likePattern);
-    std::string evaluateLikeOperation(const AST::LikeOp* likeOp, 
+    std::string evaluateLikeOperation(const AST::LikeOp* likeOp,
                                     const std::unordered_map<std::string, std::string>& row);
     bool evaluateCharacterClassMatch(const std::string& str, const std::string& charClassPattern);
     bool simpleRegexMatch(const std::string& str, const std::string& regexPattern);
@@ -120,13 +131,13 @@ private:
     DateTime generateCurrentDate();
     DateTime generateCurrentDateTime();
     UUID generateUUIDValue();
-    std::string convertToStorableValue(const std::string& rawValue, 
+    std::string convertToStorableValue(const std::string& rawValue,
                                      DatabaseSchema::Column::Type columnType);
-    std::string convertFromStoredValue(const std::string& storedValue, 
+    std::string convertFromStoredValue(const std::string& storedValue,
                                      DatabaseSchema::Column::Type columnType);
-    void applyGeneratedValues(std::unordered_map<std::string, std::string>& row, 
+    void applyGeneratedValues(std::unordered_map<std::string, std::string>& row,
                             const DatabaseSchema::Table* table);
-    void applyDefaultValues(std::unordered_map<std::string, std::string>& row, 
+    void applyDefaultValues(std::unordered_map<std::string, std::string>& row,
                           const DatabaseSchema::Table* table);
     void handleAutoIncreament(std::unordered_map<std::string, std::string>& row,
                             const DatabaseSchema::Table* table);
@@ -142,26 +153,26 @@ private:
     void validateUpdateAgainstPrimaryKey(const std::unordered_map<std::string, std::string>& updates,
                                        const DatabaseSchema::Table* table);
     void validateUniqueConstraints(const std::unordered_map<std::string, std::string>& newRow,
-                                 const DatabaseSchema::Table* table, 
+                                 const DatabaseSchema::Table* table,
                                  const std::vector<std::string>& uniqueColumns);
     void validateUniqueConstraintsInBatch(const std::unordered_map<std::string, std::string>& newRow,
                                         const std::vector<std::string>& uniqueColumn);
     void validateUpdateAgainstUniqueConstraints(const std::unordered_map<std::string, std::string>& updates,
-                                             const DatabaseSchema::Table* table, 
+                                             const DatabaseSchema::Table* table,
                                              uint32_t rowId = 0);
-    void validateBulkUpdateConstraints(const std::vector<AST::BulkUpdateStatement::UpdateSpec>& updates, 
+    void validateBulkUpdateConstraints(const std::vector<AST::BulkUpdateStatement::UpdateSpec>& updates,
                                      const DatabaseSchema::Table* table);
     void validateUpdateWithCheckConstraints(const std::unordered_map<std::string, std::string>& updates,
-                                          const DatabaseSchema::Table* table, 
+                                          const DatabaseSchema::Table* table,
                                           uint32_t row_id);
-    void validateCheckConstraints(const std::unordered_map<std::string, std::string>& row, 
+    void validateCheckConstraints(const std::unordered_map<std::string, std::string>& row,
                                 const DatabaseSchema::Table* table);
-    bool evaluateCheckConstraint(const std::string& checkExpression, 
+    bool evaluateCheckConstraint(const std::string& checkExpression,
                                const std::unordered_map<std::string, std::string>& row,
                                const std::string& constraintName = "");
     std::vector<std::pair<std::string, std::string>> parseCheckConstraints(const DatabaseSchema::Table* table);
     std::unique_ptr<AST::Expression> parseStoredCheckExpression(const std::string& storedCheckExpression);
-    
+
     // Helper methods
     std::unordered_map<std::string, std::string> buildRowFromValues(
         const std::vector<std::string>& columns,
@@ -171,12 +182,12 @@ private:
     std::vector<std::string> getUniqueColumns(const DatabaseSchema::Table* table);
     std::vector<uint32_t> findMatchingRowIds(const std::string& tableName,
                                            const AST::Expression* whereClause);
-    void debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints, 
+    void debugConstraints(const std::vector<DatabaseSchema::Constraint>& constraints,
                         const std::string& context);
 
     std::unordered_map<std::string, std::unique_ptr<AST::Expression>> checkExpressionCache;
 
-    // Analytical query execution    
+    // Analytical query execution
     bool hasWindowFunctions(const AST::SelectStatement& stmt);
     bool hasWindowFunctions(const AST::Expression* expr);
     bool hasStatisticalFunctions(const AST::SelectStatement& stmt);
@@ -231,7 +242,7 @@ private:
 
     // Date function implementations
     void applyJulianDay(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::DateFunction* dateFunc,const std::string& resultColumn);
-     
+
     void applyJulianDay(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
 
     void applySubstr(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
@@ -258,11 +269,11 @@ private:
     void applyMonth(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
     void applyDay(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
     void applyNow(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
-    
+
     // String functions
     void applyConcat(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
     void applyLength(std::vector<std::unordered_map<std::string, std::string>>& data,const AST::FunctionCall* funcCall,const std::string& resultColumn);
-    
+
     std::string calculateGroupStdDev(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);
     std::string calculateGroupVariance(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);
     std::string calculateGroupPercentile(const AST::StatisticalExpression* statExpr,const std::vector<std::unordered_map<std::string, std::string>>& group);

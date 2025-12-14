@@ -460,37 +460,49 @@ std::unique_ptr<AST::InsertStatement> Parse::parseInsertStatement() {
 	bool wasInValueContext = inValueContext;
 	inValueContext = true;
 
-	//Parse first row
-	consume(Token::Type::L_PAREN);
-	std::vector<std::unique_ptr<AST::Expression>> firstRowValues;
+    if (match(Token::Type::L_PAREN)) {
+	    //Parse first row
+	    consume(Token::Type::L_PAREN);
+	    std::vector<std::unique_ptr<AST::Expression>> firstRowValues;
 
-	do{
-		if(match(Token::Token::Type::COMMA)){
-			consume(Token::Type::COMMA);
-		}
-		firstRowValues.push_back(parseValue());
-	}while(match(Token::Type::COMMA));
+	    do{
+		    if(match(Token::Token::Type::COMMA)){
+			    consume(Token::Type::COMMA);
+		    }
+		    firstRowValues.push_back(parseValue());
+	    }while(match(Token::Type::COMMA));
 
-	stmt->values.push_back(std::move(firstRowValues));
-	consume(Token::Type::R_PAREN);
+	    stmt->values.push_back(std::move(firstRowValues));
+	    consume(Token::Type::R_PAREN);
 
-	//Parse additional rows(For multi_row INSERT)
-	while(match(Token::Type::COMMA)){
-		consume(Token::Type::COMMA);
-		consume(Token::Type::L_PAREN);
-		std::vector<std::unique_ptr<AST::Expression>> rowValues;
+	    //Parse additional rows(For multi_row INSERT)
+	    while(match(Token::Type::COMMA)){
+		    consume(Token::Type::COMMA);
+		    consume(Token::Type::L_PAREN);
+		    std::vector<std::unique_ptr<AST::Expression>> rowValues;
 
-		do{
-			if(match(Token::Type::COMMA)){
-				consume(Token::Type::COMMA);
-			}
-			rowValues.push_back(parseValue());
-		}while(match(Token::Type::COMMA));
+		    do{
+			    if(match(Token::Type::COMMA)){
+				    consume(Token::Type::COMMA);
+			    }
+			    rowValues.push_back(parseValue());
+		    }while(match(Token::Type::COMMA));
 
-		stmt->values.push_back(std::move(rowValues));
-		consume(Token::Type::R_PAREN);
-	}
+		    stmt->values.push_back(std::move(rowValues));
+		    consume(Token::Type::R_PAREN);
+	    }
+    }
 	inValueContext = wasInValueContext;
+
+    if (match(Token::Type::IN)) {
+        consume(Token::Type::IN);
+        stmt->filename = currentToken.lexeme;
+        // Remove quotes if present
+        if (stmt->filename.size() >= 2 && ((stmt->filename[0] == '\'' && stmt->filename.back() == '\'') || (stmt->filename[0] == '"' && stmt->filename.back() == '"'))) {
+            stmt->filename = stmt->filename.substr(1, stmt->filename.size() - 2);
+        }
+        consume(currentToken.type);
+    }
 	return stmt;
 }
 

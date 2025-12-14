@@ -562,6 +562,9 @@ namespace AST{
 			std::string table;
 			std::vector<std::string> columns;
 			std::vector<std::vector<std::unique_ptr<Expression>>> values;
+            std::string filename;
+            bool hasHeader = false;
+            char delimiter;
 	};
 	class CreateTableStatement:public Statement{
 		public:
