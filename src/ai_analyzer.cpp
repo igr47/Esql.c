@@ -1,4 +1,4 @@
-
+//#include "ai_grammer.h"
 #include "ai_analyzer.h"
 #include "analyzer.h"
 #include "data_extractor.h"
@@ -24,6 +24,18 @@ void AIAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt) {
         analyzeExplain(*explain_stmt);
     } else if (auto* importance_stmt = dynamic_cast<AST::FeatureImportanceStatement*>(stmt.get())) {
         analyzeFeatureImportance(*importance_stmt);
+    } else  if (auto* create_model_stmt = dynamic_cast<AST::CreateModelStatement*>(stmt.get())) {
+        analyzeCreateModel(*create_model_stmt);
+    } else if (auto* inference_stmt = dynamic_cast<AST::InferenceStatement*>(stmt.get())) {
+        analyzeInference(*inference_stmt);
+    } else if (auto* describe_stmt = dynamic_cast<AST::DescribeModelStatement*>(stmt.get())) {
+        analyzeDescribeModel(*describe_stmt);
+    } else if (auto* analyze_data_stmt = dynamic_cast<AST::AnalyzeDataStatement*>(stmt.get())) {
+        analyzeAnalyzeData(*analyze_data_stmt);
+    } else if (auto* create_pipeline_stmt = dynamic_cast<AST::CreatePipelineStatement*>(stmt.get())) {
+        analyzeCreatePipeline(*create_pipeline_stmt);
+    } else if (auto* batch_ai_stmt = dynamic_cast<AST::BatchAIStatement*>(stmt.get())) {
+        analyzeBatchAI(*batch_ai_stmt);
     } else {
         throw SematicError("Unknown AI statement type");
     }
@@ -382,3 +394,363 @@ bool AIAnalyzer::isValidIdentifier(const std::string& name) {
     return reserved_keywords.find(upper_name) == reserved_keywords.end();
 }
 
+void AIAnalyzer::analyzeCreateModel(AST::CreateModelStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing CREATE MODEL statement for model: "
+              << stmt.model_name << std::endl;
+
+    // 1. Validate model name
+    if (!isValidIdentifier(stmt.model_name)) {
+        throw SematicError("Invalid model name: " + stmt.model_name);
+    }
+
+    // 2. Check if model already exists (for CREATE OR REPLACE)
+    auto& registry = esql::ai::ModelRegistry::instance();
+    bool model_exists = registry.model_exists(stmt.model_name);
+
+    if (model_exists) {
+        auto it = stmt.parameters.find("replace");
+        if (it == stmt.parameters.end() || it->second != "true") {
+            throw SematicError("Model '" + stmt.model_name + "' already exists");
+        }
+    }
+
+        // 3. Validate algorithm
+    std::vector<std::string> valid_algorithms = {
+        "LIGHTGBM", "XGBOOST", "CATBOOST", "RANDOM_FOREST",
+        "LINEAR_REGRESSION", "LOGISTIC_REGRESSION", "NEURAL_NETWORK",
+        "KMEANS", "SVM", "DECISION_TREE"
+    };
+
+    std::string algo_upper = stmt.algorithm;
+    std::transform(algo_upper.begin(), algo_upper.end(), algo_upper.begin(), ::toupper);
+
+    if (std::find(valid_algorithms.begin(), valid_algorithms.end(), algo_upper) == valid_algorithms.end()) {
+        throw SematicError("Unsupported algorithm: " + stmt.algorithm);
+    }
+
+    // 4. Validate features
+    if (stmt.features.empty()) {
+        throw SematicError("At least one feature must be specified");
+    }
+
+    std::set<std::string> unique_features;
+    for (const auto& [feature_name, feature_type] : stmt.features) {
+        if (!isValidIdentifier(feature_name)) {
+            throw SematicError("Invalid feature name: " + feature_name);
+        }
+
+        if (unique_features.find(feature_name) != unique_features.end()) {
+            throw SematicError("Duplicate feature name: " + feature_name);
+        }
+        unique_features.insert(feature_name);
+
+        // Validate feature type if specified
+        if (!feature_type.empty() && feature_type != "AUTO") {
+            std::vector<std::string> valid_types = {
+                "NUMERIC", "INT", "FLOAT", "CATEGORICAL", "TEXT",
+                "BOOLEAN", "BINARY"
+            };
+
+            std::string type_upper = feature_type;
+            std::transform(type_upper.begin(), type_upper.end(), type_upper.begin(), ::toupper);
+            if (std::find(valid_types.begin(), valid_types.end(), type_upper) == valid_types.end()) {
+                throw SematicError("Invalid feature type: " + feature_type);
+            }
+        }
+    }
+
+    // 5. Validate target type
+    if (!stmt.target_type.empty()) {
+        std::vector<std::string> valid_target_types = {
+            "CLASSIFICATION", "REGRESSION", "CLUSTERING",
+            "BINARY", "MULTICLASS"
+        };
+
+        std::string target_upper = stmt.target_type;
+        std::transform(target_upper.begin(), target_upper.end(), target_upper.begin(), ::toupper);
+
+        if (std::find(valid_target_types.begin(), valid_target_types.end(), target_upper) == valid_target_types.end()) {
+            throw SematicError("Invalid target type: " + stmt.target_type);
+        }
+    }
+
+    // 6. Validate source table if specified
+    auto it = stmt.parameters.find("source_table");
+    if (it != stmt.parameters.end()) {
+        if (!storage_.tableExists(db_.currentDatabase(), it->second)) {
+            throw SematicError("Source table '" + it->second + "' does not exist");
+        }
+    }
+
+    // 7. Validate parameters
+    for (const auto& [param, value] : stmt.parameters) {
+        if (param != "source_table" && param != "target_column" && param != "replace") {
+                        // Validate hyperparameter values
+            try {
+                // Try to parse as number
+                if (std::regex_match(value, std::regex("^-?\\d+(\\.\\d+)?$"))) {
+                    // Valid number
+                } else if (value == "true" || value == "false") {
+                    // Valid boolean
+                } else if (value == "NULL" || value == "null") {
+                    // Valid null
+                } else if (value.front() == '\'' && value.back() == '\'') {
+                    // Valid string
+                } else {
+                    std::cout << "[AIAnalyzer] Warning: Parameter " << param
+                              << " has unusual value: " << value << std::endl;
+                }
+            } catch (...) {
+                throw SematicError("Invalid parameter value for " + param + ": " + value);
+            }
+        }
+    }
+
+    std::cout << "[AIAnalyzer] CREATE MODEL validation passed for "
+              << stmt.model_name << std::endl;
+}
+
+void AIAnalyzer::analyzeInference(AST::InferenceStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing INFERENCE statement for model: "
+              << stmt.model_name << std::endl;
+
+    // 1. Check if model exists
+    auto& registry = esql::ai::ModelRegistry::instance();
+    if (!registry.model_exists(stmt.model_name)) {
+        throw SematicError("Model '" + stmt.model_name + "' not found");
+    }
+
+    // 2. Validate input data expression
+    if (stmt.input_data) {
+        // For batch mode, input_data should be a table reference
+        // For single inference, input_data should be a row expression
+
+        if (stmt.batch_mode) {
+            if (auto* ident = dynamic_cast<AST::Identifier*>(stmt.input_data.get())) {
+                if (!storage_.tableExists(db_.currentDatabase(), ident->token.lexeme)) {
+                    throw SematicError("Input table '" + ident->token.lexeme + "' does not exist");
+                }
+            } else {
+                throw SematicError("Batch inference requires a table reference");
+            }
+        } else {
+            // Single inference - validate the expression
+            // This will need more sophisticated validation based on the model schema
+            std::cout << "[AIAnalyzer] Single inference input validation would be performed during execution" << std::endl;
+        }
+    }
+
+    std::cout << "[AIAnalyzer] INFERENCE validation passed" << std::endl;
+}
+
+void AIAnalyzer::analyzeDescribeModel(AST::DescribeModelStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing DESCRIBE MODEL statement for model: "
+              << stmt.model_name << std::endl;
+
+    // 1. Check if model exists
+    auto& registry = esql::ai::ModelRegistry::instance();
+    if (!registry.model_exists(stmt.model_name)) {
+        throw SematicError("Model '" + stmt.model_name + "' not found");
+    }
+
+    // 2. Validate sections if specified
+    std::vector<std::string> valid_sections = {
+        "PARAMETERS", "FEATURES", "METRICS", "SCHEMA",
+        "PERFORMANCE", "TRAINING_INFO", "HYPERPARAMETERS"
+    };
+
+    for (const auto& section : stmt.sections) {
+        std::string section_upper = section;
+        std::transform(section_upper.begin(), section_upper.end(), section_upper.begin(), ::toupper);
+
+        if (std::find(valid_sections.begin(), valid_sections.end(), section_upper) == valid_sections.end()) {
+            std::cout << "[AIAnalyzer] Warning: Unknown section '" << section
+                      << "' in DESCRIBE MODEL" << std::endl;
+        }
+    }
+
+    std::cout << "[AIAnalyzer] DESCRIBE MODEL validation passed" << std::endl;
+}
+
+void AIAnalyzer::analyzeAnalyzeData(AST::AnalyzeDataStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing ANALYZE DATA statement for table: "
+              << stmt.table_name << std::endl;
+
+    // 1. Validate table exists
+    if (!storage_.tableExists(db_.currentDatabase(), stmt.table_name)) {
+        throw SematicError("Table '" + stmt.table_name + "' does not exist");
+    }
+
+    // 2. Validate target column if specified
+    if (!stmt.target_column.empty()) {
+        auto table_data = data_extractor_.extract_table_data(
+            db_.currentDatabase(),
+            stmt.table_name,
+            {stmt.target_column},
+            "", // no filter
+            1   // sample 1 row
+        );
+
+        if (table_data.empty()) {
+            throw SematicError("Target column '" + stmt.target_column + "' not found in table");
+        }
+    }
+
+    // 3. Validate feature columns
+    if (!stmt.feature_columns.empty()) {
+        std::set<std::string> unique_features;
+        for (const auto& feature : stmt.feature_columns) {
+            if (unique_features.find(feature) != unique_features.end()) {
+                throw SematicError("Duplicate feature column: " + feature);
+            }
+            unique_features.insert(feature);
+
+            // Check if column exists
+            auto table_data = data_extractor_.extract_table_data(
+                db_.currentDatabase(),
+                stmt.table_name,
+                {feature},
+                "", // no filter
+                1   // sample 1 row
+            );
+
+            if (table_data.empty()) {
+                throw SematicError("Feature column '" + feature + "' not found in table");
+            }
+        }
+    }
+
+    // 4. Validate analysis type
+    std::vector<std::string> valid_analysis_types = {
+        "CORRELATION", "IMPORTANCE", "CLUSTERING", "OUTLIER",
+        "DISTRIBUTION", "SUMMARY", "PATTERN", "TREND"
+    };
+
+    if (!stmt.analysis_type.empty()) {
+        std::string type_upper = stmt.analysis_type;
+        std::transform(type_upper.begin(), type_upper.end(), type_upper.begin(), ::toupper);
+
+        if (std::find(valid_analysis_types.begin(), valid_analysis_types.end(), type_upper) == valid_analysis_types.end()) {
+            throw SematicError("Invalid analysis type: " + stmt.analysis_type);
+        }
+    }
+
+    // 5. Validate options
+    for (const auto& [option, value] : stmt.options) {
+        if (option == "method") {
+            std::vector<std::string> valid_methods = {"pearson", "spearman", "kendall"};
+            if (std::find(valid_methods.begin(), valid_methods.end(), value) == valid_methods.end()) {
+                throw SematicError("Invalid correlation method: " + value);
+            }
+        } else if (option == "threshold") {
+            try {
+                float threshold = std::stof(value);
+                if (threshold < 0.0f || threshold > 1.0f) {
+                    throw SematicError("Threshold must be between 0 and 1");
+                }
+            } catch (...) {
+                throw SematicError("Invalid threshold value: " + value);
+            }
+        } else if (option == "output_format") {
+            std::vector<std::string> valid_formats = {"TABLE", "JSON", "CHART", "REPORT"};
+            std::string format_upper = value;
+            std::transform(format_upper.begin(), format_upper.end(), format_upper.begin(), ::toupper);
+
+            if (std::find(valid_formats.begin(), valid_formats.end(), format_upper) == valid_formats.end()) {
+                throw SematicError("Invalid output format: " + value);
+            }
+        }
+    }
+
+    std::cout << "[AIAnalyzer] ANALYZE DATA validation passed" << std::endl;
+}
+
+void AIAnalyzer::analyzeCreatePipeline(AST::CreatePipelineStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing CREATE PIPELINE statement for pipeline: "
+              << stmt.pipeline_name << std::endl;
+
+    // 1. Validate pipeline name
+    if (!isValidIdentifier(stmt.pipeline_name)) {
+         throw SematicError("Invalid pipeline name: " + stmt.pipeline_name);
+    }
+
+    // 2. Validate steps
+    if (stmt.steps.empty()) {
+        throw SematicError("Pipeline must have at least one step");
+    }
+
+    std::vector<std::string> valid_step_types = {
+        "DATA_CLEANING", "FEATURE_SCALING", "FEATURE_ENCODING",
+        "FEATURE_SELECTION", "DIMENSIONALITY_REDUCTION", "MODEL_TRAINING",
+        "ENSEMBLE", "VALIDATION", "CROSS_VALIDATION"
+    };
+
+    for (const auto& [step_type, config] : stmt.steps) {
+        std::string type_upper = step_type;
+        std::transform(type_upper.begin(), type_upper.end(), type_upper.begin(), ::toupper);
+
+        if (std::find(valid_step_types.begin(), valid_step_types.end(), type_upper) == valid_step_types.end()) {
+            std::cout << "[AIAnalyzer] Warning: Unknown step type '" << step_type << "'" << std::endl;
+        }
+
+        // Basic configuration validation
+        if (!config.empty()) {
+            // Check if config looks like valid JSON or simple parameters
+            if (config.front() != '{' && config.find('=') == std::string::npos) {
+                std::cout << "[AIAnalyzer] Warning: Step configuration may be malformed: "
+                          << config << std::endl;
+            }
+        }
+    }
+
+       // 3. Validate parameters
+    for (const auto& [param, value] : stmt.parameters) {
+        // Common pipeline parameters validation
+        if (param == "parallelism") {
+            try {
+                int parallelism = std::stoi(value);
+                if (parallelism < 1 || parallelism > 100) {
+                    throw SematicError("Parallelism must be between 1 and 100");
+                }
+            } catch (...) {
+                throw SematicError("Invalid parallelism value: " + value);
+            }
+        } else if (param == "memory_limit") {
+            // Validate memory limit format (e.g., "4GB", "512MB")
+            std::regex memory_regex("^\\d+[MGK]B$", std::regex::icase);
+            if (!std::regex_match(value, memory_regex)) {
+                throw SematicError("Invalid memory limit format: " + value + ". Use format like '4GB' or '512MB'");
+            }
+        }
+    }
+
+     std::cout << "[AIAnalyzer] CREATE PIPELINE validation passed" << std::endl;
+}
+
+void AIAnalyzer::analyzeBatchAI(AST::BatchAIStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing BATCH AI statement" << std::endl;
+
+    // 1. Validate parallelism
+    if (stmt.max_concurrent < 1 || stmt.max_concurrent > 100) {
+        throw SematicError("Max concurrent must be between 1 and 100");
+    }
+
+    // 2. Validate on_error action
+    std::vector<std::string> valid_error_actions = {"STOP", "CONTINUE", "ROLLBACK"};
+    std::string action_upper = stmt.on_error;
+    std::transform(action_upper.begin(), action_upper.end(), action_upper.begin(), ::toupper);
+
+    if (std::find(valid_error_actions.begin(), valid_error_actions.end(), action_upper) == valid_error_actions.end()) {
+       throw SematicError("Invalid on_error action: " + stmt.on_error);
+    }
+
+    // 3. Validate statements
+    if (stmt.statements.empty()) {
+        throw SematicError("Batch must contain at least one statement");
+    }
+
+    std::cout << "[AIAnalyzer] Batch contains " << stmt.statements.size()
+              << " statements" << std::endl;
+
+    std::cout << "[AIAnalyzer] BATCH AI validation passed" << std::endl;
+}

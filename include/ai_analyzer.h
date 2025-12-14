@@ -10,6 +10,7 @@
 #include <memory>
 #include <unordered_set>
 #include <set>
+#include <regex>
 
 class AIAnalyzer {
 private:
@@ -39,6 +40,14 @@ public:
     bool validateTargetColumn(const std::string& table, const std::string& column);
     bool validateTestSplit(float split);
     bool validateIterations(int iterations);
+
+    void analyzeCreateModel(AST::CreateModelStatement& stmt);
+    void analyzeInference(AST::InferenceStatement& stmt);
+    void analyzeDescribeModel(AST::DescribeModelStatement& stmt);
+    void analyzeAnalyzeData(AST::AnalyzeDataStatement& stmt);
+    void analyzeCreatePipeline(AST::CreatePipelineStatement& stmt);
+    void analyzeBatchAI(AST::BatchAIStatement& stmt);
+    void analyzeCreateOrReplaceModel(AST::CreateOrReplaceModelStatement& stmt);
 
     // Model-specific validation
     bool validateModelExists(const std::string& model_name, bool required = true);
