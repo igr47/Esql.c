@@ -81,6 +81,8 @@ set(CORE_SOURCES
     src/ai_analyzer.cpp
     src/analyzer.cpp
     src/ai_execution_engine.cpp
+    src/data_analysis.cpp
+    src/ai_execution_engine_final.cpp
     src/diskstorage.cpp
     src/data_extractor.cpp
     src/database_file.cpp

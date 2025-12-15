@@ -557,6 +557,7 @@ namespace AST{
 			std::string tablename;
 			bool ifNotExists=false;
 	};
+
 	class InsertStatement:public Statement{
 		public:
 			std::string table;
@@ -570,6 +571,7 @@ namespace AST{
 		public:
 			std::string tablename;
 			std::vector<ColumnDefination> columns;
+            std::unique_ptr<Statement> query;
 			bool ifNotExists=false;
 	};
 	class AlterTableStatement:public Statement{

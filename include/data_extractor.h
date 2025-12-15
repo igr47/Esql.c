@@ -109,6 +109,8 @@ public:
 
     std::unique_ptr<DataCursor> create_cursor(const std::string& db_name,const std::string& table_name,const std::vector<std::string>& columns = {});
 
+    Datum convert_string_to_datum_wrapper(const std::string& value) { return convert_string_to_datum(value); }
+
 private:
     fractal::DiskStorage* storage_;
 

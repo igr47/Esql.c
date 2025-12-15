@@ -13,9 +13,12 @@
 #include <string>
 #include <set>
 
+class AIExecutionEngineFinal;
+
 class ExecutionEngine {
 public:
     explicit ExecutionEngine(Database& db, fractal::DiskStorage& storage);
+    ~ExecutionEngine();
 
     struct ResultSet {
         std::vector<std::string> columns;
@@ -34,11 +37,24 @@ public:
     void rollbackTransaction();
     bool inTransaction() const;
 
+    // Getter methods to be used in the ai execution engine
+    Database& accessDatabase() { return db; }
+    fractal::DiskStorage& accessStorage() { return storage; }
+    bool checkStringIsNumeric(const std::string& str)  { return isNumericString(str); }
+    ResultSet internalExecuteSelect(AST::SelectStatement& stmt) { return executeSelect(stmt); }
+    bool hasWindowFunctionWrapper(const AST::SelectStatement& stmt) { return hasWindowFunctions(stmt); }
+
+    // Expression evaluation for derived classes
+    bool internalEvaluateWhere(const AST::Expression* where,const std::unordered_map<std::string, std::string>& row) {
+        return evaluateWhereClause(where, row);
+    }
+
 private:
     Database& db;
     fractal::DiskStorage& storage;
     std::vector<std::unordered_map<std::string, std::string>> currentBatch;
     std::set<std::vector<std::string>> currentBatchPrimaryKeys;
+    std::unique_ptr<AIExecutionEngineFinal> ai_engine_;
 
     // Forward declarations for all execution methods
     // (Implementation will be in separate .cpp files)
@@ -56,6 +72,10 @@ private:
     ResultSet executeCreateTable(AST::CreateTableStatement& stmt);
     ResultSet executeDropTable(AST::DropStatement& stmt);
     ResultSet executeAlterTable(AST::AlterTableStatement& stmt);
+
+    // AI Checking method
+    bool isAIStatement(AST::Statement* stmt) const;
+    bool hasAIFunctions(AST::SelectStatement* stmt) const;
 
     /**
     * Methods to process csv files.
