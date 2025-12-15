@@ -558,6 +558,17 @@ namespace AST{
 			bool ifNotExists=false;
 	};
 
+    class LoadDataStatement : public Statement {
+        public:
+            std::string table;
+            std::string filename;
+            std::vector<std::string> columns;
+            bool hasHeader = false;
+            char delimiter = ',';
+            std::string fileType = "csv";
+
+    };
+
 	class InsertStatement:public Statement{
 		public:
 			std::string table;
@@ -755,5 +766,8 @@ class Parse{
 		std::unique_ptr<AST::Expression> parseLiteral();
 		int getPrecedence(Token::Type type);
 		bool isBinaryOperator(Token::Type type);
+
+        // ************************* LOADING DATA FROM FILE INTO table*****************
+        std::unique_ptr<AST::LoadDataStatement> parseLoadDataStatement();
 };
 #endif

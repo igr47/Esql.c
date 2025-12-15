@@ -77,6 +77,9 @@ private:
     bool isAIStatement(AST::Statement* stmt) const;
     bool hasAIFunctions(AST::SelectStatement* stmt) const;
 
+    // Method to extract data from csv files and insert them in the database as specified
+    ResultSet executeLoadData(AST::LoadDataStatement& stmt);
+
     /**
     * Methods to process csv files.
     * Processes data by removing things like quotes, and converts the data into insertable format.
