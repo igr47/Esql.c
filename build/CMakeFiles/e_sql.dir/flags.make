@@ -6,5 +6,5 @@ CXX_DEFINES = -DBOOST_ATOMIC_DYN_LINK -DBOOST_ATOMIC_NO_LIB -DBOOST_FILESYSTEM_D
 
 CXX_INCLUDES = -I/home/igiris/git_projects/Esql.c/include -I/home/igiris/git_projects/Esql.c/include/shell_includes -I/home/igiris/git_projects/Esql.c/include/execution_engine_includes -I/home/igiris/git_projects/Esql.c/include/ai
 
-CXX_FLAGS = -std=gnu++17 -fopenmp=libomp
+CXX_FLAGS = -g -std=gnu++17 -fopenmp=libomp
 

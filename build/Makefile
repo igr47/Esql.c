@@ -249,6 +249,30 @@ src/ai_execution_engine.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.s
 .PHONY : src/ai_execution_engine.cpp.s
 
+src/ai_execution_engine_final.o: src/ai_execution_engine_final.cpp.o
+.PHONY : src/ai_execution_engine_final.o
+
+# target to build an object file
+src/ai_execution_engine_final.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_execution_engine_final.cpp.o
+.PHONY : src/ai_execution_engine_final.cpp.o
+
+src/ai_execution_engine_final.i: src/ai_execution_engine_final.cpp.i
+.PHONY : src/ai_execution_engine_final.i
+
+# target to preprocess a source file
+src/ai_execution_engine_final.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_execution_engine_final.cpp.i
+.PHONY : src/ai_execution_engine_final.cpp.i
+
+src/ai_execution_engine_final.s: src/ai_execution_engine_final.cpp.s
+.PHONY : src/ai_execution_engine_final.s
+
+# target to generate assembly for a file
+src/ai_execution_engine_final.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_execution_engine_final.cpp.s
+.PHONY : src/ai_execution_engine_final.cpp.s
+
 src/ai_parser.o: src/ai_parser.cpp.o
 .PHONY : src/ai_parser.o
 
@@ -320,6 +344,30 @@ src/buffer_pool.s: src/buffer_pool.cpp.s
 src/buffer_pool.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/buffer_pool.cpp.s
 .PHONY : src/buffer_pool.cpp.s
+
+src/data_analysis.o: src/data_analysis.cpp.o
+.PHONY : src/data_analysis.o
+
+# target to build an object file
+src/data_analysis.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/data_analysis.cpp.o
+.PHONY : src/data_analysis.cpp.o
+
+src/data_analysis.i: src/data_analysis.cpp.i
+.PHONY : src/data_analysis.i
+
+# target to preprocess a source file
+src/data_analysis.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/data_analysis.cpp.i
+.PHONY : src/data_analysis.cpp.i
+
+src/data_analysis.s: src/data_analysis.cpp.s
+.PHONY : src/data_analysis.s
+
+# target to generate assembly for a file
+src/data_analysis.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/data_analysis.cpp.s
+.PHONY : src/data_analysis.cpp.s
 
 src/data_extractor.o: src/data_extractor.cpp.o
 .PHONY : src/data_extractor.o
@@ -1209,6 +1257,9 @@ help:
 	@echo "... src/ai_execution_engine.o"
 	@echo "... src/ai_execution_engine.i"
 	@echo "... src/ai_execution_engine.s"
+	@echo "... src/ai_execution_engine_final.o"
+	@echo "... src/ai_execution_engine_final.i"
+	@echo "... src/ai_execution_engine_final.s"
 	@echo "... src/ai_parser.o"
 	@echo "... src/ai_parser.i"
 	@echo "... src/ai_parser.s"
@@ -1218,6 +1269,9 @@ help:
 	@echo "... src/buffer_pool.o"
 	@echo "... src/buffer_pool.i"
 	@echo "... src/buffer_pool.s"
+	@echo "... src/data_analysis.o"
+	@echo "... src/data_analysis.i"
+	@echo "... src/data_analysis.s"
 	@echo "... src/data_extractor.o"
 	@echo "... src/data_extractor.i"
 	@echo "... src/data_extractor.s"

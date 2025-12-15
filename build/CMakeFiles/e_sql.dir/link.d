@@ -9,6 +9,8 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o \
   CMakeFiles/e_sql.dir/src/analyzer.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.o \
+  CMakeFiles/e_sql.dir/src/data_analysis.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_execution_engine_final.cpp.o \
   CMakeFiles/e_sql.dir/src/diskstorage.cpp.o \
   CMakeFiles/e_sql.dir/src/data_extractor.cpp.o \
   CMakeFiles/e_sql.dir/src/database_file.cpp.o \
@@ -52,7 +54,7 @@ e_sql: \
   /usr/lib/x86_64-linux-gnu/libboost_system.so.1.83.0 \
   /usr/lib/x86_64-linux-gnu/libboost_program_options.so.1.83.0 \
   /lib/x86_64-linux-gnu/libomp.so \
-  /lib/x86_64-linux-gnu/libpthread.a \
+  /usr/lib/x86_64-linux-gnu/libpthread.a \
   /usr/lib/x86_64-linux-gnu/libboost_atomic.so.1.83.0 \
   /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so \
   /lib/x86_64-linux-gnu/libm.so \
@@ -102,6 +104,10 @@ CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o:
 CMakeFiles/e_sql.dir/src/analyzer.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_execution_engine.cpp.o:
+
+CMakeFiles/e_sql.dir/src/data_analysis.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_execution_engine_final.cpp.o:
 
 CMakeFiles/e_sql.dir/src/diskstorage.cpp.o:
 
@@ -189,7 +195,7 @@ CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o:
 
 /lib/x86_64-linux-gnu/libomp.so:
 
-/lib/x86_64-linux-gnu/libpthread.a:
+/usr/lib/x86_64-linux-gnu/libpthread.a:
 
 /usr/lib/x86_64-linux-gnu/libboost_atomic.so.1.83.0:
 
