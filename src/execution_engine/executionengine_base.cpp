@@ -38,6 +38,8 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
         }
         else if (auto showDb = dynamic_cast<AST::ShowDatabaseStatement*>(stmt.get())) {
             return executeShow(*showDb);
+        } else if (auto load = dynamic_cast<AST::LoadDataStatement*>(stmt.get())) {
+            return executeLoadData(*load);
         }
         else if (auto showTb = dynamic_cast<AST::ShowTableStatement*>(stmt.get())) {
             return executeShowTables(*showTb);

@@ -9,10 +9,11 @@ const std::unordered_set<std::string> SyntaxHighlighter::keywords = {
     "SELECT", "INSERT", "INTO", "VALUES", "UPDATE", "SET",
     "DELETE", "CREATE", "TABLE", "DATABASE", "DROP", "ALTER", "ADD", "RENAME",
     "USE", "SHOW", "DESCRIBE", "CLEAR", "EXIT", "QUIT", "HELP",
-    "DATABASES", "BULK", "ROW", "TABLES", 
+    "DATABASES", "BULK", "ROW", "TABLES",
     "STRUCTURE", "INDEX", "VIEW", "TRUNCATE", "COMMIT", "ROLLBACK", "BEGIN",
     "TRANSACTION", "GRANT", "REVOKE", "EXPLAIN","RECURSIVE", "JOIN",
-    "LEFT", "RIGHT", "INNER", "OUTER", "CROSS", "NATURAL", "ON", "USING"
+    "LEFT", "RIGHT", "INNER", "OUTER", "CROSS", "NATURAL", "ON", "USING","LOAD",
+    "DATA","INFILE"
 };
 
 const std::unordered_set<std::string> SyntaxHighlighter::helpers = {
@@ -22,7 +23,7 @@ const std::unordered_set<std::string> SyntaxHighlighter::helpers = {
 
 const std::unordered_set<std::string> SyntaxHighlighter::datatypes = {
     "INT", "INTEGER", "FLOAT", "DOUBLE", "REAL", "DECIMAL", "NUMERIC",
-    "TEXT", "STRING", "CHAR", "VARCHAR", "BOOL", "BOOLEAN", "DATE", 
+    "TEXT", "STRING", "CHAR", "VARCHAR", "BOOL", "BOOLEAN", "DATE",
     "DATETIME", "TIMESTAMP", "TIME", "BLOB", "UUID", "JSON", "ARRAY"
 };
 
@@ -42,7 +43,7 @@ const std::unordered_set<std::string> SyntaxHighlighter::conditionals = {
 const std::unordered_set<std::string> SyntaxHighlighter::aggregate_functions = {
     "COUNT", "SUM", "AVG", "MIN", "MAX", "STDDEV", "VARIANCE",
     "GROUP_CONCAT", "STRING_AGG", "ARRAY_AGG", "JSON_AGG","ASC","DESC",
-     "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE","LAG", "LEAD", "FIRST_VALUE", 
+     "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE","LAG", "LEAD", "FIRST_VALUE",
      "LAST_VALUE","OVER", "PARTITION", "WITHIN","PERCENTILE_CONT","SUBSTR",
      "CONCANT","LENGTH"
 
@@ -59,15 +60,15 @@ std::string SyntaxHighlighter::highlight(const std::string& input) {
     if (!use_colors_ || input.empty()) {
         return input;
     }
-    
+
     std::string result;
     ParseState state;
-    
+
     for (size_t i = 0; i < input.size(); ++i) {
         char c = input[i];
-        
+
         // Handle comments
-        if (!state.in_string && !state.in_comment && i + 1 < input.size() && 
+        if (!state.in_string && !state.in_comment && i + 1 < input.size() &&
             c == '-' && input[i + 1] == '-') {
             if (!state.current_word.empty()) {
                 process_word(state.current_word, result);
@@ -82,7 +83,7 @@ std::string SyntaxHighlighter::highlight(const std::string& input) {
             i++; // Skip next '-'
             continue;
         }
-        
+
         if (state.in_comment) {
             result += apply_color(std::string(1, c), colors::GRAY);
             if (c == '\n') {
@@ -90,7 +91,7 @@ std::string SyntaxHighlighter::highlight(const std::string& input) {
             }
             continue;
         }
-        
+
         // Handle strings
         if (!state.in_comment && (c == '\'' || c == '"')) {
             if (!state.in_string) {
@@ -113,12 +114,12 @@ std::string SyntaxHighlighter::highlight(const std::string& input) {
             }
             continue;
         }
-        
+
         if (state.in_string) {
             result += apply_color(std::string(1, c), colors::MINT);
             continue;
         }
-        
+
         // Handle numbers
         if (std::isdigit(c) || (c == '-' && i + 1 < input.size() && std::isdigit(input[i + 1]))) {
             if (!state.current_word.empty()) {
@@ -128,22 +129,22 @@ std::string SyntaxHighlighter::highlight(const std::string& input) {
             state.current_number += c;
             continue;
         }
-        
+
         // Check for word boundaries
-        if (std::isspace(static_cast<unsigned char>(c)) || 
-            operators.count(std::string(1, c)) || 
+        if (std::isspace(static_cast<unsigned char>(c)) ||
+            operators.count(std::string(1, c)) ||
             c == ',' || c == ';' || c == '(' || c == ')') {
-            
+
             if (!state.current_word.empty()) {
                 process_word(state.current_word, result);
                 state.current_word.clear();
             }
-            
+
             if (!state.current_number.empty()) {
                 result += apply_color(state.current_number, colors::BLUE);
                 state.current_number.clear();
             }
-            
+
             // Colorize operators
             if (operators.count(std::string(1, c))) {
                 result += apply_color(std::string(1, c), colors::GRAY);
@@ -152,29 +153,29 @@ std::string SyntaxHighlighter::highlight(const std::string& input) {
             }
             continue;
         }
-        
+
         state.current_word += c;
     }
-    
+
     // Process any remaining tokens
     if (!state.current_word.empty()) {
         process_word(state.current_word, result);
     }
-    
+
     if (!state.current_number.empty()) {
         result += apply_color(state.current_number, colors::BLUE);
     }
-    
+
     return result;
 }
 
 void SyntaxHighlighter::process_word(const std::string& word, std::string& result) {
     std::string upper_word = word;
     std::transform(upper_word.begin(), upper_word.end(), upper_word.begin(), ::toupper);
-    
+
     if (keywords.find(upper_word) != keywords.end()) {
         result += apply_color(word, colors::MAGENTA);
-    } 
+    }
     else if (datatypes.find(upper_word) != datatypes.end()) {
         result += apply_color(word, colors::BOLD_BLUE);
     }

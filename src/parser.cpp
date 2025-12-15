@@ -60,6 +60,8 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 		}
 	}else if(match(Token::Type::USE)){
 		return parseUseStatement();
+    } else if (match(Token::Type::LOAD)) {
+        return parseLoadDataStatement();
 	}else if(match(Token::Type::SHOW)){
 		advance();
 		if(match(Token::Type::DATABASES)){
@@ -367,6 +369,96 @@ std::unique_ptr<AST::SelectStatement> Parse::parseSelectStatement(){
 	}
 	return stmt;
 }
+
+std::unique_ptr<AST::LoadDataStatement> Parse::parseLoadDataStatement() {
+    auto stmt = std::make_unique<AST::LoadDataStatement>();
+
+    // Parse LOAD DATA
+    consume(Token::Type::LOAD);
+    consume(Token::Type::DATA);
+
+    // Optional LOCAL keyword
+    if (match(Token::Type::LOCAL)) {
+        consume(Token::Type::LOCAL);
+    }
+
+    // Parse INFILE
+    consume(Token::Type::INFILE);
+
+    // Parse filename
+    stmt->filename = currentToken.lexeme;
+    // Remove quotes if present
+    if (stmt->filename.size() >= 2 &&
+        ((stmt->filename[0] == '\'' && stmt->filename.back() == '\'') ||
+         (stmt->filename[0] == '"' && stmt->filename.back() == '"'))) {
+        stmt->filename = stmt->filename.substr(1, stmt->filename.size() - 2);
+    }
+    consume(currentToken.type);
+
+    // Parse INTO TABLE
+    consume(Token::Type::INTO);
+    consume(Token::Type::TABLE);
+
+    // Parse table name
+    stmt->table = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    // Parse optional column list
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+        do {
+            if (match(Token::Type::COMMA)) {
+                consume(Token::Type::COMMA);
+            }
+            stmt->columns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
+        } while (match(Token::Type::COMMA));
+        consume(Token::Type::R_PAREN);
+    }
+
+        // Parse optional file options
+    while (matchAny({Token::Type::HEADER, Token::Type::DELIMITER, Token::Type::TYPE})) {
+        if (match(Token::Type::HEADER)) {
+            consume(Token::Type::HEADER);
+            stmt->hasHeader = true;
+        } else if (match(Token::Type::DELIMITER)) {
+            consume(Token::Type::DELIMITER);
+            if (match(Token::Type::EQUAL)) {
+                consume(Token::Type::EQUAL);
+            }
+            if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                std::string delim = currentToken.lexeme;
+                if (delim.size() >= 2 &&
+                    ((delim[0] == '\'' && delim.back() == '\'') ||
+                     (delim[0] == '"' && delim.back() == '"'))) {
+                    delim = delim.substr(1, delim.size() - 2);
+                }
+                if (!delim.empty()) {
+                    stmt->delimiter = delim[0];
+                }
+                consume(currentToken.type);
+            }
+        } else if (match(Token::Type::TYPE)) {
+            consume(Token::Type::TYPE);
+            if (match(Token::Type::EQUAL)) {
+                consume(Token::Type::EQUAL);
+            }
+            if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                stmt->fileType = currentToken.lexeme;
+                if (stmt->fileType.size() >= 2 &&
+                    ((stmt->fileType[0] == '\'' && stmt->fileType.back() == '\'') ||
+                     (stmt->fileType[0] == '"' && stmt->fileType.back() == '"'))) {
+                    stmt->fileType = stmt->fileType.substr(1, stmt->fileType.size() - 2);
+                }
+                consume(currentToken.type);
+            }
+        }
+    }
+
+        return stmt;
+}
+
+
 std::unique_ptr<AST::UpdateStatement> Parse::parseUpdateStatement() {
     auto stmt = std::make_unique<AST::UpdateStatement>();
 

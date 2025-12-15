@@ -12,6 +12,9 @@ class Token{
             // Conditionals
             CASE,WHEN,THEN,ELSE,END,ROUND,LOWER,UPPER,SUBSTRING,LIKE,
 
+            // File oerations
+            LOAD,INFILE,LOCAL,DELIMITER,HEADER,
+
             // Window Functions
             ROW_NUMBER, RANK, DENSE_RANK, NTILE,LAG, LEAD, FIRST_VALUE, LAST_VALUE,OVER, PARTITION, WITHIN,
 

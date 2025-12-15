@@ -135,7 +135,13 @@ void Lexer::initializeKeyWords(){
         {"SUBSTR", Token::Type::SUBSTR},
         {"CONCAT", Token::Type::CONCAT},
         {"LENGTH", Token::Type::LENGTH},
-        {"UPPER", Token::Type::UPPER}
+        {"UPPER", Token::Type::UPPER},
+        {"LOAD", Token::Type::LOAD},
+        {"DATA", Token::Type::DATA},
+        {"INFILE", Token::Type::INFILE},
+        {"LOCAL", Token::Type::LOCAL},
+        {"HEADER", Token::Type::HEADER},
+        {"DELIMITER", Token::Type::DELIMITER}
 	};
 }
 
@@ -190,23 +196,23 @@ Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
     char quote_char = input[position];
     position++;
     column++;
-    
+
     std::string value;
     bool escape_next = false;
-    
+
     while (position < input.length()) {
         char current = input[position];
-        
+
         if (!escape_next && current == quote_char) {
             // Found closing quote
             position++;
             column++;
-            Token::Type type = (quote_char == '\'') ? 
-                Token::Type::STRING_LITERAL : 
+            Token::Type type = (quote_char == '\'') ?
+                Token::Type::STRING_LITERAL :
                 Token::Type::DOUBLE_QUOTED_STRING;
             return Token(type, value, tokenline, tokencolumn);
         }
-        
+
         if (escape_next) {
             switch (current) {
                 case 'n': value += '\n'; break;
@@ -221,14 +227,14 @@ Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
                     break;
             }
             escape_next = false;
-        } 
+        }
         else if (current == '\\') {
             escape_next = true;
-        } 
+        }
         else {
             value += current;
         }
-        
+
         position++;
         if (current == '\n') {
             line++;
@@ -237,7 +243,7 @@ Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
             column++;
         }
     }
-    
+
     // If we get here, the string was unterminated
     return Token(Token::Type::ERROR, "Unterminated string", tokenline, tokencolumn);
 }
@@ -277,13 +283,13 @@ Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
 			position++; column++;
 			return Token(Token::Type::COMMA,",",tokenline,tokencolumn);
 		case '(':
-			position++; column++;                                                                   
+			position++; column++;
 			return Token(Token::Type::L_PAREN,"(",tokenline,tokencolumn);
 		case ')':
-			position++; column++;                                                                   
+			position++; column++;
 			return Token(Token::Type::R_PAREN,")",tokenline,tokencolumn);
 		case ';':
-			position++; column++; 
+			position++; column++;
 			return Token(Token::Type::SEMICOLON,";",tokenline,tokencolumn);
 		case ':':
 			position++; column++;

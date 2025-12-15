@@ -39,6 +39,8 @@ void SematicAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt){
 			    analyzeBulkUpdate(*bulkUpdate);
 		    }else if (auto bulkDelete = dynamic_cast<AST::BulkDeleteStatement*>(stmt.get())) {
 			    analyzeBulkDelete(*bulkDelete);
+            }else if (auto load = dynamic_cast<AST::LoadDataStatement*>(stmt.get())) {
+                analyzeLoadData(*load);
 		    }else if (isAIStatement(stmt.get())) {
                 ai_analyzer_->analyze(stmt);
             }
@@ -1840,7 +1842,47 @@ void SematicAnalyzer::analyzeBulkDelete(AST::BulkDeleteStatement& bulkDeleteStmt
     }
 }
 
+void SematicAnalyzer::analyzeLoadData(AST::LoadDataStatement& loadStmt) {
+    // Check if database is selected
+    ensureDatabaseSelected();
 
+    // Check if table exists
+    currentTable = storage.getTable(db.currentDatabase(), loadStmt.table);
+    if (!currentTable) {
+        throw SematicError("Table does not exist: " + loadStmt.table);
+    }
+
+    // Check if file type is supported
+    if (loadStmt.fileType != "csv") {
+        throw SematicError("Unsupported file type: " + loadStmt.fileType + ". Only CSV is supported.");
+    }
+
+    // Validate specified columns if any
+    if (!loadStmt.columns.empty()) {
+        for (const std::string& colName : loadStmt.columns) {
+            auto* column = findColumn(colName);
+            if (!column) {
+                throw SematicError("Unknown column: " + colName);
+            }
+
+            // Check if user is trying to load into an auto-generated column
+            if (column->autoIncreament) {
+                throw SematicError("Cannot load data into AUTO_INCREMENT column '" + colName + "'");
+            }
+            if (column->generateDateTime) {
+                throw SematicError("Cannot load data into GENERATE_DATE_TIME column '" + colName + "'");
+            }
+            if (column->generateDate) {
+                throw SematicError("Cannot load data into GENERATE_DATE column '" + colName + "'");
+            }
+            if (column->generateUUID) {
+                throw SematicError("Cannot load data into GENERATE_UUID column '" + colName + "'");
+            }
+        }
+    }
+
+    // File existence and format validation will happen in the execution engine
+}
 
 
 
