@@ -306,6 +306,7 @@ private:
     ResultSet executeWithCTE(AST::SelectStatement& stmt);
     std::string formatStatisticalValue(double value);
     std::vector<double> extractNumericValues(const std::vector<std::unordered_map<std::string, std::string>>& group,const AST::Expression* expr,ExecutionEngine* engine);
+    void handleAutoIncreamentForBulkLoad(std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table);
 };
 
 #endif

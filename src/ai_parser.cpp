@@ -437,8 +437,12 @@ std::unique_ptr<AST::PredictStatement> AIParser::parsePredict() {
 std::unique_ptr<AST::ShowModelsStatement> AIParser::parseShowModels() {
     auto stmt = std::make_unique<AST::ShowModelsStatement>();
 
-    base_parser_.consumeToken(Token::Type::SHOW);
-    base_parser_.consumeToken(Token::Type::MODELS);
+    if (base_parser_.checkMatch(Token::Type::SHOW_MODELS)) {
+        base_parser_.consumeToken(Token::Type::SHOW_MODELS);
+    } else {
+        base_parser_.consumeToken(Token::Type::SHOW);
+        base_parser_.consumeToken(Token::Type::MODELS);
+    }
 
     // Optional LIKE pattern
     if (base_parser_.checkMatch(Token::Type::LIKE)) {

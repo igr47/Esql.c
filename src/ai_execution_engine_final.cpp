@@ -55,12 +55,6 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
     }
 
     try {
-        // Try to handle as AI statement first
-        if (auto ai_stmt = dynamic_cast<AST::AIStatement*>(stmt.get())) {
-            return ai_engine_->executeAIStatement(std::move(stmt));
-        }
-
-        // Check for CREATE TABLE AS SELECT with AI functions
         if (auto create_table = dynamic_cast<AST::CreateTableStatement*>(stmt.get())) {
             // Check if this is a CREATE TABLE AS SELECT with AI functions
             if (create_table->query && dynamic_cast<AST::SelectStatement*>(create_table->query.get())) {
@@ -70,17 +64,15 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
                 }
             }
         }
-
         // Check for SELECT with AI functions
-        if (auto select_stmt = dynamic_cast<AST::SelectStatement*>(stmt.get())) {
+        else if (auto select_stmt = dynamic_cast<AST::SelectStatement*>(stmt.get())) {
             auto ai_functions = extractAIFunctionsFromSelect(*select_stmt);
             if (!ai_functions.empty()) {
                 return executeSelectWithAIFunctions(*select_stmt);
             }
         }
-
         // Check for specific AI statement types
-        if (auto create_model = dynamic_cast<AST::CreateModelStatement*>(stmt.get())) {
+        else if (auto create_model = dynamic_cast<AST::CreateModelStatement*>(stmt.get())) {
             return executeCreateModel(*create_model);
         } else if (auto create_or_replace = dynamic_cast<AST::CreateOrReplaceModelStatement*>(stmt.get())) {
             return executeCreateOrReplaceModel(*create_or_replace);
@@ -92,6 +84,8 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
             return executeCreatePipeline(*create_pipeline);
         } else if (auto batch_ai = dynamic_cast<AST::BatchAIStatement*>(stmt.get())) {
             return executeBatchAI(*batch_ai);
+        } else if (auto* ai_stmt = dynamic_cast<AST::AIStatement*>(stmt.get())) {
+            return ai_engine_->executeAIStatement(std::move(stmt));
         }
 
         // Fall back to base execution engine
