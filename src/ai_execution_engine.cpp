@@ -37,7 +37,7 @@ ExecutionEngine::ResultSet AIExecutionEngine::executeAIStatement(std::unique_ptr
         return executeFeatureImportance(*importance_stmt);
     }
 
-    throw std::runtime_error("Unknown AI statement type");
+    //throw std::runtime_error("Unknown AI statement type");
 }
 
 ExecutionEngine::ResultSet AIExecutionEngine::executeTrainModel(AST::TrainModelStatement& stmt) {

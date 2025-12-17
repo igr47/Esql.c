@@ -644,7 +644,7 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
 }
 
 
-ExecutionEngine::ResultSet ExecutionEngine::executeLoadData(AST::LoadDataStatement& stmt) {
+/*ExecutionEngine::ResultSet ExecutionEngine::executeLoadData(AST::LoadDataStatement& stmt) {
     auto table = storage.getTable(db.currentDatabase(), stmt.table);
     if (!table) {
         throw std::runtime_error("Table not found: " + stmt.table);
@@ -846,5 +846,236 @@ ExecutionEngine::ResultSet ExecutionEngine::executeLoadData(AST::LoadDataStateme
             }
         }
         throw;
+    }
+}*/
+
+ExecutionEngine::ResultSet ExecutionEngine::executeLoadData(AST::LoadDataStatement& stmt) {
+    auto table = storage.getTable(db.currentDatabase(), stmt.table);
+    if (!table) {
+        throw std::runtime_error("Table not found: " + stmt.table);
+    }
+
+    std::ifstream dataFile(stmt.filename);
+    if (!dataFile.is_open()) {
+        throw std::runtime_error("Cannot open data file: " + stmt.filename +
+                               ". Make sure the file exists and is readable.");
+    }
+
+    int inserted_count = 0;
+    int skipped_count = 0;
+    bool wasInTransaction = inTransaction();
+
+    if (!wasInTransaction) {
+        beginTransaction();
+    }
+
+    try {
+        std::string line;
+        int lineNumber = 0;
+        std::vector<std::string> fileHeaders;
+        std::vector<int> columnMap;
+
+        // Read and process header if present
+        if (stmt.hasHeader) {
+            if (std::getline(dataFile, line)) {
+                lineNumber++;
+                if (!line.empty() && line.back() == '\r') {
+                    line.pop_back(); // Remove carriage return
+                }
+                fileHeaders = parseCSVLineAdvanced(line, stmt.delimiter);
+
+                // Create mapping from file columns to table columns
+                if (stmt.columns.empty()) {
+                    // Use file headers to map to table columns
+                    columnMap = mapColumns(fileHeaders, table, true);
+                } else {
+                    // Use specified column order
+                    columnMap.resize(stmt.columns.size());
+                    for (size_t i = 0; i < stmt.columns.size(); i++) {
+                        const std::string& colName = stmt.columns[i];
+                        bool found = false;
+                        for (size_t j = 0; j < table->columns.size(); j++) {
+                            if (table->columns[j].name == colName) {
+                                columnMap[i] = j;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            throw std::runtime_error("Specified column '" + colName +
+                                                   "' not found in table '" + stmt.table + "'");
+                        }
+                    }
+                }
+            }
+        } else {
+            // No header - create mapping based on order
+            if (stmt.columns.empty()) {
+                // Map file columns directly to table columns in order
+                columnMap.resize(table->columns.size());
+                for (size_t i = 0; i < table->columns.size(); i++) {
+                    columnMap[i] = i;
+                }
+            } else {
+                // Use specified column order
+                columnMap.resize(stmt.columns.size());
+                for (size_t i = 0; i < stmt.columns.size(); i++) {
+                    const std::string& colName = stmt.columns[i];
+                    bool found = false;
+                    for (size_t j = 0; j < table->columns.size(); j++) {
+                        if (table->columns[j].name == colName) {
+                            columnMap[i] = j;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        throw std::runtime_error("Specified column '" + colName +
+                                               "' not found in table '" + stmt.table + "'");
+                    }
+                }
+            }
+        }
+
+        // Collect all rows for bulk load
+        std::vector<std::unordered_map<std::string, std::string>> all_rows;
+
+        // Read and process data rows
+        while (std::getline(dataFile, line)) {
+            lineNumber++;
+
+            // Skip empty lines
+            if (line.empty() || std::all_of(line.begin(), line.end(), ::isspace)) {
+                continue;
+            }
+
+            // Remove carriage return if present
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+
+            std::vector<std::string> fileValues;
+            try {
+                fileValues = parseCSVLineAdvanced(line, stmt.delimiter);
+            } catch (const std::exception& e) {
+                throw std::runtime_error("Line " + std::to_string(lineNumber) +
+                                       ": Error parsing CSV: " + std::string(e.what()));
+            }
+
+            // Build row from file values
+            std::unordered_map<std::string, std::string> row;
+            bool skipRow = false;
+
+            for (size_t fileIdx = 0; fileIdx < fileValues.size(); fileIdx++) {
+                if (fileIdx < columnMap.size() && columnMap[fileIdx] >= 0) {
+                    int tableIdx = columnMap[fileIdx];
+                    if (tableIdx < static_cast<int>(table->columns.size())) {
+                        const auto& column = table->columns[tableIdx];
+
+                        // Skip auto-generated columns
+                        if (column.autoIncreament || column.generateDate ||
+                            column.generateDateTime || column.generateUUID) {
+                            continue;
+                        }
+
+                        try {
+                            std::string processedValue = processCSVValue(fileValues[fileIdx], column);
+                            row[column.name] = processedValue;
+                        } catch (const std::exception& e) {
+                            std::cerr << "Warning: Line " << lineNumber
+                                     << ", Column '" << column.name
+                                     << "': " << e.what()
+                                     << ". Skipping row." << std::endl;
+                            skipRow = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (skipRow) {
+                skipped_count++;
+                continue;
+            }
+
+            // Apply default values for columns not in file
+            applyDefaultValues(row, table);
+
+            // Apply auto-generated values
+            applyGeneratedValues(row, table);
+
+            // Handle auto-increment - note: for bulk load, auto-increment is handled differently
+            handleAutoIncreamentForBulkLoad(row, table);
+
+            try {
+                // Validate against schema
+                validateRowAgainstSchema(row, table);
+
+                // Add to collection instead of inserting immediately
+                all_rows.push_back(row);
+                inserted_count++;
+
+                // Show progress for large files
+                if (inserted_count % 1000 == 0) {
+                    std::cout << "Processed " << inserted_count << " rows..." << std::endl;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Line " << lineNumber
+                         << ": " << e.what()
+                         << ". Skipping row." << std::endl;
+                skipped_count++;
+            }
+        }
+
+        dataFile.close();
+
+        // Perform bulk load if we have rows
+        if (!all_rows.empty()) {
+            try {
+                // Use bulk load instead of individual inserts
+                storage.bulkInsert(db.currentDatabase(), stmt.table, all_rows);
+
+                std::cout << "Bulk loaded " << all_rows.size() << " rows into table '" << stmt.table << "'" << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "Error during bulk load: " << e.what() << std::endl;
+                throw;
+            }
+        }
+
+        if (!wasInTransaction) {
+            commitTransaction();
+        }
+
+        std::string message = std::to_string(inserted_count) + " row(s) loaded from file '" +
+                             stmt.filename + "' into '" + stmt.table + "'";
+        if (skipped_count > 0) {
+            message += ", " + std::to_string(skipped_count) + " row(s) skipped due to errors";
+        }
+
+        return ResultSet({"Status", {{message}}});
+
+    } catch (const std::exception& e) {
+        dataFile.close();
+
+        if (!wasInTransaction && inTransaction()) {
+            try {
+                rollbackTransaction();
+            } catch (const std::exception& rollback_error) {
+                std::cerr << "Warning: Failed to rollback transaction: " << rollback_error.what() << std::endl;
+            }
+        }
+        throw;
+    }
+}
+
+void ExecutionEngine::handleAutoIncreamentForBulkLoad(std::unordered_map<std::string, std::string>& row, const DatabaseSchema::Table* table) {
+    for (const auto& column : table->columns) {
+        if (column.autoIncreament) {
+            // For bulk load, we don't assign IDs here - the tree will handle it
+            // Just ensure it's not in the row if it shouldn't be there
+            if (row.find(column.name) != row.end()) {
+                throw std::runtime_error("Cannot specify AUTO_INCREMENT column '" + column.name + "' in bulk load");
+            }
+        }
     }
 }
