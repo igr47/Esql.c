@@ -1,0 +1,78 @@
+{
+  "accuracy": 0.0,
+  "created_at": 1766583910,
+  "description": "Created via CREATE MODEL statement on table: exam_score",
+  "drift_score": 0.0,
+  "features": [
+    {
+      "data_type": "float",
+      "db_column": "age",
+      "default_value": 20.47330093383789,
+      "is_categorical": false,
+      "max_value": 24.0,
+      "mean_value": 20.47330093383789,
+      "min_value": 17.0,
+      "name": "age",
+      "required": true,
+      "std_value": 2.2844064235687256,
+      "transformation": "direct"
+    },
+    {
+      "data_type": "float",
+      "db_column": "study_hours",
+      "default_value": 4.007574081420898,
+      "is_categorical": false,
+      "max_value": 7.909999847412109,
+      "mean_value": 4.007574081420898,
+      "min_value": 0.07999999821186066,
+      "name": "study_hours",
+      "required": true,
+      "std_value": 2.308260202407837,
+      "transformation": "direct"
+    },
+    {
+      "data_type": "float",
+      "db_column": "class_attendance",
+      "default_value": 70.01701354980469,
+      "is_categorical": false,
+      "max_value": 99.4000015258789,
+      "mean_value": 70.01701354980469,
+      "min_value": 40.599998474121094,
+      "name": "class_attendance",
+      "required": true,
+      "std_value": 17.281835556030273,
+      "transformation": "direct"
+    },
+    {
+      "data_type": "float",
+      "db_column": "sleep_hours",
+      "default_value": 7.008558750152588,
+      "is_categorical": false,
+      "max_value": 9.899999618530273,
+      "mean_value": 7.008558750152588,
+      "min_value": 4.099999904632568,
+      "name": "sleep_hours",
+      "required": true,
+      "std_value": 1.7320219278335571,
+      "transformation": "direct"
+    }
+  ],
+  "last_updated": 1766583910,
+  "metadata": {
+    "algorithm": "LIGHTGBM",
+    "created_via": "CREATE_MODEL",
+    "source_table": "exam_score",
+    "target_column": "exam_score",
+    "training_samples": "20000"
+  },
+  "model_id": "student_score_model",
+  "problem_type": "regression",
+  "stats": {
+    "avg_confidence": 0.0,
+    "avg_inference_time_us": 72057594037927940,
+    "failed_predictions": 0,
+    "total_predictions": 0
+  },
+  "target_column": "exam_score",
+  "training_samples": 20000
+}

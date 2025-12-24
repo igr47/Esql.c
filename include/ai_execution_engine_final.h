@@ -110,6 +110,7 @@ private:
     // Enhanced helper methods
     std::shared_ptr<esql::ai::AdaptiveLightGBMModel> getOrLoadModel(const std::string& model_name);
     bool ensureModelLoaded(const std::string& model_name);
+    bool saveModelToDisk(const std::string& model_name);
 
     ExecutionEngine::ResultSet executeAIFunctionInSelect(const AST::AIFunctionCall& func_call,const std::vector<std::unordered_map<std::string, std::string>>& data);
     ExecutionEngine::ResultSet executeAIScalarFunction(const AST::AIScalarExpression& expr,const std::vector<std::unordered_map<std::string, std::string>>& data);

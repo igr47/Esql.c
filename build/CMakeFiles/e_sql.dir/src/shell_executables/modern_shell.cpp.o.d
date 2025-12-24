@@ -350,6 +350,7 @@ CMakeFiles/e_sql.dir/src/shell_executables/modern_shell.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/numeric \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_numeric.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/pstl/glue_numeric_defs.h \
+  /home/igiris/git_projects/Esql.c/include/execution_engine_includes/structs.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/set \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_set.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_multiset.h \

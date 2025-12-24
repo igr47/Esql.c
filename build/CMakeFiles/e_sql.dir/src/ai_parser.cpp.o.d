@@ -219,6 +219,7 @@ CMakeFiles/e_sql.dir/src/ai_parser.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_tree.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_set.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_multiset.h \
+  /home/igiris/git_projects/Esql.c/include/ai/algorithm_registry.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/sstream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/istream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/ios \

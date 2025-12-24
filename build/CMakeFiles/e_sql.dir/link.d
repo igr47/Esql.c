@@ -45,6 +45,7 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o \
   CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o \
@@ -176,6 +177,8 @@ CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o:
 CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o:
 
 CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o:
 

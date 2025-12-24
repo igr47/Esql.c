@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/igiris/git_projects/Esql.c/src/ai_analyzer.cpp" "CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o.d"
+  "/home/igiris/git_projects/Esql.c/src/ai_executables/algorithm_registry.cpp" "CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/ai_executables/lightgbm_model.cpp" "CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/ai_executables/model_registry.cpp" "CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o.d"
   "/home/igiris/git_projects/Esql.c/src/ai_executables/schema_discovery.cpp" "CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o" "gcc" "CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o.d"

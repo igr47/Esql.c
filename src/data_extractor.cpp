@@ -1,3 +1,4 @@
+
 #include "data_extractor.h"
 #include "datum.h"
 #include <iostream>
@@ -9,7 +10,6 @@
 #include <cstdlib>
 
 namespace esql {
-//namespace storage {
 
 // ============================================
 // TrainingData Implementation
@@ -285,8 +285,177 @@ std::vector<std::string> DataExtractor::get_all_columns(const std::string& db_na
     return columns;
 }
 
-DataExtractor::TrainingData
-DataExtractor::extract_training_data(const std::string& db_name,
+DataExtractor::TrainingData DataExtractor::extract_training_data(const std::string& db_name,const std::string& table_name,
+                                    const std::string& label_column,
+                                    const std::vector<std::string>& feature_columns,
+                                    const std::string& where_clause,
+                                    float test_split) {
+
+    TrainingData result;
+    result.label_name = label_column;
+    result.feature_names = feature_columns;
+
+    // Initialize counters
+    result.total_samples = 0;
+    result.valid_samples = 0;
+
+    std::cout << "[DataExtractor] DEBUG: Extracting training data from " << table_name
+              << " with label: " << label_column
+              << " and " << feature_columns.size() << " features" << std::endl;
+
+    // First, extract all data without filtering by label null check
+    auto rows = extract_table_data(db_name, table_name, {}, where_clause, 0, 0);
+    result.total_samples = rows.size();
+
+    if (rows.empty()) {
+        std::cout << "[DataExtractor] No data found for training" << std::endl;
+        return result;
+    }
+
+    std::cout << "[DataExtractor] Found " << rows.size() << " total rows" << std::endl;
+
+    // Pre-allocate vectors with estimated size
+    result.features.reserve(rows.size());
+    result.labels.reserve(rows.size());
+
+    // Process each row
+    size_t row_count = 0;
+    size_t skipped_count = 0;
+
+    for (const auto& row : rows) {
+        row_count++;
+
+        try {
+            // Check if label column exists in this row
+            auto label_it = row.find(label_column);
+            if (label_it == row.end()) {
+                skipped_count++;
+                if (skipped_count <= 5) { // Log first few skips only
+                    std::cout << "[DataExtractor] WARNING: Label column '" << label_column
+                              << "' not found in row " << row_count << std::endl;
+                }
+                continue;
+            }
+
+            // Check if label is null
+            if (label_it->second.is_null()) {
+                skipped_count++;
+                continue;
+            }
+
+            float label = 0.0f;
+            const Datum& label_datum = label_it->second;
+
+            // Convert label to float
+            if (label_datum.is_integer()) {
+                label = static_cast<float>(label_datum.as_int());
+            } else if (label_datum.is_float() || label_datum.is_double()) {
+                label = label_datum.as_float();
+            } else if (label_datum.is_boolean()) {
+                label = label_datum.as_bool() ? 1.0f : 0.0f;
+            } else if (label_datum.is_string()) {
+                // Try to parse string to float
+                try {
+                    const std::string& str_val = label_datum.as_string();
+                    label = std::stof(str_val);
+                } catch (const std::exception& e) {
+                    skipped_count++;
+                    if (skipped_count <= 5) {
+                        std::cout << "[DataExtractor] WARNING: Could not convert string label '"
+                                  << label_datum.as_string() << "' to float" << std::endl;
+                    }
+                    continue;
+                }
+            } else {
+                skipped_count++;
+                if (skipped_count <= 5) {
+                    std::cout << "[DataExtractor] WARNING: Unsupported label type: "
+                              << label_datum.type_name() << std::endl;
+                }
+                continue;
+            }
+
+            // Extract features
+            std::vector<float> features;
+            features.reserve(feature_columns.size());
+            bool features_valid = true;
+
+            for (const auto& feature_col : feature_columns) {
+                auto feat_it = row.find(feature_col);
+                if (feat_it == row.end()) {
+                    // Feature column not found - use mean imputation (0.0 for now)
+                    features.push_back(0.0f);
+                    if (skipped_count <= 5) {
+                        std::cout << "[DataExtractor] WARNING: Feature column '" << feature_col
+                                  << "' not found in row " << row_count << std::endl;
+                    }
+                } else if (feat_it->second.is_null()) {
+                    // Missing feature - use 0.0
+                    features.push_back(0.0f);
+                } else {
+                    // Convert feature to float
+                    float feature_val = 0.0f;
+                    const Datum& feat_datum = feat_it->second;
+
+                    if (feat_datum.is_integer()) {
+                        feature_val = static_cast<float>(feat_datum.as_int());
+                    } else if (feat_datum.is_float() || feat_datum.is_double()) {
+                        feature_val = feat_datum.as_float();
+                    } else if (feat_datum.is_boolean()) {
+                        feature_val = feat_datum.as_bool() ? 1.0f : 0.0f;
+                    } else if (feat_datum.is_string()) {
+                        // Try to parse string to float
+                        try {
+                            const std::string& str_val = feat_datum.as_string();
+                            feature_val = std::stof(str_val);
+                        } catch (const std::exception& e) {
+                            feature_val = 0.0f; // Default value if conversion fails
+                        }
+                    } else {
+                        feature_val = 0.0f; // Default value for unsupported types
+                    }
+
+                    features.push_back(feature_val);
+                }
+            }
+
+            // Add to results
+            result.features.push_back(features);
+            result.labels.push_back(label);
+            result.valid_samples++;
+
+        } catch (const std::exception& e) {
+            skipped_count++;
+            if (skipped_count <= 5) {
+                std::cerr << "[DataExtractor] ERROR processing row " << row_count
+                          << ": " << e.what() << std::endl;
+            }
+        }
+    }
+
+    // Fix the total_samples to be the actual number of rows processed
+    result.total_samples = row_count;
+
+    std::cout << "[DataExtractor] DEBUG: Extracted " << result.valid_samples
+              << " training samples from " << result.total_samples
+              << " total rows (skipped " << skipped_count << " rows)" << std::endl;
+
+    // Debug: Show sample statistics
+    if (!result.labels.empty()) {
+        float min_label = *std::min_element(result.labels.begin(), result.labels.end());
+        float max_label = *std::max_element(result.labels.begin(), result.labels.end());
+        float sum_label = std::accumulate(result.labels.begin(), result.labels.end(), 0.0f);
+        float mean_label = sum_label / result.labels.size();
+
+        std::cout << "[DataExtractor] DEBUG: Label statistics - "
+                  << "Min: " << min_label << ", Max: " << max_label
+                  << ", Mean: " << mean_label << std::endl;
+    }
+
+    return result;
+}
+
+/*DataExtractor::TrainingData DataExtractor::extract_training_data(const std::string& db_name,
                                     const std::string& table_name,
                                     const std::string& label_column,
                                     const std::vector<std::string>& feature_columns,
@@ -297,15 +466,12 @@ DataExtractor::extract_training_data(const std::string& db_name,
     result.label_name = label_column;
     result.feature_names = feature_columns;
 
-    // Build filter: exclude null labels
-    std::string filter = where_clause;
-    if (!filter.empty()) {
-        filter += " AND ";
-    }
-    filter += label_column + " IS NOT NULL";
+    std::cout << "[DataExtractor] Extracting training data from " << table_name
+              << " with label: " << label_column << std::endl;
 
-    // Extract data
-    auto rows = extract_table_data(db_name, table_name, {}, filter, 0, 0);
+    // First, extract all data without filtering by label null check
+    // We'll handle null label filtering manually
+    auto rows = extract_table_data(db_name, table_name, {}, where_clause, 0, 0);
     result.total_samples = rows.size();
 
     if (rows.empty()) {
@@ -313,12 +479,20 @@ DataExtractor::extract_training_data(const std::string& db_name,
         return result;
     }
 
+    std::cout << "[DataExtractor] Found " << rows.size() << " total rows" << std::endl;
+
     // Process each row
     for (const auto& row : rows) {
         try {
-            // Extract label
+            // Extract label - check if column exists
             auto label_it = row.find(label_column);
-            if (label_it == row.end() || label_it->second.is_null()) {
+            if (label_it == row.end()) {
+                std::cout << "[DataExtractor] WARNING: Label column '" << label_column
+                          << "' not found in row" << std::endl;
+                continue; // Skip rows without label column
+            }
+
+            if (label_it->second.is_null()) {
                 continue; // Skip rows with null labels
             }
 
@@ -340,8 +514,17 @@ DataExtractor::extract_training_data(const std::string& db_name,
                         label = 0.0f;
                     } else {
                         // Try numeric conversion
-                        label = std::stof(str_val);
+                        try {
+                            label = std::stof(str_val);
+                        } catch (...) {
+                            std::cout << "[DataExtractor] Could not convert string label '"
+                                      << str_val << "' to float" << std::endl;
+                            continue;
+                        }
                     }
+                } else {
+                    std::cout << "[DataExtractor] Unsupported label type" << std::endl;
+                    continue;
                 }
             } catch (const std::exception& e) {
                 std::cerr << "[DataExtractor] Failed to convert label: " << e.what() << std::endl;
@@ -354,7 +537,12 @@ DataExtractor::extract_training_data(const std::string& db_name,
 
             for (const auto& feature_col : feature_columns) {
                 auto feat_it = row.find(feature_col);
-                if (feat_it == row.end() || feat_it->second.is_null()) {
+                if (feat_it == row.end()) {
+                    // Feature column not found
+                    std::cout << "[DataExtractor] WARNING: Feature column '" << feature_col
+                              << "' not found in row" << std::endl;
+                    features.push_back(0.0f); // Use default
+                } else if (feat_it->second.is_null()) {
                     // Missing feature - use 0.0 (could use mean imputation)
                     features.push_back(0.0f);
                 } else {
@@ -404,7 +592,7 @@ DataExtractor::extract_training_data(const std::string& db_name,
               << " total rows (label: " << label_column << ")" << std::endl;
 
     return result;
-}
+}*/
 
 // ============================================
 // FilterCondition Implementation
@@ -479,6 +667,10 @@ bool DataExtractor::FilterCondition::evaluate(const std::unordered_map<std::stri
                 // Exact match
                 return cell_str == pattern;
             }
+        } else if (operator_ == "IS_NOT_NULL") {
+            return !cell_value.is_null();
+        } else if (operator_ == "IS_NULL") {
+            return cell_value.is_null();
         }
     } catch (...) {
         // Comparison failed
@@ -564,5 +756,5 @@ DataExtractor::parse_simple_filter(const std::string& filter) {
     return result;
 }
 
-//} // namespace storage
 } // namespace esql
+

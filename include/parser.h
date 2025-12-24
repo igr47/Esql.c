@@ -585,6 +585,32 @@ namespace AST{
             std::unique_ptr<Statement> query;
 			bool ifNotExists=false;
 	};
+
+    class ShowStorageInfo : public Statement {
+        public:
+            std::string storageName;
+    };
+
+    class ShowBufferPoolStats : public Statement {
+        public:
+            std::string name;
+    };
+
+    class ShowIndexStats : public Statement {
+        public:
+            std::string tableName;
+    };
+
+    class ShowTableStats : public Statement {
+        public:
+            std::string tableName;
+    };
+
+    class ShowDatabaseStats : public Statement {
+        public:
+            std::string name;
+    };
+
 	class AlterTableStatement:public Statement{
 		public:
 			std::string tablename;
@@ -726,6 +752,7 @@ class Parse{
 		std::unique_ptr<AST::ShowDatabaseStatement> parseShowDatabaseStatement();
         std::unique_ptr<AST::ShowTableStructureStatement> parseShowTableStructureStatement();
         std::unique_ptr<AST::ShowDatabaseStructure> parseShowDatabaseStructureStatement();
+        std::unique_ptr<AST::ShowTableStats> parseShowTableStats();
         // ****************** END *************************************************
 		//std::unique_ptr<AST::ShowTableStatement> parseShowTableStatement();
 		std::unique_ptr<AST::GroupByClause>  parseGroupByClause();

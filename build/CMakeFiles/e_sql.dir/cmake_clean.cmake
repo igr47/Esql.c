@@ -2,6 +2,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/e_sql.dir/link.d"
   "CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o"
   "CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.o.d"
+  "CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o"
+  "CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o"
   "CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o.d"
   "CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o"

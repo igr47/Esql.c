@@ -376,6 +376,10 @@ CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o: \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/any \
   /usr/include/nlohmann/detail/macro_unscope.hpp \
   /usr/include/nlohmann/thirdparty/hedley/hedley_undef.hpp \
+  /home/igiris/git_projects/Esql.c/include/ai/algorithm_registry.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/set \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_set.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/bits/stl_multiset.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/c++/15/fstream \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../../include/x86_64-linux-gnu/c++/15/bits/c++io.h \

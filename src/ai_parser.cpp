@@ -2,6 +2,7 @@
 #include "ai_parser.h"
 #include "parser.h"
 #include "scanner.h"
+#include "ai/algorithm_registry.h"
 #include <sstream>
 #include <algorithm>
 
@@ -65,8 +66,22 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
         stmt->algorithm = base_parser_.getCurrentToken().lexeme;
 
         // Convert to uppercase for consistency
-        std::transform(stmt->algorithm.begin(), stmt->algorithm.end(),
-                      stmt->algorithm.begin(), ::toupper);
+        std::transform(stmt->algorithm.begin(), stmt->algorithm.end(),stmt->algorithm.begin(), ::toupper);
+
+        // Validate algorithm
+        auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
+        if (!algo_registry.is_algorithm_supported(stmt->algorithm)) {
+            throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Unsupported algorithm: " + stmt->algorithm + ". Supported: " +
+                           [&algo_registry]() {
+                               auto algos = algo_registry.get_supported_algorithms();
+                               std::string result;
+                               for (size_t i = 0; i < algos.size(); ++i) {
+                                   if (i > 0) result += ", ";
+                                   result += algos[i];
+                               }
+                               return result;
+                           }());
+        }
         base_parser_.consumeToken(base_parser_.getCurrentToken().type);
     } else {
         stmt-> algorithm = "LIGHTGBM";
@@ -118,7 +133,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
             base_parser_.consumeToken(base_parser_.getCurrentToken().type);
             if (base_parser_.checkMatchAny({
                 Token::Type::CLASSIFICATION, Token::Type::REGRESSION,
-                Token::Type::BINARY, Token::Type::MULTICLASS
+                Token::Type::BINARY, Token::Type::MULTICLASS, Token::Type::CLUSTERING, Token::Type::RANKING
             })) {
                 stmt->target_type = base_parser_.getCurrentToken().lexeme;
                 base_parser_.consumeToken(base_parser_.getCurrentToken().type);
@@ -128,7 +143,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
         stmt->parameters["target_column"] = target_column;
     } else if (base_parser_.checkMatchAny({
         Token::Type::CLASSIFICATION, Token::Type::REGRESSION,
-        Token::Type::CLUSTERING, Token::Type::BINARY, Token::Type::MULTICLASS
+        Token::Type::CLUSTERING, Token::Type::BINARY, Token::Type::MULTICLASS, Token::Type::RANKING
     })) {
         // Target type directly specified
         stmt->target_type = base_parser_.getCurrentToken().lexeme;

@@ -7,6 +7,7 @@
 #include "diskstorage.h"
 #include "datetime.h"
 #include "uuid.h"
+#include "structs.h"
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -66,7 +67,20 @@ private:
     ResultSet executeShowTables(AST::ShowTableStatement& stmt);
     ResultSet executeShowTableStructure(AST::ShowTableStructureStatement& stmt);
     ResultSet executeShowDatabaseStructure(AST::ShowDatabaseStructure& stmt);
+    ResultSet executeShowDatabaseStats(AST::ShowDatabaseStats& stmt);
+    ResultSet executeShowTableStats(AST::ShowTableStats& stmt);
+    ResultSet executeShowIndexStats(AST::ShowIndexStats& stmt);
+    ResultSet executeShowBufferPoolStats(AST::ShowBufferPoolStats& stmt);
+    ResultSet executeShowStorageInfo(AST::ShowStorageInfo& stmt);
     std::string getTypeString(DatabaseSchema::Column::Type type);
+
+    // Helper methods to get and calculate database and tree structure and statistcs
+    DatabaseStats getDatabaseStatistics();
+    TableStats getTableStatistics(const std::string& tableName);
+    TreeStats getTreeStatistics(const std::string& tableName);
+    BufferPoolStats getBufferPoolStatistics();
+    void analyzeTableFragmentation(const std::string& tableName);
+    void analyzeIndexEfficiency(const std::string& tableName);
 
     // Table operations
     ResultSet executeCreateTable(AST::CreateTableStatement& stmt);

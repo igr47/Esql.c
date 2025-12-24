@@ -55,6 +55,9 @@ namespace fractal {
             bool databaseExists(const std::string& dbName) const;
             bool tableExists(const std::string& dbName, const std::string& tableName) const;
             void cleanupTable(TableInfo& tableInfo);
+            fractal::BufferPool* getBufferPool();
+            fractal::DatabaseFile& getDatabaseFile(const std::string& dbName);
+            std::unique_ptr<fractal::FractalBPlusTree> getTree(const std::string& dbName, const std::string& tableName);
 
             // Table Operations
             void createTable(const std::string& dbName, const std::string& name, const std::vector<DatabaseSchema::Column>& columns);

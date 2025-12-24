@@ -153,6 +153,30 @@ src/ai_analyzer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_analyzer.cpp.s
 .PHONY : src/ai_analyzer.cpp.s
 
+src/ai_executables/algorithm_registry.o: src/ai_executables/algorithm_registry.cpp.o
+.PHONY : src/ai_executables/algorithm_registry.o
+
+# target to build an object file
+src/ai_executables/algorithm_registry.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o
+.PHONY : src/ai_executables/algorithm_registry.cpp.o
+
+src/ai_executables/algorithm_registry.i: src/ai_executables/algorithm_registry.cpp.i
+.PHONY : src/ai_executables/algorithm_registry.i
+
+# target to preprocess a source file
+src/ai_executables/algorithm_registry.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.i
+.PHONY : src/ai_executables/algorithm_registry.cpp.i
+
+src/ai_executables/algorithm_registry.s: src/ai_executables/algorithm_registry.cpp.s
+.PHONY : src/ai_executables/algorithm_registry.s
+
+# target to generate assembly for a file
+src/ai_executables/algorithm_registry.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.s
+.PHONY : src/ai_executables/algorithm_registry.cpp.s
+
 src/ai_executables/lightgbm_model.o: src/ai_executables/lightgbm_model.cpp.o
 .PHONY : src/ai_executables/lightgbm_model.o
 
@@ -1245,6 +1269,9 @@ help:
 	@echo "... src/ai_analyzer.o"
 	@echo "... src/ai_analyzer.i"
 	@echo "... src/ai_analyzer.s"
+	@echo "... src/ai_executables/algorithm_registry.o"
+	@echo "... src/ai_executables/algorithm_registry.i"
+	@echo "... src/ai_executables/algorithm_registry.s"
 	@echo "... src/ai_executables/lightgbm_model.o"
 	@echo "... src/ai_executables/lightgbm_model.i"
 	@echo "... src/ai_executables/lightgbm_model.s"

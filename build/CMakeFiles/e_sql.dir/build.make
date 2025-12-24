@@ -674,10 +674,24 @@ CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.s"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/igiris/git_projects/Esql.c/src/shell_executables/utf8_processor.cpp -o CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.s
 
+CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o: CMakeFiles/e_sql.dir/flags.make
+CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o: /home/igiris/git_projects/Esql.c/src/ai_executables/algorithm_registry.cpp
+CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_44) "Building CXX object CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o -MF CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o.d -o CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o -c /home/igiris/git_projects/Esql.c/src/ai_executables/algorithm_registry.cpp
+
+CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/igiris/git_projects/Esql.c/src/ai_executables/algorithm_registry.cpp > CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.i
+
+CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/igiris/git_projects/Esql.c/src/ai_executables/algorithm_registry.cpp -o CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.s
+
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o: /home/igiris/git_projects/Esql.c/src/ai_executables/lightgbm_model.cpp
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_44) "Building CXX object CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_45) "Building CXX object CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o -MF CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o.d -o CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o -c /home/igiris/git_projects/Esql.c/src/ai_executables/lightgbm_model.cpp
 
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.i: cmake_force
@@ -691,7 +705,7 @@ CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o: /home/igiris/git_projects/Esql.c/src/ai_executables/model_registry.cpp
 CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_45) "Building CXX object CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_46) "Building CXX object CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o -MF CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o.d -o CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o -c /home/igiris/git_projects/Esql.c/src/ai_executables/model_registry.cpp
 
 CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.i: cmake_force
@@ -705,7 +719,7 @@ CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.s: cmake_force
 CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o: CMakeFiles/e_sql.dir/flags.make
 CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o: /home/igiris/git_projects/Esql.c/src/ai_executables/schema_discovery.cpp
 CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o: CMakeFiles/e_sql.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_46) "Building CXX object CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_47) "Building CXX object CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o -MF CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o.d -o CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o -c /home/igiris/git_projects/Esql.c/src/ai_executables/schema_discovery.cpp
 
 CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.i: cmake_force
@@ -761,6 +775,7 @@ e_sql_OBJECTS = \
 "CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o" \
 "CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o" \
 "CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o" \
+"CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o" \
 "CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o" \
 "CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o" \
 "CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o"
@@ -811,6 +826,7 @@ e_sql: CMakeFiles/e_sql.dir/src/shell_executables/spell_checker.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/syntax_highlighter.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/terminal_input.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/shell_executables/utf8_processor.cpp.o
+e_sql: CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/ai_executables/lightgbm_model.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o
 e_sql: CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o
@@ -825,7 +841,7 @@ e_sql: /lib/x86_64-linux-gnu/libomp.so
 e_sql: /usr/lib/x86_64-linux-gnu/libpthread.a
 e_sql: /usr/lib/x86_64-linux-gnu/libboost_atomic.so.1.83.0
 e_sql: CMakeFiles/e_sql.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_47) "Linking CXX executable e_sql"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/igiris/git_projects/Esql.c/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_48) "Linking CXX executable e_sql"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/e_sql.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

@@ -375,25 +375,6 @@ void DatabaseFile::free_page(uint32_t page_id) {
     }
 }
 
-/*uint64_t DatabaseFile::allocate_data_block(uint32_t table_id, uint32_t size) {
-    auto it = table_data_blocks.find(table_id);
-    if (it == table_data_blocks.end()) {
-        throw std::runtime_error("Table not found for data block allocation: " + std::to_string(table_id));
-    }
-
-    uint32_t allocated = it->second.allocate_block(size);
-
-    if (allocated >= it->second.end_offset) {
-        // Extend the data region
-        extend_data_region(table_id, size * 2); // Double the size
-        allocated = it->second.allocate_block(size);
-    }
-
-    //std::cout << "DEBUG: allocate_data_block - table " << table_id
-              //<< " allocated offset " << allocated << " size " << size << std::endl;
-
-    return allocated;
-}*/
 
 void DatabaseFile::read_data_block(uint64_t offset, char* data, uint32_t size) {
     ensure_file_open();
@@ -450,23 +431,6 @@ void DatabaseFile::extend_data_region(uint32_t table_id, uint64_t additional_siz
               << " (total: " << (block_info.end_offset - block_info.start_offset) / (1024*1024) << " MB)" << std::endl;
 }
 
-/*void DatabaseFile::extend_data_region(uint32_t table_id, uint64_t additional_size) {
-    auto it = table_data_blocks.find(table_id);
-    if (it == table_data_blocks.end()) {
-        throw std::runtime_error("Table not found for data region extension: " + std::to_string(table_id));
-    }
-
-    it->second.end_offset += additional_size;
-
-    for (uint32_t i = 0; i < table_directory.num_tables; ++i) {
-        if (table_directory.entries[i].table_id == table_id) {
-            table_directory.entries[i].data_end_offset = it->second.end_offset;
-            break;
-        }
-    }
-
-    write_table_directory();
-}*/
 
 uint32_t DatabaseFile::allocate_table_page_range(uint32_t table_id) {
     // First, try to find the best available range

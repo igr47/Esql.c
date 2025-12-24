@@ -101,11 +101,56 @@ bool ModelRegistry::save_model(const std::string& name, const std::string& path)
     auto it = models_.find(name);
     if (it == models_.end()) {
         std::cerr << "[ModelRegistry] Cannot save - model not found: " << name << std::endl;
+
+        // Try to check if model exists on disk but not in memory
+        std::string disk_path = get_model_path(name);
+        if (std::filesystem::exists(disk_path)) {
+            std::cout << "[ModelRegistry] Model exists on disk but not in memory: " << name << std::endl;
+            return true; // Model already saved on disk
+        }
+
         return false;
     }
 
     std::string save_path = path.empty() ? get_model_path(name) : path;
-    return it->second->save(save_path);
+
+        // Ensure directory exists
+    std::filesystem::create_directories(std::filesystem::path(save_path).parent_path());
+
+    bool success = it->second->save(save_path);
+
+    //return it->second->save(save_path);
+    if (success) {
+        std::cout << "[ModelRegistry] Model saved to: " << save_path << std::endl;
+    } else {
+        std::cerr << "[ModelRegistry] Failed to save model: " << name << std::endl;
+        // Save at least the schema even if model can't be saved
+        save_model_schema(name, save_path + ".schema.json");
+    }
+
+    return success;
+}
+
+bool ModelRegistry::save_model_schema(const std::string& name, const std::string& schema_path) {
+    std::shared_lock lock(mutex_);
+
+    auto it = models_.find(name);
+    if (it == models_.end()) {
+        return false;
+    }
+
+    const auto& schema = it->second->get_schema();
+
+    try {
+        std::ofstream schema_file(schema_path);
+        nlohmann::json j = schema.to_json();
+        schema_file << j.dump(2);
+        std::cout << "[ModelRegistry] Schema saved to: " << schema_path << std::endl;
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "[ModelRegistry] Failed to save schema: " << e.what() << std::endl;
+        return false;
+    }
 }
 
 std::unique_ptr<AdaptiveLightGBMModel> ModelRegistry::load_model(const std::string& name, const std::string& path) {

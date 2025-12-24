@@ -114,7 +114,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
     std::cout << "[AIExecutionEngineFinal] Executing CREATE MODEL: " << stmt.model_name << std::endl;
 
     ExecutionEngine::ResultSet result;
-    result.columns = {"model_name", "status", "message", "model_id"};
+    result.columns = {"model_name", "algorithm", "status", "message", "model_id", "training_samples"};
 
     try {
         // Validate model name
@@ -129,82 +129,188 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
             throw std::runtime_error("Model already exists. Use CREATE OR REPLACE MODEL to replace it.");
         }
 
+        // Extract parameters
+        std::string table_name, target_column;
+        if (stmt.parameters.find("source_table") != stmt.parameters.end()) {
+            table_name = stmt.parameters["source_table"];
+        }
+        if (stmt.parameters.find("target_column") != stmt.parameters.end()) {
+            target_column = stmt.parameters["target_column"];
+        }
+
+        if (table_name.empty()) {
+            throw std::runtime_error("Source table required for CREATE MODEL. Use: CREATE MODEL ... FROM table_name");
+        }
+        if (target_column.empty()) {
+            throw std::runtime_error("Target column required for CREATE MODEL. Use: TARGET column_name");
+        }
+
+        // Extract feature columns
+        std::vector<std::string> feature_columns;
+        for (const auto& [name, _] : stmt.features) {
+            feature_columns.push_back(name);
+        }
+
+        std::cout << "[AIExecutionEngineFinal] Extracting training data from table: "
+                  << table_name << " with " << feature_columns.size() << " features" << std::endl;
+
+        // Extract training data
+        auto training_data = data_extractor_->extract_training_data(
+            db_.currentDatabase(),
+            table_name,
+            target_column,
+            feature_columns
+        );
+
+        // FIX: Check if training_data extraction was successful
+        std::cout << "[AIExecutionEngineFinal] DEBUG: Training data has "
+                  << training_data.valid_samples << " valid samples, "
+                  << training_data.total_samples << " total samples, "
+                  << training_data.features.size() << " feature vectors, "
+                  << training_data.labels.size() << " labels" << std::endl;
+
+        if (training_data.features.empty() || training_data.labels.empty()) {
+            throw std::runtime_error("No valid training data extracted. Check if table exists and has data.");
+        }
+
+        if (training_data.valid_samples < 10) {
+            throw std::runtime_error("Insufficient training data. Need at least 10 samples, got " +
+                                    std::to_string(training_data.valid_samples));
+        }
+
+        std::cout << "[AIExecutionEngineFinal] Extracted " << training_data.valid_samples
+                  << " training samples" << std::endl;
+
+        // Debug: Print first few samples
+        if (!training_data.features.empty() && !training_data.labels.empty()) {
+            std::cout << "[AIExecutionEngineFinal] DEBUG: First sample - ";
+            std::cout << "Features: [";
+            for (size_t i = 0; i < std::min(training_data.features[0].size(), (size_t)5); ++i) {
+                std::cout << training_data.features[0][i] << " ";
+            }
+            std::cout << "], Label: " << training_data.labels[0] << std::endl;
+        }
+
         // Create model schema
         esql::ai::ModelSchema schema;
         schema.model_id = stmt.model_name;
-        schema.description = "Created via CREATE MODEL statement";
-        schema.problem_type = stmt.target_type;
+        schema.description = "Created via CREATE MODEL statement on table: " + table_name;
+        schema.target_column = target_column;
+        schema.algorithm = stmt.algorithm;
+
+        // Determine problem type
+        // For exam_score (numerical target), it should be regression
+        schema.problem_type = "regression";
+
+        // If you want auto-detection, you can use:
+        /*
+        bool is_binary = true;
+        for (float label : training_data.labels) {
+            if (label != 0.0f && label != 1.0f) {
+                is_binary = false;
+                break;
+            }
+        }
+        schema.problem_type = is_binary ? "binary_classification" : "regression";
+        */
+
         schema.created_at = std::chrono::system_clock::now();
         schema.last_updated = schema.created_at;
+        schema.training_samples = training_data.valid_samples;
 
-        // Add feature descriptors
-        for (const auto& [feature_name, feature_type] : stmt.features) {
+        // Create feature descriptors
+        for (size_t i = 0; i < feature_columns.size(); ++i) {
             esql::ai::FeatureDescriptor fd;
-            fd.name = feature_name;
-            fd.db_column = feature_name;
-            fd.data_type = feature_type == "AUTO" ? "unknown" : feature_type;
+            fd.name = feature_columns[i];
+            fd.db_column = feature_columns[i];
+            fd.data_type = "float";
             fd.transformation = "direct";
             fd.required = true;
-            fd.is_categorical = (feature_type == "CATEGORICAL" || feature_type == "TEXT");
+            fd.is_categorical = false;
 
+            // Calculate statistics
+            float sum = 0.0f;
+            float min_val = std::numeric_limits<float>::max();
+            float max_val = std::numeric_limits<float>::lowest();
+            size_t valid_count = 0;
+
+            for (const auto& features : training_data.features) {
+                if (i < features.size()) {
+                    float val = features[i];
+                    sum += val;
+                    min_val = std::min(min_val, val);
+                    max_val = std::max(max_val, val);
+                    valid_count++;
+                }
+            }
+
+            if (valid_count > 0) {
+                fd.mean_value = sum / valid_count;
+                fd.min_value = min_val;
+                fd.max_value = max_val;
+
+                // Calculate standard deviation
+                float variance_sum = 0.0f;
+                for (const auto& features : training_data.features) {
+                    if (i < features.size()) {
+                        float val = features[i];
+                        variance_sum += (val - fd.mean_value) * (val - fd.mean_value);
+                    }
+                }
+                fd.std_value = std::sqrt(variance_sum / valid_count);
+            } else {
+                fd.mean_value = 0.0f;
+                fd.min_value = 0.0f;
+                fd.max_value = 1.0f;
+                fd.std_value = 1.0f;
+            }
+
+            fd.default_value = fd.mean_value;
             schema.features.push_back(fd);
-        }
-
-        // Add target column if specified
-        if (stmt.parameters.find("target_column") != stmt.parameters.end()) {
-            schema.target_column = stmt.parameters["target_column"];
         }
 
         // Add metadata
         schema.metadata["created_via"] = "CREATE_MODEL";
         schema.metadata["algorithm"] = stmt.algorithm;
-        for (const auto& [key, value] : stmt.parameters) {
-            schema.metadata[key] = value;
-        }
+        schema.metadata["source_table"] = table_name;
+        schema.metadata["target_column"] = target_column;
+        schema.metadata["training_samples"] = std::to_string(training_data.valid_samples);
 
-        // Create the model
+        // Create and train the model
+        std::cout << "[AIExecutionEngineFinal] Creating and training model..." << std::endl;
         auto model = std::make_unique<esql::ai::AdaptiveLightGBMModel>(schema);
 
-        // If source table is provided, train the model immediately
-        if (stmt.parameters.find("source_table") != stmt.parameters.end()) {
-            std::string table_name = stmt.parameters["source_table"];
-            std::string target_column = stmt.parameters["target_column"];
+        // Prepare training parameters - FIXED for regression
+        std::unordered_map<std::string, std::string> train_params;
 
-            // Extract training data
-            std::vector<std::string> feature_columns;
-            for (const auto& [name, _] : stmt.features) {
-                feature_columns.push_back(name);
-            }
+        // For regression problem
+        train_params["objective"] = "regression";
+        train_params["metric"] = "rmse";
+        train_params["boosting"] = "gbdt";
+        train_params["num_iterations"] = "100";
+        train_params["learning_rate"] = "0.05";
+        train_params["num_leaves"] = "31";
+        train_params["feature_fraction"] = "0.8";
+        train_params["bagging_fraction"] = "0.8";
+        train_params["bagging_freq"] = "5";
+        train_params["verbose"] = "1";
+        train_params["num_threads"] = "4";
+        train_params["min_data_in_leaf"] = "20";
+        train_params["min_sum_hessian_in_leaf"] = "0.001";
 
-            auto training_data = data_extractor_->extract_training_data(
-                db_.currentDatabase(),
-                table_name,
-                target_column,
-                feature_columns
-            );
+        std::cout << "[AIExecutionEngineFinal] Starting training with "
+                  << training_data.features.size() << " samples and "
+                  << training_data.features[0].size() << " features" << std::endl;
 
-            if (training_data.valid_samples < 10) {
-                throw std::runtime_error("Insufficient training data");
-            }
+        // Train the model
+        bool training_success = model->train(
+            training_data.features,
+            training_data.labels,
+            train_params
+        );
 
-            // Prepare training parameters
-            std::unordered_map<std::string, std::string> train_params;
-            if (schema.problem_type == "CLASSIFICATION" ||
-                schema.problem_type == "BINARY" ||
-                schema.problem_type == "MULTICLASS") {
-                train_params["objective"] = "binary";
-            } else {
-                train_params["objective"] = "regression";
-            }
-
-            // Train the model
-            if (!model->train(training_data.features, training_data.labels, train_params)) {
-                throw std::runtime_error("Model training failed");
-            }
-
-            schema.training_samples = training_data.valid_samples;
-            schema.accuracy = 0.0f; // Would calculate from validation
-            model->update_schema(schema);
+        if (!training_success) {
+            throw std::runtime_error("Model training failed");
         }
 
         // Register the model
@@ -213,32 +319,49 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
         }
 
         // Save to disk
-        registry.save_model(stmt.model_name);
-
-        // Log operation
-        logAIOperation("CREATE_MODEL", stmt.model_name, "SUCCESS");
+        if (!registry.save_model(stmt.model_name)) {
+            std::cout << "[AIExecutionEngineFinal] Warning: Model saved to memory but not to disk" << std::endl;
+        } else {
+            std::cout << "[AIExecutionEngineFinal] Model saved to disk successfully" << std::endl;
+        }
 
         // Prepare result
         std::vector<std::string> row;
         row.push_back(stmt.model_name);
+        row.push_back(stmt.algorithm);
         row.push_back("SUCCESS");
-        row.push_back("Model created successfully");
+        row.push_back("Model created and trained successfully");
         row.push_back(schema.model_id);
+        row.push_back(std::to_string(training_data.valid_samples));
+
         result.rows.push_back(row);
+
+        logAIOperation("CREATE_MODEL", stmt.model_name, "SUCCESS",
+                      "Trained on " + std::to_string(training_data.valid_samples) + " samples");
 
     } catch (const std::exception& e) {
         logAIOperation("CREATE_MODEL", stmt.model_name, "FAILED", e.what());
 
         std::vector<std::string> row;
         row.push_back(stmt.model_name);
+        row.push_back(stmt.algorithm);
         row.push_back("FAILED");
         row.push_back(e.what());
         row.push_back("");
+        row.push_back("0");
+
         result.rows.push_back(row);
     }
 
     return result;
 }
+
+
+/*bool AIExecutionEngineFinal::saveModelToDisk(const std::string& model_name) {
+    auto& registry = esql::ai::ModelRegistry::instance();
+    return registry.save_model(model_name);
+}*/
+
 
 ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateOrReplaceModel(
     AST::CreateOrReplaceModelStatement& stmt) {

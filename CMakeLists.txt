@@ -41,8 +41,6 @@ if(LIGHTGBM_LIBRARY AND LIGHTGBM_INCLUDE_DIR)
     add_definitions(-DHAVE_LIGHTGBM)
 else()
     message(WARNING "LightGBM not found. AI/ML features will be disabled.")
-    # Define dummy symbols if LightGBM is not found
-    #add_definitions(-DLIGHTGBM_DISABLED)
 endif()
 
 # Find nlohmann/json
@@ -112,7 +110,7 @@ target_include_directories(e_sql PRIVATE
     include/ai
 )
 
-# Add AI/ML includes if available
+# Add AI/ML includes
 if(LIGHTGBM_INCLUDE_DIR)
     target_include_directories(e_sql PRIVATE ${LIGHTGBM_INCLUDE_DIR})
 endif()
@@ -128,13 +126,13 @@ endif()
 
 # Additional libraries for LightGBM
 if(LIGHTGBM_LIBRARY)
-    # OpenMP for parallel processing (LightGBM uses it)
+    # OpenMP for parallel processing
     find_package(OpenMP)
     if(OpenMP_CXX_FOUND)
         target_link_libraries(e_sql OpenMP::OpenMP_CXX)
     endif()
 
-    # Boost libraries that LightGBM might need
+    # Boost libraries that LightGBM
     cmake_policy(SET CMP0167 OLD)
     find_package(Boost COMPONENTS filesystem system program_options)
     if(Boost_FOUND)
