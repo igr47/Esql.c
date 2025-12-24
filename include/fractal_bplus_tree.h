@@ -32,18 +32,18 @@ namespace fractal {
                 int64_t* keys() { return reinterpret_cast<int64_t*>(data); }
                 const int64_t* keys() const { return reinterpret_cast<const int64_t*>(data); }
 
-                KeyValue* key_values() { 
-                    return reinterpret_cast<KeyValue*>(data + header.key_count * sizeof(int64_t)); 
+                KeyValue* key_values() {
+                    return reinterpret_cast<KeyValue*>(data + header.key_count * sizeof(int64_t));
                 }
-                
+
                 const KeyValue* key_values() const {
-                    return reinterpret_cast<const KeyValue*>(data + header.key_count * sizeof(int64_t)); 
+                    return reinterpret_cast<const KeyValue*>(data + header.key_count * sizeof(int64_t));
                 }
 
                 Message* messages() {
                     return reinterpret_cast<Message*>(data + header.key_count * sizeof(int64_t) + header.key_count * sizeof(KeyValue));
                 }
-                
+
                 const Message* messages() const {
                     return reinterpret_cast<const Message*>(data + header.key_count * sizeof(int64_t) + header.key_count * sizeof(KeyValue));
                 }
@@ -110,8 +110,13 @@ namespace fractal {
             std::string get_tree_stats() const;
             void print_tree_structure() const;
 
+            // Getter wraper methods
+            void collect_all_leaf_pages_wrapper(std::vector<uint32_t>& leaf_pages) const {collect_all_leaf_pages(leaf_pages); }
+            Page* get_page_wrapper(uint32_t page_id, bool exclusive = false) { return get_page(page_id, false); }
+            void release_page_wrapper(uint32_t page_id, bool dirty = false) { release_page(page_id, false); }
+
        private:
-            // Tree operations 
+            // Tree operations
             Page* find_leaf_page(int64_t key, uint64_t transaction_id, bool exclusive = false);
             void split_node(Page* node, uint32_t page_id, uint64_t transaction_id);
             void merge_nodes(Page* left, Page* right, uint64_t transaction_id);

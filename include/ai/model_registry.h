@@ -65,6 +65,7 @@ public:
     };
 
     std::vector<ModelStatus> get_all_model_status() const;
+    bool save_model_schema(const std::string& name, const std::string& schema_path);
 
     // Auto-reloading
     void auto_reload_models();

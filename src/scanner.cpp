@@ -81,7 +81,7 @@ void Lexer::initializeKeyWords(){
 		{"ASC",Token::Type::ASC},       {"AI_ANALYZE", Token::Type::AI_ANALYZE},
 		{"HAVING",Token::Type::HAVING}, {"HYPERPARAMETERS", Token::Type::HYPERPARAMETERS},
 		{"DESC",Token::Type::DESC},     {"SHOW_MODELS", Token::Type::SHOW_MODELS},
-		{"LIMIT",Token::Type::LIMIT},
+		{"LIMIT",Token::Type::LIMIT},   {"STATS", Token::Type::STATS},
 		{"OFFSET",Token::Type::OFFSET},
 		{"PRIMARY_KEY",Token::Type::PRIMARY_KEY},
 		{"NOT_NULL",Token::Type::NOT_NULL},

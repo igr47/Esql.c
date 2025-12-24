@@ -51,6 +51,7 @@ struct ModelSchema {
     std::string model_id;
     std::string description;
     std::string target_column;
+    std::string algorithm;
     std::string problem_type;  // binary_classification, multiclass, regression
     std::vector<FeatureDescriptor> features;
     std::unordered_map<std::string, std::string> metadata;
@@ -144,6 +145,7 @@ private:
     void create_minimal_schema(const std::string& model_path);
     void adjust_schema_to_model(size_t expected_features);
     std::string generate_parameters(const std::unordered_map<std::string, std::string>& params);
+    void calculate_training_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels);
 
     size_t get_output_size() const;
     size_t get_model_size() const;

@@ -50,6 +50,9 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
         else if (auto showTbStructure = dynamic_cast<AST::ShowDatabaseStructure*>(stmt.get())) {
             return executeShowDatabaseStructure(*showTbStructure);
         }
+        else if (auto showTbStats = dynamic_cast<AST::ShowTableStats*>(stmt.get())) {
+            return executeShowTableStats(*showTbStats);
+        }
         else if (auto createTable = dynamic_cast<AST::CreateTableStatement*>(stmt.get())) {
             return executeCreateTable(*createTable);
         }

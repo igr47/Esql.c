@@ -71,6 +71,10 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 			return parseShowTableStatement();
         } else if (match(Token::Type::TABLE)) {
             advance();
+            if (match(Token::Type::STATS)) {
+                advance();
+                return parseShowTableStats();
+            }
            return parseShowTableStructureStatement();
         } else if (match(Token::Type::DATABASE)) {
             advance();
@@ -779,6 +783,14 @@ std::unique_ptr<AST::ShowDatabaseStructure> Parse::parseShowDatabaseStructureSta
 
     consume(Token::Type::STRUCTURE);
     stmt->dbName = currentToken.lexeme;
+    consume(Token::Type::IDENTIFIER);
+
+    return stmt;
+}
+
+std::unique_ptr<AST::ShowTableStats> Parse::parseShowTableStats() {
+    auto stmt = std::make_unique<AST::ShowTableStats>();
+    stmt->tableName = currentToken.lexeme;
     consume(Token::Type::IDENTIFIER);
 
     return stmt;

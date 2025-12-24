@@ -101,6 +101,29 @@ namespace fractal {
         //DeadlockDetector::register_lock_release(LockLevel::STORAGE, std::this_thread::get_id());
     }
 
+    fractal::BufferPool* DiskStorage::getBufferPool() {
+        if (current_database.empty()) return nullptr;
+        auto it = databases.find(current_database);
+        if (it == databases.end()) return nullptr;
+        return it->second.buffer_pool.get();
+    }
+
+    fractal::DatabaseFile& DiskStorage::getDatabaseFile(const std::string& dbName) {
+        return *databases.at(dbName).db_file;
+    }
+
+    std::unique_ptr<fractal::FractalBPlusTree> DiskStorage::getTree(const std::string& dbName, const std::string& tableName) {
+        auto& dbState = getDatabase(dbName);
+        auto it = dbState.tables.find(tableName);
+        if (it == dbState.tables.end()) {
+            return nullptr;
+        }
+
+        auto tree = std::move(it->second.tree);
+        //return it->second.tree;
+        return tree;
+    }
+
     void DiskStorage::useDatabase(const std::string& dbName) {
         //HierarchicalUniqueLock<LockLevel::STORAGE> lock(storage_mutex);
         //DeadlockDetector::register_lock_attempt(LockLevel::STORAGE, std::this_thread::get_id());
