@@ -77,6 +77,7 @@ void DatabaseFile::create() {
     std::cout << "Database file created: " << filename << " with " << db_header.total_pages << " pages" << std::endl;
 }
 
+
 void DatabaseFile::open() {
     if (!exists()) {
         throw std::runtime_error("Database file does not exist: " + filename);
@@ -994,7 +995,8 @@ void DatabaseFile::debug_page_access(uint32_t page_id) {
             read_page(page_id, &test_page);
             std::cout << "  - Page exists: YES\n";
             std::cout << "  - Page type: " << static_cast<int>(test_page.header.type) << "\n";
-            std::cout << "  - Page initialized: " << (test_page.header.page_id == page_id ? "YES" : "NO") << "\n";
+	    std::cout << "  - Page initialized: " << (test_page.header.page_id
+			    == page_id ? "YES" : "NO") << "\n";
         } catch (const std::exception& e) {
             std::cout << "  - Page exists: NO - " << e.what() << "\n";
         }

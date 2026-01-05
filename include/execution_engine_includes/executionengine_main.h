@@ -16,6 +16,10 @@
 
 class AIExecutionEngineFinal;
 
+namespace Visualization {
+    class PlotStatement;  // Forward declaration
+}
+
 class ExecutionEngine {
 public:
     explicit ExecutionEngine(Database& db, fractal::DiskStorage& storage);
@@ -86,6 +90,7 @@ private:
     ResultSet executeCreateTable(AST::CreateTableStatement& stmt);
     ResultSet executeDropTable(AST::DropStatement& stmt);
     ResultSet executeAlterTable(AST::AlterTableStatement& stmt);
+    ResultSet executePlot(Visualization::PlotStatement& stmt);
 
     // AI Checking method
     bool isAIStatement(AST::Statement* stmt) const;

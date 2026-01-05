@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "ai_parser.h"
 #include "scanner.h"
+#include "plotter_includes/plotter.h"
 #include <sstream>
 #include <string>
 #include <stdexcept>
@@ -60,6 +61,8 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 		}
 	}else if(match(Token::Type::USE)){
 		return parseUseStatement();
+       } else if(match(Token::Type::PLOT)) {
+	       return parsePlotStatement();
     } else if (match(Token::Type::LOAD)) {
         return parseLoadDataStatement();
 	}else if(match(Token::Type::SHOW)){
@@ -1132,6 +1135,138 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     return stmt;
 }
 
+// In parser.cpp, update parsePlotStatement() method:
+
+std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
+    auto plotStmt = std::make_unique<Visualization::PlotStatement>();
+
+    consume(Token::Type::PLOT);
+
+    // Parse plot type
+    if (match(Token::Type::LINE)) {
+        plotStmt->config.type = Visualization::PlotType::LINE;
+        consume(Token::Type::LINE);
+    } else if (match(Token::Type::SCATTER)) {
+        plotStmt->config.type = Visualization::PlotType::SCATTER;
+        consume(Token::Type::SCATTER);
+    } else if (match(Token::Type::BAR)) {
+        plotStmt->config.type = Visualization::PlotType::BAR;
+        consume(Token::Type::BAR);
+    } else if (match(Token::Type::HISTOGRAM)) {
+        plotStmt->config.type = Visualization::PlotType::HISTOGRAM;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::DISTRIBUTION;
+        consume(Token::Type::HISTOGRAM);
+    } else if (match(Token::Type::BOXPLOT)) {
+        plotStmt->config.type = Visualization::PlotType::BOXPLOT;
+        consume(Token::Type::BOXPLOT);
+    } else if (match(Token::Type::CORRELATION)) {
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::CORRELATION;
+        consume(Token::Type::CORRELATION);
+    } else if (match(Token::Type::PIE)) {
+        plotStmt->config.type = Visualization::PlotType::PIE;
+        consume(Token::Type::PIE);
+    } else if (match(Token::Type::HEATMAP)) {
+        plotStmt->config.type = Visualization::PlotType::HEATMAP;
+        consume(Token::Type::HEATMAP);
+    } else if (match(Token::Type::MULTI_LINE)) {
+        plotStmt->config.type = Visualization::PlotType::MULTI_LINE;
+        consume(Token::Type::MULTI_LINE);
+    } else {
+        // Default to scatter plot
+        plotStmt->config.type = Visualization::PlotType::SCATTER;
+    }
+
+    // Parse plot options/configuration in parentheses
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+
+        while (!match(Token::Type::R_PAREN) && !match(Token::Type::END_OF_INPUT)) {
+            // Parse key-value pairs
+            if (match(Token::Type::IDENTIFIER)) {
+                std::string key = currentToken.lexeme;
+                consume(Token::Type::IDENTIFIER);
+
+                consume(Token::Type::EQUAL);
+
+                if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                    std::string value = currentToken.lexeme;
+                    // Remove quotes
+                    if (value.size() >= 2) {
+                        value = value.substr(1, value.size() - 2);
+                    }
+                    plotStmt->config.style[key] = value;
+                    consume(currentToken.type);
+                } else if (match(Token::Type::NUMBER_LITERAL)) {
+                    plotStmt->config.style[key] = currentToken.lexeme;
+                    consume(Token::Type::NUMBER_LITERAL);
+                } else if (match(Token::Type::TRUE) || match(Token::Type::FALSE)) {
+                    plotStmt->config.style[key] = currentToken.lexeme;
+                    consume(currentToken.type);
+                } else if (match(Token::Type::IDENTIFIER)) {
+                    plotStmt->config.style[key] = currentToken.lexeme;
+                    consume(Token::Type::IDENTIFIER);
+                }
+
+                // Check for comma or end
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                }
+            } else {
+                break;
+            }
+        }
+
+        consume(Token::Type::R_PAREN);
+    }
+
+    // Parse optional WITH clause for additional features
+    if (match(Token::Type::WITH)) {
+        consume(Token::Type::WITH);
+        if (match(Token::Type::TREND)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::TREND;
+            consume(Token::Type::TREND);
+        }
+    }
+
+    // Parse optional title
+    if (match(Token::Type::TITLE)) {
+        consume(Token::Type::TITLE);
+        if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+            plotStmt->config.title = currentToken.lexeme;
+            // Remove quotes
+            if (plotStmt->config.title.size() >= 2) {
+                plotStmt->config.title = plotStmt->config.title.substr(1,
+                    plotStmt->config.title.size() - 2);
+            }
+            consume(currentToken.type);
+        }
+    }
+
+    // Parse FOR clause with SELECT query
+    consume(Token::Type::FOR);
+    plotStmt->query = parseSelectStatement();
+
+    // Parse GROUP BY clause if present
+    if (match(Token::Type::GROUP)) {
+        // This needs to be integrated into the SelectStatement
+        plotStmt->query->groupBy = parseGroupByClause();
+    }
+
+    // Parse optional output file
+    if (match(Token::Type::SAVE)) {
+        consume(Token::Type::SAVE);
+        if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+            plotStmt->config.outputFile = currentToken.lexeme;
+            if (plotStmt->config.outputFile.size() >= 2) {
+                plotStmt->config.outputFile = plotStmt->config.outputFile.substr(1,
+                    plotStmt->config.outputFile.size() - 2);
+            }
+            consume(currentToken.type);
+        }
+    }
+
+    return plotStmt;
+}
 
 std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::parseColumnListAs() {
     std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> newColumns;

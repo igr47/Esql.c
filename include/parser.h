@@ -796,5 +796,6 @@ class Parse{
 
         // ************************* LOADING DATA FROM FILE INTO table*****************
         std::unique_ptr<AST::LoadDataStatement> parseLoadDataStatement();
+	std::unique_ptr<AST::Statement> parsePlotStatement();
 };
 #endif

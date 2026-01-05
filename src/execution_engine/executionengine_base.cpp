@@ -1,5 +1,6 @@
 #include "execution_engine_includes/executionengine_main.h"
 #include "ai_execution_engine_final.h"
+#include "plotter_includes/plotter.h"
 #include "database.h"
 #include <iostream>
 #include <string>
@@ -82,6 +83,9 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
         }
         else if (auto bulkDelete = dynamic_cast<AST::BulkDeleteStatement*>(stmt.get())) {
             return executeBulkDelete(*bulkDelete);
+        }
+        else if (auto plot = dynamic_cast<Visualization::PlotStatement*>(stmt.get())) {
+            return executePlot(*plot);
         }
         else if (isAIStatement(stmt.get())) {
             return ai_engine_->execute(std::move(stmt));
