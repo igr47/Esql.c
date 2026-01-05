@@ -1135,7 +1135,6 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     return stmt;
 }
 
-// In parser.cpp, update parsePlotStatement() method:
 
 std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
     auto plotStmt = std::make_unique<Visualization::PlotStatement>();
@@ -1171,6 +1170,12 @@ std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
     } else if (match(Token::Type::MULTI_LINE)) {
         plotStmt->config.type = Visualization::PlotType::MULTI_LINE;
         consume(Token::Type::MULTI_LINE);
+    } else if (match(Token::Type::AREA)) {
+	    plotStmt->config.type = Visualization::PlotType::AREA;
+	    consume(Token::Type::AREA);
+    } else if (match(Token::Type::STACKED_BAR)) {
+	    plotStmt->config.type = Visualization::PlotType::STACKED_BAR;
+	    consume(Token::Type::STACKED_BAR);
     } else {
         // Default to scatter plot
         plotStmt->config.type = Visualization::PlotType::SCATTER;

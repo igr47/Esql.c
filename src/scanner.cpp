@@ -104,7 +104,7 @@ void Lexer::initializeKeyWords(){
         {"END",Token::Type::END},       {"QUIVER", Token::Type::QUIVER},
         {"ROUND",Token::Type::ROUND},   {"STREAMPLOT", Token::Type::STREAMPLOT},
         {"LOWER",Token::Type::LOWER},   {"TREND", Token::Type::TREND},
-        {"UPPER",Token::Type::UPPER},
+        {"UPPER",Token::Type::UPPER},   
         {"SUBSTRING",Token::Type::SUBSTRING},
         {"LIKE",Token::Type::LIKE},
         {"GENERATE_DATE",Token::Type::GENERATE_DATE},
