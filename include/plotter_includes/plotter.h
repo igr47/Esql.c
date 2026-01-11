@@ -9,7 +9,9 @@
 #include <map>
 #include <functional>
 #include <stdexcept>
-
+#include <array>
+#include <chrono>
+#include <limits>
 
 namespace Visualization {
 
@@ -44,39 +46,119 @@ namespace Visualization {
         std::string yLabel;
         std::string zLabel; // For 3D plots
         std::vector<std::string> seriesNames;
-        std::map<std::string, std::string> style = {
-            {"color", "blue"},
-            {"linewidth", "2"},
-            {"marker", "o"},
-            {"linestyle", "-"},
-            {"markersize", "8"},
-            {"facecolor", "lightblue"},
-            {"edgecolor", "black"},
-            {"colormap", "viridis"},
-            {"alpha", "1.0"},
-            {"barwidth", "0.8"},
-            {"bins", "auto"}
+        
+        // Enhanced style options
+        struct Style {
+            // Color options
+            std::string color = "blue";
+            std::string facecolor = "lightblue";
+            std::string edgecolor = "black";
+            std::string markercolor = "blue";
+            std::string markerfacecolor = "white";
+            std::vector<std::string> colors; // For multiple series
+            
+            // Line options
+            double linewidth = 2.0;
+            std::string linestyle = "-";
+            double alpha = 1.0;
+            
+            // Marker options
+            std::string marker = "o";
+            double markersize = 8.0;
+            
+            // Bar/Histogram options
+            double barwidth = 0.8;
+            std::string baralign = "center";
+            bool stacked = false;
+            
+            // Histogram specific
+            int bins = 30;
+            std::string histtype = "bar";
+            bool cumulative = false;
+            bool density = false;
+            
+            // Box plot specific
+            bool showfliers = true; // Show outliers
+            double fliersize = 5.0;
+            std::string fliermarker = "+";
+            double whiskerwidth = 0.5;
+            
+            // Pie chart specific
+            std::vector<double> explode;
+            bool autopct = false;
+            std::string startangle = "0";
+            bool shadow = false;
+            
+            // Heatmap specific
+            std::string colormap = "viridis";
+            bool annotate = false;
+            std::string fmt = ".2f";
+            
+            // Grid and layout
+            bool grid = true;
+            std::string gridstyle = "-";
+            double gridalpha = 0.3;
+            std::string gridcolor = "gray";
+            
+            // Legend
+            bool legend = true;
+            std::string legend_loc = "best";
+            int legend_ncol = 1;
+            double legend_fontsize = 10.0;
+            
+            // Figure size
+            double figwidth = 12.0;
+            double figheight = 8.0;
+            double dpi = 100.0;
+            
+            // Axis limits
+            double xmin = std::numeric_limits<double>::quiet_NaN();
+            double xmax = std::numeric_limits<double>::quiet_NaN();
+            double ymin = std::numeric_limits<double>::quiet_NaN();
+            double ymax = std::numeric_limits<double>::quiet_NaN();
+            double zmin = std::numeric_limits<double>::quiet_NaN();
+            double zmax = std::numeric_limits<double>::quiet_NaN();
+            
+            // Tick parameters
+            double xtick_rotation = 0.0;
+            double ytick_rotation = 0.0;
+            double tick_fontsize = 10.0;
+            
+            // Title and label font sizes
+            double title_fontsize = 14.0;
+            double xlabel_fontsize = 12.0;
+            double ylabel_fontsize = 12.0;
+            
+            // 3D plot settings
+            double azimuth = 30.0;
+            double elevation = 30.0;
+            bool view_init_set = false;
+            
+            // Statistical settings
+            double confidence_interval = 0.95;
+            bool show_kde = true;
+            bool rug = false;
+            
+            // Animation settings
+            int fps = 10;
+            bool repeat = true;
+            
+            // Interactive settings
+            bool interactive = false;
+            std::string toolbar = "toolbar2";
+            
+            // Save settings
+            std::string save_format = "png";
+            bool bbox_inches_tight = true;
+            double pad_inches = 0.1;
+            
+            // Custom style parser
+            void parseFromMap(const std::map<std::string, std::string>& styleMap);
         };
-        bool grid = true;
-        bool legend = true;
-        bool show_values = false;
-        bool normalized = false;
-        bool stacked = false;
-        bool filled = true;
-        std::string outputFile = ""; // Empty for display, path for save
-        int width = 12; // inches
-        int height = 8; // inches
-        double dpi = 100;
         
-        // 3D plot settings
+        Style style;
+        std::string outputFile = "";
         bool threeD = false;
-        double azimuth = 30.0;
-        double elevation = 30.0;
-        
-        // Statistical plot settings
-        bool show_kde = true;
-        bool show_outliers = true;
-        double confidence_interval = 0.95;
     };
 
     // Enhanced Data structure for plotting
@@ -195,10 +277,6 @@ namespace Visualization {
         void plotSurface(const PlotData& data, const PlotConfig& config);
         void plotWireframe(const PlotData& data, const PlotConfig& config);
         void plotHistogram2D(const PlotData& data, const PlotConfig& config);
-        void plotParallelCoordinates(const PlotData& data, const PlotConfig& config);
-        void plotRadar(const PlotData& data, const PlotConfig& config);
-        void plotQuiver(const PlotData& data, const PlotConfig& config);
-        void plotStreamplot(const PlotData& data, const PlotConfig& config);
         
         // Statistical plotting
         void plotCorrelationMatrix(const PlotData& data);
@@ -206,17 +284,11 @@ namespace Visualization {
         void plotTrendLine(const PlotData& data, const std::string& xColumn,
                           const std::string& yColumn);
         void plotQQPlot(const PlotData& data, const std::string& column);
-        void plotResiduals(const PlotData& data, const std::string& xColumn,
-                          const std::string& yColumn);
+        //void plotResiduals(const PlotData& data, const std::string& xColumn,const std::string& yColumn);
         
         // Time series plotting
         void plotTimeSeries(const PlotData& data, const std::string& timeColumn,
                            const std::string& valueColumn, const PlotConfig& config);
-        void plotCandlestick(const PlotData& data, const PlotConfig& config);
-        
-        // Geographical plotting
-        void plotGeoMap(const PlotData& data, const std::string& latColumn,
-                       const std::string& lonColumn, const PlotConfig& config);
         
         // Interactive plotting
         void createInteractivePlot(const PlotData& data, const PlotConfig& config);
@@ -248,7 +320,7 @@ namespace Visualization {
         void setStyle(const std::string& styleName);
         void setColorPalette(const std::string& paletteName);
         void setFont(const std::string& fontName, int size = 12);
-	std::array<float, 4> parseColor(const std::string& colorStr);
+        std::array<float, 4> parseColor(const std::string& colorStr);
         
         // Utility functions
         void addLegendIfNeeded(const PlotConfig& config);
@@ -283,7 +355,7 @@ namespace Visualization {
         std::vector<std::string> getQualitativePalette(int n);
         
         // Statistical calculations
-        std::vector<double> calculateKDE(const std::vector<double>& data, int gridPoints = 100);
+        std::pair<std::vector<double>, std::vector<double>> calculateKDE(const std::vector<double>& data, int gridPoints = 100);
         std::pair<double, double> linearRegression(const std::vector<double>& x, 
                                                   const std::vector<double>& y);
         double calculateRSquared(const std::vector<double>& x, 
@@ -295,6 +367,12 @@ namespace Visualization {
         std::vector<double> normalize(const std::vector<double>& data);
         std::vector<double> standardize(const std::vector<double>& data);
         std::vector<double> logTransform(const std::vector<double>& data);
+        
+        // Utility functions
+        std::string parseLineStyle(const std::string& styleStr);
+        std::string parseMarker(const std::string& markerStr);
+        std::vector<double> linspace(double start, double end, size_t num);
+        double erfinv(double x);
         
         // Plotter state
         bool plotterInitialized;

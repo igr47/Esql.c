@@ -190,10 +190,6 @@ void Parse::advance() {
 
 Token Parse::peekToken() {
     // Save current state
-    //size_t savedPosition = lexer.position;
-    //size_t savedLine = lexer.line;
-    //size_t savedColumn = lexer.column;
-    //Token savedCurrent = currentToken;
     size_t savedPos, savedLine , savedCol;
     lexer.saveState(savedPos,savedLine,savedCol);
 
@@ -1171,6 +1167,528 @@ std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
         plotStmt->config.type = Visualization::PlotType::MULTI_LINE;
         consume(Token::Type::MULTI_LINE);
     } else if (match(Token::Type::AREA)) {
+        plotStmt->config.type = Visualization::PlotType::AREA;
+        consume(Token::Type::AREA);
+    } else if (match(Token::Type::STACKED_BAR)) {
+        plotStmt->config.type = Visualization::PlotType::STACKED_BAR;
+        consume(Token::Type::STACKED_BAR);
+    } else if (match(Token::Type::VIOLIN)) {
+        plotStmt->config.type = Visualization::PlotType::VIOLIN;
+        consume(Token::Type::VIOLIN);
+    } else if (match(Token::Type::CONTOUR)) {
+        plotStmt->config.type = Visualization::PlotType::CONTOUR;
+        consume(Token::Type::CONTOUR);
+    } else if (match(Token::Type::SURFACE)) {
+        plotStmt->config.type = Visualization::PlotType::SURFACE;
+        consume(Token::Type::SURFACE);
+    } else if (match(Token::Type::WIREFRAME)) {
+        plotStmt->config.type = Visualization::PlotType::WIREFRAME;
+        consume(Token::Type::WIREFRAME);
+    } else if (match(Token::Type::HISTOGRAM_2D)) {
+        plotStmt->config.type = Visualization::PlotType::HISTOGRAM_2D;
+        consume(Token::Type::HISTOGRAM_2D);
+    } else {
+        // Default to scatter plot
+        plotStmt->config.type = Visualization::PlotType::SCATTER;
+    }
+
+    // Parse comprehensive style options in parentheses
+    std::map<std::string, std::string> styleOptions;
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+
+        while (!match(Token::Type::R_PAREN) && !match(Token::Type::END_OF_INPUT)) {
+            if (match(Token::Type::IDENTIFIER)) {
+                std::string key = currentToken.lexeme;
+                consume(Token::Type::IDENTIFIER);
+
+                consume(Token::Type::EQUAL);
+
+                // Parse value (can be string, number, boolean, or identifier)
+                std::string value;
+                if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                    value = currentToken.lexeme;
+                    // Remove quotes
+                    if (value.size() >= 2 &&
+                        ((value[0] == '\'' && value.back() == '\'') ||
+                         (value[0] == '"' && value.back() == '"'))) {
+                        value = value.substr(1, value.size() - 2);
+                    }
+                    consume(currentToken.type);
+                } else if (match(Token::Type::NUMBER_LITERAL)) {
+                    value = currentToken.lexeme;
+                    consume(Token::Type::NUMBER_LITERAL);
+                } else if (match(Token::Type::TRUE) || match(Token::Type::FALSE)) {
+                    value = currentToken.lexeme;
+                    consume(currentToken.type);
+                } else if (match(Token::Type::IDENTIFIER)) {
+                    value = currentToken.lexeme;
+                    consume(Token::Type::IDENTIFIER);
+                } else if (match(Token::Type::NULL_TOKEN)) {
+                    value = "NULL";
+                    consume(Token::Type::NULL_TOKEN);
+                }
+
+
+		styleOptions[key] = value;
+
+                // Check for comma or end
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        consume(Token::Type::R_PAREN);
+    }
+
+    // Parse optional WITH clause for additional features
+    if (match(Token::Type::WITH)) {
+        consume(Token::Type::WITH);
+        if (match(Token::Type::TREND)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::TREND;
+            consume(Token::Type::TREND);
+        } else if (match(Token::Type::DISTRIBUTION)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::DISTRIBUTION;
+            consume(Token::Type::DISTRIBUTION);
+        } else if (match(Token::Type::TIME_SERIES)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::TIME_SERIES;
+            consume(Token::Type::TIME_SERIES);
+        } else if (match(Token::Type::CORRELATION)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::CORRELATION;
+            consume(Token::Type::CORRELATION);
+        } else if (match(Token::Type::QQ_PLOT)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::QQ_PLOT;
+            consume(Token::Type::QQ_PLOT);
+        } else if (match(Token::Type::RESIDUALS)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::RESIDUALS;
+            consume(Token::Type::RESIDUALS);
+        } else if (match(Token::Type::ANIMATION)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::ANIMATION;
+            consume(Token::Type::ANIMATION);
+        } else if (match(Token::Type::INTERACTIVE)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::INTERACTIVE;
+            consume(Token::Type::INTERACTIVE);
+        } else if (match(Token::Type::DASHBOARD)) {
+            plotStmt->subType = Visualization::PlotStatement::PlotSubType::DASHBOARD;
+            consume(Token::Type::DASHBOARD);
+        }
+    }
+
+    // Parse optional title
+    if (match(Token::Type::TITLE)) {
+        consume(Token::Type::TITLE);
+        if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+            plotStmt->config.title = currentToken.lexeme;
+            // Remove quotes
+            if (plotStmt->config.title.size() >= 2 && ((plotStmt->config.title[0] == '\'' && plotStmt->config.title.back() == '\'') && (plotStmt->config.title[0] == '"' && plotStmt->config.title.back() == '"'))) {
+                plotStmt->config.title = plotStmt->config.title.substr(1,
+                    plotStmt->config.title.size() - 2);
+            }
+            consume(currentToken.type);
+        }
+    }
+
+    // Parse optional xLabel
+    if (match(Token::Type::XLABEL) || match(Token::Type::X_LABEL)) {
+        consume(currentToken.type);
+        if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+            plotStmt->config.xLabel = currentToken.lexeme;
+            if (plotStmt->config.xLabel.size() >= 2) {
+                plotStmt->config.xLabel = plotStmt->config.xLabel.substr(1,
+                    plotStmt->config.xLabel.size() - 2);
+            }
+            consume(currentToken.type);
+        }
+    }
+
+    // Parse optional yLabel
+    if (match(Token::Type::YLABEL) || match(Token::Type::Y_LABEL)) {
+        consume(currentToken.type);
+        if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+            plotStmt->config.yLabel = currentToken.lexeme;
+            if (plotStmt->config.yLabel.size() >= 2) {
+                plotStmt->config.yLabel = plotStmt->config.yLabel.substr(1,
+                    plotStmt->config.yLabel.size() - 2);
+            }
+            consume(currentToken.type);
+        }
+    }
+
+    // Parse optional zLabel for 3D plots
+    if (match(Token::Type::ZLABEL) || match(Token::Type::Z_LABEL)) {
+        consume(currentToken.type);
+        if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+            plotStmt->config.zLabel = currentToken.lexeme;
+            if (plotStmt->config.zLabel.size() >= 2) {
+                plotStmt->config.zLabel = plotStmt->config.zLabel.substr(1,
+                    plotStmt->config.zLabel.size() - 2);
+            }
+            consume(currentToken.type);
+        }
+    }
+
+    // Parse optional series names
+    if (match(Token::Type::SERIES) || match(Token::Type::SERIES_NAMES)) {
+        consume(currentToken.type);
+        if (match(Token::Type::L_PAREN)) {
+            consume(Token::Type::L_PAREN);
+            do {
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                }
+                if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                    std::string seriesName = currentToken.lexeme;
+                    if (seriesName.size() >= 2) {
+                        seriesName = seriesName.substr(1, seriesName.size() - 2);
+                    }
+                    plotStmt->config.seriesNames.push_back(seriesName);
+                    consume(currentToken.type);
+                }
+            } while (match(Token::Type::COMMA));
+            consume(Token::Type::R_PAREN);
+        }
+    }
+
+    // Parse FOR clause with SELECT query
+    consume(Token::Type::FOR);
+    plotStmt->query = parseSelectStatement();
+
+    // Parse optional GROUP BY clause
+    if (match(Token::Type::GROUP)) {
+        plotStmt->query->groupBy = parseGroupByClause();
+    }
+
+    // Parse optional HAVING clause
+    if (match(Token::Type::HAVING)) {
+        plotStmt->query->having = parseHavingClause();
+    }
+
+    // Parse optional ORDER BY clause
+    if (match(Token::Type::ORDER)) {
+        plotStmt->query->orderBy = parseOrderByClause();
+    }
+
+    // Parse optional LIMIT clause
+    if (match(Token::Type::LIMIT)) {
+        consume(Token::Type::LIMIT);
+        plotStmt->query->limit = parseExpression();
+        if (match(Token::Type::OFFSET)) {
+            consume(Token::Type::OFFSET);
+            plotStmt->query->offset = parseExpression();
+        }
+    }
+
+    // Parse optional USING clause for columns
+    if (match(Token::Type::USING)) {
+        consume(Token::Type::USING);
+        if (match(Token::Type::L_PAREN)) {
+            consume(Token::Type::L_PAREN);
+            do {
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                }
+                if (match(Token::Type::IDENTIFIER)) {
+                    plotStmt->xColumns.push_back(currentToken.lexeme);
+                    consume(Token::Type::IDENTIFIER);
+                }
+            } while (match(Token::Type::COMMA));
+            consume(Token::Type::R_PAREN);
+        }
+    }
+
+    // Parse optional FOR COLUMNS clause
+    if (match(Token::Type::FOR_COLUMNS) || match(Token::Type::COLUMN)) {
+        consume(currentToken.type);
+        if (match(Token::Type::L_PAREN)) {
+            consume(Token::Type::L_PAREN);
+            do {
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                }
+                if (match(Token::Type::IDENTIFIER)) {
+                    plotStmt->xColumns.push_back(currentToken.lexeme);
+                    consume(Token::Type::IDENTIFIER);
+                }
+            } while (match(Token::Type::COMMA));
+            consume(Token::Type::R_PAREN);
+        }
+    }
+
+    // Parse optional FOR X Y columns
+    if (match(Token::Type::FOR_X) || match(Token::Type::X)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->xColumns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
+        }
+        if (match(Token::Type::COMMA)) {
+            consume(Token::Type::COMMA);
+            if (match(Token::Type::Y)) {
+                consume(Token::Type::Y);
+                if (match(Token::Type::IDENTIFIER)) {
+                    plotStmt->yColumns.push_back(currentToken.lexeme);
+                    consume(Token::Type::IDENTIFIER);
+                }
+            }
+        }
+    }
+
+    // Parse optional TARGET column for distribution plots
+    if (match(Token::Type::TARGET) || match(Token::Type::FOR_TARGET)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->targetColumn = currentToken.lexeme;
+            consume(Token::Type::IDENTIFIER);
+        }
+    }
+
+    // Parse optional TIME column for time series
+    if (match(Token::Type::TIME) || match(Token::Type::TIME_COLUMN)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->timeColumn = currentToken.lexeme;
+            consume(Token::Type::IDENTIFIER);
+        }
+    }
+
+    // Parse optional GROUP column
+    if (match(Token::Type::GROUP_COLUMN) || match(Token::Type::BY_GROUP)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->groupColumn = currentToken.lexeme;
+            consume(Token::Type::IDENTIFIER);
+        }
+    }
+
+    // Parse optional ANIMATION column
+    if (match(Token::Type::ANIMATE) || match(Token::Type::ANIMATION_COLUMN)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->animationColumn = currentToken.lexeme;
+            consume(Token::Type::IDENTIFIER);
+        }
+    }
+
+    // Parse optional FPS for animation
+    if (match(Token::Type::FPS) || match(Token::Type::FRAMES_PER_SECOND)) {
+        consume(currentToken.type);
+        if (match(Token::Type::NUMBER_LITERAL)) {
+            try {
+                plotStmt->animationFPS = std::stoi(currentToken.lexeme);
+                consume(Token::Type::NUMBER_LITERAL);
+            } catch (...) {
+                throw ParseError(currentToken.line, currentToken.column,
+                               "Invalid FPS value");
+            }
+        }
+    }
+
+    // Parse optional DASHBOARD layout
+    if (match(Token::Type::DASHBOARD_LAYOUT) || match(Token::Type::LAYOUT)) {
+        consume(currentToken.type);
+        if (match(Token::Type::NUMBER_LITERAL)) {
+            try {
+                plotStmt->dashboardRows = std::stoi(currentToken.lexeme);
+                consume(Token::Type::NUMBER_LITERAL);
+                if (match(Token::Type::BY) || match(Token::Type::X)) {
+                    consume(currentToken.type);
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        plotStmt->dashboardCols = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                    }
+                }
+            } catch (...) {
+                throw ParseError(currentToken.line, currentToken.column,
+                               "Invalid dashboard layout");
+            }
+        }
+    }
+
+    // Parse optional output format
+    if (match(Token::Type::FORMAT) || match(Token::Type::OUTPUT_FORMAT)) {
+        consume(currentToken.type);
+        if (match(Token::Type::PNG)) {
+            plotStmt->outputFormat = Visualization::PlotStatement::OutputFormat::PNG;
+            consume(Token::Type::PNG);
+        } else if (match(Token::Type::PDF)) {
+            plotStmt->outputFormat = Visualization::PlotStatement::OutputFormat::PDF;
+            consume(Token::Type::PDF);
+        } else if (match(Token::Type::SVG)) {
+            plotStmt->outputFormat = Visualization::PlotStatement::OutputFormat::SVG;
+            consume(Token::Type::SVG);
+        } else if (match(Token::Type::JPG) || match(Token::Type::JPEG)) {
+            plotStmt->outputFormat = Visualization::PlotStatement::OutputFormat::JPG;
+            consume(currentToken.type);
+        } else if (match(Token::Type::GIF)) {
+            plotStmt->outputFormat = Visualization::PlotStatement::OutputFormat::GIF;
+            consume(Token::Type::GIF);
+        } else if (match(Token::Type::MP4)) {
+            plotStmt->outputFormat = Visualization::PlotStatement::OutputFormat::MP4;
+            consume(Token::Type::MP4);
+        } else if (match(Token::Type::HTML)) {
+            plotStmt->outputFormat = Visualization::PlotStatement::OutputFormat::HTML;
+            consume(Token::Type::HTML);
+        }
+    }
+
+    // Parse optional output file
+    if (match(Token::Type::SAVE) || match(Token::Type::TO_FILE)) {
+        consume(currentToken.type);
+        if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+            plotStmt->config.outputFile = currentToken.lexeme;
+            if (plotStmt->config.outputFile.size() >= 2) {
+                plotStmt->config.outputFile = plotStmt->config.outputFile.substr(1,
+                    plotStmt->config.outputFile.size() - 2);
+            }
+            consume(currentToken.type);
+        }
+    }
+
+    // Parse interactive controls
+    if (match(Token::Type::CONTROLS) || match(Token::Type::WIDGETS)) {
+        consume(currentToken.type);
+        if (match(Token::Type::L_PAREN)) {
+            consume(Token::Type::L_PAREN);
+            while (!match(Token::Type::R_PAREN) && !match(Token::Type::END_OF_INPUT)) {
+                Visualization::PlotStatement::Control control;
+
+                // Parse control type
+                if (match(Token::Type::SLIDER) || match(Token::Type::DROPDOWN) ||
+                    match(Token::Type::CHECKBOX) || match(Token::Type::BUTTON)) {
+                    control.type = currentToken.lexeme;
+                    consume(currentToken.type);
+                }
+
+                // Parse control name
+                if (match(Token::Type::IDENTIFIER)) {
+                    control.name = currentToken.lexeme;
+                    consume(Token::Type::IDENTIFIER);
+                }
+
+                // Parse label if present
+                if (match(Token::Type::LABEL)) {
+                    consume(Token::Type::LABEL);
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        control.label = currentToken.lexeme;
+                        if (control.label.size() >= 2) {
+                            control.label = control.label.substr(1, control.label.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                }
+
+                // Parse slider-specific parameters
+                if (control.type == "slider") {
+                    if (match(Token::Type::MIN)) {
+                        consume(Token::Type::MIN);
+                        if (match(Token::Type::NUMBER_LITERAL)) {
+                            control.minValue = std::stod(currentToken.lexeme);
+                            consume(Token::Type::NUMBER_LITERAL);
+                        }
+                    }
+                    if (match(Token::Type::MAX)) {
+                        consume(Token::Type::MAX);
+                        if (match(Token::Type::NUMBER_LITERAL)) {
+                            control.maxValue = std::stod(currentToken.lexeme);
+                            consume(Token::Type::NUMBER_LITERAL);
+                        }
+                    }
+                    if (match(Token::Type::STEP)) {
+                        consume(Token::Type::STEP);
+                        if (match(Token::Type::NUMBER_LITERAL)) {
+                            control.step = std::stod(currentToken.lexeme);
+                            consume(Token::Type::NUMBER_LITERAL);
+                        }
+                    }
+                    if (match(Token::Type::DEFAULT)) {
+                        consume(Token::Type::DEFAULT);
+                        if (match(Token::Type::NUMBER_LITERAL)) {
+                            control.defaultValue = std::stod(currentToken.lexeme);
+                            consume(Token::Type::NUMBER_LITERAL);
+                        }
+                    }
+                }
+
+                // Parse dropdown options
+                if (control.type == "dropdown" && match(Token::Type::OPTIONS)) {
+                    consume(Token::Type::OPTIONS);
+                    if (match(Token::Type::L_PAREN)) {
+                        consume(Token::Type::L_PAREN);
+                        while (!match(Token::Type::R_PAREN)) {
+                            if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                                std::string option = currentToken.lexeme;
+                                if (option.size() >= 2) {
+                                    option = option.substr(1, option.size() - 2);
+                                }
+                                control.options.push_back(option);
+                                consume(currentToken.type);
+                            }
+                            if (match(Token::Type::COMMA)) {
+                                consume(Token::Type::COMMA);
+                            }
+                        }
+                        consume(Token::Type::R_PAREN);
+                    }
+                }
+
+                plotStmt->controls.push_back(control);
+
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                } else {
+                    break;
+                }
+            }
+            consume(Token::Type::R_PAREN);
+        }
+    }
+
+    // Now parse style options into config
+    plotStmt->config.style.parseFromMap(styleOptions);
+
+    return plotStmt;
+}
+
+/*std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
+    auto plotStmt = std::make_unique<Visualization::PlotStatement>();
+
+    consume(Token::Type::PLOT);
+
+    // Parse plot type
+    if (match(Token::Type::LINE)) {
+        plotStmt->config.type = Visualization::PlotType::LINE;
+        consume(Token::Type::LINE);
+    } else if (match(Token::Type::SCATTER)) {
+        plotStmt->config.type = Visualization::PlotType::SCATTER;
+        consume(Token::Type::SCATTER);
+    } else if (match(Token::Type::BAR)) {
+        plotStmt->config.type = Visualization::PlotType::BAR;
+        consume(Token::Type::BAR);
+    } else if (match(Token::Type::HISTOGRAM)) {
+        plotStmt->config.type = Visualization::PlotType::HISTOGRAM;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::DISTRIBUTION;
+        consume(Token::Type::HISTOGRAM);
+    } else if (match(Token::Type::BOXPLOT)) {
+        plotStmt->config.type = Visualization::PlotType::BOXPLOT;
+        consume(Token::Type::BOXPLOT);
+    } else if (match(Token::Type::CORRELATION)) {
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::CORRELATION;
+        consume(Token::Type::CORRELATION);
+    } else if (match(Token::Type::PIE)) {
+        plotStmt->config.type = Visualization::PlotType::PIE;
+        consume(Token::Type::PIE);
+    } else if (match(Token::Type::HEATMAP)) {
+        plotStmt->config.type = Visualization::PlotType::HEATMAP;
+        consume(Token::Type::HEATMAP);
+    } else if (match(Token::Type::MULTI_LINE)) {
+        plotStmt->config.type = Visualization::PlotType::MULTI_LINE;
+        consume(Token::Type::MULTI_LINE);
+    } else if (match(Token::Type::AREA)) {
 	    plotStmt->config.type = Visualization::PlotType::AREA;
 	    consume(Token::Type::AREA);
     } else if (match(Token::Type::STACKED_BAR)) {
@@ -1271,7 +1789,7 @@ std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
     }
 
     return plotStmt;
-}
+}*/
 
 std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> Parse::parseColumnListAs() {
     std::vector<std::pair<std::unique_ptr<AST::Expression>, std::string>> newColumns;

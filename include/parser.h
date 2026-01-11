@@ -404,7 +404,7 @@ namespace AST{
 				}
 				//return function.lexeme + "(" + (argument ? argument-> toString() : "") + ")";
 				result += ")";
-				//Add alias ifvargument 2 exists(Tpically an AS clause)
+				//ifvargument 2 exists(Tpically an AS clause)
 				if(argument2){
 					result += "AS" + argument2->toString();
 				}
