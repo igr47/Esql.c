@@ -1027,8 +1027,51 @@ namespace Visualization {
         // Create heatmap with comprehensive styling
         auto h = plt::heatmap(matrix);
 
-        // Note: Matplot++ has limited colormap support compared to matplotlib
-        // We use the default colormap
+	if (!config.style.colormap.empty()) {
+		std::string cmap = config.style.colormap;
+		std::transform(cmap.begin(), cmap.end(), cmap.begin(), ::tolower);
+
+		// Common matplotlib colormap names o matplot++ colormap
+		if (cmap == "jet" || cmap == "parula") {
+			plt::colormap(plt::palette::jet());
+		} else if (cmap == "plasma") {
+			plt::colormap(plt::palette::plasma());
+		} else if (cmap == "inferno") {
+			plt::colormap(plt::palette::inferno());
+		} else if (cmap == "magma") {
+			plt::colormap(plt::palette::magma());
+		} else if (cmap == "hot") {
+			plt::colormap(plt::palette::hot());
+		} else if (cmap == "cool") {
+			plt::colormap(plt::palette::cool());
+		} else if (cmap == "spring") {
+			plt::colormap(plt::palette::spring());
+		} else if (cmap == "summer") {
+			plt::colormap(plt::palette::summer());
+		} else if (cmap == "autumn") {
+			plt::colormap(plt::palette::autumn());
+		} else if (cmap == "winter") {
+			plt::colormap(plt::palette::winter());
+		} else if (cmap == "gray" || cmap == "grey") {
+			plt::colormap(plt::palette::gray());
+		} else if (cmap == "bone") {
+			plt::colormap(plt::palette::bone());
+		} else if (cmap == "copper") {
+			plt::colormap(plt::palette::copper());
+		} else if (cmap == "pink") {
+			plt::colormap(plt::palette::pink());
+		} else if (cmap == "lines") {
+			plt::colormap(plt::palette::lines());
+		} else if (cmap == "colorcube") {
+			plt::colormap(plt::palette::colorcube());
+		} else if (cmap == "prism") {
+			plt::colormap(plt::palette::prism());
+		} else if (cmap == "flag") {
+			plt::colormap(plt::palette::flag());
+		} else if (cmap == "white") {
+			plt::colormap(plt::palette::white());
+		}
+	}
 
         // Add colorbar
         plt::colorbar();
@@ -2973,7 +3016,9 @@ void Visualization::PlotConfig::Style::parseFromMap(const std::map<std::string, 
             interactive = (value == "true" || value == "1" || value == "yes");
         } else if (lowerKey == "save_format") {
             save_format = value;
-        }
+        } else if (lowerKey == "colormap") {
+	    colormap = value;
+	}
         // Add more style parsing as needed
     }
 }
