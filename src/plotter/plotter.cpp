@@ -2970,9 +2970,9 @@ void Visualization::PlotConfig::Style::parseFromMap(const std::map<std::string, 
             grid = (value == "true" || value == "1" || value == "yes");
         } else if (lowerKey == "legend") {
             legend = (value == "true" || value == "1" || value == "yes");
-        } else if (lowerKey == "figwidth") {
+        } else if (lowerKey == "width") {
             try { figwidth = std::stod(value); } catch (...) {}
-        } else if (lowerKey == "figheight") {
+        } else if (lowerKey == "height") {
             try { figheight = std::stod(value); } catch (...) {}
         } else if (lowerKey == "bins") {
             try { bins = std::stoi(value); } catch (...) {}
