@@ -55,6 +55,8 @@ namespace Visualization {
             std::string edgecolor = "black";
             std::string markercolor = "blue";
             std::string markerfacecolor = "white";
+	    std::string xlabel;
+	    std::string ylabel;
             std::vector<std::string> colors; // For multiple series
             
             // Line options

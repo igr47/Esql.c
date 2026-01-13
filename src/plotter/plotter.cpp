@@ -306,13 +306,32 @@ namespace Visualization {
         }
 
         // Set labels
-        if (!config.xLabel.empty()) {
-            plt::xlabel(config.xLabel);
-        }
+    if (!config.xLabel.empty()) {
+        plt::xlabel(config.xLabel);
+    } else if (!config.style.xlabel.empty()) {
+        plt::xlabel(config.style.xlabel);
+    }
 
-        if (!config.yLabel.empty()) {
+    if (!config.yLabel.empty()) {
+        plt::ylabel(config.yLabel);
+    } else if (!config.style.ylabel.empty()) {
+        plt::ylabel(config.style.ylabel);
+    }
+
+        /*if (!config.xLabel.empty()) {
+            plt::xlabel(config.xLabel);
+        } 
+	if (!config.style.xlabel.empty()) {
+		plt::xlabel(config.style.xlabel);
+	}
+
+	if (!config.style.ylabel.empty()) {
+		plt::ylabel(config.style.ylabel);
+	} 
+	
+	if (!config.yLabel.empty()) {
             plt::ylabel(config.yLabel);
-        }
+        }*/
 
         // Set grid
         if (config.style.grid) {
@@ -740,23 +759,48 @@ namespace Visualization {
         auto h = plt::hist(values, bins);
 
         // Apply histogram styling
-        //auto faceColor = parseColor(config.style.facecolor);
-        //h->face_color(faceColor);
-	    auto faceColor = parseColor(config.style.facecolor);
-	    faceColor[3] = config.style.alpha;
-	    h->face_color(faceColor);
+	auto faceColor = parseColor(config.style.facecolor);
+	faceColor[3] = config.style.alpha;
+	h->face_color(faceColor);
 
-        //auto edgeColor = parseColor(config.style.edgecolor);
-        //h->edge_color(edgeColor);
-	    auto edgeColor = parseColor(config.style.edgecolor);
-	    edgeColor[3] = config.style.alpha;
-	    h->edge_color(edgeColor);
+	auto edgeColor = parseColor(config.style.edgecolor);
+	edgeColor[3] = config.style.alpha;
+	h->edge_color(edgeColor);
 
         h->line_width(config.style.linewidth);
-        //h->alpha(config.style.alpha);
 
         // For cumulative histogram
-        if (config.style.cumulative) {
+	if (config.style.cumulative) {
+               // Sort values for cumulative calculation
+               std::vector<double> sortedValues = values;
+               std::sort(sortedValues.begin(), sortedValues.end());
+        
+               // Create cumulative frequencies
+               std::vector<double> cumulative(sortedValues.size());
+               for (size_t i = 0; i < sortedValues.size(); ++i) {
+		       cumulative[i] = static_cast<double>(i + 1) / sortedValues.size();
+               }
+        
+	       // Create a second plot for cumulative line
+	       plt::hold(true);
+	       auto cumPlot = plt::plot(sortedValues, cumulative);
+               cumPlot->line_width(config.style.linewidth);
+        
+               auto cumColor = parseColor(config.style.color);
+               cumColor[3] = config.style.alpha * 0.8; // Slightly transparent
+               cumPlot->color(cumColor);
+               cumPlot->line_style("--");
+               cumPlot->display_name("Cumulative");
+               plt::hold(false);
+        
+               // Add legend for cumulative line
+	       if (config.style.legend) {
+		       plt::legend();
+	       }
+	}
+
+        /*if (config.style.cumulative) {
+            // Sort values for cumulative calculation
             std::vector<double> sortedValues = values;
             std::sort(sortedValues.begin(), sortedValues.end());
 
@@ -770,7 +814,7 @@ namespace Visualization {
             cumLine->line_width(config.style.linewidth);
             cumLine->line_style("--");
             plt::hold(false);
-        }
+        }*/
 
         // For density histogram
         if (config.style.density) {
@@ -2960,6 +3004,10 @@ void Visualization::PlotConfig::Style::parseFromMap(const std::map<std::string, 
             linestyle = value;
         } else if (lowerKey == "marker") {
             marker = value;
+	} else if (lowerKey == "xlabel") {
+	    xlabel = value;
+	} else if (lowerKey == "ylabel") {
+	    ylabel = value;
         } else if (lowerKey == "markercolor") {
             markercolor = value;
         } else if (lowerKey == "markersize") {
