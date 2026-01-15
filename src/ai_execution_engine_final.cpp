@@ -164,7 +164,6 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
             feature_columns
         );
 
-        // FIX: Check if training_data extraction was successful
         std::cout << "[AIExecutionEngineFinal] DEBUG: Training data has "
                   << training_data.valid_samples << " valid samples, "
                   << training_data.total_samples << " total samples, "
@@ -406,26 +405,6 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
         auto model = std::make_unique<esql::ai::AdaptiveLightGBMModel>(schema);
 
 
-        /*std::unordered_map<std::string, std::string> train_params;
-
-        // For regression problem
-        train_params["objective"] = "regression";
-        train_params["metric"] = "rmse";
-        train_params["boosting"] = "gbdt";
-        train_params["num_iterations"] = "100";
-        train_params["learning_rate"] = "0.05";
-        train_params["num_leaves"] = "31";
-        train_params["feature_fraction"] = "0.8";
-        train_params["bagging_fraction"] = "0.8";
-        train_params["bagging_freq"] = "5";
-        train_params["verbose"] = "1";
-        train_params["num_threads"] = "4";
-        train_params["min_data_in_leaf"] = "20";
-        train_params["min_sum_hessian_in_leaf"] = "0.001";
-
-        std::cout << "[AIExecutionEngineFinal] Starting training with "
-                  << training_data.features.size() << " samples and "
-                  << training_data.features[0].size() << " features" << std::endl;*/
 
         std::unordered_map<std::string, std::string> train_params;
 

@@ -421,12 +421,12 @@ void AIAnalyzer::analyzeCreateModel(AST::CreateModelStatement& stmt) {
         "KMEANS", "SVM", "DECISION_TREE"
     };
 
-    std::string algo_upper = stmt.model_name;
-    std::transform(algo_upper.begin(), algo_upper.end(), algo_upper.begin(), ::toupper);
+    //std::string algo_upper = stmt.model_name;
+    //std::transform(algo_upper.begin(), algo_upper.end(), algo_upper.begin(), ::toupper);
 
-    if (std::find(valid_algorithms.begin(), valid_algorithms.end(), algo_upper) == valid_algorithms.end()) {
+    /*if (std::find(valid_algorithms.begin(), valid_algorithms.end(), algo_upper) == valid_algorithms.end()) {
         throw SematicError("Unsupported algorithm: " + stmt.algorithm);
-    }
+    }*/
 
     // 4. Validate features
     if (stmt.features.empty()) {

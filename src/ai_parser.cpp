@@ -63,7 +63,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
     // Parse USING clause
     if (base_parser_.checkMatch(Token::Type::USING)) {
         base_parser_.consumeToken(Token::Type::USING);
-        stmt->model_name = base_parser_.getCurrentToken().lexeme;
+        //stmt->model_name = base_parser_.getCurrentToken().lexeme;
 
         // Convert to uppercase for consistency
         std::transform(stmt->algorithm.begin(), stmt->algorithm.end(),stmt->algorithm.begin(), ::toupper);
@@ -84,7 +84,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
         }*/
         base_parser_.consumeToken(base_parser_.getCurrentToken().type);
     } else {
-        stmt-> model_name = "LIGHTGBM";
+        //stmt-> model_name = "LIGHTGBM";
     }
 
         // Parse FEATURES clause

@@ -147,6 +147,22 @@ private:
     std::string generate_parameters(const std::unordered_map<std::string, std::string>& params);
     void calculate_training_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels);
 
+    // Helper functions for metric calculation
+    void process_binary_classification_metrics(const std::vector<std::string>& eval_names,const std::vector<double>& eval_results,const std::vector<std::vector<float>>& features, const std::vector<float>& labels);
+
+    void process_multiclass_metrics(const std::vector<std::string>& eval_names,const std::vector<double>& eval_results,const std::vector<std::vector<float>>& features,const std::vector<float>& labels);
+
+    void process_regression_metrics(const std::vector<std::string>& eval_names,const std::vector<double>& eval_results,const std::vector<std::vector<float>>& features,const std::vector<float>& labels);
+
+    double calculate_r2_score(const std::vector<std::vector<float>>& features,const std::vector<float>& labels,size_t max_samples = 1000);
+
+    double calculate_validation_accuracy(const std::vector<std::vector<float>>& features,const std::vector<float>& labels,size_t max_samples = 1000);
+
+    void calculate_fallback_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels);
+
+    double calculate_mean(const std::vector<float>& values, size_t max_samples = 1000);
+    double calculate_std(const std::vector<float>& values, size_t max_samples = 1000);
+
     size_t get_output_size() const;
     size_t get_model_size() const;
 };
