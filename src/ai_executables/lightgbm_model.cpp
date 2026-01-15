@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <algorithm>
+#include <map>
+#include <unordered_map>
 
 namespace esql {
 namespace ai {
@@ -119,8 +122,134 @@ FeatureDescriptor FeatureDescriptor::from_json(const nlohmann::json& j) {
 // ============================================
 // ModelSchema Implementation
 // ============================================
-
 nlohmann::json ModelSchema::to_json() const {
+    nlohmann::json j;
+    j["model_id"] = model_id;
+    j["description"] = description;
+    j["target_column"] = target_column;
+    j["problem_type"] = problem_type;
+    j["created_at"] = std::chrono::system_clock::to_time_t(created_at);
+    j["last_updated"] = std::chrono::system_clock::to_time_t(last_updated);
+    j["training_samples"] = training_samples;
+    j["accuracy"] = accuracy;
+    j["drift_score"] = drift_score;
+
+    // Add comprehensive metrics based on problem type
+    nlohmann::json metrics_json;
+
+    if (problem_type == "binary_classification") {
+        // Extract binary classification metrics
+        std::map<std::string, std::string> metric_keys = {
+            {"auc_score", "auc"},
+            {"logloss", "log_loss"},
+            {"precision", "precision"},
+            {"recall", "recall"},
+            {"f1_score", "f1_score"},
+            {"true_positives", "true_positives"},
+            {"false_positives", "false_positives"},
+            {"true_negatives", "true_negatives"},
+            {"false_negatives", "false_negatives"}
+        };
+
+        for (const auto& [metadata_key, json_key] : metric_keys) {
+            if (metadata.find(metadata_key) != metadata.end()) {
+                try {
+                    metrics_json[json_key] = std::stof(metadata.at(metadata_key));
+                } catch (...) {
+                    metrics_json[json_key] = 0.0f;
+                }
+            }
+        }
+
+    } else if (problem_type == "multiclass") {
+        // Extract multiclass metrics
+        metrics_json["macro_precision"] = get_metadata_float("macro_precision", 0.0f);
+        metrics_json["macro_recall"] = get_metadata_float("macro_recall", 0.0f);
+        metrics_json["macro_f1"] = get_metadata_float("macro_f1", 0.0f);
+        metrics_json["micro_precision"] = get_metadata_float("micro_precision", 0.0f);
+
+        // Extract per-class metrics
+        nlohmann::json per_class_json;
+        for (const auto& [key, value] : metadata) {
+            if (key.find("class_") == 0 && key.find("_precision") != std::string::npos) {
+                std::string class_num = key.substr(6, key.find("_precision") - 6);
+                try {
+                    per_class_json[class_num]["precision"] = std::stof(value);
+
+                    // Try to find corresponding recall and f1
+                    std::string recall_key = "class_" + class_num + "_recall";
+                    std::string f1_key = "class_" + class_num + "_f1";
+
+                    if (metadata.find(recall_key) != metadata.end()) {
+                        per_class_json[class_num]["recall"] = std::stof(metadata.at(recall_key));
+                    }
+                    if (metadata.find(f1_key) != metadata.end()) {
+                        per_class_json[class_num]["f1"] = std::stof(metadata.at(f1_key));
+                    }
+                } catch (...) {
+                    // Skip invalid values
+                }
+            }
+        }
+
+        if (!per_class_json.empty()) {
+            metrics_json["per_class_metrics"] = per_class_json;
+        }
+
+    } else {
+        // Regression metrics
+        std::map<std::string, std::string> metric_keys = {
+            {"rmse", "rmse"},
+            {"mae", "mae"},
+            {"r2_score", "r2"},
+            {"mean_squared_error", "mse"},
+            {"mean_absolute_error", "mae"}
+        };
+
+        for (const auto& [metadata_key, json_key] : metric_keys) {
+            if (metadata.find(metadata_key) != metadata.end()) {
+                try {
+                    metrics_json[json_key] = std::stof(metadata.at(metadata_key));
+                } catch (...) {
+                    metrics_json[json_key] = 0.0f;
+                }
+            }
+        }
+    }
+
+    j["metrics"] = metrics_json;
+
+    // Rest of the existing code...
+    j["features"] = nlohmann::json::array();
+    for (const auto& feature : features) {
+        j["features"].push_back(feature.to_json());
+    }
+
+    j["metadata"] = metadata;
+    j["stats"] = nlohmann::json::object({
+        {"total_predictions", stats.total_predictions},
+        {"failed_predictions", stats.failed_predictions},
+        {"avg_confidence", stats.avg_confidence},
+        {"avg_inference_time_us", stats.avg_inference_time.count()}
+    });
+
+    return j;
+}
+
+float ModelSchema::get_metadata_float(const std::string& key, float default_value) const {
+    auto it = metadata.find(key);
+    if (it != metadata.end()) {
+        try {
+            return std::stof(it->second);
+        } catch (...) {
+            return default_value;
+        }
+    }
+    return default_value;
+}
+
+
+/*nlohmann::json ModelSchema::to_json() const {
     nlohmann::json j;
     j["model_id"] = model_id;
     j["description"] = description;
@@ -146,7 +275,7 @@ nlohmann::json ModelSchema::to_json() const {
     });
 
     return j;
-}
+}*/
 
 ModelSchema ModelSchema::from_json(const nlohmann::json& j) {
     ModelSchema schema;
@@ -563,6 +692,147 @@ ModelMetadata AdaptiveLightGBMModel::get_metadata() const {
     meta.output_size = get_output_size();
     meta.accuracy = schema_.accuracy;
     meta.model_size = get_model_size();
+    meta.avg_inference_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+        schema_.stats.avg_inference_time
+    );
+
+       // Extract metrics based on problem type
+    if (schema_.problem_type == "binary_classification") {
+        meta.precision = get_metric_from_metadata("precision", 0.0f);
+        meta.recall = get_metric_from_metadata("recall", 0.0f);
+        meta.f1_score = get_metric_from_metadata("f1_score", 0.0f);
+        meta.auc_score = get_metric_from_metadata("auc_score", 0.0f);
+    } else if (schema_.problem_type == "multiclass") {
+        meta.precision = get_metric_from_metadata("macro_precision", 0.0f);
+        meta.recall = get_metric_from_metadata("macro_recall", 0.0f);
+        meta.f1_score = get_metric_from_metadata("macro_f1", 0.0f);
+    } else {
+        meta.r2_score = get_metric_from_metadata("r2_score", 0.0f);
+        meta.rmse = get_metric_from_metadata("rmse", 0.0f);
+        meta.mae = get_metric_from_metadata("mae", 0.0f);
+    }
+
+    // Add algorithm info
+    auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
+    const auto* algo_info = algo_registry.get_algorithm(schema_.algorithm);
+
+    meta.parameters["algorithm"] = schema_.algorithm;
+    if (algo_info) {
+        meta.parameters["algorithm_description"] = algo_info->description;
+        meta.parameters["lightgbm_objective"] = algo_info->lightgbm_objective;
+    }
+
+    // Add comprehensive metrics based on problem type
+    if (schema_.problem_type == "binary_classification") {
+        add_binary_classification_metrics(meta.parameters);
+    } else if (schema_.problem_type == "multiclass") {
+        add_multiclass_metrics(meta.parameters);
+    } else {
+        add_regression_metrics(meta.parameters);
+    }
+
+    // Add common schema info
+    meta.parameters["problem_type"] = schema_.problem_type;
+    meta.parameters["target_column"] = schema_.target_column;
+    meta.parameters["features"] = std::to_string(schema_.features.size());
+    meta.parameters["drift_score"] = std::to_string(schema_.drift_score);
+    meta.parameters["created_at"] = std::to_string(
+        std::chrono::system_clock::to_time_t(schema_.created_at)
+    );
+    meta.parameters["training_samples"] = std::to_string(schema_.training_samples);
+    meta.parameters["total_predictions"] = std::to_string(schema_.stats.total_predictions);
+
+    return meta;
+}
+
+float AdaptiveLightGBMModel::get_metric_from_metadata(const std::string& key, float default_value) const {
+    auto it = schema_.metadata.find(key);
+    if (it != schema_.metadata.end()) {
+        try {
+            return std::stof(it->second);
+        } catch (...) {
+            return default_value;
+        }
+    }
+    return default_value;
+}
+
+void AdaptiveLightGBMModel::add_binary_classification_metrics(
+    std::unordered_map<std::string, std::string>& params) const {
+
+    std::map<std::string, std::string> metric_keys = {
+        {"auc_score", "auc"},
+        {"logloss", "log_loss"},
+        {"precision", "precision"},
+        {"recall", "recall"},
+        {"f1_score", "f1_score"},
+        {"specificity", "specificity"},
+        {"true_positives", "true_positives"},
+        {"false_positives", "false_positives"},
+        {"true_negatives", "true_negatives"},
+        {"false_negatives", "false_negatives"}
+    };
+
+    for (const auto& [metadata_key, param_key] : metric_keys) {
+        auto it = schema_.metadata.find(metadata_key);
+        if (it != schema_.metadata.end()) {
+            params[param_key] = it->second;
+        }
+    }
+}
+
+void AdaptiveLightGBMModel::add_multiclass_metrics(
+    std::unordered_map<std::string, std::string>& params) const {
+
+    auto add_if_exists = [&](const std::string& key, const std::string& param_name) {
+        auto it = schema_.metadata.find(key);
+        if (it != schema_.metadata.end()) {
+            params[param_name] = it->second;
+        }
+    };
+
+    add_if_exists("macro_precision", "macro_precision");
+    add_if_exists("macro_recall", "macro_recall");
+    add_if_exists("macro_f1", "macro_f1");
+    add_if_exists("micro_precision", "micro_precision");
+
+    // Add number of classes
+    auto class_it = schema_.metadata.find("num_classes");
+    if (class_it != schema_.metadata.end()) {
+        params["num_classes"] = class_it->second;
+    }
+}
+
+void AdaptiveLightGBMModel::add_regression_metrics(
+    std::unordered_map<std::string, std::string>& params) const {
+
+    std::map<std::string, std::string> metric_keys = {
+        {"rmse", "rmse"},
+        {"mae", "mae"},
+        {"r2_score", "r2_score"},
+        {"huber_loss", "huber_loss"},
+        {"fair_loss", "fair_loss"},
+        {"quantile_loss", "quantile_loss"}
+    };
+
+    for (const auto& [metadata_key, param_key] : metric_keys) {
+        auto it = schema_.metadata.find(metadata_key);
+        if (it != schema_.metadata.end()) {
+            params[param_key] = it->second;
+        }
+    }
+}
+
+/*ModelMetadata AdaptiveLightGBMModel::get_metadata() const {
+    std::lock_guard<std::mutex> lock(model_mutex_);
+
+    ModelMetadata meta;
+    meta.name = schema_.model_id;
+    meta.type = ModelType::LIGHTGBM;
+    meta.input_size = schema_.features.size();
+    meta.output_size = get_output_size();
+    meta.accuracy = schema_.accuracy;
+    meta.model_size = get_model_size();
     meta.avg_inference_time = std::chrono::duration_cast<std::chrono::milliseconds>(schema_.stats.avg_inference_time);
 
     // Add algorithm info
@@ -587,7 +857,7 @@ ModelMetadata AdaptiveLightGBMModel::get_metadata() const {
     meta.parameters["total_predictions"] = std::to_string(schema_.stats.total_predictions);
 
     return meta;
-}
+}*/
 
 void AdaptiveLightGBMModel::set_batch_size(size_t batch_size) {
     std::lock_guard<std::mutex> lock(model_mutex_);
@@ -991,9 +1261,338 @@ void AdaptiveLightGBMModel::calculate_training_metrics(
     }
 }
 
+void AdaptiveLightGBMModel::calculate_binary_classification_metrics(
+    const std::vector<std::vector<float>>& features,
+    const std::vector<float>& labels,
+    std::unordered_map<std::string, float>& metrics) {
+
+    if (features.empty() || labels.empty() || !booster_) {
+        return;
+    }
+
+    // Use a validation set (last 20% or max 1000 samples)
+    size_t total_samples = features.size();
+    size_t val_size = std::min(total_samples / 5, (size_t)1000);
+    if (val_size < 10) return;
+
+    size_t start_idx = total_samples - val_size;
+    size_t feature_size = features[0].size();
+
+    // Prepare features for prediction
+    std::vector<float> flat_features;
+    flat_features.reserve(val_size * feature_size);
+    for (size_t i = start_idx; i < total_samples; ++i) {
+        flat_features.insert(flat_features.end(),
+                           features[i].begin(),
+                           features[i].end());
+    }
+
+    // Allocate output buffer
+    std::vector<double> predictions(val_size);
+    int64_t out_len = 0;
+
+    // Make predictions
+    int result = LGBM_BoosterPredictForMat(
+        booster_,
+        flat_features.data(),
+        C_API_DTYPE_FLOAT32,
+        static_cast<int32_t>(val_size),
+        static_cast<int32_t>(feature_size),
+        1,
+        0,
+        0,
+        -1,
+        "",
+        &out_len,
+        predictions.data()
+    );
+
+    if (result != 0 || static_cast<size_t>(out_len) != val_size) {
+        return;
+    }
+
+    // Calculate confusion matrix
+    int64_t true_positives = 0;
+    int64_t false_positives = 0;
+    int64_t true_negatives = 0;
+    int64_t false_negatives = 0;
+
+    for (size_t i = 0; i < val_size; ++i) {
+        bool pred_class = predictions[i] > 0.5f;
+        bool true_class = labels[start_idx + i] > 0.5f;
+
+        if (pred_class && true_class) {
+            true_positives++;
+        } else if (pred_class && !true_class) {
+            false_positives++;
+        } else if (!pred_class && true_class) {
+            false_negatives++;
+        } else {
+            true_negatives++;
+        }
+    }
+
+    // Calculate metrics
+    float accuracy = static_cast<float>(true_positives + true_negatives) / val_size;
+
+    // Precision: TP / (TP + FP)
+    float precision = 0.0f;
+    if (true_positives + false_positives > 0) {
+        precision = static_cast<float>(true_positives) / (true_positives + false_positives);
+    }
+
+        // Recall: TP / (TP + FN)
+    float recall = 0.0f;
+    if (true_positives + false_negatives > 0) {
+        recall = static_cast<float>(true_positives) / (true_positives + false_negatives);
+    }
+
+    // F1 score: 2 * (precision * recall) / (precision + recall)
+    float f1_score = 0.0f;
+    if (precision + recall > 0) {
+        f1_score = 2.0f * (precision * recall) / (precision + recall);
+    }
+
+    // Store metrics
+    metrics["accuracy"] = accuracy;
+    metrics["precision"] = precision;
+    metrics["recall"] = recall;
+    metrics["f1_score"] = f1_score;
+    metrics["true_positives"] = static_cast<float>(true_positives);
+    metrics["false_positives"] = static_cast<float>(false_positives);
+    metrics["true_negatives"] = static_cast<float>(true_negatives);
+    metrics["false_negatives"] = static_cast<float>(false_negatives);
+
+    // Calculate additional metrics
+    if (true_negatives + false_positives > 0) {
+        metrics["specificity"] = static_cast<float>(true_negatives) / (true_negatives + false_positives);
+    } else {
+        metrics["specificity"] = 0.0f;
+    }
+}
+
+// Helper function to calculate multiclass classification metrics
+void AdaptiveLightGBMModel::calculate_multiclass_metrics(
+    const std::vector<std::vector<float>>& features,
+    const std::vector<float>& labels,
+    size_t num_classes,
+    std::unordered_map<std::string, float>& metrics) {
+
+    if (features.empty() || labels.empty() || !booster_ || num_classes < 2) {
+        return;
+    }
+
+    // Use a validation set
+    size_t total_samples = features.size();
+    size_t val_size = std::min(total_samples / 5, (size_t)1000);
+    if (val_size < 10) return;
+
+    size_t start_idx = total_samples - val_size;
+    size_t feature_size = features[0].size();
+
+    // Prepare features for prediction
+    std::vector<float> flat_features;
+    flat_features.reserve(val_size * feature_size);
+    for (size_t i = start_idx; i < total_samples; ++i) {
+        flat_features.insert(flat_features.end(),
+                           features[i].begin(),
+                           features[i].end());
+    }
+
+    // Allocate output buffer for multiclass predictions
+    std::vector<double> predictions(val_size * num_classes);
+    int64_t out_len = 0;
+
+    // Make predictions (returns probabilities for each class)
+    int result = LGBM_BoosterPredictForMat(
+        booster_,
+        flat_features.data(),
+        C_API_DTYPE_FLOAT32,
+        static_cast<int32_t>(val_size),
+        static_cast<int32_t>(feature_size),
+        1,
+        1,  // predict raw score (returns probabilities)
+        0,
+        -1,
+        "",
+        &out_len,
+        predictions.data()
+    );
+
+    if (result != 0 || static_cast<size_t>(out_len) != val_size * num_classes) {
+        return;
+    }
+
+    // Initialize confusion matrix
+    std::vector<std::vector<int64_t>> confusion_matrix(num_classes,
+                                                      std::vector<int64_t>(num_classes, 0));
+
+    // Calculate predicted classes and build confusion matrix
+    int64_t correct_predictions = 0;
+
+    for (size_t i = 0; i < val_size; ++i) {
+        size_t true_class = static_cast<size_t>(labels[start_idx + i]);
+
+        // Find predicted class (highest probability)
+        size_t pred_class = 0;
+        double max_prob = predictions[i * num_classes];
+        for (size_t c = 1; c < num_classes; ++c) {
+            if (predictions[i * num_classes + c] > max_prob) {
+                max_prob = predictions[i * num_classes + c];
+                pred_class = c;
+            }
+        }
+
+        confusion_matrix[true_class][pred_class]++;
+        if (pred_class == true_class) {
+            correct_predictions++;
+        }
+    }
+
+    // Calculate overall accuracy
+    float accuracy = static_cast<float>(correct_predictions) / val_size;
+
+    // Calculate per-class metrics
+    std::vector<float> per_class_precision(num_classes, 0.0f);
+    std::vector<float> per_class_recall(num_classes, 0.0f);
+    std::vector<float> per_class_f1(num_classes, 0.0f);
+
+    for (size_t c = 0; c < num_classes; ++c) {
+        int64_t tp = confusion_matrix[c][c];
+        int64_t fp = 0;
+        int64_t fn = 0;
+
+        // Sum false positives
+        for (size_t true_c = 0; true_c < num_classes; ++true_c) {
+            if (true_c != c) {
+                fp += confusion_matrix[true_c][c];
+            }
+        }
+
+        // Sum false negatives
+        for (size_t pred_c = 0; pred_c < num_classes; ++pred_c) {
+            if (pred_c != c) {
+                fn += confusion_matrix[c][pred_c];
+            }
+        }
+
+                // Calculate precision for this class
+        if (tp + fp > 0) {
+            per_class_precision[c] = static_cast<float>(tp) / (tp + fp);
+        }
+
+        // Calculate recall for this class
+        if (tp + fn > 0) {
+            per_class_recall[c] = static_cast<float>(tp) / (tp + fn);
+        }
+
+        // Calculate F1 for this class
+        if (per_class_precision[c] + per_class_recall[c] > 0) {
+            per_class_f1[c] = 2.0f * (per_class_precision[c] * per_class_recall[c]) /
+                             (per_class_precision[c] + per_class_recall[c]);
+        }
+    }
+
+    // Calculate macro-averaged metrics
+    float macro_precision = 0.0f;
+    float macro_recall = 0.0f;
+    float macro_f1 = 0.0f;
+
+    for (size_t c = 0; c < num_classes; ++c) {
+        macro_precision += per_class_precision[c];
+        macro_recall += per_class_recall[c];
+        macro_f1 += per_class_f1[c];
+    }
+
+    if (num_classes > 0) {
+        macro_precision /= num_classes;
+        macro_recall /= num_classes;
+        macro_f1 /= num_classes;
+    }
+
+    // Calculate micro-averaged precision (same as accuracy for multiclass)
+    float micro_precision = accuracy;
+
+    // Store metrics
+    metrics["accuracy"] = accuracy;
+    metrics["macro_precision"] = macro_precision;
+    metrics["macro_recall"] = macro_recall;
+    metrics["macro_f1"] = macro_f1;
+    metrics["micro_precision"] = micro_precision;
+
+    // Store per-class metrics in metadata (as JSON string or separate entries)
+    for (size_t c = 0; c < num_classes; ++c) {
+        metrics["class_" + std::to_string(c) + "_precision"] = per_class_precision[c];
+        metrics["class_" + std::to_string(c) + "_recall"] = per_class_recall[c];
+        metrics["class_" + std::to_string(c) + "_f1"] = per_class_f1[c];
+    }
+}
 
 // Helper function to process binary classification metrics
 void AdaptiveLightGBMModel::process_binary_classification_metrics(
+    const std::vector<std::string>& eval_names,
+    const std::vector<double>& eval_results,
+    const std::vector<std::vector<float>>& features,
+    const std::vector<float>& labels) {
+
+    // First, get LightGBM evaluation metrics
+    double auc_score = 0.0;
+    double logloss_score = 0.0;
+    double accuracy = 0.0;
+    bool has_auc = false;
+    bool has_logloss = false;
+
+    for (size_t i = 0; i < eval_names.size() && i < eval_results.size(); ++i) {
+        const std::string& name = eval_names[i];
+        double value = eval_results[i];
+
+        if (name.find("auc") != std::string::npos) {
+            auc_score = value;
+            has_auc = true;
+            schema_.metadata["auc_score"] = std::to_string(value);
+        } else if (name.find("binary_logloss") != std::string::npos) {
+            logloss_score = value;
+            has_logloss = true;
+            schema_.metadata["logloss"] = std::to_string(value);
+        } else if (name.find("binary_error") != std::string::npos) {
+            accuracy = 1.0 - value;
+            schema_.metadata["error_rate"] = std::to_string(value);
+        }
+    }
+
+    // Calculate comprehensive binary classification metrics
+    std::unordered_map<std::string, float> computed_metrics;
+    calculate_binary_classification_metrics(features, labels, computed_metrics);
+
+    // Store all metrics in metadata
+    for (const auto& [key, value] : computed_metrics) {
+        schema_.metadata[key] = std::to_string(value);
+    }
+        // Determine overall accuracy score
+    if (has_auc) {
+        schema_.accuracy = static_cast<float>(auc_score);
+    } else if (computed_metrics.find("accuracy") != computed_metrics.end()) {
+        schema_.accuracy = computed_metrics["accuracy"];
+    } else if (accuracy > 0.0) {
+        schema_.accuracy = static_cast<float>(accuracy);
+    } else if (has_logloss) {
+        double estimated_acc = std::max(0.0, std::min(1.0, 1.0 - logloss_score));
+        schema_.accuracy = static_cast<float>(estimated_acc);
+    } else {
+        schema_.accuracy = 0.85f; // Reasonable default
+    }
+
+    std::cout << "[LightGBM] Binary Classification Metrics:" << std::endl;
+    std::cout << "  Accuracy: " << schema_.accuracy << std::endl;
+    std::cout << "  Precision: " << computed_metrics["precision"] << std::endl;
+    std::cout << "  Recall: " << computed_metrics["recall"] << std::endl;
+    std::cout << "  F1 Score: " << computed_metrics["f1_score"] << std::endl;
+    if (has_auc) {
+        std::cout << "  AUC: " << auc_score << std::endl;
+    }
+}
+
+/*void AdaptiveLightGBMModel::process_binary_classification_metrics(
     const std::vector<std::string>& eval_names,
     const std::vector<double>& eval_results,
     const std::vector<std::vector<float>>& features,
@@ -1057,7 +1656,7 @@ void AdaptiveLightGBMModel::process_binary_classification_metrics(
         schema_.accuracy = 0.85f;
         schema_.metadata["default_accuracy"] = "0.85";
     }
-}
+}*/
 
 // Helper function to process multiclass metrics
 void AdaptiveLightGBMModel::process_multiclass_metrics(
@@ -1075,6 +1674,75 @@ void AdaptiveLightGBMModel::process_multiclass_metrics(
         double value = eval_results[i];
 
         if (name.find("multi_logloss") != std::string::npos) {
+            multi_logloss = value;
+            schema_.metadata["multi_logloss"] = std::to_string(value);
+            has_metrics = true;
+        } else if (name.find("multi_error") != std::string::npos) {
+            multi_error = value;
+            schema_.metadata["multi_error"] = std::to_string(value);
+            has_metrics = true;
+        }
+    }
+
+        // Get number of classes from metadata
+    size_t num_classes = 1;
+    auto it = schema_.metadata.find("num_classes");
+    if (it != schema_.metadata.end()) {
+        try {
+            num_classes = std::stoi(it->second);
+        } catch (...) {
+            num_classes = 1;
+        }
+    }
+
+    // Calculate comprehensive multiclass metrics
+    std::unordered_map<std::string, float> computed_metrics;
+    if (num_classes > 1) {
+        calculate_multiclass_metrics(features, labels, num_classes, computed_metrics);
+
+        // Store all metrics in metadata
+        for (const auto& [key, value] : computed_metrics) {
+            schema_.metadata[key] = std::to_string(value);
+        }
+
+                // Use computed accuracy if available
+        if (computed_metrics.find("accuracy") != computed_metrics.end()) {
+            schema_.accuracy = computed_metrics["accuracy"];
+        } else if (has_metrics && multi_error > 0.0) {
+            schema_.accuracy = static_cast<float>(1.0 - multi_error);
+        } else {
+            schema_.accuracy = 0.75f; // Reasonable default
+        }
+    } else {
+        // Fallback for single class
+        schema_.accuracy = 0.75f;
+    }
+
+    std::cout << "[LightGBM] Multiclass Classification Metrics:" << std::endl;
+    std::cout << "  Accuracy: " << schema_.accuracy << std::endl;
+    if (computed_metrics.find("macro_precision") != computed_metrics.end()) {
+        std::cout << "  Macro Precision: " << computed_metrics["macro_precision"] << std::endl;
+        std::cout << "  Macro Recall: " << computed_metrics["macro_recall"] << std::endl;
+        std::cout << "  Macro F1: " << computed_metrics["macro_f1"] << std::endl;
+        std::cout << "  Micro Precision: " << computed_metrics["micro_precision"] << std::endl;
+    }
+}
+
+/*void AdaptiveLightGBMModel::process_multiclass_metrics(
+    const std::vector<std::string>& eval_names,
+    const std::vector<double>& eval_results,
+    const std::vector<std::vector<float>>& features,
+    const std::vector<float>& labels) {
+
+    double multi_logloss = 0.0;
+    double multi_error = 0.0;
+    bool has_metrics = false;
+
+    for (size_t i = 0; i < eval_names.size() && i < eval_results.size(); ++i) {
+        const std::string& name = eval_names[i];
+        double value = eval_results[i];
+
+if (name.find("multi_logloss") != std::string::npos) {
             multi_logloss = value;
             schema_.metadata["multi_logloss"] = std::to_string(value);
             has_metrics = true;
@@ -1102,7 +1770,7 @@ void AdaptiveLightGBMModel::process_multiclass_metrics(
             schema_.accuracy = 0.75f;
         }
     }
-}
+}*/
 
 // Helper function to process regression metrics
 void AdaptiveLightGBMModel::process_regression_metrics(

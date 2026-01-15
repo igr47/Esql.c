@@ -70,6 +70,7 @@ struct ModelSchema {
 
     nlohmann::json to_json() const;
     static ModelSchema from_json(const nlohmann::json& j);
+    float get_metadata_float(const std::string& key, float default_value) const;
 
     bool matches_row(const std::unordered_map<std::string, Datum>& row) const;
     std::vector<float> extract_features(const std::unordered_map<std::string, Datum>& row) const;
@@ -146,6 +147,19 @@ private:
     void adjust_schema_to_model(size_t expected_features);
     std::string generate_parameters(const std::unordered_map<std::string, std::string>& params);
     void calculate_training_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels);
+
+    void add_binary_classification_metrics(std::unordered_map<std::string, std::string>& params) const;
+
+    void add_multiclass_metrics(std::unordered_map<std::string, std::string>& params) const;
+
+    void add_regression_metrics(std::unordered_map<std::string, std::string>& params) const;
+
+    float get_metric_from_metadata(const std::string& key, float default_value) const;
+
+
+    void calculate_multiclass_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels,size_t num_classes,std::unordered_map<std::string, float>& metrics);
+
+    void calculate_binary_classification_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels,std::unordered_map<std::string, float>& metrics);
 
     // Helper functions for metric calculation
     void process_binary_classification_metrics(const std::vector<std::string>& eval_names,const std::vector<double>& eval_results,const std::vector<std::vector<float>>& features, const std::vector<float>& labels);

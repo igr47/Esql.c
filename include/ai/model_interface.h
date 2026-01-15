@@ -38,9 +38,17 @@ struct ModelMetadata {
     size_t input_size;
     size_t output_size;
     float accuracy;
+    float precision;
+    float recall;
+    float f1_score;
+    float auc_score;
+    float r2_score;
+    float rmse;
+    float mae;
     size_t model_size; // in bytes
     std::chrono::milliseconds avg_inference_time;
     std::unordered_map<std::string, std::string> parameters;
+    ModelMetadata() : accuracy(0.0f), precision(0.0f), recall(0.0f), f1_score(0.0f), auc_score(0.0f), r2_score(0.0f),rmse(0.0f), mae(0.0f) {}
 };
 
 class IModel {
