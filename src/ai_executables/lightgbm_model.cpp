@@ -134,6 +134,76 @@ nlohmann::json ModelSchema::to_json() const {
     j["accuracy"] = accuracy;
     j["drift_score"] = drift_score;
 
+    // Comprehensive metrics section
+    nlohmann::json metrics_json;
+
+    if (problem_type == "binary_classification") {
+        metrics_json["accuracy"] = get_metadata_float("accuracy", 0.0f);
+        metrics_json["precision"] = get_metadata_float("precision", 0.0f);
+        metrics_json["recall"] = get_metadata_float("recall", 0.0f);
+        metrics_json["f1_score"] = get_metadata_float("f1_score", 0.0f);
+        metrics_json["auc_score"] = get_metadata_float("auc_score", 0.0f);
+        metrics_json["specificity"] = get_metadata_float("specificity", 0.0f);
+
+    } else if (problem_type == "multiclass") {
+        metrics_json["accuracy"] = get_metadata_float("accuracy", 0.0f);
+        metrics_json["macro_precision"] = get_metadata_float("macro_precision", 0.0f);
+        metrics_json["macro_recall"] = get_metadata_float("macro_recall", 0.0f);
+        metrics_json["macro_f1"] = get_metadata_float("macro_f1", 0.0f);
+        metrics_json["micro_precision"] = get_metadata_float("micro_precision", 0.0f);
+
+    } else {
+                // Regression metrics
+        metrics_json["r2_score"] = get_metadata_float("r2_score", 0.0f);
+        metrics_json["rmse"] = get_metadata_float("rmse", 0.0f);
+        metrics_json["mae"] = get_metadata_float("mae", 0.0f);
+        metrics_json["mape"] = get_metadata_float("mape", 0.0f);
+        metrics_json["medae"] = get_metadata_float("medae", 0.0f);
+
+        // "Precision-like" metrics for regression
+        metrics_json["within_5_percent"] = get_metadata_float("within_5_percent", 0.0f);
+        metrics_json["within_10_percent"] = get_metadata_float("within_10_percent", 0.0f);
+        metrics_json["within_20_percent"] = get_metadata_float("within_20_percent", 0.0f);
+        metrics_json["within_1_std"] = get_metadata_float("within_1_std", 0.0f);
+        metrics_json["within_2_std"] = get_metadata_float("within_2_std", 0.0f);
+        metrics_json["coverage_90"] = get_metadata_float("coverage_90", 0.0f);
+        metrics_json["coverage_95"] = get_metadata_float("coverage_95", 0.0f);
+        metrics_json["coverage_99"] = get_metadata_float("coverage_99", 0.0f);
+    }
+
+    j["metrics"] = metrics_json;
+
+    // Feature information
+    j["features"] = nlohmann::json::array();
+    for (const auto& feature : features) {
+        j["features"].push_back(feature.to_json());
+    }
+
+    // All metadata (including raw metrics)
+    j["metadata"] = metadata;
+
+    // Statistics
+    j["stats"] = nlohmann::json::object({
+        {"total_predictions", stats.total_predictions},
+        {"failed_predictions", stats.failed_predictions},
+        {"avg_confidence", stats.avg_confidence},
+        {"avg_inference_time_us", stats.avg_inference_time.count()}
+    });
+
+    return j;
+}
+/*nlohmann::json ModelSchema::to_json() const {
+    nlohmann::json j;
+    j["model_id"] = model_id;
+    j["description"] = description;
+    j["target_column"] = target_column;
+    j["problem_type"] = problem_type;
+    j["created_at"] = std::chrono::system_clock::to_time_t(created_at);
+    j["last_updated"] = std::chrono::system_clock::to_time_t(last_updated);
+    j["training_samples"] = training_samples;
+    j["accuracy"] = accuracy;
+    j["drift_score"] = drift_score;
+
     // Add comprehensive metrics based on problem type
     nlohmann::json metrics_json;
 
@@ -234,7 +304,7 @@ nlohmann::json ModelSchema::to_json() const {
     });
 
     return j;
-}
+}*/
 
 float ModelSchema::get_metadata_float(const std::string& key, float default_value) const {
     auto it = metadata.find(key);
@@ -710,6 +780,9 @@ ModelMetadata AdaptiveLightGBMModel::get_metadata() const {
         meta.r2_score = get_metric_from_metadata("r2_score", 0.0f);
         meta.rmse = get_metric_from_metadata("rmse", 0.0f);
         meta.mae = get_metric_from_metadata("mae", 0.0f);
+        meta.within_10_percent = get_metric_from_metadata("within_10_percent", 0.0f);
+        meta.within_1_std = get_metric_from_metadata("within_1_std", 0.0f);
+        meta.coverage_95 = get_metric_from_metadata("coverage_95", 0.0f);
     }
 
     // Add algorithm info
@@ -744,6 +817,21 @@ ModelMetadata AdaptiveLightGBMModel::get_metadata() const {
 
     return meta;
 }
+
+void AdaptiveLightGBMModel::add_all_metrics_to_parameters(std::unordered_map<std::string, std::string>& params) const {
+
+    // Add all available metrics from metadata
+    for (const auto& [key, value] : schema_.metadata) {
+        // Skip non-metric entries
+        if (key == "created_via" || key == "source_table" ||
+            key == "target_column" || key == "training_samples") {
+            continue;
+        }
+
+        params[key] = value;
+    }
+}
+
 
 float AdaptiveLightGBMModel::get_metric_from_metadata(const std::string& key, float default_value) const {
     auto it = schema_.metadata.find(key);
@@ -1133,6 +1221,45 @@ bool AdaptiveLightGBMModel::train(const std::vector<std::vector<float>>& feature
     return true;
 }
 
+void AdaptiveLightGBMModel::log_metrics_summary() const {
+    std::cout << "\n=== Model Metrics Summary ===" << std::endl;
+    std::cout << "Model ID: " << schema_.model_id << std::endl;
+    std::cout << "Problem Type: " << schema_.problem_type << std::endl;
+    std::cout << "Algorithm: " << schema_.algorithm << std::endl;
+    std::cout << "Training Samples: " << schema_.training_samples << std::endl;
+    std::cout << "Overall Accuracy: " << schema_.accuracy << std::endl;
+
+    if (schema_.problem_type == "binary_classification") {
+        std::cout << "\nClassification Metrics:" << std::endl;
+        std::cout << "  Precision: " << get_metric_from_metadata("precision", 0.0f) << std::endl;
+        std::cout << "  Recall: " << get_metric_from_metadata("recall", 0.0f) << std::endl;
+        std::cout << "  F1 Score: " << get_metric_from_metadata("f1_score", 0.0f) << std::endl;
+        std::cout << "  AUC: " << get_metric_from_metadata("auc_score", 0.0f) << std::endl;
+
+    } else if (schema_.problem_type == "multiclass") {
+        std::cout << "\nMulticlass Metrics:" << std::endl;
+        std::cout << "  Macro Precision: " << get_metric_from_metadata("macro_precision", 0.0f) << std::endl;
+        std::cout << "  Macro Recall: " << get_metric_from_metadata("macro_recall", 0.0f) << std::endl;
+        std::cout << "  Macro F1: " << get_metric_from_metadata("macro_f1", 0.0f) << std::endl;
+
+    } else {
+        std::cout << "\nRegression Metrics:" << std::endl;
+        std::cout << "  R² Score: " << get_metric_from_metadata("r2_score", 0.0f) << std::endl;
+        std::cout << "  RMSE: " << get_metric_from_metadata("rmse", 0.0f) << std::endl;
+        std::cout << "  MAE: " << get_metric_from_metadata("mae", 0.0f) << std::endl;
+        std::cout << "  Within 10%: " << get_metric_from_metadata("within_10_percent", 0.0f) << "%" << std::endl;
+        std::cout << "  Within 1σ: " << get_metric_from_metadata("within_1_std", 0.0f) << "%" << std::endl;
+        std::cout << "  95% Coverage: " << get_metric_from_metadata("coverage_95", 0.0f) << "%" << std::endl;
+    }
+
+    std::cout << "\nPerformance Stats:" << std::endl;
+    std::cout << "  Total Predictions: " << schema_.stats.total_predictions << std::endl;
+    std::cout << "  Failed Predictions: " << schema_.stats.failed_predictions << std::endl;
+    std::cout << "  Avg Inference Time: "
+              << schema_.stats.avg_inference_time.count() / 1000.0f << " ms" << std::endl;
+    std::cout << "  Data Drift Score: " << schema_.drift_score << std::endl;
+    std::cout << "===================================\n" << std::endl;
+}
 
 void AdaptiveLightGBMModel::calculate_training_metrics(
     const std::vector<std::vector<float>>& features,
@@ -1259,6 +1386,7 @@ void AdaptiveLightGBMModel::calculate_training_metrics(
                   << ". Using fallback metrics." << std::endl;
         calculate_fallback_metrics(features, labels);
     }
+    log_metrics_summary();
 }
 
 void AdaptiveLightGBMModel::calculate_binary_classification_metrics(
@@ -1772,8 +1900,300 @@ if (name.find("multi_logloss") != std::string::npos) {
     }
 }*/
 
-// Helper function to process regression metrics
+void AdaptiveLightGBMModel::calculate_regression_metrics(
+    const std::vector<std::vector<float>>& features,
+    const std::vector<float>& labels,
+    std::unordered_map<std::string, float>& metrics) {
+
+    if (features.empty() || labels.empty() || !booster_) {
+        return;
+    }
+
+    // Use a validation set (last 20% or max 1000 samples)
+    size_t total_samples = features.size();
+    size_t val_size = std::min(total_samples / 5, (size_t)1000);
+    if (val_size < 10) return;
+
+    size_t start_idx = total_samples - val_size;
+    size_t feature_size = features[0].size();
+
+    // Prepare features for prediction
+    std::vector<float> flat_features;
+    flat_features.reserve(val_size * feature_size);
+    for (size_t i = start_idx; i < total_samples; ++i) {
+        flat_features.insert(flat_features.end(),
+                           features[i].begin(),
+                           features[i].end());
+    }
+
+    // Allocate output buffer
+    std::vector<double> predictions(val_size);
+    int64_t out_len = 0;
+
+    // Make predictions
+    int result = LGBM_BoosterPredictForMat(
+        booster_,
+        flat_features.data(),
+        C_API_DTYPE_FLOAT32,
+        static_cast<int32_t>(val_size),
+        static_cast<int32_t>(feature_size),
+        1,
+        0,
+        0,
+        -1,
+        "",
+        &out_len,
+        predictions.data()
+    );
+
+    if (result != 0 || static_cast<size_t>(out_len) != val_size) {
+        return;
+    }
+
+    // Calculate basic statistics
+    std::vector<float> residuals(val_size);
+    std::vector<float> absolute_errors(val_size);
+    std::vector<float> relative_errors(val_size);
+    std::vector<float> squared_errors(val_size);
+
+    float sum_labels = 0.0f;
+    float sum_predictions = 0.0f;
+
+    for (size_t i = 0; i < val_size; ++i) {
+        float true_val = labels[start_idx + i];
+        float pred_val = static_cast<float>(predictions[i]);
+
+        sum_labels += true_val;
+        sum_predictions += pred_val;
+
+        float error = pred_val - true_val;
+        float abs_error = std::abs(error);
+
+        residuals[i] = error;
+        absolute_errors[i] = abs_error;
+        squared_errors[i] = error * error;
+
+        if (true_val != 0.0f) {
+            relative_errors[i] = abs_error / std::abs(true_val);
+        } else {
+            relative_errors[i] = 0.0f;
+        }
+    }
+
+    // Basic metrics
+    float mean_true = sum_labels / val_size;
+    float mean_pred = sum_predictions / val_size;
+
+    // Calculate R² score
+    float ss_total = 0.0f;
+    float ss_residual = 0.0f;
+    for (size_t i = 0; i < val_size; ++i) {
+        float true_val = labels[start_idx + i];
+        float pred_val = static_cast<float>(predictions[i]);
+
+        ss_total += (true_val - mean_true) * (true_val - mean_true);
+        ss_residual += (true_val - pred_val) * (true_val - pred_val);
+    }
+
+    float r2_score = 1.0f;
+    if (ss_total > 0.0f) {
+        r2_score = 1.0f - (ss_residual / ss_total);
+    }
+
+    // Calculate RMSE (Root Mean Squared Error)
+    float mse = ss_residual / val_size;
+    float rmse = std::sqrt(mse);
+
+    // Calculate MAE (Mean Absolute Error)
+    float mae = 0.0f;
+    for (float ae : absolute_errors) {
+        mae += ae;
+    }
+    mae /= val_size;
+
+    // Calculate MAPE (Mean Absolute Percentage Error)
+    float mape = 0.0f;
+    for (float re : relative_errors) {
+        mape += re;
+    }
+    mape = (mape / val_size) * 100.0f; // Convert to percentage
+
+    // Calculate MedAE (Median Absolute Error) - robust to outliers
+    std::vector<float> sorted_abs_errors = absolute_errors;
+    std::sort(sorted_abs_errors.begin(), sorted_abs_errors.end());
+    float medae = sorted_abs_errors[val_size / 2];
+
+    // Calculate "Within Tolerance" metrics (similar to precision for regression)
+    float tolerance_5_percent = 0.0f;
+    float tolerance_10_percent = 0.0f;
+    float tolerance_20_percent = 0.0f;
+    float tolerance_1_std = 0.0f;
+    float tolerance_2_std = 0.0f;
+
+    // Calculate standard deviation of errors
+    float mean_error = 0.0f;
+    for (float err : residuals) {
+        mean_error += err;
+    }
+    mean_error /= val_size;
+
+    float error_variance = 0.0f;
+    for (float err : residuals) {
+        float diff = err - mean_error;
+        error_variance += diff * diff;
+    }
+    error_variance /= val_size;
+    float error_std = std::sqrt(error_variance);
+
+    for (size_t i = 0; i < val_size; ++i) {
+        float true_val = labels[start_idx + i];
+        float pred_val = static_cast<float>(predictions[i]);
+        float abs_error = absolute_errors[i];
+
+        // Within percentage tolerance
+        if (true_val != 0.0f) {
+            float rel_error = abs_error / std::abs(true_val);
+            if (rel_error <= 0.05f) tolerance_5_percent += 1.0f;
+            if (rel_error <= 0.10f) tolerance_10_percent += 1.0f;
+            if (rel_error <= 0.20f) tolerance_20_percent += 1.0f;
+        }
+
+        // Within standard deviation tolerance
+        if (std::abs(pred_val - true_val) <= error_std) tolerance_1_std += 1.0f;
+        if (std::abs(pred_val - true_val) <= 2.0f * error_std) tolerance_2_std += 1.0f;
+    }
+
+    tolerance_5_percent = (tolerance_5_percent / val_size) * 100.0f;
+    tolerance_10_percent = (tolerance_10_percent / val_size) * 100.0f;
+    tolerance_20_percent = (tolerance_20_percent / val_size) * 100.0f;
+    tolerance_1_std = (tolerance_1_std / val_size) * 100.0f;
+    tolerance_2_std = (tolerance_2_std / val_size) * 100.0f;
+
+    // Store all metrics
+    metrics["r2_score"] = r2_score;
+    metrics["rmse"] = rmse;
+    metrics["mae"] = mae;
+    metrics["mape"] = mape;
+    metrics["medae"] = medae;
+    metrics["mse"] = mse;
+    metrics["mean_true"] = mean_true;
+    metrics["mean_pred"] = mean_pred;
+    metrics["error_mean"] = mean_error;
+    metrics["error_std"] = error_std;
+
+    // Within tolerance metrics (these are like "precision" for regression)
+    metrics["within_5_percent"] = tolerance_5_percent;
+    metrics["within_10_percent"] = tolerance_10_percent;
+    metrics["within_20_percent"] = tolerance_20_percent;
+    metrics["within_1_std"] = tolerance_1_std;
+    metrics["within_2_std"] = tolerance_2_std;
+
+        // Additional regression diagnostics
+    if (val_size >= 2) {
+        // Calculate prediction interval coverage
+        float coverage_90 = 0.0f;
+        float coverage_95 = 0.0f;
+        float coverage_99 = 0.0f;
+
+        for (size_t i = 0; i < val_size; ++i) {
+            float true_val = labels[start_idx + i];
+            float pred_val = static_cast<float>(predictions[i]);
+
+            // Simple prediction intervals (using error distribution)
+            float lower_90 = pred_val - 1.645f * error_std;
+            float upper_90 = pred_val + 1.645f * error_std;
+            float lower_95 = pred_val - 1.960f * error_std;
+            float upper_95 = pred_val + 1.960f * error_std;
+            float lower_99 = pred_val - 2.576f * error_std;
+            float upper_99 = pred_val + 2.576f * error_std;
+
+            if (true_val >= lower_90 && true_val <= upper_90) coverage_90 += 1.0f;
+            if (true_val >= lower_95 && true_val <= upper_95) coverage_95 += 1.0f;
+            if (true_val >= lower_99 && true_val <= upper_99) coverage_99 += 1.0f;
+        }
+
+        metrics["coverage_90"] = (coverage_90 / val_size) * 100.0f;
+        metrics["coverage_95"] = (coverage_95 / val_size) * 100.0f;
+        metrics["coverage_99"] = (coverage_99 / val_size) * 100.0f;
+    }
+}
+
 void AdaptiveLightGBMModel::process_regression_metrics(
+    const std::vector<std::string>& eval_names,
+    const std::vector<double>& eval_results,
+    const std::vector<std::vector<float>>& features,
+    const std::vector<float>& labels) {
+
+    double rmse = 0.0;
+    double mae = 0.0;
+    double r2 = 0.0;
+    bool has_rmse = false;
+    bool has_mae = false;
+
+    // Process LightGBM metrics
+    for (size_t i = 0; i < eval_names.size() && i < eval_results.size(); ++i) {
+        const std::string& name = eval_names[i];
+        double value = eval_results[i];
+
+        if (name.find("rmse") != std::string::npos ||name.find("l2") != std::string::npos || name.find("regression") != std::string::npos) {
+            rmse = value;
+            has_rmse = true;
+            schema_.metadata["rmse"] = std::to_string(value);
+        } else if (name.find("mae") != std::string::npos ||
+                   name.find("l1") != std::string::npos) {
+            mae = value;
+            has_mae = true;
+            schema_.metadata["mae"] = std::to_string(value);
+        } else if (name.find("huber") != std::string::npos) {
+            schema_.metadata["huber_loss"] = std::to_string(value);
+        } else if (name.find("fair") != std::string::npos) {
+            schema_.metadata["fair_loss"] = std::to_string(value);
+        } else if (name.find("quantile") != std::string::npos) {
+            schema_.metadata["quantile_loss"] = std::to_string(value);
+        }
+    }
+
+    // Calculate comprehensive regression metrics
+    std::unordered_map<std::string, float> computed_metrics;
+    calculate_regression_metrics(features, labels, computed_metrics);
+
+        // Store all computed metrics
+    for (const auto& [key, value] : computed_metrics) {
+        schema_.metadata[key] = std::to_string(value);
+    }
+
+    // Determine overall accuracy metric based on problem subtype
+    if (schema_.problem_type == "count_regression") {
+        // For count data, use within tolerance metrics
+        if (computed_metrics.find("within_10_percent") != computed_metrics.end()) {
+            schema_.accuracy = computed_metrics["within_10_percent"] / 100.0f;
+        } else if (has_rmse) {
+            schema_.accuracy = std::max(0.0f, 1.0f - static_cast<float>(rmse) / 100.0f);
+        } else {
+            schema_.accuracy = computed_metrics["r2_score"];
+        }
+    } else if (schema_.problem_type == "positive_regression") {
+        // For positive regression, use R² but cap at reasonable values
+        schema_.accuracy = std::max(0.0f, std::min(1.0f, computed_metrics["r2_score"]));
+    } else {
+        // Standard regression - use R² score
+        schema_.accuracy = computed_metrics["r2_score"];
+    }
+
+    // Log comprehensive regression metrics
+    std::cout << "[LightGBM] Regression Metrics:" << std::endl;
+    std::cout << "  R² Score: " << computed_metrics["r2_score"] << std::endl;
+    std::cout << "  RMSE: " << computed_metrics["rmse"] << std::endl;
+    std::cout << "  MAE: " << computed_metrics["mae"] << std::endl;
+    std::cout << "  MAPE: " << computed_metrics["mape"] << "%" << std::endl;
+    std::cout << "  Within 10%: " << computed_metrics["within_10_percent"] << "%" << std::endl;
+    std::cout << "  Within 1σ: " << computed_metrics["within_1_std"] << "%" << std::endl;
+}
+
+
+
+// Helper function to process regression metrics
+/*void AdaptiveLightGBMModel::process_regression_metrics(
     const std::vector<std::string>& eval_names,
     const std::vector<double>& eval_results,
     const std::vector<std::vector<float>>& features,
@@ -1858,7 +2278,7 @@ void AdaptiveLightGBMModel::process_regression_metrics(
         schema_.metadata["default_accuracy"] = "0.7";
         std::cout << "[LightGBM] Using fallback regression accuracy: 0.7" << std::endl;
     }
-}
+}*/
 
 // Calculate R² score from validation data
 double AdaptiveLightGBMModel::calculate_r2_score(

@@ -161,6 +161,10 @@ private:
 
     void calculate_binary_classification_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels,std::unordered_map<std::string, float>& metrics);
 
+    void add_all_metrics_to_parameters(std::unordered_map<std::string, std::string>& params) const;
+
+    void calculate_regression_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels,std::unordered_map<std::string, float>& metrics);
+
     // Helper functions for metric calculation
     void process_binary_classification_metrics(const std::vector<std::string>& eval_names,const std::vector<double>& eval_results,const std::vector<std::vector<float>>& features, const std::vector<float>& labels);
 
@@ -173,6 +177,8 @@ private:
     double calculate_validation_accuracy(const std::vector<std::vector<float>>& features,const std::vector<float>& labels,size_t max_samples = 1000);
 
     void calculate_fallback_metrics(const std::vector<std::vector<float>>& features,const std::vector<float>& labels);
+
+    void log_metrics_summary() const;
 
     double calculate_mean(const std::vector<float>& values, size_t max_samples = 1000);
     double calculate_std(const std::vector<float>& values, size_t max_samples = 1000);

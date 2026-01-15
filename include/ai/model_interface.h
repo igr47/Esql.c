@@ -45,6 +45,9 @@ struct ModelMetadata {
     float r2_score;
     float rmse;
     float mae;
+    float within_10_percent;  // Regression "precision-like" metric
+    float within_1_std;       // Regression "precision-like" metric
+    float coverage_95;        // Prediction interval coverage
     size_t model_size; // in bytes
     std::chrono::milliseconds avg_inference_time;
     std::unordered_map<std::string, std::string> parameters;
