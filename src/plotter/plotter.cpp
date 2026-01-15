@@ -306,32 +306,18 @@ namespace Visualization {
         }
 
         // Set labels
-    if (!config.xLabel.empty()) {
-        plt::xlabel(config.xLabel);
-    } else if (!config.style.xlabel.empty()) {
-        plt::xlabel(config.style.xlabel);
-    }
-
-    if (!config.yLabel.empty()) {
-        plt::ylabel(config.yLabel);
-    } else if (!config.style.ylabel.empty()) {
-        plt::ylabel(config.style.ylabel);
-    }
-
-        /*if (!config.xLabel.empty()) {
-            plt::xlabel(config.xLabel);
-        } 
-	if (!config.style.xlabel.empty()) {
+	if (!config.xLabel.empty()) {
+		plt::xlabel(config.xLabel);
+	} else if (!config.style.xlabel.empty()) {
 		plt::xlabel(config.style.xlabel);
 	}
 
-	if (!config.style.ylabel.empty()) {
-		plt::ylabel(config.style.ylabel);
-	} 
-	
 	if (!config.yLabel.empty()) {
-            plt::ylabel(config.yLabel);
-        }*/
+		plt::ylabel(config.yLabel);
+	} else if (!config.style.ylabel.empty()) {
+		plt::ylabel(config.style.ylabel);
+	}
+
 
         // Set grid
         if (config.style.grid) {
@@ -695,8 +681,8 @@ namespace Visualization {
 
         // Apply bar styling
         auto barColor = parseColor(config.style.color);
-	    barColor[3] = config.style.alpha;
-	    b->face_color(barColor);
+	barColor[3] = config.style.alpha;
+	b->face_color(barColor);
         //b->face_color(barColor);
 
         //auto edgeColor = parseColor(config.style.edgecolor);
@@ -759,19 +745,24 @@ namespace Visualization {
         auto h = plt::hist(values, bins);
 
         // Apply histogram styling
-	auto faceColor = parseColor(config.style.facecolor);
+	std::cout << "DEBUG: Applying face color." << std::endl;
+	auto faceColor = parseColor(config.style.color);
 	faceColor[3] = config.style.alpha;
 	h->face_color(faceColor);
+	std::cout << "DEBUG: Applied face color." << std::endl;
 
+	std::cout << "DEBUG: Applying edge color." << std::endl;
 	auto edgeColor = parseColor(config.style.edgecolor);
 	edgeColor[3] = config.style.alpha;
 	h->edge_color(edgeColor);
+	std::cout << "DEBUG: Applied edge color." << std::endl;
 
         h->line_width(config.style.linewidth);
 
         // For cumulative histogram
 	if (config.style.cumulative) {
                // Sort values for cumulative calculation
+		std::cout << "DEBUG: Detected cummuative and now applying it." << std::endl;
                std::vector<double> sortedValues = values;
                std::sort(sortedValues.begin(), sortedValues.end());
         
@@ -797,6 +788,7 @@ namespace Visualization {
 	       if (config.style.legend) {
 		       plt::legend();
 	       }
+	       std::cout << "DEBUG: Successfully applied cummulative." << std::endl;
 	}
 
         /*if (config.style.cumulative) {
@@ -3051,7 +3043,9 @@ void Visualization::PlotConfig::Style::parseFromMap(const std::map<std::string, 
         } else if (lowerKey == "fmt") {
             fmt = value;
         } else if (lowerKey == "cumulative") {
+	    std::cout << "DEBUG: Foungg cumulative in parseFromMap." << std::endl;
             cumulative = (value == "true" || value == "1" || value == "yes");
+	    std::cout << "DEBUG: Applied cummulative in parseFromMap." << std::endl;
         } else if (lowerKey == "density") {
             density = (value == "true" || value == "1" || value == "yes");
         } else if (lowerKey == "showfliers") {
