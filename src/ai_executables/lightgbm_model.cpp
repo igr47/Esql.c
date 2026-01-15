@@ -565,6 +565,16 @@ ModelMetadata AdaptiveLightGBMModel::get_metadata() const {
     meta.model_size = get_model_size();
     meta.avg_inference_time = std::chrono::duration_cast<std::chrono::milliseconds>(schema_.stats.avg_inference_time);
 
+    // Add algorithm info
+    auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
+    const auto* algo_info = algo_registry.get_algorithm(schema_.algorithm);
+
+    meta.parameters["algorithm"] = schema_.algorithm;
+    if (algo_info) {
+        meta.parameters["algorithm_description"] = algo_info->description;
+        meta.parameters["lightgbm_objective"] = algo_info->lightgbm_objective;
+    }
+
     // Add schema info to parameters
     meta.parameters["problem_type"] = schema_.problem_type;
     meta.parameters["target_column"] = schema_.target_column;
@@ -1010,8 +1020,101 @@ void AdaptiveLightGBMModel::adjust_schema_to_model(size_t expected_features) {
     }
 }
 
-
 std::string AdaptiveLightGBMModel::generate_parameters(
+    const std::unordered_map<std::string, std::string>& params) {
+
+    // Get algorithm info from registry
+    auto& registry = esql::ai::AlgorithmRegistry::instance();
+    const auto* algo_info = registry.get_algorithm(schema_.algorithm);
+
+    std::unordered_map<std::string, std::string> default_params;
+
+    if (algo_info) {
+        // Use algorithm-specific defaults
+        default_params = algo_info->default_params;
+        default_params["objective"] = algo_info->lightgbm_objective;
+
+        // Handle multi-class special case
+        if (algo_info->requires_num_classes && schema_.problem_type == "multiclass") {
+            auto it = schema_.metadata.find("num_classes");
+            if (it != schema_.metadata.end()) {
+                default_params["num_class"] = it->second;
+            } else {
+                // Try to infer from data
+                default_params["num_class"] = "3"; // Safe default
+            }
+        }
+
+        // Handle quantile regression
+        if (schema_.algorithm == "QUANTILE") {
+            auto quantile_it = params.find("alpha");
+            if (quantile_it != params.end()) {
+                default_params["alpha"] = quantile_it->second;
+            }
+        }
+
+        // Handle tweedie regression
+        if (schema_.algorithm == "TWEEIDIE") {
+            auto tweedie_it = params.find("tweedie_variance_power");
+            if (tweedie_it != params.end()) {
+                default_params["tweedie_variance_power"] = tweedie_it->second;
+            }
+        }
+    } else {
+        // Fallback to old logic
+        if (schema_.problem_type == "binary_classification") {
+            default_params["objective"] = "binary";
+            default_params["metric"] = "binary_logloss";
+        } else if (schema_.problem_type == "multiclass") {
+            default_params["objective"] = "multiclass";
+            default_params["metric"] = "multi_logloss";
+            auto it = schema_.metadata.find("num_classes");
+            if (it != schema_.metadata.end()) {
+                default_params["num_class"] = it->second;
+            } else {
+                default_params["num_class"] = "3";
+            }
+        } else {
+            default_params["objective"] = "regression";
+            default_params["metric"] = "rmse";
+        }
+        default_params["boosting"] = "gbdt";
+    }
+
+    // Common defaults
+    default_params["num_leaves"] = "31";
+    default_params["learning_rate"] = "0.05";
+    default_params["feature_fraction"] = "0.9";
+    default_params["bagging_fraction"] = "0.8";
+    default_params["bagging_freq"] = "5";
+    default_params["min_data_in_leaf"] = "20";
+    default_params["min_sum_hessian_in_leaf"] = "0.001";
+    default_params["lambda_l1"] = "0.0";
+    default_params["lambda_l2"] = "0.0";
+    default_params["min_gain_to_split"] = "0.0";
+    default_params["max_depth"] = "-1";
+    default_params["verbose"] = "1";
+    default_params["num_threads"] = "4";
+
+    // Override with user parameters
+    for (const auto& [key, value] : params) {
+        default_params[key] = value;
+    }
+
+    // Build parameter string
+    std::string param_str;
+    for (const auto& [key, value] : default_params) {
+        param_str += key + "=" + value + " ";
+    }
+
+    std::cout << "[LightGBM] Using algorithm: " << (algo_info ? algo_info->name : "DEFAULT")
+              << " with objective: " << default_params["objective"] << std::endl;
+    std::cout << "[LightGBM] Parameters: " << param_str << std::endl;
+
+    return param_str;
+}
+
+/*std::string AdaptiveLightGBMModel::generate_parameters(
     const std::unordered_map<std::string, std::string>& params) {
 
     // Default parameters for LightGBM
@@ -1064,7 +1167,7 @@ std::string AdaptiveLightGBMModel::generate_parameters(
 
     std::cout << "[LightGBM] Generated parameters: " << param_str << std::endl;
     return param_str;
-}
+}*/
 
 
 size_t AdaptiveLightGBMModel::get_output_size() const {

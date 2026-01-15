@@ -63,12 +63,12 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
     // Parse USING clause
     if (base_parser_.checkMatch(Token::Type::USING)) {
         base_parser_.consumeToken(Token::Type::USING);
-        stmt->algorithm = base_parser_.getCurrentToken().lexeme;
+        stmt->model_name = base_parser_.getCurrentToken().lexeme;
 
         // Convert to uppercase for consistency
         std::transform(stmt->algorithm.begin(), stmt->algorithm.end(),stmt->algorithm.begin(), ::toupper);
 
-        // Validate algorithm
+        /*// Validate algorithm
         auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
         if (!algo_registry.is_algorithm_supported(stmt->algorithm)) {
             throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Unsupported algorithm: " + stmt->algorithm + ". Supported: " +
@@ -81,10 +81,10 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
                                }
                                return result;
                            }());
-        }
+        }*/
         base_parser_.consumeToken(base_parser_.getCurrentToken().type);
     } else {
-        stmt-> algorithm = "LIGHTGBM";
+        stmt-> model_name = "LIGHTGBM";
     }
 
         // Parse FEATURES clause

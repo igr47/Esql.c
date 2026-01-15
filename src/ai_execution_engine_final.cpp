@@ -6,6 +6,7 @@
 #include "execution_engine_includes/executionengine_main.h"
 #include "ai_grammer.h"
 #include "data_extractor.h"
+#include "algorithm_registry.h"
 #include "model_registry.h"
 #include "database.h"
 #include <iostream>
@@ -18,6 +19,7 @@
 #include <future>
 #include <queue>
 #include <thread>
+#include <unordered_set>
 
 AIExecutionEngineFinal::AIExecutionEngineFinal(ExecutionEngine& base_engine,Database& db, fractal::DiskStorage& storage)
     : base_engine_(base_engine), db_(db), storage_(storage) {
@@ -196,23 +198,146 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
         schema.model_id = stmt.model_name;
         schema.description = "Created via CREATE MODEL statement on table: " + table_name;
         schema.target_column = target_column;
-        schema.algorithm = stmt.algorithm;
+        //schema.algorithm = stmt.algorithm;
 
-        // Determine problem type
-        // For exam_score (numerical target), it should be regression
-        schema.problem_type = "regression";
+        // Analyze labels for problem type detection
+        float min_label = *std::min_element(training_data.labels.begin(), training_data.labels.end());
+        float max_label = *std::max_element(training_data.labels.begin(), training_data.labels.end());
+        size_t unique_labels = 0;
+        std::unordered_set<float> unique_labels_set;
 
-        // If you want auto-detection, you can use:
-        /*
-        bool is_binary = true;
+        // Check if all labels are integers
+        bool all_integers = true;
+        bool all_non_negative = true;
+        bool all_positive = true;
+        bool has_zeros = false;
+
         for (float label : training_data.labels) {
-            if (label != 0.0f && label != 1.0f) {
-                is_binary = false;
-                break;
+            unique_labels_set.insert(label);
+
+            // Check if integer
+            if (std::abs(label - std::round(label)) > 1e-6) {
+                all_integers = false;
+            }
+
+            // Check sign
+            if (label < 0) {
+                all_non_negative = false;
+                all_positive = false;
+            } else if (label == 0) {
+                has_zeros = true;
+                all_positive = false;
             }
         }
-        schema.problem_type = is_binary ? "binary_classification" : "regression";
-        */
+
+        unique_labels = unique_labels_set.size();
+
+        // Determine problem type based on label characteristics
+        std::string detected_problem_type;
+
+        if (unique_labels == 2 && min_label == 0.0f && max_label == 1.0f) {
+            // Binary classification with 0/1 labels
+            detected_problem_type = "binary_classification";
+        } else if (unique_labels > 2 && unique_labels <= 20 && all_integers) {
+            // Multi-class classification (reasonable number of classes, integer labels)
+            detected_problem_type = "multiclass";
+            schema.metadata["num_classes"] = std::to_string(unique_labels);
+        } else if (all_integers && all_non_negative && unique_labels > 20) {
+            // Count data (many unique integer values, all non-negative)
+            detected_problem_type = "count_regression";
+        } else if (all_positive && !all_integers) {
+            // Positive continuous data
+            detected_problem_type = "positive_regression";
+        } else if (has_zeros && all_non_negative && !all_integers) {
+            // Zero-inflated positive data
+            detected_problem_type = "zero_inflated_regression";
+        } else {
+            // General regression
+            detected_problem_type = "regression";
+        }
+
+        // Check for quantile regression hint
+        if (!stmt.target_type.empty()) {
+            std::string upper_target = stmt.target_type;
+            std::transform(upper_target.begin(), upper_target.end(),upper_target.begin(), ::toupper);
+
+            if (upper_target.find("QUANTILE") != std::string::npos || upper_target.find("PERCENTILE") != std::string::npos) {
+                detected_problem_type = "quantile_regression";
+            }
+        }
+
+        schema.problem_type = detected_problem_type;
+        std::cout << "[AIExecutionEngineFinal] Detected problem type: " << detected_problem_type << " (unique labels: " << unique_labels << ", min: " << min_label << ", max: " << max_label << ")" << std::endl;
+
+        // Auto-select algorithm if needed
+        auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
+        if (stmt.algorithm.empty() || stmt.algorithm == "AUTO") {
+            std::unordered_map<std::string, std::string> hints;
+
+            // Add data-based hints for algorithm selectio
+            if (detected_problem_type == "regression") {
+                // Check for outliers in regression
+                std::vector<float> sorted_labels = training_data.labels;
+                std::sort(sorted_labels.begin(), sorted_labels.end());
+
+                if (sorted_labels.size() > 10) {
+                    float q1 = sorted_labels[sorted_labels.size() / 4];
+                    float q3 = sorted_labels[sorted_labels.size() * 3 / 4];
+                    float iqr = q3 - q1;
+
+                    size_t outlier_count = 0;
+                    for (float label : training_data.labels) {
+                        if (label < q1 - 1.5 * iqr || label > q3 + 1.5 * iqr) {
+                            outlier_count++;
+                        }
+                    }
+
+                    float outlier_ratio = static_cast<float>(outlier_count) / training_data.labels.size();
+                    if (outlier_ratio > 0.1) {
+                        hints["robust_to_outliers"] = "true";
+                        std::cout << "[AIExecutionEngineFinal] Detected " << outlier_count << " outliers (" << (outlier_ratio * 100) << "%), " << "suggesting robust algorithm" << std::endl;
+                    }
+                }
+            }
+
+            // Check for specific user hints in parameters
+            for (const auto& [key, value] : stmt.parameters) {
+                if (key == "quantile" || key == "alpha") {
+                    hints["quantile"] = value;
+                } else if (key == "robust" && value == "true") {
+                    hints["robust_to_outliers"] = "true";
+                }
+            }
+
+            // Use the algorithm registry for suggestion
+            stmt.algorithm = algo_registry.suggest_algorithm(
+                    detected_problem_type,
+                    training_data.labels,
+                    hints
+            );
+
+            std::cout << "[AIExecutionEngineFinal] Auto-selected algorithm: " << stmt.algorithm << std::endl;
+        }
+
+        // Validate the algorithm choice
+        if (!algo_registry.validate_algorithm_choice(stmt.algorithm, detected_problem_type,unique_labels)) {
+            // Get suitable algorithms for error message
+            std::string suitable_algorithms;
+            auto all_algorithms = algo_registry.get_supported_algorithms();
+            for (const auto& algo_name : all_algorithms) {
+                const auto* algo = algo_registry.get_algorithm(algo_name);
+                if (algo && algo->is_suitable_for(detected_problem_type, unique_labels)) {
+                    if (!suitable_algorithms.empty()) suitable_algorithms += ", ";
+                    suitable_algorithms += algo_name;
+                }
+            }
+
+            throw std::runtime_error("Algorithm '" + stmt.algorithm + "' is not suitable for " + detected_problem_type + " problem with " + std::to_string(unique_labels) + " unique labels. " +
+                    "Suitable algorithms: " + (suitable_algorithms.empty() ? "None found" : suitable_algorithms)
+            );
+        }
+
+        schema.algorithm = stmt.algorithm;
 
         schema.created_at = std::chrono::system_clock::now();
         schema.last_updated = schema.created_at;
@@ -280,8 +405,8 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
         std::cout << "[AIExecutionEngineFinal] Creating and training model..." << std::endl;
         auto model = std::make_unique<esql::ai::AdaptiveLightGBMModel>(schema);
 
-        // Prepare training parameters - FIXED for regression
-        std::unordered_map<std::string, std::string> train_params;
+
+        /*std::unordered_map<std::string, std::string> train_params;
 
         // For regression problem
         train_params["objective"] = "regression";
@@ -300,7 +425,112 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
 
         std::cout << "[AIExecutionEngineFinal] Starting training with "
                   << training_data.features.size() << " samples and "
-                  << training_data.features[0].size() << " features" << std::endl;
+                  << training_data.features[0].size() << " features" << std::endl;*/
+
+        std::unordered_map<std::string, std::string> train_params;
+
+        // Get algorithm info from registry
+        //auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
+        const auto* algo_info = algo_registry.get_algorithm(schema.algorithm);
+
+        if (algo_info) {
+            // Start with algorithm-specific defaults
+            train_params = algo_info->default_params;
+
+            // Override with user parameters from CREATE MODEL statement
+            for (const auto& [key, value] : stmt.parameters) {
+                // Skip special parameters that aren't LightGBM params
+                if (key == "source_table" || key == "target_column" || key == "replace" || key == "training_samples") {
+                    continue;
+                }
+                train_params[key] = value;
+            }
+
+            // Ensure required parameters are set
+            if (schema.problem_type == "multiclass" || (algo_info->requires_num_classes && schema.metadata.find("num_classes") != schema.metadata.end())) {
+                train_params["num_class"] = schema.metadata["num_classes"];
+            }
+
+            // Handle special algorithm cases
+            if (schema.algorithm == "QUANTILE" && stmt.parameters.find("alpha") == stmt.parameters.end()) {
+                // Default to median (0.5) if not specified
+                train_params["alpha"] = "0.5";
+            }
+
+            if (schema.algorithm == "TWEEIDIE" && stmt.parameters.find("tweedie_variance_power") == stmt.parameters.end()) {
+                // Default tweedie variance power
+                train_params["tweedie_variance_power"] = "1.5";
+            }
+
+            // Set common training parameters with overrides from user
+            if (train_params.find("num_iterations") == train_params.end()) {
+                train_params["num_iterations"] = "100";
+            }
+            if (train_params.find("learning_rate") == train_params.end()) {
+                train_params["learning_rate"] = "0.05";
+            }
+            if (train_params.find("num_leaves") == train_params.end()) {
+                train_params["num_leaves"] = "31";
+            }
+            if (train_params.find("feature_fraction") == train_params.end()) {
+                train_params["feature_fraction"] = "0.9";
+            }
+            if (train_params.find("bagging_fraction") == train_params.end()) {
+                train_params["bagging_fraction"] = "0.8";
+            }
+            if (train_params.find("bagging_freq") == train_params.end()) {
+                train_params["bagging_freq"] = "5";
+            }
+            if (train_params.find("min_data_in_leaf") == train_params.end()) {
+                train_params["min_data_in_leaf"] = "20";
+            }
+            if (train_params.find("min_sum_hessian_in_leaf") == train_params.end()) {
+                train_params["min_sum_hessian_in_leaf"] = "0.001";
+            }
+            if (train_params.find("verbose") == train_params.end()) {
+                train_params["verbose"] = "1";
+            }
+            if (train_params.find("num_threads") == train_params.end()) {
+                train_params["num_threads"] = "4";
+            }
+
+        } else {
+            // Fallback for unknown algorithms (shouldn't happen with validation)
+            if (schema.problem_type == "binary_classification") {
+                train_params["objective"] = "binary";
+                train_params["metric"] = "binary_logloss";
+            } else if (schema.problem_type == "multiclass") {
+                train_params["objective"] = "multiclass";
+                train_params["metric"] = "multi_logloss";
+                train_params["num_class"] = schema.metadata["num_classes"];
+            } else {
+                train_params["objective"] = "regression";
+                train_params["metric"] = "rmse";
+            }
+
+            train_params["boosting"] = "gbdt";
+            train_params["num_iterations"] = "100";
+            train_params["learning_rate"] = "0.05";
+            train_params["num_leaves"] = "31";
+            train_params["feature_fraction"] = "0.9";
+            train_params["bagging_fraction"] = "0.8";
+            train_params["bagging_freq"] = "5";
+            train_params["verbose"] = "1";
+            train_params["num_threads"] = "4";
+            train_params["min_data_in_leaf"] = "20";
+            train_params["min_sum_hessian_in_leaf"] = "0.001";
+
+            // Add user parameters
+            for (const auto& [key, value] : stmt.parameters) {
+                if (key != "source_table" && key != "target_column" && key != "replace" && key != "training_samples") {
+                    train_params[key] = value;
+                }
+            }
+        }
+
+        std::cout << "[AIExecutionEngineFinal] Using algorithm: " << schema.algorithm << " with " << train_params.size() << " parameters" << std::endl;
+        std::cout << "[AIExecutionEngineFinal] Key parameters: objective=" << (train_params.find("objective") != train_params.end() ? train_params["objective"] : "N/A")
+          << ", metric=" << (train_params.find("metric") != train_params.end() ? train_params["metric"] : "N/A") << std::endl;
 
         // Train the model
         bool training_success = model->train(
@@ -1420,7 +1650,38 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeAIFunctionInSelect(
                 switch (func_call.function_type) {
                     case AST::AIFunctionType::PREDICT:
                     case AST::AIFunctionType::PREDICT_CLASS: {
-                        float pred_value = prediction.data[0];
+                            float pred_value = prediction.data[0];
+                            std::string algorithm_upper = schema.algorithm;
+                            std::transform(algorithm_upper.begin(), algorithm_upper.end(),algorithm_upper.begin(), ::toupper);
+
+                            if (algorithm_upper.find("BINARY") != std::string::npos || algorithm_upper.find("CLASSIFICATION") != std::string::npos) {
+                                // Classification algorithms
+                                if (schema.problem_type == "binary_classification") {
+                                    result_row.push_back(pred_value > 0.5f ? "1" : "0");
+                                    if (func_call.options.find("probability") != func_call.options.end()) {
+                                        result_row.push_back(std::to_string(pred_value));
+                                    }
+                                } else {
+                                    // Multi-class - return class index
+                                    result_row.push_back(std::to_string(static_cast<int>(std::round(pred_value))));
+                                }
+                            } else if (algorithm_upper == "POISSON") {
+                                // Poisson regression - round to nearest integer
+                                result_row.push_back(std::to_string(static_cast<int>(std::round(pred_value))));
+                            } else if (algorithm_upper == "QUANTILE") {
+                                // Quantile regression - include confidence interval
+                                result_row.push_back(std::to_string(pred_value));
+                                if (func_call.options.find("interval") != func_call.options.end()) {
+                                    // Calculate confidence interval (simplified)
+                                    float interval = 0.1f * pred_value; // 10% interval
+                                    result_row.push_back(std::to_string(pred_value - interval));
+                                    result_row.push_back(std::to_string(pred_value + interval));
+                                }
+                            } else {
+                                // Standard regression
+                                result_row.push_back(std::to_string(pred_value));
+                            }
+                        /*float pred_value = prediction.data[0];
                         if (schema.problem_type == "binary_classification") {
                             result_row.push_back(pred_value > 0.5f ? "1" : "0");
                         } else {
@@ -1429,7 +1690,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeAIFunctionInSelect(
 
                         if (func_call.options.find("probability") != func_call.options.end()) {
                             result_row.push_back(std::to_string(pred_value));
-                        }
+                        }*/
                         break;
                     }
                     case AST::AIFunctionType::PREDICT_VALUE:
