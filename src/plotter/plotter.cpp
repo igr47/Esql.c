@@ -765,25 +765,25 @@ namespace Visualization {
 		std::cout << "DEBUG: Detected cummuative and now applying it." << std::endl;
                std::vector<double> sortedValues = values;
                std::sort(sortedValues.begin(), sortedValues.end());
-        
+
                // Create cumulative frequencies
                std::vector<double> cumulative(sortedValues.size());
                for (size_t i = 0; i < sortedValues.size(); ++i) {
 		       cumulative[i] = static_cast<double>(i + 1) / sortedValues.size();
                }
-        
+
 	       // Create a second plot for cumulative line
 	       plt::hold(true);
 	       auto cumPlot = plt::plot(sortedValues, cumulative);
                cumPlot->line_width(config.style.linewidth);
-        
+
                auto cumColor = parseColor(config.style.color);
                cumColor[3] = config.style.alpha * 0.8; // Slightly transparent
                cumPlot->color(cumColor);
                cumPlot->line_style("--");
                cumPlot->display_name("Cumulative");
                plt::hold(false);
-        
+
                // Add legend for cumulative line
 	       if (config.style.legend) {
 		       plt::legend();
@@ -984,6 +984,8 @@ namespace Visualization {
 
         // Create pie chart with comprehensive styling
         auto p = plt::pie(nonZeroValues);
+        plt::axis("equal");
+        plt::axis("off");
 
         // Apply explode if specified
         if (!config.style.explode.empty() && config.style.explode.size() >= nonZeroValues.size()) {

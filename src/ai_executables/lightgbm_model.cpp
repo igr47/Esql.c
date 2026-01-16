@@ -192,119 +192,6 @@ nlohmann::json ModelSchema::to_json() const {
 
     return j;
 }
-/*nlohmann::json ModelSchema::to_json() const {
-    nlohmann::json j;
-    j["model_id"] = model_id;
-    j["description"] = description;
-    j["target_column"] = target_column;
-    j["problem_type"] = problem_type;
-    j["created_at"] = std::chrono::system_clock::to_time_t(created_at);
-    j["last_updated"] = std::chrono::system_clock::to_time_t(last_updated);
-    j["training_samples"] = training_samples;
-    j["accuracy"] = accuracy;
-    j["drift_score"] = drift_score;
-
-    // Add comprehensive metrics based on problem type
-    nlohmann::json metrics_json;
-
-    if (problem_type == "binary_classification") {
-        // Extract binary classification metrics
-        std::map<std::string, std::string> metric_keys = {
-            {"auc_score", "auc"},
-            {"logloss", "log_loss"},
-            {"precision", "precision"},
-            {"recall", "recall"},
-            {"f1_score", "f1_score"},
-            {"true_positives", "true_positives"},
-            {"false_positives", "false_positives"},
-            {"true_negatives", "true_negatives"},
-            {"false_negatives", "false_negatives"}
-        };
-
-        for (const auto& [metadata_key, json_key] : metric_keys) {
-            if (metadata.find(metadata_key) != metadata.end()) {
-                try {
-                    metrics_json[json_key] = std::stof(metadata.at(metadata_key));
-                } catch (...) {
-                    metrics_json[json_key] = 0.0f;
-                }
-            }
-        }
-
-    } else if (problem_type == "multiclass") {
-        // Extract multiclass metrics
-        metrics_json["macro_precision"] = get_metadata_float("macro_precision", 0.0f);
-        metrics_json["macro_recall"] = get_metadata_float("macro_recall", 0.0f);
-        metrics_json["macro_f1"] = get_metadata_float("macro_f1", 0.0f);
-        metrics_json["micro_precision"] = get_metadata_float("micro_precision", 0.0f);
-
-        // Extract per-class metrics
-        nlohmann::json per_class_json;
-        for (const auto& [key, value] : metadata) {
-            if (key.find("class_") == 0 && key.find("_precision") != std::string::npos) {
-                std::string class_num = key.substr(6, key.find("_precision") - 6);
-                try {
-                    per_class_json[class_num]["precision"] = std::stof(value);
-
-                    // Try to find corresponding recall and f1
-                    std::string recall_key = "class_" + class_num + "_recall";
-                    std::string f1_key = "class_" + class_num + "_f1";
-
-                    if (metadata.find(recall_key) != metadata.end()) {
-                        per_class_json[class_num]["recall"] = std::stof(metadata.at(recall_key));
-                    }
-                    if (metadata.find(f1_key) != metadata.end()) {
-                        per_class_json[class_num]["f1"] = std::stof(metadata.at(f1_key));
-                    }
-                } catch (...) {
-                    // Skip invalid values
-                }
-            }
-        }
-
-        if (!per_class_json.empty()) {
-            metrics_json["per_class_metrics"] = per_class_json;
-        }
-
-    } else {
-        // Regression metrics
-        std::map<std::string, std::string> metric_keys = {
-            {"rmse", "rmse"},
-            {"mae", "mae"},
-            {"r2_score", "r2"},
-            {"mean_squared_error", "mse"},
-            {"mean_absolute_error", "mae"}
-        };
-
-        for (const auto& [metadata_key, json_key] : metric_keys) {
-            if (metadata.find(metadata_key) != metadata.end()) {
-                try {
-                    metrics_json[json_key] = std::stof(metadata.at(metadata_key));
-                } catch (...) {
-                    metrics_json[json_key] = 0.0f;
-                }
-            }
-        }
-    }
-
-    j["metrics"] = metrics_json;
-
-    // Rest of the existing code...
-    j["features"] = nlohmann::json::array();
-    for (const auto& feature : features) {
-        j["features"].push_back(feature.to_json());
-    }
-
-    j["metadata"] = metadata;
-    j["stats"] = nlohmann::json::object({
-        {"total_predictions", stats.total_predictions},
-        {"failed_predictions", stats.failed_predictions},
-        {"avg_confidence", stats.avg_confidence},
-        {"avg_inference_time_us", stats.avg_inference_time.count()}
-    });
-
-    return j;
-}*/
 
 float ModelSchema::get_metadata_float(const std::string& key, float default_value) const {
     auto it = metadata.find(key);
@@ -319,33 +206,6 @@ float ModelSchema::get_metadata_float(const std::string& key, float default_valu
 }
 
 
-/*nlohmann::json ModelSchema::to_json() const {
-    nlohmann::json j;
-    j["model_id"] = model_id;
-    j["description"] = description;
-    j["target_column"] = target_column;
-    j["problem_type"] = problem_type;
-    j["created_at"] = std::chrono::system_clock::to_time_t(created_at);
-    j["last_updated"] = std::chrono::system_clock::to_time_t(last_updated);
-    j["training_samples"] = training_samples;
-    j["accuracy"] = accuracy;
-    j["drift_score"] = drift_score;
-
-    j["features"] = nlohmann::json::array();
-    for (const auto& feature : features) {
-        j["features"].push_back(feature.to_json());
-    }
-
-    j["metadata"] = metadata;
-    j["stats"] = nlohmann::json::object({
-        {"total_predictions", stats.total_predictions},
-        {"failed_predictions", stats.failed_predictions},
-        {"avg_confidence", stats.avg_confidence},
-        {"avg_inference_time_us", stats.avg_inference_time.count()}
-    });
-
-    return j;
-}*/
 
 ModelSchema ModelSchema::from_json(const nlohmann::json& j) {
     ModelSchema schema;
@@ -522,7 +382,6 @@ bool AdaptiveLightGBMModel::load(const std::string& path) {
 
     is_loaded_ = true;
     drift_detector_.last_drift_check = std::chrono::system_clock::now();
-
     std::cout << "[LightGBM] Model loaded successfully: " << schema_.model_id
               << " (" << schema_.features.size() << " features)" << std::endl;
 
@@ -911,41 +770,6 @@ void AdaptiveLightGBMModel::add_regression_metrics(
     }
 }
 
-/*ModelMetadata AdaptiveLightGBMModel::get_metadata() const {
-    std::lock_guard<std::mutex> lock(model_mutex_);
-
-    ModelMetadata meta;
-    meta.name = schema_.model_id;
-    meta.type = ModelType::LIGHTGBM;
-    meta.input_size = schema_.features.size();
-    meta.output_size = get_output_size();
-    meta.accuracy = schema_.accuracy;
-    meta.model_size = get_model_size();
-    meta.avg_inference_time = std::chrono::duration_cast<std::chrono::milliseconds>(schema_.stats.avg_inference_time);
-
-    // Add algorithm info
-    auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
-    const auto* algo_info = algo_registry.get_algorithm(schema_.algorithm);
-
-    meta.parameters["algorithm"] = schema_.algorithm;
-    if (algo_info) {
-        meta.parameters["algorithm_description"] = algo_info->description;
-        meta.parameters["lightgbm_objective"] = algo_info->lightgbm_objective;
-    }
-
-    // Add schema info to parameters
-    meta.parameters["problem_type"] = schema_.problem_type;
-    meta.parameters["target_column"] = schema_.target_column;
-    meta.parameters["features"] = std::to_string(schema_.features.size());
-    meta.parameters["drift_score"] = std::to_string(schema_.drift_score);
-    meta.parameters["created_at"] = std::to_string(
-        std::chrono::system_clock::to_time_t(schema_.created_at)
-    );
-    meta.parameters["training_samples"] = std::to_string(schema_.training_samples);
-    meta.parameters["total_predictions"] = std::to_string(schema_.stats.total_predictions);
-
-    return meta;
-}*/
 
 void AdaptiveLightGBMModel::set_batch_size(size_t batch_size) {
     std::lock_guard<std::mutex> lock(model_mutex_);
@@ -1720,71 +1544,6 @@ void AdaptiveLightGBMModel::process_binary_classification_metrics(
     }
 }
 
-/*void AdaptiveLightGBMModel::process_binary_classification_metrics(
-    const std::vector<std::string>& eval_names,
-    const std::vector<double>& eval_results,
-    const std::vector<std::vector<float>>& features,
-    const std::vector<float>& labels) {
-
-    double auc_score = 0.0;
-    double logloss_score = 0.0;
-    double accuracy = 0.0;
-    bool has_auc = false;
-    bool has_logloss = false;
-
-    // Extract metrics from LightGBM evaluation
-    for (size_t i = 0; i < eval_names.size() && i < eval_results.size(); ++i) {
-        const std::string& name = eval_names[i];
-        double value = eval_results[i];
-
-        if (name.find("auc") != std::string::npos ||
-            name.find("AUC") != std::string::npos) {
-            auc_score = value;
-            has_auc = true;
-            schema_.metadata["auc_score"] = std::to_string(value);
-            std::cout << "[LightGBM] AUC Score: " << value << std::endl;
-        }
-        else if (name.find("binary_logloss") != std::string::npos ||
-                 name.find("logloss") != std::string::npos) {
-            logloss_score = value;
-            has_logloss = true;
-            schema_.metadata["logloss"] = std::to_string(value);
-            std::cout << "[LightGBM] LogLoss: " << value << std::endl;
-        }
-        else if (name.find("binary_error") != std::string::npos ||
-                 name.find("error") != std::string::npos) {
-            accuracy = 1.0 - value;
-            schema_.metadata["error_rate"] = std::to_string(value);
-            std::cout << "[LightGBM] Error Rate: " << value << " (Accuracy: " << accuracy << ")" << std::endl;
-        }
-    }
-
-    // Calculate accuracy from validation set if not available
-    if (accuracy <= 0.0) {
-        accuracy = calculate_validation_accuracy(features, labels, 1000);
-    }
-
-    // Set overall accuracy score (prioritize AUC if available)
-    if (has_auc) {
-        // AUC is in [0, 1], use it directly
-        schema_.accuracy = static_cast<float>(auc_score);
-    }
-    else if (accuracy > 0.0) {
-        schema_.accuracy = static_cast<float>(accuracy);
-    }
-    else if (has_logloss) {
-        // Convert logloss to approximate accuracy
-        // Good models have logloss < 0.5, bad models > 0.5
-        double estimated_acc = std::max(0.0, std::min(1.0, 1.0 - logloss_score));
-        schema_.accuracy = static_cast<float>(estimated_acc);
-        schema_.metadata["estimated_accuracy"] = std::to_string(estimated_acc);
-    }
-    else {
-        // Fallback to reasonable default for binary classification
-        schema_.accuracy = 0.85f;
-        schema_.metadata["default_accuracy"] = "0.85";
-    }
-}*/
 
 // Helper function to process multiclass metrics
 void AdaptiveLightGBMModel::process_multiclass_metrics(
@@ -1856,49 +1615,6 @@ void AdaptiveLightGBMModel::process_multiclass_metrics(
     }
 }
 
-/*void AdaptiveLightGBMModel::process_multiclass_metrics(
-    const std::vector<std::string>& eval_names,
-    const std::vector<double>& eval_results,
-    const std::vector<std::vector<float>>& features,
-    const std::vector<float>& labels) {
-
-    double multi_logloss = 0.0;
-    double multi_error = 0.0;
-    bool has_metrics = false;
-
-    for (size_t i = 0; i < eval_names.size() && i < eval_results.size(); ++i) {
-        const std::string& name = eval_names[i];
-        double value = eval_results[i];
-
-if (name.find("multi_logloss") != std::string::npos) {
-            multi_logloss = value;
-            schema_.metadata["multi_logloss"] = std::to_string(value);
-            has_metrics = true;
-            std::cout << "[LightGBM] Multi-class LogLoss: " << value << std::endl;
-        }
-        else if (name.find("multi_error") != std::string::npos) {
-            multi_error = value;
-            schema_.metadata["multi_error"] = std::to_string(value);
-            has_metrics = true;
-            std::cout << "[LightGBM] Multi-class Error Rate: " << value << std::endl;
-        }
-    }
-
-    if (has_metrics && multi_error > 0.0) {
-        schema_.accuracy = static_cast<float>(1.0 - multi_error);
-    }
-    else {
-        // Calculate validation accuracy
-        double val_accuracy = calculate_validation_accuracy(features, labels, 1000);
- if (val_accuracy > 0.0) {
-            schema_.accuracy = static_cast<float>(val_accuracy);
-        }
-        else {
-            // Fallback
-            schema_.accuracy = 0.75f;
-        }
-    }
-}*/
 
 void AdaptiveLightGBMModel::calculate_regression_metrics(
     const std::vector<std::vector<float>>& features,
@@ -2192,93 +1908,6 @@ void AdaptiveLightGBMModel::process_regression_metrics(
 
 
 
-// Helper function to process regression metrics
-/*void AdaptiveLightGBMModel::process_regression_metrics(
-    const std::vector<std::string>& eval_names,
-    const std::vector<double>& eval_results,
-    const std::vector<std::vector<float>>& features,
-    const std::vector<float>& labels) {
-
-    double rmse = 0.0;
-    double mae = 0.0;
-    double r2 = 0.0;
-    bool has_rmse = false;
-    bool has_mae = false;
-
-    // Process LightGBM metrics
-    for (size_t i = 0; i < eval_names.size() && i < eval_results.size(); ++i) {
-        const std::string& name = eval_names[i];
-        double value = eval_results[i];
-
-        if (name.find("rmse") != std::string::npos ||
-            name.find("l2") != std::string::npos ||
-            name.find("regression") != std::string::npos) {
-            rmse = value;
-            has_rmse = true;
-            schema_.metadata["rmse"] = std::to_string(value);
-            std::cout << "[LightGBM] RMSE: " << value << std::endl;
-        }
-        else if (name.find("mae") != std::string::npos ||
-                 name.find("l1") != std::string::npos) {
-            mae = value;
-            has_mae = true;
-            schema_.metadata["mae"] = std::to_string(value);
-            std::cout << "[LightGBM] MAE: " << value << std::endl;
-        }
-        else if (name.find("huber") != std::string::npos) {
-            schema_.metadata["huber_loss"] = std::to_string(value);
-            std::cout << "[LightGBM] Huber Loss: " << value << std::endl;
-        }
-        else if (name.find("fair") != std::string::npos) {
-            schema_.metadata["fair_loss"] = std::to_string(value);
-            std::cout << "[LightGBM] Fair Loss: " << value << std::endl;
-        }
-        else if (name.find("quantile") != std::string::npos) {
-            schema_.metadata["quantile_loss"] = std::to_string(value);
-            std::cout << "[LightGBM] Quantile Loss: " << value << std::endl;
-        }
-    }
-
-    // Calculate R² score
-    std::cout << "[LightGBM] Calculating R² score..." << std::endl;
-    r2 = calculate_r2_score(features, labels, 1000);
-
-    if (r2 > -1000.0 && r2 <= 1.0) {  // Valid R² score
-        schema_.accuracy = static_cast<float>(r2);
-        schema_.metadata["r2_score"] = std::to_string(r2);
-        std::cout << "[LightGBM] R² Score: " << r2 << std::endl;
-
-        // Also store RMSE if available
-        if (has_rmse) {
-            std::cout << "[LightGBM] Final metrics - RMSE: " << rmse
-                      << ", R²: " << r2 << std::endl;
-        }
-    }
-    else if (has_rmse) {
-        // Convert RMSE to a normalized accuracy-like score
-        // This is a fallback when R² calculation fails
-        double label_mean = calculate_mean(labels, 1000);
-        double label_std = calculate_std(labels, 1000);
-
-        if (label_std > 0.0) {
-            double normalized_rmse = rmse / label_std;
-            double accuracy_like = std::max(0.0, std::min(1.0, 1.0 - normalized_rmse));
-            schema_.accuracy = static_cast<float>(accuracy_like);
-            schema_.metadata["normalized_accuracy"] = std::to_string(accuracy_like);
-            std::cout << "[LightGBM] Using normalized accuracy: " << accuracy_like
-                      << " (based on RMSE: " << rmse << ")" << std::endl;
-        }
-        else {
-            schema_.accuracy = 0.7f;  // Reasonable default for regression
-            std::cout << "[LightGBM] Using default regression accuracy: 0.7" << std::endl;
-        }
-    }
-    else {
-        schema_.accuracy = 0.7f;  // Reasonable default for regression
-        schema_.metadata["default_accuracy"] = "0.7";
-        std::cout << "[LightGBM] Using fallback regression accuracy: 0.7" << std::endl;
-    }
-}*/
 
 // Calculate R² score from validation data
 double AdaptiveLightGBMModel::calculate_r2_score(
