@@ -30,6 +30,7 @@ public:
     struct TrainingData {
         std::vector<std::vector<float>> features;
         std::vector<float> labels;
+        std::vector<std::string> original_labels;
         std::vector<std::string> feature_names;
         std::string label_name;
         size_t total_samples;
@@ -41,6 +42,8 @@ public:
     TrainingData extract_training_data(const std::string& db_name,const std::string& table_name,const std::string& label_column,
                                       const std::vector<std::string>& feature_columns,const std::string& where_clause = "",
                                       float test_split = 0.0f);
+    TrainingData extract_training_data_for_classification(const std::string& db_name,const std::string& table_name,const std::string& label_column,
+    const std::vector<std::string>& feature_columns,const std::string& where_clause = "",float test_split = 0.0f);
 
     // Sampling methods
     std::vector<std::unordered_map<std::string, Datum>>

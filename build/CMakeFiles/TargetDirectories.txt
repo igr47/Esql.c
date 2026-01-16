@@ -1,0 +1,3 @@
+/home/igris/git_projects/Esql.c/build/CMakeFiles/e_sql.dir
+/home/igris/git_projects/Esql.c/build/CMakeFiles/edit_cache.dir
+/home/igris/git_projects/Esql.c/build/CMakeFiles/rebuild_cache.dir

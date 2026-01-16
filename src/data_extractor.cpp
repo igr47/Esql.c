@@ -285,6 +285,95 @@ std::vector<std::string> DataExtractor::get_all_columns(const std::string& db_na
     return columns;
 }
 
+DataExtractor::TrainingData DataExtractor::extract_training_data_for_classification(const std::string& db_name,const std::string& table_name,
+    const std::string& label_column,const std::vector<std::string>& feature_columns,const std::string& where_clause,float test_split) {
+
+    TrainingData result;
+    result.label_name = label_column;
+    result.feature_names = feature_columns;
+
+    // Extract data
+    auto rows = extract_table_data(db_name, table_name, {}, where_clause, 0, 0);
+    result.total_samples = rows.size();
+    result.valid_samples = 0;
+
+    if (rows.empty()) {
+        return result;
+    }
+
+    // Build label mapping
+    std::unordered_map<std::string, int> label_map;
+    std::unordered_map<int, std::string> reverse_label_map;
+    int next_class_id = 0;
+
+    // First pass: collect all unique labels
+    for (const auto& row : rows) {
+        auto label_it = row.find(label_column);
+        if (label_it != row.end() && !label_it->second.is_null()) {
+            std::string label_str = label_it->second.to_string();
+            if (label_map.find(label_str) == label_map.end()) {
+                label_map[label_str] = next_class_id;
+                reverse_label_map[next_class_id] = label_str;
+                next_class_id++;
+            }
+        }
+    }
+
+    // Second pass: extract features and mapped labels
+    for (const auto& row : rows) {
+        auto label_it = row.find(label_column);
+        if (label_it == row.end() || label_it->second.is_null()) {
+            continue;
+        }
+
+        std::string label_str = label_it->second.to_string();
+        int class_id = label_map[label_str];
+
+        // Extract features
+        std::vector<float> features;
+        features.reserve(feature_columns.size());
+
+        for (const auto& feature_col : feature_columns) {
+            auto feat_it = row.find(feature_col);
+            if (feat_it == row.end() || feat_it->second.is_null()) {
+                features.push_back(0.0f); // Default for missing
+            } else {
+                // Convert feature to float
+                float feature_val = 0.0f;
+                const Datum& feat_datum = feat_it->second;
+
+                if (feat_datum.is_integer()) {
+                    feature_val = static_cast<float>(feat_datum.as_int());
+                } else if (feat_datum.is_float() || feat_datum.is_double()) {
+                    feature_val = feat_datum.as_float();
+                } else if (feat_datum.is_boolean()) {
+                    feature_val = feat_datum.as_bool() ? 1.0f : 0.0f;
+                } else if (feat_datum.is_string()) {
+                    // For string features, use one-hot or hash encoding
+                    std::hash<std::string> hasher;
+                    size_t hash_val = hasher(feat_datum.as_string());
+                    feature_val = static_cast<float>(hash_val % 1000) / 1000.0f;
+                }
+
+                features.push_back(feature_val);
+            }
+        }
+
+        result.features.push_back(features);
+        result.labels.push_back(static_cast<float>(class_id));
+        result.original_labels.push_back(label_str);
+        result.valid_samples++;
+    }
+
+    // Store label mapping in metadata
+    std::cout << "[DataExtractor] Classification labels mapping:" << std::endl;
+    for (const auto& [label_str, class_id] : label_map) {
+        std::cout << "  " << label_str << " -> " << class_id << std::endl;
+    }
+
+    return result;
+}
+
 DataExtractor::TrainingData DataExtractor::extract_training_data(const std::string& db_name,const std::string& table_name,
                                     const std::string& label_column,
                                     const std::vector<std::string>& feature_columns,

@@ -157,12 +157,61 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(AST::Creat
                   << table_name << " with " << feature_columns.size() << " features" << std::endl;
 
         // Extract training data
-        auto training_data = data_extractor_->extract_training_data(
+        auto classification_data = data_extractor_->extract_training_data_for_classification(
+                db_.currentDatabase(),
+                table_name,
+                target_column,
+                feature_columns
+                );
+
+        esql::DataExtractor::TrainingData training_data;
+        std::string detected_problem;
+
+        if (classification_data.valid_samples > 0) {
+            // Check if it looks like classification (few unique labels)
+            std::set<float> unique_labels(classification_data.labels.begin(), classification_data.labels.end());
+
+            if (unique_labels.size() <= 20) {
+                // It's classification
+                training_data = classification_data;
+
+                if (unique_labels.size() == 2) {
+                    detected_problem = "binary_classification";
+                } else {
+                    detected_problem = "multiclass";
+                    // Store number of classes in schema
+                    //schema.metadata["num_classes"] = std::to_string(unique_labels.size());
+                }
+            } else {
+                // Too many unique labels for classification, try regression
+                std::cout << "[AIExecutionEngineFinal] Too many unique labels (" << unique_labels.size() << "), trying regression extraction..." << std::endl;
+
+                // Try regression extraction
+                training_data = data_extractor_->extract_training_data(
+                        db_.currentDatabase(),
+                        table_name,
+                        target_column,
+                        feature_columns
+                );
+                detected_problem = "regression";
+            }
+        } else {
+            // Classification extraction failed, try regression
+            training_data = data_extractor_->extract_training_data(
+                    db_.currentDatabase(),
+                    table_name,
+                    target_column,
+                    feature_columns
+            );
+            detected_problem = "regression";
+        }
+
+        /*auto training_data = data_extractor_->extract_training_data(
             db_.currentDatabase(),
             table_name,
             target_column,
             feature_columns
-        );
+        );*/
 
         std::cout << "[AIExecutionEngineFinal] DEBUG: Training data has "
                   << training_data.valid_samples << " valid samples, "
