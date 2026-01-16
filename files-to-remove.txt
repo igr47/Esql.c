@@ -1,0 +1,7 @@
+*.o
+e_sql
+*.pch
+*.csv
+*.txt
+build/
+models/

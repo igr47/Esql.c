@@ -33,8 +33,10 @@ public:
         std::vector<std::string> original_labels;
         std::vector<std::string> feature_names;
         std::string label_name;
-        size_t total_samples;
-        size_t valid_samples;
+        size_t total_samples = 0;
+        size_t valid_samples = 0;
+
+        TrainingData() : total_samples(0), valid_samples(0) {}
 
         std::string to_string() const;
     };
