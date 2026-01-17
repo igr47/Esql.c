@@ -106,11 +106,11 @@ void Lexer::initializeKeyWords(){
         {"LOWER",Token::Type::LOWER},   {"TREND", Token::Type::TREND},
         {"UPPER",Token::Type::UPPER},   {"TIME_SERIES", Token::Type::TIME_SERIES},
         {"SUBSTRING",Token::Type::SUBSTRING},  {"QQ_PLOT", Token::Type::QQ_PLOT},
-        {"LIKE",Token::Type::LIKE},
-        {"GENERATE_DATE",Token::Type::GENERATE_DATE},
-        {"GENERATE_DATE_TIME",Token::Type::GENERATE_DATE_TIME},
-        {"GENERATE_UUID",Token::Type::GENERATE_UUID},
-        {"STRUCTURE",Token::Type::STRUCTURE},
+        {"LIKE",Token::Type::LIKE},                   {"TUNE_HYPERPARAMETERS", Token::Type::TUNE_HYPERPARAMETERS},
+        {"GENERATE_DATE",Token::Type::GENERATE_DATE}, {"RANDOM", Token::Type::RANDOM},
+        {"GENERATE_DATE_TIME",Token::Type::GENERATE_DATE_TIME},  {"ITERATIONS", Token::Type::ITERATIONS},
+        {"GENERATE_UUID",Token::Type::GENERATE_UUID},   {"FOLDS", Token::Type::FOLDS},
+        {"STRUCTURE",Token::Type::STRUCTURE},         {"WITH_TUNING_GRID", Token::Type::WITH_TUNING_GRID},
         {"STDDEV", Token::Type::STDDEV},
         {"VARIANCE", Token::Type::VARIANCE},
         {"PERCENTILE_CONT", Token::Type::PERCENTILE_CONT},
@@ -380,6 +380,12 @@ Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
         case ')':
             position++; column++;
             return Token(Token::Type::R_PAREN,")",tokenline,tokencolumn);
+        case '[':
+            position++; column++;
+            return Token(Token::Type::R_BRACKET,"[",tokenline,tokencolumn);
+        case ']':
+            position++; column++;
+            return Token(Token::Type::L_BRACKET,"]",tokenline,tokencolumn);
         case ';':
             position++; column++;
             return Token(Token::Type::SEMICOLON,";",tokenline,tokencolumn);

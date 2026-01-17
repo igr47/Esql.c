@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <nlohmann/json.hpp>
+#include <unordered_map>
 
 // AI-specific token types to add to Token::Type enum
 /*
@@ -127,6 +129,137 @@ namespace AST {
         }
     };
 
+    // Training options structure for CREATE MODEL
+    struct TrainingOptions {
+        bool cross_validation = false;
+        int cv_folds = 5;
+        bool early_stopping = true;
+        int early_stopping_rounds = 10;
+        std::string validation_table;  // Separate validation table
+        float validation_split = 0.2f;
+        bool use_gpu = false;
+        std::string device_type = "cpu";  // cpu or gpu
+        int num_threads = -1;  // auto-detect if -1
+        std::string metric = "auto";  // auto or specific metric
+        std::string boosting_type = "gbdt";  // gbdt, dart, goss, rf
+        int seed = 42;
+        bool deterministic = true;
+
+                // Serialization methods
+        nlohmann::json to_json() const {
+            nlohmann::json j;
+            j["cross_validation"] = cross_validation;
+            j["cv_folds"] = cv_folds;
+            j["early_stopping"] = early_stopping;
+            j["early_stopping_rounds"] = early_stopping_rounds;
+            j["validation_table"] = validation_table;
+            j["validation_split"] = validation_split;
+            j["use_gpu"] = use_gpu;
+            j["device_type"] = device_type;
+            j["num_threads"] = num_threads;
+            j["metric"] = metric;
+            j["boosting_type"] = boosting_type;
+            j["seed"] = seed;
+            j["deterministic"] = deterministic;
+            return j;
+        };
+
+        static TrainingOptions from_json(const nlohmann::json& j) {
+            TrainingOptions opts;
+            opts.cross_validation = j.value("cross_validation", false);
+            opts.cv_folds = j.value("cv_folds", 5);
+            opts.early_stopping = j.value("early_stopping", true);
+            opts.early_stopping_rounds = j.value("early_stopping_rounds", 10);
+            opts.validation_table = j.value("validation_table", "");
+            opts.validation_split = j.value("validation_split", 0.2f);
+            opts.use_gpu = j.value("use_gpu", false);
+            opts.device_type = j.value("device_type", "cpu");
+            opts.num_threads = j.value("num_threads", -1);
+            opts.metric = j.value("metric", "auto");
+            opts.boosting_type = j.value("boosting_type", "gbdt");
+            opts.seed = j.value("seed", 42);
+            opts.deterministic = j.value("deterministic", true);
+            return opts;
+        }
+    };
+
+        // Hyperparameter tuning options structure
+    struct TuningOptions {
+        bool tune_hyperparameters = false;
+        std::string tuning_method = "grid";  // grid, random, bayesian
+        int tuning_iterations = 10;
+        int tuning_folds = 3;
+        std::string scoring_metric = "auto";
+        std::unordered_map<std::string, std::vector<std::string>> param_grid;
+        std::unordered_map<std::string, std::pair<float, float>> param_ranges; // for random/bayesian
+        bool parallel_tuning = true;
+        int tuning_jobs = -1;  // -1 for all cores
+
+        // Serialization methods
+        nlohmann::json to_json() const {
+            nlohmann::json j;
+            j["tune_hyperparameters"] = tune_hyperparameters;
+            j["tuning_method"] = tuning_method;
+            j["tuning_iterations"] = tuning_iterations;
+            j["tuning_folds"] = tuning_folds;
+            j["scoring_metric"] = scoring_metric;
+            j["parallel_tuning"] = parallel_tuning;
+            j["tuning_jobs"] = tuning_jobs;
+
+            // Serialize param_grid
+            nlohmann::json grid_json;
+            for (const auto& [param, values] : param_grid) {
+                grid_json[param] = values;
+            }
+            j["param_grid"] = grid_json;
+
+            // Serialize param_ranges
+            nlohmann::json ranges_json;
+            for (const auto& [param, range] : param_ranges) {
+                nlohmann::json range_json;
+                range_json["min"] = range.first;
+                range_json["max"] = range.second;
+                ranges_json[param] = range_json;
+            }
+            j["param_ranges"] = ranges_json;
+
+            return j;
+        }
+
+        static TuningOptions from_json(const nlohmann::json& j) {
+            TuningOptions opts;
+            opts.tune_hyperparameters = j.value("tune_hyperparameters", false);
+            opts.tuning_method = j.value("tuning_method", "grid");
+            opts.tuning_iterations = j.value("tuning_iterations", 10);
+            opts.tuning_folds = j.value("tuning_folds", 3);
+            opts.scoring_metric = j.value("scoring_metric", "auto");
+            opts.parallel_tuning = j.value("parallel_tuning", true);
+            opts.tuning_jobs = j.value("tuning_jobs", -1);
+
+            // Deserialize param_grid
+            if (j.contains("param_grid")) {
+                for (auto& [key, value] : j["param_grid"].items()) {
+                    std::vector<std::string> values;
+                    for (const auto& v : value) {
+                        values.push_back(v.get<std::string>());
+                    }
+                    opts.param_grid[key] = values;
+                }
+            }
+
+                        // Deserialize param_ranges
+            if (j.contains("param_ranges")) {
+                for (auto& [key, value] : j["param_ranges"].items()) {
+                    float min_val = value["min"];
+                    float max_val = value["max"];
+                    opts.param_ranges[key] = {min_val, max_val};
+                }
+            }
+
+            return opts;
+        }
+    };
+
     class CreateModelStatement : public AIStatement {
     public:
         std::string model_name;
@@ -134,6 +267,17 @@ namespace AST {
         std::vector<std::pair<std::string, std::string>> features; // name, type
         std::string target_type; // "CLASSIFICATION", "REGRESSION", "CLUSTERING"
         std::unordered_map<std::string, std::string> parameters;
+
+        TrainingOptions training_options;
+        TuningOptions tuning_options;
+
+        std::string data_sampling = "none";  // none, oversample, undersample, smote
+        float sampling_ratio = 1.0f;
+        bool feature_selection = false;
+        std::string feature_selection_method = "auto";
+        int max_features_to_select = -1;
+        bool feature_scaling = true;
+        std::string scaling_method = "standard";  // standard, minmax, robust
 
         std::string toEsql() const override {
             std::string result = "CREATE MODEL " + model_name;
@@ -158,6 +302,75 @@ namespace AST {
                 result += " TARGET " + target_type;
             }
 
+            if (training_options.cross_validation) {
+                result += " CROSS_VALIDATION FOLDS " + std::to_string(training_options.cv_folds);
+            }
+
+            if (training_options.early_stopping) {
+                result += " EARLY_STOPPING ROUNDS " +std::to_string(training_options.early_stopping_rounds);
+                if (!training_options.validation_table.empty()) {
+                    result += " VALIDATION_TABLE " + training_options.validation_table;
+                } else {
+                    result += " VALIDATION_SPLIT " +
+                             std::to_string(training_options.validation_split);
+                }
+            }
+
+            if (training_options.use_gpu) {
+                result += " DEVICE GPU";
+            }
+
+            if (training_options.num_threads > 0) {
+                result += " NUM_THREADS " + std::to_string(training_options.num_threads);
+            }
+
+            if (training_options.metric != "auto") {
+                result += " METRIC " + training_options.metric;
+            }
+
+            if (training_options.boosting_type != "gbdt") {
+                result += " BOOSTING " + training_options.boosting_type;
+            }
+
+            if (training_options.seed != 42) {
+                result += " SEED " + std::to_string(training_options.seed);
+            }
+
+            // Add tuning options
+            if (tuning_options.tune_hyperparameters) {
+                result += " TUNE_HYPERPARAMETERS USING " + tuning_options.tuning_method + " ITERATIONS " + std::to_string(tuning_options.tuning_iterations);
+
+                if (!tuning_options.parallel_tuning) {
+                    result += " SEQUENTIAL";
+                }
+
+                if (tuning_options.tuning_jobs > 0) {
+                    result += " JOBS " + std::to_string(tuning_options.tuning_jobs);
+                }
+            }
+
+            // Add advanced options
+            if (data_sampling != "none") {
+                result += " DATA_SAMPLING " + data_sampling;
+                if (sampling_ratio != 1.0f) {
+                    result += " RATIO " + std::to_string(sampling_ratio);
+                }
+            }
+
+            if (feature_selection) {
+                result += " FEATURE_SELECTION USING " + feature_selection_method;
+                if (max_features_to_select > 0) {
+                    result += " MAX_FEATURES " + std::to_string(max_features_to_select);
+                }
+            }
+
+            if (!feature_scaling) {
+                result += " NO_FEATURE_SCALING";
+            } else if (scaling_method != "standard") {
+                result += " SCALING " + scaling_method;
+            }
+
+            // Add hyperparameters
             if (!parameters.empty()) {
                 result += " WITH (";
                 bool first = true;
@@ -171,6 +384,66 @@ namespace AST {
 
              return result;
         }
+
+                // Serialization for saving model metadata
+        nlohmann::json to_json() const {
+            nlohmann::json j;
+            j["model_name"] = model_name;
+            j["algorithm"] = algorithm;
+            j["target_type"] = target_type;
+            j["parameters"] = parameters;
+            j["training_options"] = training_options.to_json();
+            j["tuning_options"] = tuning_options.to_json();
+
+            // Serialize features
+            nlohmann::json features_json = nlohmann::json::array();
+            for (const auto& [name, type] : features) {
+                nlohmann::json feature;
+                feature["name"] = name;
+                feature["type"] = type;
+                features_json.push_back(feature);
+            }
+            j["features"] = features_json;
+            j["data_sampling"] = data_sampling;
+            j["sampling_ratio"] = sampling_ratio;
+            j["feature_selection"] = feature_selection;
+            j["feature_selection_method"] = feature_selection_method;
+            j["max_features_to_select"] = max_features_to_select;
+            j["feature_scaling"] = feature_scaling;
+            j["scaling_method"] = scaling_method;
+
+            return j;
+        }
+
+        static CreateModelStatement from_json(const nlohmann::json& j) {
+            CreateModelStatement stmt;
+            stmt.model_name = j["model_name"];
+            stmt.algorithm = j["algorithm"];
+            stmt.target_type = j["target_type"];
+            stmt.parameters = j["parameters"].get<std::unordered_map<std::string, std::string>>();
+            stmt.training_options = TrainingOptions::from_json(j["training_options"]);
+            stmt.tuning_options = TuningOptions::from_json(j["tuning_options"]);
+
+            // Deserialize features
+            for (const auto& feature_json : j["features"]) {
+                stmt.features.emplace_back(
+                    feature_json["name"],
+                    feature_json["type"]
+                );
+            }
+
+                        // Advanced options
+            stmt.data_sampling = j["data_sampling"];
+            stmt.sampling_ratio = j["sampling_ratio"];
+            stmt.feature_selection = j["feature_selection"];
+            stmt.feature_selection_method = j["feature_selection_method"];
+            stmt.max_features_to_select = j["max_features_to_select"];
+            stmt.feature_scaling = j["feature_scaling"];
+            stmt.scaling_method = j["scaling_method"];
+
+            return stmt;
+        }
+
     };
 
     class AIFunctionCall : public Expression {

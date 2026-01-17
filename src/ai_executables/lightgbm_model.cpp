@@ -1085,7 +1085,271 @@ void AdaptiveLightGBMModel::log_metrics_summary() const {
     std::cout << "===================================\n" << std::endl;
 }
 
+/*void AdaptiveLightGBMModel::calculate_training_metrics(
+    const std::vector<std::vector<float>>& features,
+ const std::vector<float>& labels) {
+
+    schema_.accuracy = 0.0f;
+
+    if (!booster_ || features.empty() || labels.empty()) {
+        std::cerr << "[LightGBM] WARNING: Cannot calculate metrics - booster not available or empty data" << std::endl;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    std::cout << "[LightGBM] Calculating training metrics for problem type: "
+              << schema_.problem_type << std::endl;
+
+    // Get evaluation results from LightGBM
+    int eval_count = 0;
+    std::cout << "[LightGBM] Getting evaluation count..." << std::endl;
+    int result = LGBM_BoosterGetEvalCounts(booster_, &eval_count);
+
+    if (result != 0 || eval_count <= 0) {
+        std::cerr << "[LightGBM] WARNING: No evaluation metrics available from LightGBM" << std::endl;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    std::cout << "[LightGBM] Found " << eval_count << " evaluation metrics" << std::endl;
+
+    // FIRST CALL: Get required buffer size
+    int out_len = 0;
+    size_t required_buffer_len = 0;
+
+    result = LGBM_BoosterGetEvalNames(
+        booster_,
+        0,                      // len = 0 for first call (query mode)
+        &out_len,              // Will get actual number of names
+        0,                      // buffer_len = 0 for first call
+        &required_buffer_len,   // Will get required buffer size
+        nullptr                 // out_strs = nullptr for first call
+    );
+
+    if (result != 0 || required_buffer_len == 0) {
+        std::cerr << "[LightGBM] WARNING: Cannot get evaluation names buffer size, error: "
+                  << result << ", buffer_len: " << required_buffer_len << std::endl;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    std::cout << "[LightGBM] Need buffer of size: " << required_buffer_len
+              << " for " << out_len << " evaluation names" << std::endl;
+
+    // Allocate buffer for the concatenated string
+    char* buffer = new char[required_buffer_len];
+    if (!buffer) {
+        std::cerr << "[LightGBM] ERROR: Failed to allocate buffer for evaluation names" << std::endl;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    // Reset out_len for second call
+    out_len = 0;
+    size_t actual_buffer_len = 0;
+
+    // SECOND CALL: Get actual names
+    result = LGBM_BoosterGetEvalNames(
+        booster_,
+        eval_count,            // Provide the expected count
+        &out_len,              // Will get actual number of names
+        required_buffer_len,   // Provide allocated buffer size
+        &actual_buffer_len,    // Will get actual buffer used
+        &buffer                // Buffer where names will be written
+    );
+
+    if (result != 0 || out_len <= 0) {
+        std::cerr << "[LightGBM] WARNING: Cannot retrieve evaluation names, error: "
+                  << result << ", out_len: " << out_len << std::endl;
+        delete[] buffer;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    // Parse the concatenated null-terminated strings
+    std::vector<std::string> eval_names;
+    const char* current = buffer;
+    size_t remaining = actual_buffer_len;
+
+    while (remaining > 0 && *current != '\0') {
+        size_t str_len = strlen(current);
+        if (str_len > 0) {
+            eval_names.push_back(std::string(current));
+            current += str_len + 1;  // Move to next string (including null terminator)
+            if (str_len + 1 > remaining) break;
+            remaining -= (str_len + 1);
+        } else {
+            break;
+        }
+    }
+
+    std::cout << "[LightGBM] Parsed " << eval_names.size() << " evaluation names" << std::endl;
+
+    // Get evaluation results
+    std::vector<double> eval_results;
+
+    // Since we only trained on one dataset, use data_idx = 0
+    int data_idx = 0;
+    std::vector<double> results_buffer(eval_count);
+    int out_results_len = 0;
+
+    std::cout << "[LightGBM] Getting evaluation results..." << std::endl;
+    result = LGBM_BoosterGetEval(
+        booster_,
+        data_idx,
+        &out_results_len,
+        results_buffer.data()
+    );
+
+    if (result != 0) {
+        std::cerr << "[LightGBM] WARNING: Cannot get evaluation results, error: "
+                  << result << std::endl;
+        delete[] buffer;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    if (out_results_len > 0) {
+        for (int i = 0; i < out_results_len; ++i) {
+            eval_results.push_back(results_buffer[i]);
+        }
+        std::cout << "[LightGBM] Retrieved " << eval_results.size() << " evaluation values" << std::endl;
+    }
+
+    // Clean up buffer
+    delete[] buffer;
+
+    // Process metrics based on problem type
+    if (schema_.problem_type == "binary_classification") {
+        process_binary_classification_metrics(eval_names, eval_results, features, labels);
+    }
+    else if (schema_.problem_type == "multiclass") {
+        process_multiclass_metrics(eval_names, eval_results, features, labels);
+    }
+    else if (schema_.problem_type == "regression" ||
+             schema_.problem_type == "count_regression" ||
+             schema_.problem_type == "positive_regression" ||
+             schema_.problem_type == "zero_inflated_regression" ||
+             schema_.problem_type == "quantile_regression") {
+        process_regression_metrics(eval_names, eval_results, features, labels);
+    }
+    else {
+        std::cerr << "[LightGBM] WARNING: Unknown problem type: " << schema_.problem_type
+                  << ". Using fallback metrics." << std::endl;
+        calculate_fallback_metrics(features, labels);
+    }
+
+    log_metrics_summary();
+}*/
+
 void AdaptiveLightGBMModel::calculate_training_metrics(
+    const std::vector<std::vector<float>>& features,
+    const std::vector<float>& labels) {
+
+    schema_.accuracy = 0.0f;
+
+    if (!booster_ || features.empty() || labels.empty()) {
+        std::cerr << "[LightGBM] WARNING: Cannot calculate metrics - booster not available or empty data" << std::endl;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    std::cout << "[LightGBM] Calculating training metrics for problem type: "
+              << schema_.problem_type << std::endl;
+
+    // Get evaluation results from LightGBM
+    int eval_count = 0;
+    std::cout << "[LightGBM] Getting evaluation count..." << std::endl;
+    int result = LGBM_BoosterGetEvalCounts(booster_, &eval_count);
+
+    if (result != 0 || eval_count <= 0) {
+        std::cerr << "[LightGBM] WARNING: No evaluation metrics available from LightGBM" << std::endl;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    std::cout << "[LightGBM] Found " << eval_count << " evaluation metrics" << std::endl;
+
+    // SIMPLIFIED: Don't try to parse metric names, just get the results
+    std::vector<double> eval_results;
+
+    int data_idx = 0;
+    std::vector<double> results_buffer(eval_count);
+    int out_results_len = 0;
+
+    std::cout << "[LightGBM] Getting evaluation results..." << std::endl;
+    result = LGBM_BoosterGetEval(
+        booster_,
+        data_idx,
+        &out_results_len,
+        results_buffer.data()
+    );
+
+    if (result != 0) {
+        std::cerr << "[LightGBM] WARNING: Cannot get evaluation results, error: "
+                  << result << std::endl;
+        calculate_fallback_metrics(features, labels);
+        return;
+    }
+
+    if (out_results_len > 0) {
+        for (int i = 0; i < out_results_len; ++i) {
+            eval_results.push_back(results_buffer[i]);
+        }
+        std::cout << "[LightGBM] Retrieved " << eval_results.size() << " evaluation values: ";
+        for (double val : eval_results) {
+            std::cout << val << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    // Create default names based on problem type and count
+    std::vector<std::string> eval_names;
+
+    if (schema_.problem_type == "binary_classification") {
+        if (eval_results.size() >= 1) eval_names.push_back("binary_logloss");
+        if (eval_results.size() >= 2) eval_names.push_back("auc");
+        if (eval_results.size() >= 3) eval_names.push_back("binary_error");
+        if (eval_results.size() >= 4) eval_names.push_back("precision");
+        if (eval_results.size() >= 5) eval_names.push_back("recall");
+    }
+    else if (schema_.problem_type == "multiclass") {
+        if (eval_results.size() >= 1) eval_names.push_back("multi_logloss");
+        if (eval_results.size() >= 2) eval_names.push_back("multi_error");
+    }
+    else {
+        // Regression metrics
+        if (eval_results.size() >= 1) eval_names.push_back("rmse");
+        if (eval_results.size() >= 2) eval_names.push_back("mae");
+        if (eval_results.size() >= 3) eval_names.push_back("r2");
+        if (eval_results.size() >= 4) eval_names.push_back("quantile_loss");
+        if (eval_results.size() >= 5) eval_names.push_back("huber_loss");
+    }
+
+    // Process metrics based on problem type
+    if (schema_.problem_type == "binary_classification") {
+        process_binary_classification_metrics(eval_names, eval_results, features, labels);
+    }
+    else if (schema_.problem_type == "multiclass") {
+        process_multiclass_metrics(eval_names, eval_results, features, labels);
+    }
+    else if (schema_.problem_type == "regression" ||
+             schema_.problem_type == "count_regression" ||
+             schema_.problem_type == "positive_regression" ||
+             schema_.problem_type == "zero_inflated_regression" ||
+             schema_.problem_type == "quantile_regression") {
+        process_regression_metrics(eval_names, eval_results, features, labels);
+    }
+    else {
+        std::cerr << "[LightGBM] WARNING: Unknown problem type: " << schema_.problem_type
+                  << ". Using fallback metrics." << std::endl;
+        calculate_fallback_metrics(features, labels);
+    }
+
+    log_metrics_summary();
+}
+
+/*void AdaptiveLightGBMModel::calculate_training_metrics(
     const std::vector<std::vector<float>>& features,
     const std::vector<float>& labels) {
 
@@ -1128,6 +1392,7 @@ void AdaptiveLightGBMModel::calculate_training_metrics(
         nullptr  // out_strs (nullptr for first call)
     );
 
+
     if (result != 0 || eval_names_len <= 0) {
         std::cerr << "[LightGBM] WARNING: Cannot get evaluation names length" << std::endl;
         calculate_fallback_metrics(features, labels);
@@ -1162,7 +1427,7 @@ void AdaptiveLightGBMModel::calculate_training_metrics(
         current += strlen(current) + 1;
     }
 
-    // Get evaluation results - CORRECTED
+    // Get evaluation results
     std::vector<double> eval_results;
 
     // Since we only trained on one dataset, use data_idx = 0
@@ -1211,7 +1476,7 @@ void AdaptiveLightGBMModel::calculate_training_metrics(
         calculate_fallback_metrics(features, labels);
     }
     log_metrics_summary();
-}
+}*/
 
 void AdaptiveLightGBMModel::calculate_binary_classification_metrics(
     const std::vector<std::vector<float>>& features,

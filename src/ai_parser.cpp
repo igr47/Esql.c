@@ -5,6 +5,7 @@
 #include "ai/algorithm_registry.h"
 #include <sstream>
 #include <algorithm>
+#include <iostream>
 
 AIParser::AIParser(Lexer& lexer, Parse& parser) : lexer_(lexer), base_parser_(parser) {}
 
@@ -87,7 +88,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
         //stmt-> model_name = "LIGHTGBM";
     }
 
-        // Parse FEATURES clause
+    // Parse FEATURES clause
     base_parser_.consumeToken(Token::Type::FEATURES);
     base_parser_.consumeToken(Token::Type::L_PAREN);
 
@@ -158,6 +159,15 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
         stmt->parameters["source_table"] = source_table;
     }
 
+    // Parse training options
+    parseTrainingOptions(*stmt);
+
+    // Parse tuning options
+    parseTuningOptions(*stmt);
+
+    // Parse advanced options
+    parseAdvancedOptions(*stmt);
+
     // Parse WITH clause for parameters
     if (base_parser_.checkMatch(Token::Type::WITH)) {
         base_parser_.consumeToken(Token::Type::WITH);
@@ -170,6 +180,383 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
 
     return stmt;
 }
+
+void AIParser::parseTrainingOptions(AST::CreateModelStatement& stmt) {
+    while (base_parser_.checkMatchAny({
+        Token::Type::CROSS_VALIDATION, Token::Type::EARLY_STOPPING,
+        Token::Type::DEVICE, Token::Type::NUM_THREADS, Token::Type::METRIC,
+        Token::Type::BOOSTING, Token::Type::SEED, Token::Type::VALIDATION_TABLE,
+        Token::Type::VALIDATION_SPLIT, Token::Type::DETERMINISTIC
+    })) {
+        Token current = base_parser_.getCurrentToken();
+
+        switch (current.type) {
+            case Token::Type::CROSS_VALIDATION: {
+                base_parser_.consumeToken(Token::Type::CROSS_VALIDATION);
+                stmt.training_options.cross_validation = true;
+
+                if (base_parser_.checkMatch(Token::Type::FOLDS)) {
+                    base_parser_.consumeToken(Token::Type::FOLDS);
+                    if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                        try {
+                                stmt.training_options.cv_folds =
+                                std::stoi(base_parser_.getCurrentToken().lexeme);
+                            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                        } catch (...) {
+                            throw ParseError(current.line, current.column,
+                                           "Invalid cross-validation folds");
+                        }
+                    }
+                }
+                break;
+            }
+
+            case Token::Type::EARLY_STOPPING: {
+                base_parser_.consumeToken(Token::Type::EARLY_STOPPING);
+                stmt.training_options.early_stopping = true;
+
+                if (base_parser_.checkMatch(Token::Type::ROUNDS)) {
+                    base_parser_.consumeToken(Token::Type::ROUNDS);
+                    if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                        try {
+                            stmt.training_options.early_stopping_rounds =
+                                std::stoi(base_parser_.getCurrentToken().lexeme);
+                            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                        } catch (...) {
+                            throw ParseError(current.line, current.column,
+                                           "Invalid early stopping rounds");
+                        }
+                    }
+                }
+
+                // Parse validation source
+                if (base_parser_.checkMatch(Token::Type::VALIDATION_TABLE)) {
+                    base_parser_.consumeToken(Token::Type::VALIDATION_TABLE);
+                    stmt.training_options.validation_table = base_parser_.getCurrentToken().lexeme;
+                    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+                } else if (base_parser_.checkMatch(Token::Type::VALIDATION_SPLIT)) {
+                    base_parser_.consumeToken(Token::Type::VALIDATION_SPLIT);
+                    if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                        try {
+                            stmt.training_options.validation_split =
+                                std::stof(base_parser_.getCurrentToken().lexeme);
+                            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                        } catch (...) {
+                            throw ParseError(current.line, current.column,
+                                           "Invalid validation split");
+                        }
+                    }
+                }
+                break;
+            }
+
+            case Token::Type::DEVICE: {
+                base_parser_.consumeToken(Token::Type::DEVICE);
+                std::string device = base_parser_.getCurrentToken().lexeme;
+                std::transform(device.begin(), device.end(), device.begin(), ::toupper);
+
+                if (device == "GPU") {
+                    stmt.training_options.use_gpu = true;
+                    stmt.training_options.device_type = "gpu";
+                } else if (device == "CPU") {
+                    stmt.training_options.use_gpu = false;
+                    stmt.training_options.device_type = "cpu";
+                } else {
+                    throw ParseError(current.line, current.column,
+                                   "Invalid device type. Use GPU or CPU");
+                }
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                break;
+            }
+
+            case Token::Type::NUM_THREADS: {
+                base_parser_.consumeToken(Token::Type::NUM_THREADS);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.training_options.num_threads =
+                            std::stoi(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid number of threads");
+                    }
+                }
+                break;
+            }
+
+            case Token::Type::METRIC: {
+                base_parser_.consumeToken(Token::Type::METRIC);
+                stmt.training_options.metric = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+
+                break;
+            }
+
+            case Token::Type::BOOSTING: {
+                base_parser_.consumeToken(Token::Type::BOOSTING);
+                stmt.training_options.boosting_type = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                break;
+            }
+
+            case Token::Type::SEED: {
+                base_parser_.consumeToken(Token::Type::SEED);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.training_options.seed = std::stoi(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid seed value");
+                    }
+                }
+                break;
+            }
+
+            case Token::Type::DETERMINISTIC: {
+                base_parser_.consumeToken(Token::Type::DETERMINISTIC);
+                std::string value = base_parser_.getCurrentToken().lexeme;
+                std::transform(value.begin(), value.end(), value.begin(), ::toupper);
+
+                if (value == "TRUE" || value == "1") {
+                    stmt.training_options.deterministic = true;
+                } else if (value == "FALSE" || value == "0") {
+                    stmt.training_options.deterministic = false;
+                } else {
+                    throw ParseError(current.line, current.column,
+                                   "Invalid deterministic value. Use TRUE or FALSE");
+                }
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                break;
+            }
+
+            default:
+                // Skip unknown tokens
+                base_parser_.advanceToken();
+                break;
+        }
+    }
+}
+
+void AIParser::parseTuningOptions(AST::CreateModelStatement& stmt) {
+    if (base_parser_.checkMatch(Token::Type::TUNE_HYPERPARAMETERS)) {
+        base_parser_.consumeToken(Token::Type::TUNE_HYPERPARAMETERS);
+        stmt.tuning_options.tune_hyperparameters = true;
+
+        // Parse tuning method
+        if (base_parser_.checkMatch(Token::Type::USING)) {
+            base_parser_.consumeToken(Token::Type::USING);
+            stmt.tuning_options.tuning_method =
+                base_parser_.getCurrentToken().lexeme;
+            base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+        }
+
+        // Parse iterations
+        if (base_parser_.checkMatch(Token::Type::ITERATIONS)) {
+            base_parser_.consumeToken(Token::Type::ITERATIONS);
+            if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                try {
+                    stmt.tuning_options.tuning_iterations = std::stoi(base_parser_.getCurrentToken().lexeme);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } catch (...) {
+                    throw ParseError(base_parser_.getCurrentToken().line,
+                                    base_parser_.getCurrentToken().column,
+                                    "Invalid tuning iterations");
+                }
+            }
+        }
+
+        // Parse folds
+        if (base_parser_.checkMatch(Token::Type::FOLDS)) {
+            base_parser_.consumeToken(Token::Type::FOLDS);
+            if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                try {
+                    stmt.tuning_options.tuning_folds =
+                        std::stoi(base_parser_.getCurrentToken().lexeme);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } catch (...) {
+                    throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Invalid tuning folds");
+                }
+            }
+        }
+
+                // Parse parallel options
+        if (base_parser_.checkMatch(Token::Type::SEQUENTIAL)) {
+            base_parser_.consumeToken(Token::Type::SEQUENTIAL);
+            stmt.tuning_options.parallel_tuning = false;
+        } else if (base_parser_.checkMatch(Token::Type::JOBS)) {
+            base_parser_.consumeToken(Token::Type::JOBS);
+            if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                try {
+                    stmt.tuning_options.tuning_jobs =
+                        std::stoi(base_parser_.getCurrentToken().lexeme);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } catch (...) {
+                    throw ParseError(base_parser_.getCurrentToken().line,
+                                    base_parser_.getCurrentToken().column,
+                                    "Invalid tuning jobs");
+                }
+            }
+        }
+
+        // Parse scoring metric
+        if (base_parser_.checkMatch(Token::Type::SCORING)) {
+            base_parser_.consumeToken(Token::Type::SCORING);
+            stmt.tuning_options.scoring_metric =
+                base_parser_.getCurrentToken().lexeme;
+            base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+        }
+
+        // Parse parameter grid/ranges
+        if (base_parser_.checkMatch(Token::Type::WITH_TUNING_GRID)) {
+            base_parser_.consumeToken(Token::Type::WITH_TUNING_GRID);
+            base_parser_.consumeToken(Token::Type::L_PAREN);
+            parseParameterGrid(stmt.tuning_options);
+            base_parser_.consumeToken(Token::Type::R_PAREN);
+        }
+    }
+}
+
+void AIParser::parseParameterGrid(AST::TuningOptions& tuning_options) {
+    do {
+        if (base_parser_.checkMatch(Token::Type::COMMA)) {
+            base_parser_.consumeToken(Token::Type::COMMA);
+        }
+
+        std::string param_name = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        base_parser_.consumeToken(Token::Type::EQUAL);
+
+        // Parse value list
+        std::vector<std::string> values;
+
+        if (base_parser_.checkMatch(Token::Type::L_BRACKET)) {
+            base_parser_.consumeToken(Token::Type::L_BRACKET);
+
+            do {
+                if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                    base_parser_.consumeToken(Token::Type::COMMA);
+                }
+
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    values.push_back(base_parser_.getCurrentToken().lexeme);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } else if (base_parser_.checkMatch(Token::Type::STRING_LITERAL)) {
+                    std::string value = base_parser_.getCurrentToken().lexeme;
+                    // Remove quotes
+                    if (value.size() >= 2) {
+                        value = value.substr(1, value.size() - 2);
+                    }
+                    values.push_back(value);
+                    base_parser_.consumeToken(Token::Type::STRING_LITERAL);
+                } else {
+                    throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Expected parameter value");
+                }
+            } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+            base_parser_.consumeToken(Token::Type::R_BRACKET);
+
+            tuning_options.param_grid[param_name] = values;
+
+        } else if (base_parser_.checkMatch(Token::Type::RANGE)) {
+            base_parser_.consumeToken(Token::Type::RANGE);
+            base_parser_.consumeToken(Token::Type::L_PAREN);
+
+            // Parse min value
+            if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                float min_val = std::stof(base_parser_.getCurrentToken().lexeme);
+                base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+
+                base_parser_.consumeToken(Token::Type::COMMA);
+
+                                // Parse max value
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    float max_val = std::stof(base_parser_.getCurrentToken().lexeme);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+
+                    tuning_options.param_ranges[param_name] = {min_val, max_val};
+                }
+            }
+
+            base_parser_.consumeToken(Token::Type::R_PAREN);
+        }
+    } while (base_parser_.checkMatch(Token::Type::COMMA));
+}
+
+void AIParser::parseAdvancedOptions(AST::CreateModelStatement& stmt) {
+    while (base_parser_.checkMatchAny({
+        Token::Type::DATA_SAMPLING, Token::Type::FEATURE_SELECTION,
+        Token::Type::NO_FEATURE_SCALING, Token::Type::SCALING
+    })) {
+        Token current = base_parser_.getCurrentToken();
+
+        switch (current.type) {
+            case Token::Type::DATA_SAMPLING: {
+                base_parser_.consumeToken(Token::Type::DATA_SAMPLING);
+                stmt.data_sampling = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+
+                if (base_parser_.checkMatch(Token::Type::RATIO)) {
+                    base_parser_.consumeToken(Token::Type::RATIO);
+                    if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                        try {
+                            stmt.sampling_ratio = std::stof(base_parser_.getCurrentToken().lexeme);
+                            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                        } catch (...) {
+                            throw ParseError(current.line, current.column,
+                                           "Invalid sampling ratio");
+                        }
+                    }
+                }
+                break;
+            }
+
+            case Token::Type::FEATURE_SELECTION: {
+                base_parser_.consumeToken(Token::Type::FEATURE_SELECTION);
+                stmt.feature_selection = true;
+
+                if (base_parser_.checkMatch(Token::Type::USING)) {
+                    base_parser_.consumeToken(Token::Type::USING);
+                    stmt.feature_selection_method =
+                        base_parser_.getCurrentToken().lexeme;
+                    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                }
+
+                    if (base_parser_.checkMatch(Token::Type::MAX_FEATURES)) {
+                    base_parser_.consumeToken(Token::Type::MAX_FEATURES);
+                    if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                        try {
+                            stmt.max_features_to_select = std::stoi(base_parser_.getCurrentToken().lexeme);
+                            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                        } catch (...) {
+                            throw ParseError(current.line, current.column,
+                                           "Invalid max features value");
+                        }
+                    }
+                }
+                break;
+            }
+
+            case Token::Type::NO_FEATURE_SCALING: {
+                base_parser_.consumeToken(Token::Type::NO_FEATURE_SCALING);
+                stmt.feature_scaling = false;
+                break;
+            }
+
+            case Token::Type::SCALING: {
+                base_parser_.consumeToken(Token::Type::SCALING);
+                stmt.scaling_method = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                break;
+            }
+
+            default:
+                base_parser_.advanceToken();
+                break;
+        }
+    }
+}
+
 
 std::unique_ptr<AST::TrainModelStatement> AIParser::parseTrainModel() {
     auto stmt = std::make_unique<AST::TrainModelStatement>();
@@ -1099,6 +1486,150 @@ std::unique_ptr<AST::Expression> AIParser::parseAIFunction() {
 std::unordered_map<std::string, std::string> AIParser::parseHyperparameters() {
     std::unordered_map<std::string, std::string> params;
 
+    bool has_lparen = false;
+    if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+        has_lparen = true;
+    }
+
+    do {
+        if (base_parser_.checkMatch(Token::Type::COMMA)) {
+            base_parser_.consumeToken(Token::Type::COMMA);
+        }
+
+        std::string param_name = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        base_parser_.consumeToken(Token::Type::EQUAL);
+
+        std::string param_value;
+        if (base_parser_.checkMatch(Token::Type::STRING_LITERAL)) {
+            param_value = base_parser_.getCurrentToken().lexeme;
+            // Remove quotes
+            if (param_value.size() >= 2 &&
+                ((param_value[0] == '\'' && param_value.back() == '\'') ||
+                 (param_value[0] == '"' && param_value.back() == '"'))) {
+                param_value = param_value.substr(1, param_value.size() - 2);
+            }
+            base_parser_.consumeToken(Token::Type::STRING_LITERAL);
+        } else if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+            param_value = base_parser_.getCurrentToken().lexeme;
+
+            // Validate numeric parameter ranges
+            validateNumericParameter(param_name, param_value, base_parser_.getCurrentToken());
+
+            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+        } else if (base_parser_.checkMatch(Token::Type::TRUE)) {
+            param_value = "true";
+            base_parser_.consumeToken(Token::Type::TRUE);
+        } else if (base_parser_.checkMatch(Token::Type::FALSE)) {
+            param_value = "false";
+            base_parser_.consumeToken(Token::Type::FALSE);
+        } else if (base_parser_.checkMatch(Token::Type::NULL_TOKEN)) {
+            param_value = "NULL";
+            base_parser_.consumeToken(Token::Type::NULL_TOKEN);
+        } else {
+            throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Expected hyperparameter value");
+        }
+
+        params[param_name] = param_value;
+
+        // Validate parameter dependencies
+        validateParameterDependencies(params, param_name, param_value,
+                                    base_parser_.getCurrentToken());
+
+    } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+    if (has_lparen && base_parser_.checkMatch(Token::Type::R_PAREN)) {
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    return params;
+}
+
+void AIParser::validateNumericParameter(const std::string& param_name,
+                                      const std::string& param_value,
+                                      const Token& token) {
+    static const std::unordered_map<std::string, std::pair<float, float>> param_ranges = {
+        {"learning_rate", {0.0f, 1.0f}},
+        {"num_iterations", {1, 10000}},
+        {"num_leaves", {2, 32768}},
+        {"min_data_in_leaf", {1, 10000}},
+        {"min_sum_hessian_in_leaf", {0.0f, 1000.0f}},
+        {"feature_fraction", {0.0f, 1.0f}},
+        {"bagging_fraction", {0.0f, 1.0f}},
+        {"bagging_freq", {0, 100}},
+        {"max_depth", {-1, 100}},
+        {"lambda_l1", {0.0f, 1000.0f}},
+        {"lambda_l2", {0.0f, 1000.0f}},
+        {"min_gain_to_split", {0.0f, 100.0f}},
+        {"max_bin", {2, 65535}},
+        {"min_data_in_bin", {1, 10000}},
+        {"data_random_seed", {0, 2147483647}},
+        {"extra_trees", {false, true}},
+        {"top_rate", {0.0f, 1.0f}},
+        {"other_rate", {0.0f, 1.0f}}
+    };
+
+    auto it = param_ranges.find(param_name);
+    if (it != param_ranges.end()) {
+        try {
+            float value = std::stof(param_value);
+            const auto& range = it->second;
+
+            // Check if parameter is boolean (range.second == true)
+            if (range.second == 1.0f && range.first == 0.0f) {
+                // Boolean parameter
+                if (value != 0.0f && value != 1.0f) {
+                    throw ParseError(token.line, token.column,
+                                   "Parameter '" + param_name + "' must be 0 or 1");
+                }
+            } else if (value < range.first || value > range.second) {
+                throw ParseError(token.line, token.column,"Parameter '" + param_name + "' must be between " + std::to_string(range.first) + " and " + std::to_string(range.second));
+            }
+        } catch (const std::exception&) {
+            throw ParseError(token.line, token.column,
+                           "Invalid numeric value for parameter '" + param_name + "'");
+        }
+    }
+}
+
+void AIParser::validateParameterDependencies(const std::unordered_map<std::string, std::string>& params,const std::string& current_param,
+    const std::string& current_value,const Token& token) {
+
+    // Check for incompatible parameters
+    if (current_param == "boosting" && current_value == "rf") {
+        // Random forest shouldn't have bagging_freq
+        if (params.find("bagging_freq") != params.end() &&
+            params.at("bagging_freq") != "0") {
+            throw ParseError(token.line, token.column,
+                           "Random forest (boosting=rf) should have bagging_freq=0");
+        }
+    }
+
+    // Check for required parameters together
+    if (current_param == "alpha" && params.find("objective") == params.end()) {
+                throw ParseError(token.line, token.column,
+                       "Parameter 'alpha' requires 'objective=quantile' or 'objective=huber'");
+    }
+
+    // Check for mutually exclusive parameters
+    static const std::vector<std::pair<std::string, std::string>> exclusive_params = {
+        {"max_depth", "num_leaves"},
+        {"min_data_in_leaf", "min_child_samples"},
+        {"feature_fraction", "colsample_bytree"}
+    };
+
+    for (const auto& [param1, param2] : exclusive_params) {
+        if ((current_param == param1 && params.find(param2) != params.end()) ||
+            (current_param == param2 && params.find(param1) != params.end())) {
+            std::cout << "[Warning] Parameters '" << param1 << "' and '" << param2 << "' are similar. Consider using only one." << std::endl;
+        }
+    }
+}
+
+/*std::unordered_map<std::string, std::string> AIParser::parseHyperparameters() {
+    std::unordered_map<std::string, std::string> params;
+
     // Check if we're already inside WITH clause
     bool has_lparen = false;
     if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
@@ -1146,8 +1677,35 @@ std::unordered_map<std::string, std::string> AIParser::parseHyperparameters() {
         base_parser_.consumeToken(Token::Type::R_PAREN);
     }
 
+    static const std::set<std::string> numeric_params = {
+        "num_iterations", "learning_rate", "num_leaves", "min_data_in_leaf",
+        "min_sum_hessian_in_leaf", "feature_fraction", "bagging_fraction",
+        "bagging_freq", "max_depth", "lambda_l1", "lambda_l2"
+    };
+
+    static const std::set<std::string> boolean_params = {
+        "boosting_from_average", "is_unbalance", "boost_from_average",
+        "verbose", "early_stopping_round"
+    };
+
+    // Validate parameter types.
+    for (const auto& [key,value] : params) {
+        if (numeric_params.find(key) != numeric_params.end()) {
+            try {
+                std::stof(value);
+            } catch (...) {
+                throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Parameter '" + key + "' must be numeric");
+            }
+        } else if (boolean_params.find(key) != boolean_params.end()) {
+            if (value != "true" && value != "false" &&
+                value != "1" && value != "0") {
+                throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Parameter '" + key + "' must be true/false");
+            }
+        }
+    }
+
     return params;
-}
+}*/
 
 std::unique_ptr<AST::DescribeModelStatement> AIParser::parseDescribeModel() {
     auto stmt = std::make_unique<AST::DescribeModelStatement>();

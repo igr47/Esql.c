@@ -36,6 +36,12 @@ public:
     std::unique_ptr<AST::BatchAIStatement> parseBatchAI();
     std::vector<std::string> parseAnalysisSections();
     bool validateFeatureList(const std::vector<std::string>& features) const;
+    void validateParameterDependencies(const std::unordered_map<std::string, std::string>& params,const std::string& current_param,const std::string& current_value,const Token& token);
+    void validateNumericParameter(const std::string& param_name,const std::string& param_value,const Token& token);
+    void parseAdvancedOptions(AST::CreateModelStatement& stmt);
+    void parseParameterGrid(AST::TuningOptions& tuning_options);
+    void parseTuningOptions(AST::CreateModelStatement& stmt);
+    void parseTrainingOptions(AST::CreateModelStatement& stmt);
 
 
 

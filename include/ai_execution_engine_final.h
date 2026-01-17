@@ -19,6 +19,76 @@ class Datum;
 class AIExecutionEngineFinal {
 private:
 
+    class HyperparameterValidator {
+    private:
+        static const std::set<std::string> valid_parameters;
+        static const std::unordered_map<std::string, std::pair<float, float>> param_ranges;
+        static const std::unordered_map<std::string, std::set<std::string>> param_dependencies;
+
+    public:
+        static void validate(const std::unordered_map<std::string, std::string>& params,const std::string& algorithm,const std::string& problem_type,size_t num_classes = 0);
+        static std::unordered_map<std::string, std::string> getDefaultParameters(const std::string& algorithm,const std::string& problem_type,size_t sample_count,size_t feature_count,size_t num_classes = 0);
+
+    private:
+        static void validateParameterRange(const std::string& param,const std::string& value_str,const std::pair<float, float>& range,std::vector<std::string>& errors);
+        static void checkRequiredParameters(const std::unordered_map<std::string, std::string>& params,const std::string& algorithm,const std::string& problem_type,size_t num_classes,std::vector<std::string>& errors);
+        static void checkParameterDependencies(const std::unordered_map<std::string, std::string>& params,const std::string& algorithm,std::vector<std::string>& errors,std::vector<std::string>& warnings);
+        static void checkAlgorithmConstraints(const std::unordered_map<std::string, std::string>& params,const std::string& algorithm,std::vector<std::string>& errors);
+    };
+
+    class DataPreprocessor {
+    public:
+        static esql::DataExtractor::TrainingData preprocess(const esql::DataExtractor::TrainingData& original_data,const std::string& sampling_method,float sampling_ratio,
+            bool feature_scaling,const std::string& scaling_method,const std::vector<esql::ai::FeatureDescriptor>& feature_descriptors,int seed);
+        static esql::DataExtractor::TrainingData applySampling(const esql::DataExtractor::TrainingData& data,const std::string& method,float ratio,int seed);
+        static esql::DataExtractor::TrainingData applyScaling(const esql::DataExtractor::TrainingData& data,const std::string& method,const std::vector<esql::ai::FeatureDescriptor>& feature_descriptors);
+    };
+
+    class FeatureSelector {
+    public:
+        static std::pair<esql::DataExtractor::TrainingData, std::vector<size_t>> selectFeatures(const esql::DataExtractor::TrainingData& data,
+            const std::vector<esql::ai::FeatureDescriptor>& original_features,const std::string& method,int max_features,const std::vector<float>& labels);
+    private:
+        static std::vector<float> calculateFeatureImportance(const esql::DataExtractor::TrainingData& data,const std::vector<float>& labels,const std::string& method);
+        static float calculateCorrelation(const esql::DataExtractor::TrainingData& data,const std::vector<float>& labels,size_t feature_idx);
+        static std::vector<size_t> selectTopFeatures(const std::vector<float>& importance_scores,int max_features);
+    };
+
+       // Hyperparameter tuner
+    class HyperparameterTuner {
+    private:
+        struct TrialResult {
+            std::unordered_map<std::string, std::string> parameters;
+            float score;
+            std::chrono::milliseconds duration;
+            std::unordered_map<std::string, float> metrics;
+
+            bool operator<(const TrialResult& other) const {
+                return score < other.score;  // For max-heap
+            }
+        };
+
+    public:
+        static std::unordered_map<std::string, std::string> tune(const esql::DataExtractor::TrainingData& data,const std::string& algorithm,
+            const std::string& problem_type,const AST::TuningOptions& tuning_options,const std::vector<esql::ai::FeatureDescriptor>& feature_descriptors,int seed);
+
+    private:
+        struct SearchSpace {
+            std::unordered_map<std::string, std::vector<std::string>> categorical;
+            std::unordered_map<std::string, std::pair<float, float>> continuous;
+            std::unordered_map<std::string, std::pair<int, int>> integer;
+        };
+
+        static SearchSpace generateSearchSpace(const std::string& algorithm,const std::string& problem_type,const AST::TuningOptions& tuning_options);
+        static std::unordered_map<std::string, std::string> generateParameterCombination(const SearchSpace& space,const std::string& method,std::mt19937& rng);
+        static float evaluateSingleFold(const esql::DataExtractor::TrainingData& data,const std::unordered_map<std::string, std::string>& params,const std::string& algorithm,const std::string& problem_type,const std::vector<esql::ai::FeatureDescriptor>& feature_descriptors,int seed);
+        static float evaluateParameters(const esql::DataExtractor::TrainingData& data,const std::unordered_map<std::string, std::string>& params,const std::string& algorithm,const std::string& problem_type,const std::vector<esql::ai::FeatureDescriptor>& feature_descriptors,int folds,int seed);
+        static float evaluateModel(const esql::ai::AdaptiveLightGBMModel& model,const esql::DataExtractor::TrainingData& test_data,const std::string& problem_type);
+        static float calculateAccuracy(const std::vector<float>& predictions,const std::vector<float>& labels);
+        static float calculateRSquared(const std::vector<float>& predictions,const std::vector<float>& labels);
+        static float calculateQuantileScore(const std::vector<float>& predictions,const std::vector<float>& labels);
+    };
+
     // Reference to the base execution engine
     ExecutionEngine& base_engine_;
     Database& db_;
@@ -63,6 +133,11 @@ public:
     ExecutionEngine& getBaseEngine() { return base_engine_; }
     Database& getDatabase() { return db_; }
     fractal::DiskStorage& getStorage() { return storage_; }
+
+    //Hyper parameter preparation function
+    std::unordered_map<std::string, std::string> prepareHyperparameters(AST::CreateModelStatement& stmt,const esql::DataExtractor::TrainingData& training_data,const std::string& detected_problem_type,size_t num_classes);
+    void applyTrainingOptions(std::unordered_map<std::string, std::string>& params,const AST::TrainingOptions& options);
+    void logTrainingParameters(const std::string& model_name,const std::unordered_map<std::string, std::string>& params,const std::string& problem_type);
 
     // Enhanced AI methods
     ExecutionEngine::ResultSet executeCreateModel(AST::CreateModelStatement& stmt);
