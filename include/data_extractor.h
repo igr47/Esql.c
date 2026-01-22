@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include <set>
+#include <mutex>
 
 namespace esql {
 //namespace storage {
@@ -40,6 +41,9 @@ public:
 
         std::string to_string() const;
     };
+
+    void log_encoding_stats() const;
+    float encode_string_feature(const std::string& column_name, const std::string& value);
 
     TrainingData extract_training_data(const std::string& db_name,const std::string& table_name,const std::string& label_column,
                                       const std::vector<std::string>& feature_columns,const std::string& where_clause = "",
@@ -121,6 +125,8 @@ private:
 
     // Helper methods
     Datum convert_to_datum(const std::string& column_name,const std::string& value,const std::string& expected_type = "");
+    mutable std::unordered_map<std::string, std::unordered_map<std::string, float>> string_encodings_;
+    mutable std::mutex encoding_mutex_;
 
     std::vector<std::string> get_all_columns(const std::string& db_name,const std::string& table_name);
 

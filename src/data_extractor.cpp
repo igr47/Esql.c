@@ -493,13 +493,15 @@ DataExtractor::TrainingData DataExtractor::extract_training_data(const std::stri
                     } else if (feat_datum.is_boolean()) {
                         feature_val = feat_datum.as_bool() ? 1.0f : 0.0f;
                     } else if (feat_datum.is_string()) {
+			 const std::string& str_val = feat_datum.as_string();
+			 feature_val = encode_string_feature(feature_col, str_val);
                         // Try to parse string to float
-                        try {
+                        /*try {
                             const std::string& str_val = feat_datum.as_string();
                             feature_val = std::stof(str_val);
                         } catch (const std::exception& e) {
                             feature_val = 0.0f; // Default value if conversion fails
-                        }
+                        }*/
                     } else {
                         feature_val = 0.0f; // Default value for unsupported types
                     }
@@ -541,7 +543,41 @@ DataExtractor::TrainingData DataExtractor::extract_training_data(const std::stri
                   << ", Mean: " << mean_label << std::endl;
     }
 
+    log_encoding_stats();
     return result;
+}
+
+float DataExtractor::encode_string_feature(const std::string& column_name, const std::string& value) {
+        std::lock_guard<std::mutex> lock(encoding_mutex_);
+
+        auto& column_encoding = string_encodings_[column_name];
+
+        // Check if we've seen this value before
+        auto it = column_encoding.find(value);
+        if (it != column_encoding.end()) {
+            return it->second;
+        }
+
+        // New value - assign next sequential number
+        float encoded_value = static_cast<float>(column_encoding.size());
+        column_encoding[value] = encoded_value;
+
+        // Log first few encodings
+        if (column_encoding.size() <= 5) {
+            std::cout << "[DataExtractor] Encoding '" << column_name
+                      << "' value '" << value << "' -> " << encoded_value << std::endl;
+	}
+
+	return encoded_value;
+}
+
+void DataExtractor::log_encoding_stats() const {
+        std::lock_guard<std::mutex> lock(encoding_mutex_);
+
+        std::cout << "[DataExtractor] String encoding statistics:" << std::endl;
+        for (const auto& [column, encoding] : string_encodings_) {
+            std::cout << "  " << column << ": " << encoding.size() << " unique values" << std::endl;
+        }
 }
 
 /*DataExtractor::TrainingData DataExtractor::extract_training_data(const std::string& db_name,
