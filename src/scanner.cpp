@@ -177,7 +177,26 @@ void Lexer::initializeKeyWords(){
         {"LAYOUT", Token::Type::LAYOUT},
         {"FOR_X", Token::Type::FOR_X},
         {"X", Token::Type::X},
-        {"Y", Token::Type::Y}
+        {"Y", Token::Type::Y},
+	{"GEO_MAP", Token::Type::GEO_MAP},
+	{"MAP", Token::Type::MAP},
+	{"GEO_SCATTER",Token::Type::GEO_SCATTER},
+	{"GEO_HEATMAP", Token::Type::GEO_HEATMAP},
+	{"GEO_CHOROPLETH", Token::Type::GEO_CHOROPLETH},
+	{"CHOROPLETH",  Token::Type::CHOROPLETH},
+	{"GEO_BUBBLE", Token::Type::GEO_BUBBLE},
+	{"GEO_LINE", Token::Type::GEO_LINE},
+	{"GEO_CONTOUR", Token::Type::GEO_CONTOUR},
+	{"GEO_POLYGON", Token::Type::GEO_POLYGON},
+	{"GEO_GRID", Token::Type::GEO_GRID},
+	{"GEO_FLOW", Token::Type::GEO_FLOW},
+	{"LATITUDE", Token::Type::LATITUDE},
+	{"LAT", Token::Type::LAT},
+	{"LON", Token::Type::LON},
+	{"LONGITUDE", Token::Type::LONGITUDE},
+	{"REGION", Token::Type::REGION},
+	{"VALUE",Token::Type::VALUE},
+	{"VALUES",Token::Type::VALUES}
 	};
 }
 

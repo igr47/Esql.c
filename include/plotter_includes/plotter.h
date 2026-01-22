@@ -12,6 +12,9 @@
 #include <array>
 #include <chrono>
 #include <limits>
+#include <nlohmann/json.hpp>
+
+
 
 namespace Visualization {
 
@@ -35,7 +38,17 @@ namespace Visualization {
         PARALLEL_COORDINATES,
         RADAR,
         QUIVER,
-        STREAMPLOT
+        STREAMPLOT,
+        GEO_MAP,          // Geographic map plotting
+        GEO_SCATTER,      // Scatter plot on map
+        GEO_HEATMAP,      // Heatmap on map
+        GEO_CONTOUR,      // Contour plot on map
+        GEO_BUBBLE,       // Bubble chart on map
+        GEO_CHOROPLETH,   // Choropleth map
+        GEO_LINE,         // Lines/paths on map
+        GEO_POLYGON,      // Polygon plotting on map
+        GEO_GRID,         // Grid data on map
+        GEO_FLOW          // Flow/vector field on map
     };
 
     // Enhanced Plot configuration for Matplot++
@@ -45,8 +58,14 @@ namespace Visualization {
         std::string xLabel;
         std::string yLabel;
         std::string zLabel; // For 3D plots
+
+        // Geographic specific labels
+        std::string latLabel = "latitude";
+        std::string lonLabel = "longitude";
+        std::string valueLabel = "value";
+
         std::vector<std::string> seriesNames;
-        
+
         // Enhanced style options
         struct Style {
             // Color options
@@ -55,64 +74,67 @@ namespace Visualization {
             std::string edgecolor = "black";
             std::string markercolor = "blue";
             std::string markerfacecolor = "white";
-	    std::string xlabel;
-	    std::string ylabel;
+            std::string xlabel;
+            std::string ylabel;
             std::vector<std::string> colors; // For multiple series
-            
+
             // Line options
             double linewidth = 2.0;
             std::string linestyle = "-";
             double alpha = 1.0;
-            
+
+	    std::string lonLabel;
+	    std::string latLabel;
+
             // Marker options
             std::string marker = "o";
             double markersize = 8.0;
-            
+
             // Bar/Histogram options
             double barwidth = 0.8;
             std::string baralign = "center";
             bool stacked = false;
-            
+
             // Histogram specific
             int bins = 30;
             std::string histtype = "bar";
             bool cumulative = false;
             bool density = false;
-            
+
             // Box plot specific
             bool showfliers = true; // Show outliers
             double fliersize = 5.0;
             std::string fliermarker = "+";
             double whiskerwidth = 0.5;
-            
+
             // Pie chart specific
             std::vector<double> explode;
             bool autopct = false;
             std::string startangle = "0";
             bool shadow = false;
-            
+
             // Heatmap specific
             std::string colormap = "viridis";
             bool annotate = false;
             std::string fmt = ".2f";
-            
+
             // Grid and layout
             bool grid = true;
             std::string gridstyle = "-";
             double gridalpha = 0.3;
             std::string gridcolor = "gray";
-            
+
             // Legend
             bool legend = true;
             std::string legend_loc = "best";
             int legend_ncol = 1;
             double legend_fontsize = 10.0;
-            
+
             // Figure size
             double figwidth = 12.0;
             double figheight = 8.0;
             double dpi = 100.0;
-            
+
             // Axis limits
             double xmin = std::numeric_limits<double>::quiet_NaN();
             double xmax = std::numeric_limits<double>::quiet_NaN();
@@ -120,44 +142,79 @@ namespace Visualization {
             double ymax = std::numeric_limits<double>::quiet_NaN();
             double zmin = std::numeric_limits<double>::quiet_NaN();
             double zmax = std::numeric_limits<double>::quiet_NaN();
-            
+
+            // Geographic specific limits
+            double lat_min = -90.0;
+            double lat_max = 90.0;
+            double lon_min = -180.0;
+            double lon_max = 180.0;
+
             // Tick parameters
             double xtick_rotation = 0.0;
             double ytick_rotation = 0.0;
             double tick_fontsize = 10.0;
-            
+
             // Title and label font sizes
             double title_fontsize = 14.0;
             double xlabel_fontsize = 12.0;
             double ylabel_fontsize = 12.0;
-            
+
             // 3D plot settings
             double azimuth = 30.0;
             double elevation = 30.0;
             bool view_init_set = false;
-            
+
             // Statistical settings
             double confidence_interval = 0.95;
             bool show_kde = true;
             bool rug = false;
-            
+
             // Animation settings
             int fps = 10;
             bool repeat = true;
-            
+
             // Interactive settings
             bool interactive = false;
             std::string toolbar = "toolbar2";
-            
+
             // Save settings
             std::string save_format = "png";
             bool bbox_inches_tight = true;
             double pad_inches = 0.1;
-            
+
+            // Geographic specific settings
+            std::string projection = "equirectangular"; // "mercator", "orthographic", "stereographic", "gnomonic"
+            std::string map_style = "default"; // "satellite", "terrain", "roadmap"
+            std::string coastline_color = "black";
+            double coastline_width = 1.0;
+            bool show_coastlines = true;
+            bool show_countries = true;
+            bool show_states = false;
+            bool show_cities = false;
+            bool show_rivers = false;
+            bool show_lakes = false;
+            std::vector<std::string> country_filter; // Filter specific countries
+            std::string region = "world"; // "world", "usa", "europe", "asia", etc.
+            double map_resolution = 1.0; // Resolution of map features
+            std::string scalebar = "none"; // "km", "miles", "none"
+            std::string north_arrow = "none"; // "simple", "fancy", "none"
+            std::string colorbar_title = "Value";
+            bool auto_scale = true; // Auto-scale based on data
+
+            // Bubble plot specific
+            double bubble_min_size = 10.0;
+            double bubble_max_size = 100.0;
+            std::string bubble_scale = "area"; // "area" or "radius"
+
+            // Choropleth specific
+            std::string shapefile_path = ""; // Path to shapefile for custom regions
+            std::string region_column = "name"; // Column in shapefile for region names
+            std::string join_column = "name"; // Column in data to join with shapefile
+
             // Custom style parser
             void parseFromMap(const std::map<std::string, std::string>& styleMap);
         };
-        
+
         Style style;
         std::string outputFile = "";
         bool threeD = false;
@@ -167,22 +224,27 @@ namespace Visualization {
     struct PlotData {
         std::vector<std::string> columns;
         std::vector<std::vector<std::string>> rows;
-        
+
         // Data organized by column for easy access
         std::map<std::string, std::vector<double>> numericData; // Column -> numeric values
         std::map<std::string, std::vector<std::string>> categoricalData; // Column -> categorical labels
         std::map<std::string, std::vector<int>> integerData; // Column -> integer values
         std::map<std::string, std::vector<bool>> booleanData; // Column -> boolean values
-        
+
+        // Geographic data
+        std::map<std::string, std::vector<double>> latitudeData; // Latitude values
+        std::map<std::string, std::vector<double>> longitudeData; // Longitude values
+        std::map<std::string, std::vector<std::string>> regionData; // Region names (country, state, etc.)
+
         // Metadata for data types
         std::map<std::string, std::string> columnTypes; // Column -> type info
-        
+
         // Timestamp data support
         std::map<std::string, std::vector<std::chrono::system_clock::time_point>> timestampData;
-        
+
         // 3D data support
         std::map<std::string, std::vector<std::vector<double>>> matrixData; // For 2D arrays
-        
+
         // Clear all data
         void clear() {
             columns.clear();
@@ -191,16 +253,20 @@ namespace Visualization {
             categoricalData.clear();
             integerData.clear();
             booleanData.clear();
+            latitudeData.clear();
+            longitudeData.clear();
+            regionData.clear();
             columnTypes.clear();
             timestampData.clear();
             matrixData.clear();
         }
-        
+
         // Check if data is empty
         bool empty() const {
-            return rows.empty() && numericData.empty() && categoricalData.empty();
+            return rows.empty() && numericData.empty() && categoricalData.empty() &&
+                   latitudeData.empty() && longitudeData.empty();
         }
-        
+
         // Get column by name with type checking
         template<typename T>
         const std::vector<T>& getColumn(const std::string& name) const {
@@ -219,7 +285,7 @@ namespace Visualization {
             }
             throw std::runtime_error("Column not found or wrong type: " + name);
         }
-        
+
         // Get column names by type
         std::vector<std::string> getNumericColumns() const {
             std::vector<std::string> result;
@@ -228,10 +294,34 @@ namespace Visualization {
             }
             return result;
         }
-        
+
         std::vector<std::string> getCategoricalColumns() const {
             std::vector<std::string> result;
             for (const auto& [name, _] : categoricalData) {
+                result.push_back(name);
+            }
+            return result;
+        }
+
+        std::vector<std::string> getLatitudeColumns() const {
+            std::vector<std::string> result;
+            for (const auto& [name, _] : latitudeData) {
+                result.push_back(name);
+            }
+            return result;
+        }
+
+        std::vector<std::string> getLongitudeColumns() const {
+            std::vector<std::string> result;
+            for (const auto& [name, _] : longitudeData) {
+                result.push_back(name);
+            }
+            return result;
+        }
+
+        std::vector<std::string> getRegionColumns() const {
+            std::vector<std::string> result;
+            for (const auto& [name, _] : regionData) {
                 result.push_back(name);
             }
             return result;
@@ -247,20 +337,20 @@ namespace Visualization {
         // Initialize and cleanup
         void initializePlotter();
         void finalizePlotter();
-        
+
         // Data conversion and preparation
         PlotData convertToPlotData(const ExecutionEngine::ResultSet& result,
                                   const std::vector<std::string>& xColumns,
                                   const std::vector<std::string>& yColumns);
-        
+
         PlotData convertToPlotData(const ExecutionEngine::ResultSet& result);
-        
+
         // Advanced data processing
         void detectColumnTypes(PlotData& data);
         void cleanData(PlotData& data);
         void normalizeData(PlotData& data);
         void extractFeatures(PlotData& data);
-        
+
         // Basic plot functions
         void plotLine(const PlotData& data, const PlotConfig& config);
         void plotScatter(const PlotData& data, const PlotConfig& config);
@@ -272,62 +362,81 @@ namespace Visualization {
         void plotArea(const PlotData& data, const PlotConfig& config);
         void plotStackedBar(const PlotData& data, const PlotConfig& config);
         void plotMultiLine(const PlotData& data, const PlotConfig& config);
-        
+
         // Advanced plot functions (Matplot++ specific)
         void plotViolin(const PlotData& data, const PlotConfig& config);
         void plotContour(const PlotData& data, const PlotConfig& config);
         void plotSurface(const PlotData& data, const PlotConfig& config);
         void plotWireframe(const PlotData& data, const PlotConfig& config);
         void plotHistogram2D(const PlotData& data, const PlotConfig& config);
-        
+
         // Statistical plotting
         void plotCorrelationMatrix(const PlotData& data);
         void plotDistribution(const PlotData& data, const std::string& column);
         void plotTrendLine(const PlotData& data, const std::string& xColumn,
                           const std::string& yColumn);
         void plotQQPlot(const PlotData& data, const std::string& column);
-        //void plotResiduals(const PlotData& data, const std::string& xColumn,const std::string& yColumn);
-        
+
         // Time series plotting
         void plotTimeSeries(const PlotData& data, const std::string& timeColumn,
                            const std::string& valueColumn, const PlotConfig& config);
-        
+
+        // Geographic plotting (NEW)
+        void plotGeoMap(const PlotData& data, const PlotConfig& config);
+        void plotGeoScatter(const PlotData& data, const PlotConfig& config);
+        void plotGeoHeatmap(const PlotData& data, const PlotConfig& config);
+        void plotGeoContour(const PlotData& data, const PlotConfig& config);
+        void plotGeoBubble(const PlotData& data, const PlotConfig& config);
+        void plotGeoChoropleth(const PlotData& data, const PlotConfig& config);
+        void plotGeoLine(const PlotData& data, const PlotConfig& config);
+        void plotGeoPolygon(const PlotData& data, const PlotConfig& config);
+        void plotGeoGrid(const PlotData& data, const PlotConfig& config);
+        void plotGeoFlow(const PlotData& data, const PlotConfig& config);
+
+        // Geographic utilities
+        void addBasemap(const PlotConfig& config);
+        void addScaleBar(const PlotConfig& config);
+        void addNorthArrow(const PlotConfig& config);
+        void addGridLines(const PlotConfig& config);
+        void addMapFeatures(const PlotConfig& config);
+        std::pair<double, double> calculateMapBounds(const PlotData& data);
+
         // Interactive plotting
         void createInteractivePlot(const PlotData& data, const PlotConfig& config);
         void addWidgets(const PlotConfig& config);
-        
+
         // Multi-plot layouts
         void createDashboard(const std::vector<PlotData>& datasets,
                             const std::vector<PlotConfig>& configs,
                             int rows, int cols);
-        
+
         // Animation support
         void createAnimation(const std::vector<PlotData>& frames,
                             const PlotConfig& config, int fps = 10);
-        
+
         // Auto-plot based on data characteristics with AI-like detection
         void autoPlot(const PlotData& data, const std::string& title = "");
-        
+
         // Plot with AI-recommended settings
         void smartPlot(const PlotData& data, const std::string& title = "");
-        
+
         // Output control
         void showPlot();
         void savePlot(const std::string& filename);
         void savePlot(const std::string& filename, const std::string& format);
         void clearPlot();
         void closeAll();
-        
+
         // Style management
         void setStyle(const std::string& styleName);
         void setColorPalette(const std::string& paletteName);
         void setFont(const std::string& fontName, int size = 12);
         std::array<float, 4> parseColor(const std::string& colorStr);
-        
+
         // Utility functions
         void addLegendIfNeeded(const PlotConfig& config);
         void handlePlotOutput(const PlotConfig& config);
-        
+
     private:
         // Helper methods
         bool isNumericColumn(const std::vector<std::string>& values);
@@ -335,70 +444,96 @@ namespace Visualization {
         bool isBooleanColumn(const std::vector<std::string>& values);
         bool isDateColumn(const std::vector<std::string>& values);
         bool isDateTimeColumn(const std::vector<std::string>& values);
-        
+        bool isLatitudeColumn(const std::vector<std::string>& values);
+        bool isLongitudeColumn(const std::vector<std::string>& values);
+
         std::vector<double> convertToNumeric(const std::vector<std::string>& values);
         std::vector<int> convertToInteger(const std::vector<std::string>& values);
         std::vector<bool> convertToBoolean(const std::vector<std::string>& values);
-        
+        std::vector<double> convertToLatitude(const std::vector<std::string>& values);
+        std::vector<double> convertToLongitude(const std::vector<std::string>& values);
+
         // Data validation and cleaning
         void validatePlotData(const PlotData& data, const PlotConfig& config);
         void validateNumericData(const std::vector<double>& data, const std::string& columnName);
         void validateCategoricalData(const std::vector<std::string>& data, const std::string& columnName);
-        
+        void validateGeoData(const PlotData& data, const PlotConfig& config);
+
         // Plot setup
         void setupFigure(const PlotConfig& config);
+        void setupGeoAxes(const PlotConfig& config);
         void setup3DAxes(const PlotConfig& config);
         void applyStyle(const PlotConfig& config);
-        
+
         // Color management
         std::vector<std::string> getColorPalette(int n);
         std::vector<std::string> getSequentialPalette(int n);
         std::vector<std::string> getDivergingPalette(int n);
         std::vector<std::string> getQualitativePalette(int n);
-        
+
+        // Geographic color palettes
+        std::vector<std::string> getTerrainPalette(int n);
+        std::vector<std::string> getTopographicPalette(int n);
+        std::vector<std::string> getOceanPalette(int n);
+
         // Statistical calculations
         std::pair<std::vector<double>, std::vector<double>> calculateKDE(const std::vector<double>& data, int gridPoints = 100);
-        std::pair<double, double> linearRegression(const std::vector<double>& x, 
+        std::pair<double, double> linearRegression(const std::vector<double>& x,
                                                   const std::vector<double>& y);
-        double calculateRSquared(const std::vector<double>& x, 
+        double calculateRSquared(const std::vector<double>& x,
                                const std::vector<double>& y,
                                double slope, double intercept);
         std::vector<std::vector<double>> calculateCorrelationMatrix(const PlotData& data);
-        
+
+        // Geographic calculations
+        double calculateGreatCircleDistance(double lat1, double lon1, double lat2, double lon2);
+        std::vector<double> calculateDensityGrid(const std::vector<double>& lats,
+                                                const std::vector<double>& lons,
+                                                const std::vector<double>& values,
+                                                int gridSize = 50);
+        std::pair<std::vector<double>, std::vector<double>> latLonToMercator(const std::vector<double>& lats,
+                                                                            const std::vector<double>& lons);
+
         // Data transformations
         std::vector<double> normalize(const std::vector<double>& data);
         std::vector<double> standardize(const std::vector<double>& data);
         std::vector<double> logTransform(const std::vector<double>& data);
-        
+
         // Utility functions
         std::string parseLineStyle(const std::string& styleStr);
         std::string parseMarker(const std::string& markerStr);
         std::vector<double> linspace(double start, double end, size_t num);
         double erfinv(double x);
-        
+
+        // Geographic utility functions
+        std::string getCountryCode(const std::string& countryName);
+        std::vector<std::string> getStateNames(const std::string& countryCode);
+        std::vector<std::pair<double, double>> getCountryBoundary(const std::string& countryCode);
+        std::vector<std::pair<double, double>> getCityCoordinates(const std::string& cityName);
+
         // Plotter state
         bool plotterInitialized;
         int currentFigureId;
-        
+
         // Configuration cache
         std::string currentStyle;
         std::string currentPalette;
-        
+
         // Plot history for undo/redo
         struct PlotState {
             PlotData data;
             PlotConfig config;
             std::string timestamp;
         };
-        
+
         std::vector<PlotState> plotHistory;
         size_t currentHistoryIndex;
-        
+
         // Error handling
         std::vector<std::string> errorLog;
         void logError(const std::string& error);
         void clearErrors();
-        
+
         // Performance tracking
         struct PerformanceMetrics {
             size_t dataPointsProcessed;
@@ -406,7 +541,7 @@ namespace Visualization {
             double dataConversionTime;
             std::chrono::steady_clock::time_point startTime;
         };
-        
+
         PerformanceMetrics currentMetrics;
         void startTimer();
         void stopTimer();
@@ -428,9 +563,18 @@ namespace Visualization {
             INTERACTIVE,
             DASHBOARD,
             GEO_MAP,
+            GEO_SCATTER,
+            GEO_HEATMAP,
+            GEO_CHOROPLETH,
+            GEO_BUBBLE,
+            GEO_LINE,
+            GEO_CONTOUR,
+            GEO_POLYGON,
+            GEO_GRID,
+            GEO_FLOW,
             CANDLESTICK
         };
-        
+
         enum class OutputFormat {
             DISPLAY,
             PNG,
@@ -450,6 +594,13 @@ namespace Visualization {
         std::vector<std::string> xColumns;
         std::vector<std::string> yColumns;
         std::vector<std::string> zColumns; // For 3D plots
+
+        // Geographic specific columns
+        std::vector<std::string> latColumns;
+        std::vector<std::string> lonColumns;
+        std::vector<std::string> regionColumns;
+        std::vector<std::string> valueColumns;
+
         std::string targetColumn; // For distribution/trend plots
         std::string timeColumn; // For time series
         std::string groupColumn; // For grouping
@@ -457,7 +608,7 @@ namespace Visualization {
         int animationFPS = 10;
         int dashboardRows = 2;
         int dashboardCols = 2;
-        
+
         // Interactive controls
         struct Control {
             std::string type; // "slider", "dropdown", "checkbox", "button"
@@ -469,24 +620,37 @@ namespace Visualization {
             double defaultValue = 0.5;
             std::vector<std::string> options;
         };
-        
+
         std::vector<Control> controls;
 
         PlotStatement() = default;
-        
+
         // Helper methods
         bool is3DPlot() const {
             return config.threeD || !zColumns.empty();
         }
-        
+
+        bool isGeoPlot() const {
+            return subType == PlotSubType::GEO_MAP ||
+                   subType == PlotSubType::GEO_SCATTER ||
+                   subType == PlotSubType::GEO_HEATMAP ||
+                   subType == PlotSubType::GEO_CHOROPLETH ||
+                   subType == PlotSubType::GEO_BUBBLE ||
+                   subType == PlotSubType::GEO_LINE ||
+                   subType == PlotSubType::GEO_CONTOUR ||
+                   subType == PlotSubType::GEO_POLYGON ||
+                   subType == PlotSubType::GEO_GRID ||
+                   subType == PlotSubType::GEO_FLOW;
+        }
+
         bool isAnimated() const {
             return subType == PlotSubType::ANIMATION || !animationColumn.empty();
         }
-        
+
         bool isInteractive() const {
             return subType == PlotSubType::INTERACTIVE || !controls.empty();
         }
-        
+
         std::string getOutputFileExtension() const {
             switch (outputFormat) {
                 case OutputFormat::PNG: return ".png";
@@ -504,33 +668,33 @@ namespace Visualization {
 
     // Utility functions for plotting
     namespace PlotUtils {
-        
+
         // Color conversion
         std::string rgbToHex(int r, int g, int b);
         std::tuple<int, int, int> hexToRgb(const std::string& hex);
-        
+
         // Data sampling for large datasets
-        PlotData sampleData(const PlotData& data, size_t maxPoints = 10000, 
+        PlotData sampleData(const PlotData& data, size_t maxPoints = 10000,
                            bool random = true);
-        
+
         // Data aggregation
         PlotData aggregateData(const PlotData& data, const std::string& groupColumn,
                               const std::vector<std::string>& aggColumns,
                               const std::vector<std::string>& aggFunctions);
-        
+
         // Outlier detection
-        std::vector<bool> detectOutliers(const std::vector<double>& data, 
+        std::vector<bool> detectOutliers(const std::vector<double>& data,
                                         double threshold = 3.0);
-        
+
         // Data smoothing
-        std::vector<double> smoothData(const std::vector<double>& data, 
+        std::vector<double> smoothData(const std::vector<double>& data,
                                       int windowSize = 5);
-        
+
         // Interpolation
         std::vector<double> interpolateData(const std::vector<double>& x,
                                            const std::vector<double>& y,
                                            const std::vector<double>& newX);
-        
+
         // Statistical summaries
         struct SummaryStats {
             double mean;
@@ -544,24 +708,57 @@ namespace Visualization {
             size_t count;
             size_t missing;
         };
-        
+
         SummaryStats calculateStats(const std::vector<double>& data);
-        
+
         // Data binning
-        std::vector<double> createBins(const std::vector<double>& data, 
+        std::vector<double> createBins(const std::vector<double>& data,
                                       int numBins = 10);
-        
+
+        // Geographic utilities
+        struct GeoPoint {
+            double latitude;
+            double longitude;
+            double value = 0.0;
+            std::string label;
+        };
+
+        struct GeoBounds {
+            double min_lat;
+            double max_lat;
+            double min_lon;
+            double max_lon;
+        };
+
+        struct RegionData {
+            std::string name;
+            std::string code;
+            std::vector<std::pair<double, double>> boundary;
+            double center_lat;
+            double center_lon;
+        };
+
+        GeoBounds calculateGeoBounds(const std::vector<GeoPoint>& points);
+        double calculateDistance(const GeoPoint& p1, const GeoPoint& p2);
+        std::vector<GeoPoint> clusterGeoPoints(const std::vector<GeoPoint>& points,
+                                              double radius_km = 50.0);
+        RegionData getRegionBoundary(const std::string& regionName);
+        std::vector<std::pair<double, double>> simplifyPolygon(const std::vector<std::pair<double, double>>& polygon,
+                                                              double tolerance = 0.01);
+
         // Formatting
         std::string formatNumber(double value, int precision = 3);
         std::string formatDateTime(const std::chrono::system_clock::time_point& tp);
-        
+        std::string formatCoordinate(double coord, bool isLatitude = true);
+
         // File operations
         bool savePlotData(const PlotData& data, const std::string& filename);
         PlotData loadPlotData(const std::string& filename);
-        
+
         // Validation
         bool validatePlotConfiguration(const PlotConfig& config);
         bool validatePlotDataForType(const PlotData& data, PlotType type);
+        bool validateGeoData(const PlotData& data);
     };
 
 } // namespace Visualization

@@ -1187,6 +1187,46 @@ std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
     } else if (match(Token::Type::HISTOGRAM_2D)) {
         plotStmt->config.type = Visualization::PlotType::HISTOGRAM_2D;
         consume(Token::Type::HISTOGRAM_2D);
+    } else if (match(Token::Type::GEO_MAP) || match(Token::Type::MAP)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_MAP;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_MAP;
+        consume(currentToken.type);
+    } else if (match(Token::Type::GEO_SCATTER)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_SCATTER;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_SCATTER;
+        consume(Token::Type::GEO_SCATTER);
+    } else if (match(Token::Type::GEO_HEATMAP)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_HEATMAP;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_HEATMAP;
+        consume(Token::Type::GEO_HEATMAP);
+    } else if (match(Token::Type::GEO_CHOROPLETH) || match(Token::Type::CHOROPLETH)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_CHOROPLETH;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_CHOROPLETH;
+        consume(currentToken.type);
+    } else if (match(Token::Type::GEO_BUBBLE)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_BUBBLE;
+	plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_BUBBLE;
+        consume(Token::Type::GEO_BUBBLE);
+    } else if (match(Token::Type::GEO_LINE)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_LINE;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_LINE;
+        consume(Token::Type::GEO_LINE);
+    } else if (match(Token::Type::GEO_CONTOUR)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_CONTOUR;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_CONTOUR;
+        consume(Token::Type::GEO_CONTOUR);
+    } else if (match(Token::Type::GEO_POLYGON)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_POLYGON;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_POLYGON;
+        consume(Token::Type::GEO_POLYGON);
+    } else if (match(Token::Type::GEO_GRID)) {
+        plotStmt->config.type = Visualization::PlotType::GEO_GRID;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_GRID;
+        consume(Token::Type::GEO_GRID);
+    } else if (match(Token::Type::GEO_FLOW)) {
+	plotStmt->config.type = Visualization::PlotType::GEO_FLOW;
+        plotStmt->subType = Visualization::PlotStatement::PlotSubType::GEO_FLOW;
+        consume(Token::Type::GEO_FLOW);
     } else {
         // Default to scatter plot
         plotStmt->config.type = Visualization::PlotType::SCATTER;
@@ -1329,6 +1369,38 @@ std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
                     plotStmt->config.zLabel.size() - 2);
             }
             consume(currentToken.type);
+        }
+    }
+
+   if (match(Token::Type::LATITUDE) || match(Token::Type::LAT)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->latColumns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
+        }
+    }
+
+    if (match(Token::Type::LONGITUDE) || match(Token::Type::LON)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->lonColumns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
+        }
+    }
+
+    if (match(Token::Type::REGION)) {
+        consume(Token::Type::REGION);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->regionColumns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
+        }
+    }
+
+    if (match(Token::Type::VALUE) || match(Token::Type::VALUES)) {
+        consume(currentToken.type);
+        if (match(Token::Type::IDENTIFIER)) {
+            plotStmt->valueColumns.push_back(currentToken.lexeme);
+            consume(Token::Type::IDENTIFIER);
         }
     }
 

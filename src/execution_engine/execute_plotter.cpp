@@ -121,6 +121,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executePlot(Visualization::PlotState
                 case Visualization::PlotType::HISTOGRAM_2D:
                     plotter.plotHistogram2D(plotData, stmt.config);
                     break;
+		case Visualization::PlotType::GEO_MAP:
+		    plotter.plotGeoMap(plotData, stmt.config);
+		    break;
                 default:
                     plotter.autoPlot(plotData, stmt.config.title);
                     break;

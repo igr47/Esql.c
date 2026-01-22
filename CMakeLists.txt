@@ -169,6 +169,11 @@ file(GLOB AI_SOURCES
     "src/ai_executables/*.cpp"
 )
 
+#LIGHTGBM sources
+file (GLOB LIGHTGBM_SOURCES
+     "src/ai_executables/lightgbm/*.cpp"
+)
+
 # Execution Engine sources
 file(GLOB EXECUTION_ENGINE_SOURCES
     "src/execution_engine/*.cpp"
@@ -179,8 +184,19 @@ file(GLOB SHELL_SOURCES
     "src/shell_executables/*.cpp"
 )
 
+#Plotter executables
 file(GLOB PLOTTER_SOURCES
     "src/plotter/*.cpp"
+)
+
+#Ai ExecutionEngine_Base sorces
+file(GLOB AI_EXECUTION_ENGINE_BASE_SOURCES
+    "src/ai_executionengine/ai_executionengine_base/*.cpp"
+)
+
+#Ai ExecutionEngine Final sorces
+file(GLOB AI_EXECUTION_ENGINE_FINAL_SOURCES
+    "src/ai_executionengine/ai_executionengine_final/*.cpp"
 )
 
 set(CORE_SOURCES
@@ -188,11 +204,10 @@ set(CORE_SOURCES
     src/token_utils.cpp
     src/ai_parser.cpp
     src/parser.cpp
+    src/ai_grammer.cpp
     src/ai_analyzer.cpp
     src/analyzer.cpp
-    src/ai_execution_engine.cpp
     src/data_analysis.cpp
-    src/ai_execution_engine_final.cpp
     src/diskstorage.cpp
     src/data_extractor.cpp
     src/database_file.cpp
@@ -208,9 +223,12 @@ set(CORE_SOURCES
 # Combine all sources
 set(ALL_SOURCES
     ${CORE_SOURCES}
+    ${AI_EXECUTION_ENGINE_BASE_SOURCES}
+    ${AI_EXECUTION_ENGINE_FINAL_SOURCES}
     ${EXECUTION_ENGINE_SOURCES}
     ${SHELL_SOURCES}
     ${AI_SOURCES}
+    ${LIGHTGBM_SOURCES}
     ${PLOTTER_SOURCES}
 )
 
