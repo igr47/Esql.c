@@ -124,6 +124,33 @@ ExecutionEngine::ResultSet ExecutionEngine::executePlot(Visualization::PlotState
 		case Visualization::PlotType::GEO_MAP:
 		    plotter.plotGeoMap(plotData, stmt.config);
 		    break;
+		case Visualization::PlotType::GEO_SCATTER:
+		    plotter.plotGeoScatter(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_HEATMAP:
+		    plotter.plotGeoHeatmap(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_BUBBLE:
+		    plotter.plotGeoBubble(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_CHOROPLETH:
+		    plotter.plotGeoChoropleth(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_LINE:
+		    plotter.plotGeoLine(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_CONTOUR:
+		    plotter.plotGeoContour(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_POLYGON:
+		    plotter.plotGeoPolygon(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_GRID:
+		    plotter.plotGeoGrid(plotData, stmt.config);
+		    break;
+		case Visualization::PlotType::GEO_FLOW:
+		    plotter.plotGeoFlow(plotData, stmt.config);
+		    break;
                 default:
                     plotter.autoPlot(plotData, stmt.config.title);
                     break;
