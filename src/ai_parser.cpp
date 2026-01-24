@@ -1779,7 +1779,7 @@ std::unique_ptr<AST::AnalyzeDataStatement> AIParser::parseAnalyzeData() {
         if (base_parser_.checkMatchAny({
             Token::Type::CORRELATION, Token::Type::IMPORTANCE,
             Token::Type::CLUSTERING, Token::Type::OUTLIER,
-            Token::Type::DISTRIBUTION, Token::Type::SUMMARY
+            Token::Type::DISTRIBUTION, Token::Type::SUMMARY,Token::Type::QUALITY
         })) {
             stmt->analysis_type = base_parser_.getCurrentToken().lexeme;
             base_parser_.consumeToken(base_parser_.getCurrentToken().type);
