@@ -94,16 +94,20 @@ public:
     // Cursor-based extraction for large tables
     class DataCursor {
     public:
-        DataCursor(fractal::DiskStorage* storage,const std::string& db_name,const std::string& table_name,const std::vector<std::string>& columns);
+        DataCursor(DataExtractor* parent,fractal::DiskStorage* storage,const std::string& db_name,const std::string& table_name,const std::vector<std::string>& columns);
 
         bool has_next() const;
         std::unordered_map<std::string, Datum> next();
         size_t get_position() const { return current_position_; }
         size_t get_total_rows() const { return total_rows_; }
+	std::vector<std::string> get_all_columns(const std::string& db_name,const std::string& table_name) {
+		return get_all_columns(db_name, table_name);
+	}
 
         void reset();
 
     private:
+	DataExtractor* parent_;
         fractal::DiskStorage* storage_;
         std::string db_name_;
         std::string table_name_;

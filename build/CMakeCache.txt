@@ -237,6 +237,15 @@ ESQL_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 ESQL_SOURCE_DIR:STATIC=/home/igris/git_projects/Esql.c
 
+//The directory containing a CMake configuration file for Eigen3.
+Eigen3_DIR:PATH=/usr/share/eigen3/cmake
+
+//Path to a file.
+FFTW3_INCLUDE_DIR:PATH=/usr/include
+
+//Path to a library.
+FFTW3_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libfftw3.so
+
 //Path to a file.
 FREETYPE_INCLUDE_DIR_freetype2:PATH=/usr/include/freetype2
 
@@ -511,7 +520,7 @@ CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding Boost
 FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0/BoostConfig.cmake][cfound components: filesystem system program_options ][v1.83.0()]
 //Details about finding Freetype
-FIND_PACKAGE_MESSAGE_DETAILS_Freetype:INTERNAL=[/usr/lib/x86_64-linux-gnu/libfreetype.so][/usr/include/freetype2][v2.13.3()]
+FIND_PACKAGE_MESSAGE_DETAILS_Freetype:INTERNAL=[/usr/lib/x86_64-linux-gnu/libfreetype.so][/usr/include/freetype2][v2.14.1()]
 //Details about finding OpenGL
 FIND_PACKAGE_MESSAGE_DETAILS_OpenGL:INTERNAL=[/usr/lib/x86_64-linux-gnu/libOpenGL.so][/usr/lib/x86_64-linux-gnu/libGLX.so][/usr/include][c ][v()]
 //Details about finding OpenMP

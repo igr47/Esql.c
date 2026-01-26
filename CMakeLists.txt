@@ -3,6 +3,39 @@ project(ESQL)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# FFTW3 for Fourier transforms
+find_library(FFTW3_LIBRARY NAMES fftw3 fftw3-3)
+find_path(FFTW3_INCLUDE_DIR NAMES fftw3.h)
+if(FFTW3_LIBRARY AND FFTW3_INCLUDE_DIR)
+    message(STATUS "Found FFTW3: ${FFTW3_LIBRARY}")
+    add_definitions(-DHAVE_FFTW3)
+else()
+    message(WARNING "FFTW3 not found. Fourier transform features disabled.")
+endif()
+
+# Eigen3 (header-only linear algebra)
+find_package(Eigen3 3.3 QUIET)
+if(Eigen3_FOUND)
+    message(STATUS "Found Eigen3: ${EIGEN3_INCLUDE_DIR}")
+else()
+    message(STATUS "Eigen3 not found, downloading...")
+    include(FetchContent)
+    FetchContent_Declare(
+        eigen
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG 3.4.0
+    )
+    FetchContent_MakeAvailable(eigen)
+    set(EIGEN3_INCLUDE_DIR ${eigen_SOURCE_DIR})
+endif()
+
+# Ensure Boost has math and accumulators support
+cmake_policy(SET CMP0167 OLD)
+find_package(Boost COMPONENTS filesystem system program_options REQUIRED)
+if(Boost_FOUND)
+    message(STATUS "Found Boost: ${Boost_VERSION}")
+endif()
+
 find_library(READLINE_LIBRARY NAMES readline)
 find_path(READLINE_INCLUDE_DIR NAMES readline/readline.h)
 
@@ -240,7 +273,18 @@ target_include_directories(e_sql PRIVATE
     include/execution_engine_includes
     include/ai
     include/plotter_includes
+    ${Boost_INCLUDE_DIRS}
 )
+
+# Add Eigen3 includes
+if(EIGEN3_INCLUDE_DIR)
+    target_include_directories(e_sql PRIVATE ${EIGEN3_INCLUDE_DIR})
+endif()
+
+# Add FFTW3 includes if found
+if(FFTW3_INCLUDE_DIR)
+    target_include_directories(e_sql PRIVATE ${FFTW3_INCLUDE_DIR})
+endif()
 
 # Add matplotplusplus includes if found
 if(MATPLOTPP_INCLUDE_DIR)
@@ -261,6 +305,21 @@ if(READLINE_LIBRARY AND READLINE_INCLUDE_DIR)
     target_include_directories(e_sql PRIVATE ${READLINE_INCLUDE_DIR})
     target_link_libraries(e_sql ${READLINE_LIBRARY})
 endif()
+
+# Add nlohmann/json
+if(TARGET nlohmann_json::nlohmann_json)
+    target_link_libraries(e_sql nlohmann_json::nlohmann_json)
+elseif(nlohmann_json_FOUND)
+    target_include_directories(e_sql PRIVATE ${nlohmann_json_INCLUDE_DIR})
+endif()
+
+# Add FFTW3 library if found
+if(FFTW3_LIBRARY)
+    target_link_libraries(e_sql ${FFTW3_LIBRARY})
+endif()
+
+# Add math library for complex number support
+target_link_libraries(e_sql m)
 
 # Add matplotplusplus library if found
 if(MATPLOTPP_LIBRARY)
@@ -295,8 +354,6 @@ if(LIGHTGBM_LIBRARY)
     endif()
 
     # Boost libraries that LightGBM may need
-    cmake_policy(SET CMP0167 OLD)
-    find_package(Boost COMPONENTS filesystem system program_options)
     if(Boost_FOUND)
         target_link_libraries(e_sql ${Boost_LIBRARIES})
     endif()

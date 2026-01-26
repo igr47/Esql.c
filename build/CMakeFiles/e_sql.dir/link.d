@@ -112,6 +112,12 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/plotter/violin.cpp.o \
   CMakeFiles/e_sql.dir/src/plotter/wireframe.cpp.o \
   /usr/lib/x86_64-linux-gnu/libreadline.so \
+  /usr/lib/x86_64-linux-gnu/libfftw3.so \
+  /lib/x86_64-linux-gnu/libm.so \
+  /lib/x86_64-linux-gnu/libm.so \
+  /lib/x86_64-linux-gnu/libm.so \
+  /lib/x86_64-linux-gnu/libm.so.6 \
+  /lib/x86_64-linux-gnu/libmvec.so.1 \
   /usr/local/lib/libmatplot.a \
   /usr/lib/x86_64-linux-gnu/libGL.so \
   /usr/lib/x86_64-linux-gnu/libfreetype.so \
@@ -151,13 +157,13 @@ e_sql: \
   /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o \
   /lib/x86_64-linux-gnu/crtn.o \
   /usr/lib/x86_64-linux-gnu/libtinfo.so.6 \
+  /lib64/ld-linux-x86-64.so.2 \
   /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0 \
   /usr/lib/x86_64-linux-gnu/libGLX.so.0 \
   /usr/lib/x86_64-linux-gnu/libz.so.1 \
   /usr/lib/x86_64-linux-gnu/libbz2.so.1.0 \
   /usr/lib/x86_64-linux-gnu/libpng16.so.16 \
   /usr/lib/x86_64-linux-gnu/libbrotlidec.so.1 \
-  /lib64/ld-linux-x86-64.so.2 \
   /usr/lib/x86_64-linux-gnu/libX11.so.6 \
   /usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1 \
   /usr/lib/x86_64-linux-gnu/libxcb.so.1 \
@@ -390,6 +396,18 @@ CMakeFiles/e_sql.dir/src/plotter/wireframe.cpp.o:
 
 /usr/lib/x86_64-linux-gnu/libreadline.so:
 
+/usr/lib/x86_64-linux-gnu/libfftw3.so:
+
+/lib/x86_64-linux-gnu/libm.so:
+
+/lib/x86_64-linux-gnu/libm.so:
+
+/lib/x86_64-linux-gnu/libm.so:
+
+/lib/x86_64-linux-gnu/libm.so.6:
+
+/lib/x86_64-linux-gnu/libmvec.so.1:
+
 /usr/local/lib/libmatplot.a:
 
 /usr/lib/x86_64-linux-gnu/libGL.so:
@@ -468,6 +486,8 @@ CMakeFiles/e_sql.dir/src/plotter/wireframe.cpp.o:
 
 /usr/lib/x86_64-linux-gnu/libtinfo.so.6:
 
+/lib64/ld-linux-x86-64.so.2:
+
 /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0:
 
 /usr/lib/x86_64-linux-gnu/libGLX.so.0:
@@ -479,8 +499,6 @@ CMakeFiles/e_sql.dir/src/plotter/wireframe.cpp.o:
 /usr/lib/x86_64-linux-gnu/libpng16.so.16:
 
 /usr/lib/x86_64-linux-gnu/libbrotlidec.so.1:
-
-/lib64/ld-linux-x86-64.so.2:
 
 /usr/lib/x86_64-linux-gnu/libX11.so.6:
 

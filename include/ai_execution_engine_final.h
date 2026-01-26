@@ -182,6 +182,31 @@ private:
     void stopWorkerThreads();
     void addTask(std::function<void()> task);
 
+       // Helper methods for executeAnalyzeData
+    std::vector<std::unordered_map<std::string, esql::Datum>> extract_chunk(esql::DataExtractor::DataCursor& cursor, size_t chunk_size);
+
+    void format_table_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report,const std::string& analysis_type,const AST::AnalyzeDataStatement& stmt);
+
+    void format_summary_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_correlation_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_importance_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report,const std::string& target_column);
+
+    void format_clustering_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_outlier_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_distribution_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_quality_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_timeseries_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_comprehensive_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
+    void format_insights_output(ExecutionEngine::ResultSet& result,const esql::analysis::ProfessionalComprehensiveAnalysisReport& report);
+
     // Enhanced helper methods
     std::shared_ptr<esql::ai::AdaptiveLightGBMModel> getOrLoadModel(const std::string& model_name);
     bool ensureModelLoaded(const std::string& model_name);

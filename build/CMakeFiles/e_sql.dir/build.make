@@ -1825,6 +1825,7 @@ e_sql: CMakeFiles/e_sql.dir/src/plotter/wireframe.cpp.o
 e_sql: CMakeFiles/e_sql.dir/build.make
 e_sql: CMakeFiles/e_sql.dir/compiler_depend.ts
 e_sql: /usr/lib/x86_64-linux-gnu/libreadline.so
+e_sql: /usr/lib/x86_64-linux-gnu/libfftw3.so
 e_sql: /usr/local/lib/libmatplot.a
 e_sql: /usr/lib/x86_64-linux-gnu/libGL.so
 e_sql: /usr/lib/x86_64-linux-gnu/libfreetype.so

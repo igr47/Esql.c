@@ -93,6 +93,115 @@ DataExtractor::DataExtractor(fractal::DiskStorage* storage)
     }
 }
 
+DataExtractor::DataCursor::DataCursor(DataExtractor* parent,
+                                     fractal::DiskStorage* storage,
+                                     const std::string& db_name,
+                                     const std::string& table_name,
+                                     const std::vector<std::string>& columns)
+    : parent_(parent),
+      storage_(storage),
+      db_name_(db_name),
+      table_name_(table_name),
+      columns_(columns.empty() ? parent->get_all_columns(db_name, table_name) : columns),
+      current_position_(0),
+      total_rows_(0),
+      buffer_position_(0) {
+    
+    // Get total rows from storage
+    try {
+        auto sample_data = storage_->getTableData(db_name, table_name);
+        total_rows_ = sample_data.size();
+    } catch (const std::exception& e) {
+        std::cerr << "[DataCursor] Failed to get table data: " << e.what() << std::endl;
+        total_rows_ = 0;
+    }
+    
+    // Load first chunk
+    load_next_chunk();
+}
+
+bool DataExtractor::DataCursor::has_next() const {
+    return current_position_ < total_rows_;
+}
+
+std::unordered_map<std::string, Datum> DataExtractor::DataCursor::next() {
+    if (!has_next()) {
+        throw std::out_of_range("No more data in cursor");
+    }
+
+    // If buffer is empty or we've consumed all buffer, load next chunk
+    if (buffer_position_ >= buffer_.size()) {
+        load_next_chunk();
+        buffer_position_ = 0;
+
+        // If still empty after loading, throw
+        if (buffer_.empty()) {
+            throw std::runtime_error("Failed to load data chunk");
+        }
+    }
+
+    // Get next row from buffer
+    auto row = std::move(buffer_[buffer_position_]);
+    buffer_position_++;
+    current_position_++;
+        
+    return row;
+}
+
+void DataExtractor::DataCursor::load_next_chunk(size_t chunk_size) {
+    buffer_.clear();
+    buffer_position_ = 0;
+    
+    try {
+        // Calculate how many rows to fetch
+        size_t rows_to_fetch = std::min(chunk_size, total_rows_ - current_position_);
+        
+        if (rows_to_fetch == 0) {
+            return;
+        }
+        
+        // Get raw data from storage
+        auto raw_data = storage_->getTableData(db_name_, table_name_);
+        
+        // Convert to Datum format using parent's converter
+        buffer_.reserve(rows_to_fetch);
+        for (size_t i = current_position_; i < current_position_ + rows_to_fetch && i < raw_data.size(); ++i) {
+            std::unordered_map<std::string, Datum> row;
+            for (const auto& col : columns_) {
+                auto it = raw_data[i].find(col);
+                if (it != raw_data[i].end()) {
+                    // Convert string value to Datum using parent's method
+                    row[col] = parent_->convert_string_to_datum(it->second);
+                } else {
+                    // Column not found, use null
+                    row[col] = Datum::create_null();
+                }
+            }
+            buffer_.push_back(std::move(row));
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "[DataCursor] Failed to load chunk: " << e.what() << std::endl;
+        buffer_.clear();
+    }
+}
+
+std::unique_ptr<DataExtractor::DataCursor> DataExtractor::create_cursor(const std::string& db_name,const std::string& table_name,const std::vector<std::string>& columns) {
+    return std::make_unique<DataCursor>(this, storage_, db_name, table_name, columns);
+}
+
+void DataExtractor::DataCursor::reset() {
+    current_position_ = 0;
+    buffer_position_ = 0;
+    buffer_.clear();
+    load_next_chunk();
+}
+
+
+/*std::unique_ptr<DataExtractor::DataCursor> DataExtractor::create_cursor(const std::string& db_name,const std::string& table_name,const std::vector<std::string>& columns) {
+    return std::make_unique<DataCursor>(this, storage_, db_name, table_name, columns);
+}*/
+
 std::vector<std::unordered_map<std::string, Datum>>
 DataExtractor::extract_table_data(const std::string& db_name,
                                  const std::string& table_name,
@@ -546,6 +655,8 @@ DataExtractor::TrainingData DataExtractor::extract_training_data(const std::stri
     log_encoding_stats();
     return result;
 }
+
+
 
 float DataExtractor::encode_string_feature(const std::string& column_name, const std::string& value) {
         std::lock_guard<std::mutex> lock(encoding_mutex_);
