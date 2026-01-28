@@ -459,9 +459,11 @@ DataExtractor::TrainingData DataExtractor::extract_training_data_for_classificat
                     feature_val = feat_datum.as_bool() ? 1.0f : 0.0f;
                 } else if (feat_datum.is_string()) {
                     // For string features, use one-hot or hash encoding
-                    std::hash<std::string> hasher;
+		    const std::string& str_val = feat_datum.as_string();
+                    feature_val = encode_string_feature(feature_col, str_val);
+                    /*std::hash<std::string> hasher;
                     size_t hash_val = hasher(feat_datum.as_string());
-                    feature_val = static_cast<float>(hash_val % 1000) / 1000.0f;
+                    feature_val = static_cast<float>(hash_val % 1000) / 1000.0f;*/
                 }
 
                 features.push_back(feature_val);
@@ -481,6 +483,7 @@ DataExtractor::TrainingData DataExtractor::extract_training_data_for_classificat
     }
 
     return result;
+    log_encoding_stats();
 }
 
 DataExtractor::TrainingData DataExtractor::extract_training_data(const std::string& db_name,const std::string& table_name,
