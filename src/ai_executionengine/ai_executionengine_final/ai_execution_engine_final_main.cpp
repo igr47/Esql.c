@@ -76,6 +76,8 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
         // Check for specific AI statement types
         else if (auto create_model = dynamic_cast<AST::CreateModelStatement*>(stmt.get())) {
             return executeCreateModel(*create_model);
+	} else if (auto* execute_forecast = dynamic_cast<AST::ForecastStatement*>(stmt.get())) {
+            return executeForecast(*execute_forecast);
         } else if (auto create_or_replace = dynamic_cast<AST::CreateOrReplaceModelStatement*>(stmt.get())) {
             return executeCreateOrReplaceModel(*create_or_replace);
         } else if (auto describe_model = dynamic_cast<AST::DescribeModelStatement*>(stmt.get())) {
@@ -88,7 +90,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
             return executeBatchAI(*batch_ai);
         } else if (auto* ai_stmt = dynamic_cast<AST::AIStatement*>(stmt.get())) {
             return ai_engine_->executeAIStatement(std::move(stmt));
-        }
+        } 
 
         // Fall back to base execution engine
         return base_engine_.execute(std::move(stmt));

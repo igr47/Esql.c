@@ -22,6 +22,7 @@ public:
     // Individual AI statement parsers
     std::unique_ptr<AST::TrainModelStatement> parseTrainModel();
     std::unique_ptr<AST::PredictStatement> parsePredict();
+    std::unique_ptr<AST::ForecastStatement> parseForecast();
     std::unique_ptr<AST::ShowModelsStatement> parseShowModels();
     std::unique_ptr<AST::DropModelStatement> parseDropModel();
     std::unique_ptr<AST::ExplainStatement> parseExplain();

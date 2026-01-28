@@ -36,6 +36,8 @@ void AIAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt) {
         analyzeCreatePipeline(*create_pipeline_stmt);
     } else if (auto* batch_ai_stmt = dynamic_cast<AST::BatchAIStatement*>(stmt.get())) {
         analyzeBatchAI(*batch_ai_stmt);
+    } else if (auto* analyze_forecast = dynamic_cast<AST::ForecastStatement*>(stmt.get())) {
+	analyzeForecast(*analyze_forecast);
     } else {
         throw SematicError("Unknown AI statement type");
     }
@@ -151,6 +153,10 @@ void AIAnalyzer::analyzeTrainModel(AST::TrainModelStatement& stmt) {
 
     std::cout << "[AIAnalyzer] TRAIN MODEL validation passed for "
               << stmt.model_name << std::endl;
+}
+
+void AIAnalyzer::analyzeForecast(AST::ForecastStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing FORECAST statement using model:" << stmt.model_name << std::endl;
 }
 
 void AIAnalyzer::analyzePredict(AST::PredictStatement& stmt) {

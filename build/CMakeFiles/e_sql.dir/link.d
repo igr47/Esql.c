@@ -34,6 +34,7 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_analyze.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_batch_ai.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_createpipeline.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/hyperparameters.cpp.o \
   CMakeFiles/e_sql.dir/src/execution_engine/constraint_validation.cpp.o \
@@ -64,11 +65,16 @@ e_sql: \
   CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/anomaly_detection.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/cluster.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/drift_detector.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/feature_descriptor.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/forecast.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/lightgbm_model.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/model_helpers.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/model_schema.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/probability_destribution.cpp.o \
+  CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/simulate.cpp.o \
   CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/training_metrics.cpp.o \
   CMakeFiles/e_sql.dir/src/plotter/animation.cpp.o \
   CMakeFiles/e_sql.dir/src/plotter/area.cpp.o \
@@ -240,6 +246,8 @@ CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_bat
 
 CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_createpipeline.cpp.o:
 
+CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.o:
+
 CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/hyperparameters.cpp.o:
@@ -300,15 +308,25 @@ CMakeFiles/e_sql.dir/src/ai_executables/model_registry.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executables/schema_discovery.cpp.o:
 
+CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/anomaly_detection.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/cluster.cpp.o:
+
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/drift_detector.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/feature_descriptor.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/forecast.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/lightgbm_model.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/model_helpers.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/model_schema.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/probability_destribution.cpp.o:
+
+CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/simulate.cpp.o:
 
 CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/training_metrics.cpp.o:
 

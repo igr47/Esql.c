@@ -37,6 +37,8 @@ std::unique_ptr<AST::Statement> AIParser::parseAIStatement() {
         return parseAnalyzeData();
     } else if (base_parser_.checkMatch(Token::Type::CREATE) && base_parser_.checkPeekToken().type == Token::Type::PIPELINE) {
         return parseCreatePipeline();
+    } else if (base_parser_.checkMatch(Token::Type::FORECAST)) {
+	return parseForecast();
     }
 
     throw ParseError(current.line, current.column, "Expected AI statement");
@@ -555,6 +557,101 @@ void AIParser::parseAdvancedOptions(AST::CreateModelStatement& stmt) {
                 break;
         }
     }
+}
+
+// Add to ai_parser.cpp:
+
+std::unique_ptr<AST::ForecastStatement> AIParser::parseForecast() {
+    auto stmt = std::make_unique<AST::ForecastStatement>();
+
+    // FORECAST USING model_name
+    base_parser_.consumeToken(Token::Type::FORECAST);
+    base_parser_.consumeToken(Token::Type::USING);
+    stmt->model_name = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // FROM table_name
+    base_parser_.consumeToken(Token::Type::FROM);
+    stmt->input_table = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Optional TIME COLUMN
+    if (base_parser_.checkMatch(Token::Type::TIME)) {
+        base_parser_.consumeToken(Token::Type::TIME);
+        base_parser_.consumeToken(Token::Type::COLUMN);
+        stmt->time_column = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+    }
+
+    // VALUE COLUMNS
+    if (base_parser_.checkMatch(Token::Type::VALUE)) {
+        base_parser_.consumeToken(Token::Type::VALUE);
+        base_parser_.consumeToken(Token::Type::COLUMNS);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        do {
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+            stmt->value_columns.push_back(base_parser_.getCurrentToken().lexeme);
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    // HORIZON (number of steps)
+    if (base_parser_.checkMatch(Token::Type::HORIZON)) {
+        base_parser_.consumeToken(Token::Type::HORIZON);
+        if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+            try {
+                stmt->horizon = std::stoul(base_parser_.getCurrentToken().lexeme);
+                base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+            } catch (...) {
+                throw ParseError(base_parser_.getCurrentToken().line,
+                                base_parser_.getCurrentToken().column,
+                                "Invalid horizon value");
+            }
+        }
+    }
+
+    // WITH CONFIDENCE
+    if (base_parser_.checkMatch(Token::Type::WITH)) {
+        base_parser_.consumeToken(Token::Type::WITH);
+        if (base_parser_.checkMatch(Token::Type::CONFIDENCE)) {
+            base_parser_.consumeToken(Token::Type::CONFIDENCE);
+            stmt->include_confidence = true;
+        }
+    }
+
+    // SCENARIOS
+    if (base_parser_.checkMatch(Token::Type::WITH)) {
+        base_parser_.consumeToken(Token::Type::WITH);
+        if (base_parser_.checkMatch(Token::Type::SCENARIOS)) {
+            base_parser_.consumeToken(Token::Type::SCENARIOS);
+            stmt->include_scenarios = true;
+
+            if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                try {
+                    stmt->num_scenarios = std::stoul(base_parser_.getCurrentToken().lexeme);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } catch (...) {
+                    throw ParseError(base_parser_.getCurrentToken().line,
+                                    base_parser_.getCurrentToken().column,
+                                    "Invalid number of scenarios");
+                }
+            }
+        }
+    }
+
+    // INTO output_table
+    if (base_parser_.checkMatch(Token::Type::INTO)) {
+        base_parser_.consumeToken(Token::Type::INTO);
+        stmt->output_table = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+    }
+
+    return stmt;
 }
 
 

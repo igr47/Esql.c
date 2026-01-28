@@ -136,6 +136,61 @@ namespace AST {
         static CreateModelStatement from_json(const nlohmann::json& j);
     };
 
+    class ForecastStatement : public AIStatement {
+    public:
+	std::string model_name;
+        std::string input_table;
+        std::string time_column;
+        std::vector<std::string> value_columns;
+        size_t horizon = 1;  // Number of steps to forecast
+        bool include_confidence = false;
+        bool include_scenarios = false;
+        size_t num_scenarios = 100;
+        std::string output_table;
+        std::string scenario_type = "monte_carlo"; // monte_carlo, bootstrap, parametric
+
+        std::string toEsql() const override;
+    };
+
+    class SimulateStatement : public AIStatement {
+    public:
+        std::string model_name;
+        std::string base_table;
+        std::string intervention_table;  // Table with what-if scenarios
+        std::vector<std::string> scenario_columns;
+        size_t simulation_steps = 1;
+        std::string output_table;
+        bool compare_scenarios = false;
+        std::string comparison_metric = "absolute_difference";
+
+        std::string toEsql() const override;
+    };
+
+    class MultiPredictStatement : public AIStatement {
+    public:
+        std::string model_name;
+        std::string input_table;
+        std::string output_table;
+        std::vector<std::string> output_columns;
+        size_t num_predictions = 1;  // For sequence prediction
+        bool parallel_predictions = false;
+        size_t batch_size = 100;
+
+        std::string toEsql() const override;
+    };
+
+    class AnalyzeUncertaintyStatement : public AIStatement {
+    public:
+        std::string model_name;
+        std::string input_table;
+        std::string output_table;
+        std::string uncertainty_method = "bootstrapping"; // bootstrapping, dropout, ensemble
+        size_t num_samples = 100;
+        float confidence_level = 0.95;
+
+        std::string toEsql() const override;
+   };
+
     class AIFunctionCall : public Expression {
     public:
         AIFunctionType function_type;

@@ -6538,8 +6538,6 @@ bool ProfessionalDataAnalyzer::validate_input_data(
     return true;
 }
 
-// The remaining core analysis methods would be implemented similarly
-// Due to space constraints, I'll show the structure for one more method
 
 ProfessionalColumnAnalysis ProfessionalDataAnalyzer::analyze_column_professional(
     const std::string& column_name,
@@ -6749,7 +6747,7 @@ ProfessionalColumnAnalysis ProfessionalDataAnalyzer::analyze_column_professional
 }
 
 // ============================================
-// CONTINUED: ProfessionalDataAnalyzer Core Methods
+// ProfessionalDataAnalyzer Core Methods
 // ============================================
 
 ProfessionalCorrelationAnalysis ProfessionalDataAnalyzer::analyze_correlation_professional(

@@ -428,6 +428,113 @@ namespace AST {
         return result;
     }
 
+    std::string ForecastStatement::toEsql() const {
+	std::string result = "FORECAST USING " + model_name;
+
+	if (!input_table.empty()) {
+	    result += " ON " + input_table;
+	}
+
+	if (!time_column.empty()) {
+	   result += " WITH TIME " + time_column;
+	}
+
+	if (!value_columns.empty()) {
+	   result += " OUTPUT (";
+	   for (size_t i = 0; i < value_columns.size(); ++i) {
+	       if (i > 0) result += ", ";
+	       result += value_columns[i];
+	   }
+	   result += ")";
+	}
+
+	result += " STEPS " + std::to_string(horizon);
+
+	if (include_confidence) {
+	   result += " WITH CONFIDENCE ";
+	}
+        
+        if (include_scenarios) {
+	   result += " WITH SCENARIOS ";
+	}
+        result += " NUMBER SCENARIOS " + std::to_string(num_scenarios);
+
+	if (!output_table.empty()) {
+	   result += " ON TABLE " + output_table;
+	}
+
+	if (!scenario_type.empty()) {
+	   result += " SCENARIO TYPE " +scenario_type;
+	}
+
+	return result;
+    }
+
+    std::string SimulateStatement::toEsql() const {
+	 std::string result = " SIMULATING USING " + model_name;
+
+	 if (!base_table.empty()) {
+	    result += " ON TABLE " + base_table;
+	 }
+
+	 if (!intervention_table.empty()) {
+	    result += " WITH INTERVENTION " + intervention_table;
+	 }
+
+	 if (!scenario_columns.empty()) {
+	    result += " SCENARIO COLUMNS ( ";
+	    for (size_t i = 0; i < scenario_columns.size(); ++i) {
+		if (i > 0) result += ", ";
+		result += scenario_columns[i];
+	    }
+	    result += ")";
+	 }
+
+	 result += " SIMULATION STEPS " + std::to_string(simulation_steps);
+
+	 if (!output_table.empty()) {
+	    result += " OUTPUT TABLE " + output_table;
+	 }
+
+	 if (compare_scenarios) {
+	    result += " WITH SCENARIO COMPARISON ";
+	 }
+
+	 if (!comparison_metric.empty()) {
+	    result += " COMPARISON METRIC " + comparison_metric;
+	 }
+
+	 return result;
+    }
+
+    std::string MultiPredictStatement::toEsql() const {
+	 std::string result = " MULTI PREDICTING USING " + model_name;
+
+	 if (!input_table.empty()) {
+	    result += " ON TABLE " + input_table;
+	 }
+
+	 if (!output_table.empty()) {
+	    result += " OUTPUT TABLE " + output_table;
+	 }
+
+	 return result;
+    }
+
+    std::string AnalyzeUncertaintyStatement::toEsql() const {
+	 std::string result = " ANALYZING UNCERTAINITY USING " + model_name;
+
+	 if (!input_table.empty()) {
+	    result += " ON TABLE " + input_table;
+	 }
+
+	 if (!output_table.empty()) {
+	    result += " OUTPUT TABLE " + output_table;
+	 }
+
+	 return result;
+    }
+
     // PredictStatement implementations
     std::string PredictStatement::toEsql() const {
         std::string result = "PREDICT USING " + model_name;

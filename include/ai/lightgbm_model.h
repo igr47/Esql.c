@@ -114,6 +114,74 @@ public:
     float get_drift_score() const { return schema_.drift_score; }
     void reset_drift_detector();
 
+    std::vector<Tensor> forecast(const std::vector<Tensor>& historical_data,size_t steps_ahead,const std::unordered_map<std::string, std::string>& options = {});
+
+    // Multi-step prediction
+    std::vector<Tensor> predict_sequence(const Tensor& input,size_t sequence_length);
+
+    // What-if simulation
+    std::vector<Tensor> simulate(const Tensor& initial_conditions,const std::vector<Tensor>& interventions,size_t steps,const std::unordered_map<std::string, std::string>& options = {});
+
+        // Confidence intervals
+    struct PredictionWithConfidence {
+        Tensor prediction;
+        Tensor lower_bound;
+        Tensor upper_bound;
+        float confidence_level;
+    };
+
+    PredictionWithConfidence predict_with_confidence(const Tensor& input,float confidence_level = 0.95);
+
+    // Influence analysis
+    struct InfluenceResult {
+        std::vector<std::pair<size_t, float>> training_sample_influences;
+        std::vector<std::pair<std::string, float>> feature_influences;
+        float total_influence;
+    };
+
+    InfluenceResult calculate_influence(const Tensor& input,const std::vector<Tensor>& training_samples = {});
+
+        // Clustering
+    struct ClusterResult {
+        int cluster_id;
+        float distance_to_center;
+        std::vector<float> cluster_probabilities;
+        std::vector<std::string> similar_samples;
+    };
+
+    ClusterResult assign_cluster(const Tensor& input);
+
+    // Probability distributions
+    struct ProbabilityDistribution {
+        std::vector<float> probabilities;
+        std::vector<std::string> labels;
+        float entropy;
+        float confidence;
+    };
+
+    ProbabilityDistribution get_probability_distribution(const Tensor& input);
+
+       // Residual analysis
+    struct ResidualAnalysis {
+        float residual;
+        float standardized_residual;
+        bool is_outlier;
+        float cook_distance;
+        float leverage;
+    };
+
+    ResidualAnalysis analyze_residual(const Tensor& input, float actual_value);
+
+    // Anomaly detection
+    struct AnomalyResult {
+        bool is_anomaly;
+        float anomaly_score;
+        float threshold;
+        std::vector<float> feature_contributions;
+    };
+
+    AnomalyResult detect_anomaly(const Tensor& input);
+
     // Performance monitoring
     size_t get_prediction_count() const { return prediction_count_; }
     float get_avg_inference_time_ms() const;

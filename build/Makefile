@@ -177,6 +177,54 @@ src/ai_executables/algorithm_registry.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/algorithm_registry.cpp.s
 .PHONY : src/ai_executables/algorithm_registry.cpp.s
 
+src/ai_executables/lightgbm/anomaly_detection.o: src/ai_executables/lightgbm/anomaly_detection.cpp.o
+.PHONY : src/ai_executables/lightgbm/anomaly_detection.o
+
+# target to build an object file
+src/ai_executables/lightgbm/anomaly_detection.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/anomaly_detection.cpp.o
+.PHONY : src/ai_executables/lightgbm/anomaly_detection.cpp.o
+
+src/ai_executables/lightgbm/anomaly_detection.i: src/ai_executables/lightgbm/anomaly_detection.cpp.i
+.PHONY : src/ai_executables/lightgbm/anomaly_detection.i
+
+# target to preprocess a source file
+src/ai_executables/lightgbm/anomaly_detection.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/anomaly_detection.cpp.i
+.PHONY : src/ai_executables/lightgbm/anomaly_detection.cpp.i
+
+src/ai_executables/lightgbm/anomaly_detection.s: src/ai_executables/lightgbm/anomaly_detection.cpp.s
+.PHONY : src/ai_executables/lightgbm/anomaly_detection.s
+
+# target to generate assembly for a file
+src/ai_executables/lightgbm/anomaly_detection.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/anomaly_detection.cpp.s
+.PHONY : src/ai_executables/lightgbm/anomaly_detection.cpp.s
+
+src/ai_executables/lightgbm/cluster.o: src/ai_executables/lightgbm/cluster.cpp.o
+.PHONY : src/ai_executables/lightgbm/cluster.o
+
+# target to build an object file
+src/ai_executables/lightgbm/cluster.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/cluster.cpp.o
+.PHONY : src/ai_executables/lightgbm/cluster.cpp.o
+
+src/ai_executables/lightgbm/cluster.i: src/ai_executables/lightgbm/cluster.cpp.i
+.PHONY : src/ai_executables/lightgbm/cluster.i
+
+# target to preprocess a source file
+src/ai_executables/lightgbm/cluster.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/cluster.cpp.i
+.PHONY : src/ai_executables/lightgbm/cluster.cpp.i
+
+src/ai_executables/lightgbm/cluster.s: src/ai_executables/lightgbm/cluster.cpp.s
+.PHONY : src/ai_executables/lightgbm/cluster.s
+
+# target to generate assembly for a file
+src/ai_executables/lightgbm/cluster.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/cluster.cpp.s
+.PHONY : src/ai_executables/lightgbm/cluster.cpp.s
+
 src/ai_executables/lightgbm/drift_detector.o: src/ai_executables/lightgbm/drift_detector.cpp.o
 .PHONY : src/ai_executables/lightgbm/drift_detector.o
 
@@ -224,6 +272,30 @@ src/ai_executables/lightgbm/feature_descriptor.s: src/ai_executables/lightgbm/fe
 src/ai_executables/lightgbm/feature_descriptor.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/feature_descriptor.cpp.s
 .PHONY : src/ai_executables/lightgbm/feature_descriptor.cpp.s
+
+src/ai_executables/lightgbm/forecast.o: src/ai_executables/lightgbm/forecast.cpp.o
+.PHONY : src/ai_executables/lightgbm/forecast.o
+
+# target to build an object file
+src/ai_executables/lightgbm/forecast.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/forecast.cpp.o
+.PHONY : src/ai_executables/lightgbm/forecast.cpp.o
+
+src/ai_executables/lightgbm/forecast.i: src/ai_executables/lightgbm/forecast.cpp.i
+.PHONY : src/ai_executables/lightgbm/forecast.i
+
+# target to preprocess a source file
+src/ai_executables/lightgbm/forecast.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/forecast.cpp.i
+.PHONY : src/ai_executables/lightgbm/forecast.cpp.i
+
+src/ai_executables/lightgbm/forecast.s: src/ai_executables/lightgbm/forecast.cpp.s
+.PHONY : src/ai_executables/lightgbm/forecast.s
+
+# target to generate assembly for a file
+src/ai_executables/lightgbm/forecast.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/forecast.cpp.s
+.PHONY : src/ai_executables/lightgbm/forecast.cpp.s
 
 src/ai_executables/lightgbm/lightgbm_model.o: src/ai_executables/lightgbm/lightgbm_model.cpp.o
 .PHONY : src/ai_executables/lightgbm/lightgbm_model.o
@@ -296,6 +368,54 @@ src/ai_executables/lightgbm/model_schema.s: src/ai_executables/lightgbm/model_sc
 src/ai_executables/lightgbm/model_schema.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/model_schema.cpp.s
 .PHONY : src/ai_executables/lightgbm/model_schema.cpp.s
+
+src/ai_executables/lightgbm/probability_destribution.o: src/ai_executables/lightgbm/probability_destribution.cpp.o
+.PHONY : src/ai_executables/lightgbm/probability_destribution.o
+
+# target to build an object file
+src/ai_executables/lightgbm/probability_destribution.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/probability_destribution.cpp.o
+.PHONY : src/ai_executables/lightgbm/probability_destribution.cpp.o
+
+src/ai_executables/lightgbm/probability_destribution.i: src/ai_executables/lightgbm/probability_destribution.cpp.i
+.PHONY : src/ai_executables/lightgbm/probability_destribution.i
+
+# target to preprocess a source file
+src/ai_executables/lightgbm/probability_destribution.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/probability_destribution.cpp.i
+.PHONY : src/ai_executables/lightgbm/probability_destribution.cpp.i
+
+src/ai_executables/lightgbm/probability_destribution.s: src/ai_executables/lightgbm/probability_destribution.cpp.s
+.PHONY : src/ai_executables/lightgbm/probability_destribution.s
+
+# target to generate assembly for a file
+src/ai_executables/lightgbm/probability_destribution.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/probability_destribution.cpp.s
+.PHONY : src/ai_executables/lightgbm/probability_destribution.cpp.s
+
+src/ai_executables/lightgbm/simulate.o: src/ai_executables/lightgbm/simulate.cpp.o
+.PHONY : src/ai_executables/lightgbm/simulate.o
+
+# target to build an object file
+src/ai_executables/lightgbm/simulate.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/simulate.cpp.o
+.PHONY : src/ai_executables/lightgbm/simulate.cpp.o
+
+src/ai_executables/lightgbm/simulate.i: src/ai_executables/lightgbm/simulate.cpp.i
+.PHONY : src/ai_executables/lightgbm/simulate.i
+
+# target to preprocess a source file
+src/ai_executables/lightgbm/simulate.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/simulate.cpp.i
+.PHONY : src/ai_executables/lightgbm/simulate.cpp.i
+
+src/ai_executables/lightgbm/simulate.s: src/ai_executables/lightgbm/simulate.cpp.s
+.PHONY : src/ai_executables/lightgbm/simulate.s
+
+# target to generate assembly for a file
+src/ai_executables/lightgbm/simulate.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executables/lightgbm/simulate.cpp.s
+.PHONY : src/ai_executables/lightgbm/simulate.cpp.s
 
 src/ai_executables/lightgbm/training_metrics.o: src/ai_executables/lightgbm/training_metrics.cpp.o
 .PHONY : src/ai_executables/lightgbm/training_metrics.o
@@ -704,6 +824,30 @@ src/ai_executionengine/ai_executionengine_final/execute_createpipeline.s: src/ai
 src/ai_executionengine/ai_executionengine_final/execute_createpipeline.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_createpipeline.cpp.s
 .PHONY : src/ai_executionengine/ai_executionengine_final/execute_createpipeline.cpp.s
+
+src/ai_executionengine/ai_executionengine_final/execute_forecast.o: src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.o
+.PHONY : src/ai_executionengine/ai_executionengine_final/execute_forecast.o
+
+# target to build an object file
+src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.o
+.PHONY : src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.o
+
+src/ai_executionengine/ai_executionengine_final/execute_forecast.i: src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.i
+.PHONY : src/ai_executionengine/ai_executionengine_final/execute_forecast.i
+
+# target to preprocess a source file
+src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.i
+.PHONY : src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.i
+
+src/ai_executionengine/ai_executionengine_final/execute_forecast.s: src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.s
+.PHONY : src/ai_executionengine/ai_executionengine_final/execute_forecast.s
+
+# target to generate assembly for a file
+src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/e_sql.dir/build.make CMakeFiles/e_sql.dir/src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.s
+.PHONY : src/ai_executionengine/ai_executionengine_final/execute_forecast.cpp.s
 
 src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.o: src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.cpp.o
 .PHONY : src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.o
@@ -2760,12 +2904,21 @@ help:
 	@echo "... src/ai_executables/algorithm_registry.o"
 	@echo "... src/ai_executables/algorithm_registry.i"
 	@echo "... src/ai_executables/algorithm_registry.s"
+	@echo "... src/ai_executables/lightgbm/anomaly_detection.o"
+	@echo "... src/ai_executables/lightgbm/anomaly_detection.i"
+	@echo "... src/ai_executables/lightgbm/anomaly_detection.s"
+	@echo "... src/ai_executables/lightgbm/cluster.o"
+	@echo "... src/ai_executables/lightgbm/cluster.i"
+	@echo "... src/ai_executables/lightgbm/cluster.s"
 	@echo "... src/ai_executables/lightgbm/drift_detector.o"
 	@echo "... src/ai_executables/lightgbm/drift_detector.i"
 	@echo "... src/ai_executables/lightgbm/drift_detector.s"
 	@echo "... src/ai_executables/lightgbm/feature_descriptor.o"
 	@echo "... src/ai_executables/lightgbm/feature_descriptor.i"
 	@echo "... src/ai_executables/lightgbm/feature_descriptor.s"
+	@echo "... src/ai_executables/lightgbm/forecast.o"
+	@echo "... src/ai_executables/lightgbm/forecast.i"
+	@echo "... src/ai_executables/lightgbm/forecast.s"
 	@echo "... src/ai_executables/lightgbm/lightgbm_model.o"
 	@echo "... src/ai_executables/lightgbm/lightgbm_model.i"
 	@echo "... src/ai_executables/lightgbm/lightgbm_model.s"
@@ -2775,6 +2928,12 @@ help:
 	@echo "... src/ai_executables/lightgbm/model_schema.o"
 	@echo "... src/ai_executables/lightgbm/model_schema.i"
 	@echo "... src/ai_executables/lightgbm/model_schema.s"
+	@echo "... src/ai_executables/lightgbm/probability_destribution.o"
+	@echo "... src/ai_executables/lightgbm/probability_destribution.i"
+	@echo "... src/ai_executables/lightgbm/probability_destribution.s"
+	@echo "... src/ai_executables/lightgbm/simulate.o"
+	@echo "... src/ai_executables/lightgbm/simulate.i"
+	@echo "... src/ai_executables/lightgbm/simulate.s"
 	@echo "... src/ai_executables/lightgbm/training_metrics.o"
 	@echo "... src/ai_executables/lightgbm/training_metrics.i"
 	@echo "... src/ai_executables/lightgbm/training_metrics.s"
@@ -2826,6 +2985,9 @@ help:
 	@echo "... src/ai_executionengine/ai_executionengine_final/execute_createpipeline.o"
 	@echo "... src/ai_executionengine/ai_executionengine_final/execute_createpipeline.i"
 	@echo "... src/ai_executionengine/ai_executionengine_final/execute_createpipeline.s"
+	@echo "... src/ai_executionengine/ai_executionengine_final/execute_forecast.o"
+	@echo "... src/ai_executionengine/ai_executionengine_final/execute_forecast.i"
+	@echo "... src/ai_executionengine/ai_executionengine_final/execute_forecast.s"
 	@echo "... src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.o"
 	@echo "... src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.i"
 	@echo "... src/ai_executionengine/ai_executionengine_final/hyperparameter_tuner.s"

@@ -169,6 +169,53 @@ void AlgorithmRegistry::initialize_default_algorithms() {
         {"RANKING", "NDCG", "RECOMMENDATION"},
         {{"metric", "ndcg"}, {"boosting", "gbdt"}}
     });
+
+    // ===== ANOMALY DETECTION ALGORITHMS =====
+    register_algorithm({
+	"ANOMALY_ISO_FOREST", "regression", AlgorithmCategory::REGRESSION,
+	"Isolation Forest for anomaly detection",
+	{"ANOMALY", "OUTLIER", "FRAUD"},
+	{{"metric", "rmse"}, {"boosting", "gbdt"}, {"objective", "anomaly"}}
+    });
+
+    register_algorithm({
+	"ANOMALY_LOF", "regression_l1", AlgorithmCategory::REGRESSION,
+	"Local Outlier Factor for anomaly detection",
+	{"ANOMALY", "OUTLIER", "LOCAL"},
+	{{"metric", "mae"}, {"boosting", "gbdt"}, {"objective", "anomaly_lof"}}
+    });
+
+    // ===== CLUSTERING ALGORITHMS =====
+    register_algorithm({
+	"CLUSTERING_KMEANS", "multiclass", AlgorithmCategory::CLASSIFICATION,
+	"K-Means clustering (using multiclass classification)",
+	{"CLUSTERING", "SEGMENTATION", "UNSUPERVISED"},
+	{{"metric", "multi_logloss"}, {"boosting", "gbdt"}, {"num_class", "8"}},
+	true, false
+    });
+
+    // ===== FORECASTING ALGORITHMS =====
+    register_algorithm({
+	"FORECAST_ARIMA", "regression", AlgorithmCategory::REGRESSION,
+        "ARIMA-like time series forecasting",
+        {"FORECAST", "TIMESERIES", "ARIMA"},
+        {{"metric", "mae"}, {"boosting", "gbdt"}, {"max_lag", "7"}}
+    });
+
+    register_algorithm({
+	"FORECAST_PROPHET", "regression", AlgorithmCategory::REGRESSION,
+        "Facebook Prophet-like forecasting",
+        {"FORECAST", "TIMESERIES", "SEASONAL"},
+        {{"metric", "mape"}, {"boosting", "gbdt"}, {"seasonality", "auto"}}
+    });
+
+    // ===== MULTI-OUTPUT REGRESSION =====
+    register_algorithm({
+	"MULTI_REGRESSION", "regression", AlgorithmCategory::REGRESSION,
+        "Multi-output regression for predicting multiple values",
+        {"MULTI_OUTPUT", "MULTI_TARGET", "VECTOR"},
+        {{"metric", "rmse"}, {"boosting", "gbdt"}, {"multi_output", "true"}}
+    });
 }
 
 bool AlgorithmRegistry::register_algorithm(const AlgorithmInfo& info) {
