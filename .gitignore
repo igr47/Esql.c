@@ -1,4 +1,41 @@
-databases/*.db
-databases/*.db
-databases/*.wal
-*.db
+# Build directories
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CMakeLists.txt.user
+*.cmake
+
+# Executables and binaries
+*.exe
+*.out
+*.app
+e_sql
+
+# Object files
+*.o
+*.obj
+
+# Compiled files
+*.class
+*.dll
+*.so
+*.dylib
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Models directory
+models/
