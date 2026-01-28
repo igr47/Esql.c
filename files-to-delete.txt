@@ -1,0 +1,20 @@
+*.jpg
+*.o
+e_sql
+*.pch
+*.jar
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+climate_test.csv
+Exam_Score_Prediction.csv
+*.swp
+*.swo
+*.db
+*.wal
+*.log
+models/
+*.txt  # Be careful with this - might remove model files
