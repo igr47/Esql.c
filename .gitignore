@@ -1,34 +1,30 @@
-# Build directories
+# Build outputs
 build/
-cmake-build-*/
-CMakeFiles/
-CMakeCache.txt
-CMakeLists.txt.user
-*.cmake
-
-# Executables and binaries
-*.exe
-*.out
-*.app
-e_sql
-
-# Object files
 *.o
 *.obj
-
-# Compiled files
-*.class
-*.dll
 *.so
 *.dylib
+*.dll
+*.exe
+e_sql
+*.out
+*.app
 
-# IDE files
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# OS generated files
+# OS
 .DS_Store
 .DS_Store?
 ._*
@@ -37,5 +33,21 @@ e_sql
 ehthumbs.db
 Thumbs.db
 
-# Models directory
+# Data files
+*.db
+*.wal
+*.log
+*.csv
+*.jpg
+*.png
+
+# Models
 models/
+*.pch
+
+# Large files
+bfg-*.jar
+
+# Executables
+a.out
+test_permissions
