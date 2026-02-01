@@ -775,13 +775,13 @@ ThemeSystem::Theme ThemeSystem::create_dracula_theme() {
 
     // Additional syntax styles
     theme.ui_styles.set_style("string_literal", "light_green");
-    theme.ui_styles.set_style("number_literal", "light_yellow");
+    theme.ui_styles.set_style("number_literal", "base00");
     theme.ui_styles.set_style("comment", "dark_gray");
-    theme.ui_styles.set_style("operator", "white");
+    theme.ui_styles.set_style("operator", "nord4");
     theme.ui_styles.set_style("punctuation", "light_gray");
-    theme.ui_styles.set_style("identifier", "light_cyan");
+    theme.ui_styles.set_style("identifier", "magenta");
     theme.ui_styles.set_style("parameter", "gold");
-    theme.ui_styles.set_style("bracket", "lavender");
+    theme.ui_styles.set_style("bracket", "violet");
 
     return theme;
 }

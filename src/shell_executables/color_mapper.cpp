@@ -45,13 +45,16 @@ void ColorMapper::initialize_maps() {
     color_map_["midnight_blue"] = colors::MIDNIGHT_BLUE;
     color_map_["ocean_blue"] = colors::OCEAN_BLUE;
     color_map_["sky_blue"] = colors::SKY_BLUE;
-    color_map_["light_blue"] = colors::GRADIENT_BLUE_1; // or create a new constant
+    color_map_["light_blue"] = colors::GRADIENT_BLUE_1; 
     color_map_["ice_blue"] = colors::ICE_BLUE;
     color_map_["fire_red"] = colors::FIRE_RED;
     color_map_["forest_green"] = colors::FOREST_GREEN;
     color_map_["grass_green"] = colors::GRASS_GREEN;
     color_map_["sun_yellow"] = colors::SUN_YELLOW;
     color_map_["earth_brown"] = colors::EARTH_BROWN;
+
+    color_map_["light_green"] = colors::LIGHT_GREEN;
+    color_map_["light_cyan"] = colors::LIGHT_CYAN;
     
     // Dark colors
     color_map_["dark_red"] = colors::DARK_RED;

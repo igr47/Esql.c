@@ -115,6 +115,9 @@ namespace colors {
     static constexpr const char* DARK_MAGENTA = "\033[38;5;90m";
     static constexpr const char* DARK_CYAN = "\033[38;5;30m";
 
+    static constexpr const char* LIGHT_GREEN = "\033[1;32m";
+    static constexpr const char* LIGHT_CYAN = "\033[1;36m";
+
     static constexpr const char* ORANGE = "\033[38;5;208m";
     static constexpr const char* LIGHT_ORANGE = "\033[38;5;214m";
     static constexpr const char* DARK_ORANGE = "\033[38;5;166m";
