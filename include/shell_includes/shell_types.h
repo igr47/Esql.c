@@ -68,6 +68,7 @@ enum class KeyCode {
 namespace colors {
     static constexpr const char* RESET = "\033[0m";
     static constexpr const char* BOLD = "\033[1m";
+    static constexpr const char* BLACK = "\033[38;5;0m";
     static constexpr const char* RED = "\033[31m";
     static constexpr const char* GREEN = "\033[32m";
     static constexpr const char* YELLOW = "\033[33m";
@@ -91,15 +92,76 @@ namespace colors {
     static constexpr const char* DIM = "\033[2m";
     static constexpr const char* ITALIC = "\033[3m";
     static constexpr const char* UNDERLINE = "\033[4m";
+    static constexpr const char* BLINK = "\033[5m";
+    static constexpr const char* REVERSE = "\033[7m";
+    static constexpr const char* HIDDEN = "\033[8m";
+    static constexpr const char* STRIKETHROUGH = "\033[9m";
 
     static constexpr const char* BRIGHT_GREEN = "\033[92m";
+    static constexpr const char* BRIGHT_BLACK = "\033[38;5;8m";
     static constexpr const char* BRIGHT_YELLOW = "\033[93m";
     static constexpr const char* BRIGHT_BLUE = "\033[94m";
     static constexpr const char* BRIGHT_MAGENTA = "\033[95m";
     static constexpr const char* BRIGHT_CYAN = "\033[96m";
     static constexpr const char* BRIGHT_WHITE = "\033[97m";
 
-        // Professional gradient palettes
+    static constexpr const char* LIGHT_GRAY = "\033[38;5;7m";
+    static constexpr const char* DARK_GRAY = "\033[38;5;236m";
+
+    static constexpr const char* DARK_RED = "\033[38;5;88m";
+    static constexpr const char* DARK_GREEN = "\033[38;5;22m";
+    static constexpr const char* DARK_YELLOW = "\033[38;5;94m";
+    static constexpr const char* DARK_BLUE = "\033[38;5;18m";
+    static constexpr const char* DARK_MAGENTA = "\033[38;5;90m";
+    static constexpr const char* DARK_CYAN = "\033[38;5;30m";
+
+    static constexpr const char* ORANGE = "\033[38;5;208m";
+    static constexpr const char* LIGHT_ORANGE = "\033[38;5;214m";
+    static constexpr const char* DARK_ORANGE = "\033[38;5;166m";
+
+    static constexpr const char* PINK = "\033[38;5;213m";
+    static constexpr const char* LIGHT_PINK = "\033[38;5;218m";
+    static constexpr const char* DARK_PINK = "\033[38;5;125m";
+
+    static constexpr const char* PURPLE = "\033[38;5;93m";
+    static constexpr const char* LIGHT_PURPLE = "\033[38;5;141m";
+    static constexpr const char* DARK_PURPLE = "\033[38;5;55m";
+
+    static constexpr const char* BROWN = "\033[38;5;94m";
+    static constexpr const char* LIGHT_BROWN = "\033[38;5;137m";
+    static constexpr const char* DARK_BROWN = "\033[38;5;52m";
+
+    static constexpr const char* LIGHT_TEAL = "\033[38;5;14m";
+    static constexpr const char* DARK_TEAL = "\033[38;5;23m";
+
+    static constexpr const char* SILVER = "\033[38;5;7m";
+    static constexpr const char* BRONZE = "\033[38;5;130m";
+
+    static constexpr const char* FOREST_GREEN = "\033[38;5;28m";
+    static constexpr const char* OCEAN_BLUE = "\033[38;5;27m";
+    static constexpr const char* SKY_BLUE = "\033[38;5;39m";
+    static constexpr const char* GRASS_GREEN = "\033[38;5;46m";
+    static constexpr const char* SUN_YELLOW = "\033[38;5;226m";
+    static constexpr const char* FIRE_RED = "\033[38;5;196m";
+    static constexpr const char* ICE_BLUE = "\033[38;5;45m";
+    static constexpr const char* EARTH_BROWN = "\033[38;5;94m";
+    static constexpr const char* MIDNIGHT_BLUE = "\033[38;5;17m";
+
+    // True Color RGB macros for advanced users
+    #define RGB(r, g, b) "\033[38;2;" #r ";" #g ";" #b "m"
+    #define RGBA(r, g, b, a) "\033[38;2;" #r ";" #g ";" #b "m" // Note: ANSI doesn't support alpha
+    
+    static constexpr const char* BG_BLACK = "\033[48;5;0m";
+    static constexpr const char* BG_WHITE = "\033[48;5;15m";
+    static constexpr const char* BG_RED = "\033[48;5;1m";
+    static constexpr const char* BG_GREEN = "\033[48;5;2m";
+    static constexpr const char* BG_BLUE = "\033[48;5;4m";
+    static constexpr const char* BG_YELLOW = "\033[48;5;3m";
+    static constexpr const char* BG_MAGENTA = "\033[48;5;5m";
+    static constexpr const char* BG_CYAN = "\033[48;5;6m";
+    static constexpr const char* BG_GRAY = "\033[48;5;8m";
+
+    // Professional gradient palettes
     static constexpr const char* GRADIENT_BLUE_1 = "\033[38;5;39m";
     static constexpr const char* GRADIENT_BLUE_2 = "\033[38;5;45m";
     static constexpr const char* GRADIENT_BLUE_3 = "\033[38;5;51m";
@@ -128,12 +190,54 @@ namespace colors {
     static constexpr const char* GRADIENT_MAGENTA_3 = "\033[38;5;165m";
     static constexpr const char* GRADIENT_MAGENTA_4 = "\033[38;5;201m";
 
-        // Premium accent colors
+    static constexpr const char* RESET_COLOR = "\033[39m";
+    static constexpr const char* RESET_BG = "\033[49m";
+    static constexpr const char* RESET_BOLD = "\033[22m";
+    static constexpr const char* RESET_ITALIC = "\033[23m";
+    static constexpr const char* RESET_UNDERLINE = "\033[24m";
+    static constexpr const char* RESET_BLINK = "\033[25m";
+    static constexpr const char* RESET_REVERSE = "\033[27m";
+    static constexpr const char* RESET_ALL = "\033[0m";
+
+    // Premium accent colors
     static constexpr const char* PREMIUM_GOLD = "\033[38;5;220m";
     static constexpr const char* PREMIUM_SILVER = "\033[38;5;255m";
     static constexpr const char* PREMIUM_EMERALD = "\033[38;5;46m";
     static constexpr const char* PREMIUM_SAPPHIRE = "\033[38;5;27m";
     static constexpr const char* PREMIUM_RUBY = "\033[38;5;196m";
+
+    // Solarized colors
+    static constexpr const char* BASE00 = "\033[38;5;244m";
+    static constexpr const char* BASE01 = "\033[38;5;240m";
+    static constexpr const char* BASE0 = "\033[38;5;250m";
+    static constexpr const char* BASE1 = "\033[38;5;251m";
+    static constexpr const char* BASE2 = "\033[48;5;0m";
+    static constexpr const char* BASE3 = "\033[48;5;8m";
+    static constexpr const char* SOLAR_VIOLET = "\033[38;5;61m";
+
+    // Nord colors
+    static constexpr const char* NORD_BLUE = "\033[38;5;109m";
+    static constexpr const char* NORD_CYAN = "\033[38;5;116m";
+    static constexpr const char* NORD_GREEN = "\033[38;5;114m";
+    static constexpr const char* NORD_YELLOW = "\033[38;5;223m";
+    static constexpr const char* NORD_ORANGE = "\033[38;5;209m";
+    static constexpr const char* NORD_RED = "\033[38;5;174m";
+    static constexpr const char* NORD_PURPLE = "\033[38;5;140m";
+    static constexpr const char* NORD_MAGENTA = "\033[38;5;176m";
+    static constexpr const char* NORD3 = "\033[38;5;240m";
+    static constexpr const char* NORD4 = "\033[38;5;250m";
+
+    // GitHub Dark colors
+    static constexpr const char* GH_BLUE = "\033[38;5;68m";
+    static constexpr const char* GH_CYAN = "\033[38;5;116m";
+    static constexpr const char* GH_GREEN = "\033[38;5;114m";
+    static constexpr const char* GH_YELLOW = "\033[38;5;185m";
+    static constexpr const char* GH_ORANGE = "\033[38;5;208m";
+    static constexpr const char* GH_RED = "\033[38;5;203m";
+    static constexpr const char* GH_PINK = "\033[38;5;211m";
+    static constexpr const char* GH_PURPLE = "\033[38;5;140m";
+    static constexpr const char* GH_GRAY = "\033[38;5;246m";
+    static constexpr const char* GH_FG = "\033[38;5;250m";
 
 }
 

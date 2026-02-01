@@ -11,6 +11,10 @@
 #include "completion_engine.h"
 #include "autosuggestion_manager.h"
 #include "phoenix_animator.h"
+#include "theme_system.h"
+#include "theme_commands.h"
+#include "theme_highlighter.h"
+#include "keyword_groups.h"
 #include "spell_checker.h"
 #include <string>
 #include <vector>
@@ -178,7 +182,11 @@ private:
     Database& db_;
     esql::TerminalInput terminal_;
     esql::HistoryManager history_;
-    esql::SyntaxHighlighter highlighter_;
+    //esql::SyntaxHighlighter highlighter_;
+    esql::ThemeSystem theme_system_;
+    esql::ThemeCommands theme_commands_;
+    esql::ThemeHighlighter theme_highlighter_;  
+    esql::KeywordGroups keyword_groups_;
     esql::UTF8Processor utf8_processor_;
     esql::CompletionEngine completion_engine_;
     esql::AutoSuggestionManager autosuggestion_manager_;

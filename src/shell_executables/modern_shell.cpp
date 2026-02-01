@@ -16,14 +16,21 @@
 #endif
 
 ModernShell::ModernShell(Database& db) 
-    : db_(db), current_db_("default"), completion_engine_(db), autosuggestion_manager_(history_), gradient_system_()  {
+    : db_(db), current_db_("default"), completion_engine_(db), autosuggestion_manager_(history_), theme_system_(),
+      theme_commands_(theme_system_), theme_highlighter_(theme_system_)   {
     
     // Initialize terminal
     terminal_.enable_raw_mode();
     terminal_.get_terminal_size(terminal_width_, terminal_height_);
     
-    highlighter_.enable_colors(use_colors_);
-    highlighter_.set_current_database(current_db_);
+    //highlighter_.enable_colors(use_colors_);
+    //highlighter_.set_current_database(current_db_);
+    theme_system_.set_current_theme("nord");
+
+    // Setup theme highlighter
+    theme_highlighter_.enable_colors(use_colors_);
+    theme_highlighter_.set_current_database(current_db_);
+
     completion_engine_.set_current_database(current_db_);
 
     // Initial prompt positions is below the banner
@@ -294,7 +301,7 @@ void ModernShell::update_screen() {
 
         // Display all previous multiline buffers
         for (size_t i = 0; i < multiline_buffer_.size(); ++i) {
-            std::string colored_line = highlighter_.highlight(multiline_buffer_[i]);
+            std::string colored_line = theme_highlighter_.highlight(multiline_buffer_[i]);
             std::cout << colored_line << "\n\033[K";
 
             // Print continuation prefix for the next buffer line
@@ -315,7 +322,7 @@ void ModernShell::update_screen() {
         }
 
         // Display current input with highlighting - no suggestions in multiline mode
-        std::string colored_input = highlighter_.highlight(current_input_);
+        std::string colored_input = theme_highlighter_.highlight(current_input_);
         std::cout << colored_input << "\033[K";
 
         // Clear any remaining characters from previous input
@@ -673,12 +680,12 @@ void ModernShell::clear_autosuggestion() {
 
 std::string ModernShell::render_with_spell_check(const std::string& input) {
     if (!use_colors_ || input.empty()) {
-        return highlighter_.highlight(input);
+        return theme_highlighter_.highlight(input);
     }
 
     auto misspellings = spell_checker_.check_spelling(input);
     if (misspellings.empty()) {
-        return highlighter_.highlight(input);
+        return theme_highlighter_.highlight(input);
     }
 
     // Build the result by processing the input character by character
@@ -694,7 +701,7 @@ std::string ModernShell::render_with_spell_check(const std::string& input) {
         // Highlight text before this misspelling
         if (current_pos < start) {
             std::string before_misspelling = input.substr(current_pos, start - current_pos);
-            result += highlighter_.highlight(before_misspelling);
+            result += theme_highlighter_.highlight(before_misspelling);
         }
 
         // Highlight the misspelled word in red
@@ -707,7 +714,7 @@ std::string ModernShell::render_with_spell_check(const std::string& input) {
     // Highlight any remaining text after the last misspelling
     if (current_pos < input.length()) {
         std::string remaining = input.substr(current_pos);
-        result += highlighter_.highlight(remaining);
+        result += theme_highlighter_.highlight(remaining);
     }
 
     return result;
@@ -970,7 +977,7 @@ void ModernShell::execute_command(const std::string& command) {
                     
                     if (!db_name.empty()) {
                         current_db_ = db_name;
-                        highlighter_.set_current_database(current_db_);
+                        theme_highlighter_.set_current_database(current_db_);
                         completion_engine_.set_current_database(current_db_); 
                     }
                 }
@@ -1385,6 +1392,25 @@ void ModernShell::clear_screen() {
     terminal_.clear_screen();
 }
 
+/*std::string ModernShell::build_prompt() {
+    std::string time_str = get_current_time();
+    std::string prompt;
+
+    if (use_colors_) {
+        std::string time_part = theme_system_.apply_ui_style("prompt_time",
+            "[" + time_str + "]");
+        std::string bullet = theme_system_.apply_ui_style("prompt_bullet", " • ");
+        std::string db_part = theme_system_.apply_ui_style("prompt_db",
+            current_db_ + ">");
+
+        prompt = time_part + bullet + db_part + " ";
+    } else {
+        prompt = "[" + time_str + "] • " + current_db_ + "> ";
+    }
+
+    return prompt;
+}*/
+
 std::string ModernShell::build_prompt() const {
     std::string time_str = get_current_time();
     std::string prompt;
@@ -1413,73 +1439,6 @@ std::string ModernShell::build_prompt() const {
     return prompt;
 }
 
-/*std::string ModernShell::build_prompt() const {
-    std::string time_str = get_current_time();
-    std::string prompt;
-
-    if (use_colors_) {
-        std::string full_prompt = "[" + time_str + "] • " + current_db_ + "> ";
-
-        // Use a sophisticated two-color gradient
-        std::vector<const char*> professional_colors = {
-            esql::colors::GRADIENT_BLUE_1,
-            esql::colors::GRADIENT_CYAN_1,
-            esql::colors::GRADIENT_PURPLE_1
-        };
-
-        prompt = gradient_system_.apply_gradient(
-            full_prompt,
-            GradientSystem::GradientType::BLUE_OCEAN,
-            true
-        );
-    } else {
-        prompt = "[" + time_str + "] • " + current_db_ + "> ";
-    }
-
-    return prompt;
-}*/
-
-/*std::string ModernShell::build_prompt() const {
-    std::string time_str = get_current_time();
-    std::string prompt;
-
-    if (use_colors_) {
-        // Apply gradient to time portion only
-        std::string gradient_time = gradient_system_.apply_gradient(
-            "[" + time_str + "]",
-            GradientSystem::GradientType::BLUE_OCEAN,
-            false
-        );
-
-        prompt = gradient_time + " " +
-                 std::string(esql::colors::GREEN) + "• " +
-                 esql::colors::RESET +
-                 std::string(esql::colors::GRAY) + current_db_ +
-                 esql::colors::RESET + "> ";
-    } else {
-        prompt = "[" + time_str + "] • " + current_db_ + "> ";
-    }
-
-    return prompt;
-}*/
-
-/*std::string ModernShell::build_prompt() const {
-    std::string time_str = get_current_time();
-    std::string prompt;
-    
-    if (use_colors_) {
-        prompt = std::string(esql::colors::YELLOW) + "[" + time_str + "] " + 
-                 esql::colors::RESET +
-                 std::string(esql::colors::GREEN) + "• " + 
-                 esql::colors::RESET +
-                 std::string(esql::colors::GRAY) + current_db_ + 
-                 esql::colors::RESET + "> ";
-    } else {
-        prompt = "[" + time_str + "] • " + current_db_ + "> ";
-    }
-    
-    return prompt;
-}*/
 
 std::string ModernShell::get_current_time() const {
     auto now = std::chrono::system_clock::now();
@@ -1556,7 +1515,7 @@ void ModernShell::show_help() {
 
 void ModernShell::set_current_database(const std::string& db_name) {
     current_db_ = db_name;
-    highlighter_.set_current_database(db_name);
+    theme_highlighter_.set_current_database(db_name);
     completion_engine_.set_current_database(db_name);
 }
 
