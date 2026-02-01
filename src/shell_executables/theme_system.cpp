@@ -40,55 +40,6 @@ void ThemeSystem::initialize_builtin_themes() {
     themes_["synthwave"] = create_synthwave_theme();
 }
 
-/*ThemeSystem::Theme ThemeSystem::create_default_theme() {
-    Theme theme;
-    
-    theme.info.name = "default";
-    theme.info.description = "Default ESQL theme - Clean and readable";
-    theme.info.author = "ESQL Team";
-    theme.info.version = "1.0";
-    theme.info.tags = {"light", "clean", "readable"};
-    theme.info.builtin = true;
-    
-    // Default keyword styles
-    KeywordStyle data_def_style;
-    data_def_style.color = "blue";
-    data_def_style.styles = {"bold"};
-    theme.keyword_styles["DATA_DEFINITION"] = data_def_style;
-    
-    KeywordStyle data_manip_style;
-    data_manip_style.color = "green";
-    data_manip_style.styles = {"bold"};
-    theme.keyword_styles["DATA_MANIPULATION"] = data_manip_style;
-    
-    KeywordStyle ai_style;
-    ai_style.color = "magenta";
-    ai_style.styles = {"bold"};
-    theme.keyword_styles["AI_CORE"] = ai_style;
-    
-    KeywordStyle function_style;
-    function_style.color = "cyan";
-    theme.keyword_styles["AGGREGATE_FUNCTIONS"] = function_style;
-    
-    KeywordStyle type_style;
-    type_style.color = "yellow";
-    theme.keyword_styles["DATA_TYPES"] = type_style;
-    
-    // UI Styles
-    theme.ui_styles.prompt_time = "gray";
-    theme.ui_styles.prompt_db = "blue";
-    theme.ui_styles.prompt_bullet = "green";
-    theme.ui_styles.banner_title = "blue";
-    theme.ui_styles.error = "red";
-    theme.ui_styles.success = "green";
-    theme.ui_styles.warning = "yellow";
-    theme.ui_styles.info = "cyan";
-    
-    // Initialize gradients
-    initialize_builtin_gradients(theme);
-    
-    return theme;
-}*/
 
 // Static version that can be called from const context
 static ThemeSystem::Theme create_default_theme_static() {
@@ -1116,6 +1067,9 @@ ThemeSystem::Theme ThemeSystem::create_nord_theme() {
     theme.ui_styles.warning = "nord_orange";
     theme.ui_styles.info = "nord_cyan";
     theme.ui_styles.highlight = "nord_yellow";
+    theme.ui_styles.table_header = "nord_blue";
+    theme.ui_styles.table_data = "nord_yellow";
+    theme.ui_styles.table_border = "nord_cyan";
 
     // Additional syntax styles
     theme.ui_styles.set_style("string_literal", "nord_green");
@@ -1799,228 +1753,7 @@ ThemeSystem::Theme ThemeSystem::create_default_theme() {
     return theme;
 }
 
-/*ThemeSystem::Theme ThemeSystem::create_veldora_theme() {
-    Theme theme = create_default_theme();
 
-    theme.info.name = "veldora";
-    theme.info.description = "Veldora - Majestic blue dragon theme with elegant gradients";
-    theme.info.author = "ESQL Team";
-    theme.info.version = "2.0";
-    theme.info.tags = {"dark", "blue", "gradient", "elegant", "dragon", "animated"};
-    theme.info.builtin = true;
-
-    // UI Styles with gradients
-    theme.ui_styles.prompt_time = "gradient:veldora_time";
-    theme.ui_styles.prompt_db = "gradient:veldora_db";
-    theme.ui_styles.prompt_bullet = "gradient:veldora_magic";
-    theme.ui_styles.banner_title = "gradient:veldora_primary";
-    theme.ui_styles.banner_subtitle = "gradient:veldora_secondary";
-    theme.ui_styles.banner_status = "gradient:veldora_status";
-    theme.ui_styles.table_border = "ocean_blue";
-    theme.ui_styles.table_header = "gradient:veldora_header";
-    theme.ui_styles.table_data = "light_blue";
-    theme.ui_styles.help_title = "gradient:veldora_primary";
-    theme.ui_styles.help_command = "gradient:veldora_magic";
-    theme.ui_styles.help_description = "sky_blue";
-    theme.ui_styles.error = "fire_red";
-    theme.ui_styles.success = "forest_green";
-    theme.ui_styles.warning = "sun_yellow";
-    theme.ui_styles.info = "gradient:veldora_info";
-    theme.ui_styles.highlight = "gradient:veldora_magic";
-    theme.ui_styles.suggestion = "dark_gray";
-    theme.ui_styles.cursor = "white";
-
-    // Additional syntax styles using set_style method
-    theme.ui_styles.set_style("string_literal", "mint");
-    theme.ui_styles.set_style("number_literal", "coral");
-    theme.ui_styles.set_style("comment", "dark_gray");
-    theme.ui_styles.set_style("operator", "ocean_blue");
-    theme.ui_styles.set_style("punctuation", "light_gray");
-    theme.ui_styles.set_style("identifier", "purple");
-    theme.ui_styles.set_style("parameter", "gold");
-    theme.ui_styles.set_style("bracket", "lavender");
-
-    // Keyword styles with gradients
-    theme.keyword_styles["DATA_DEFINITION"] = {"ocean_blue", "", {"bold"}, "purple_dawn", true};
-    theme.keyword_styles["DATA_MANIPULATION"] = {"sky_blue", "", {"bold"}, "blue_ocean", true};
-    theme.keyword_styles["SYSTEM_COMMANDS"] = {"ocean_blue", "", {"bold"}, "purple_dawn", true};
-    theme.keyword_styles["DATA_QUERY"] = {"light_blue", "", {"bold"}, "purple_dawn", true};
-    theme.keyword_styles["DATA_CONTROL"] = {"cyan", "", {"bold"}, "purple_dawn", true};
-    theme.keyword_styles["AI_CORE"] = {"bright_cyan", "", {"bold"}, "purple_dawn", true};
-    theme.keyword_styles["AI_MODELS"] = {"light_purple", "", {"italic"}, "", false};
-    theme.keyword_styles["AI_OPERATIONS"] = {"lavender", "", {}, "", false};
-    theme.keyword_styles["PLOT_TYPES"] = {"ice_blue", "", {}, "purple_dawn", true};
-    theme.keyword_styles["AGGREGATE_FUNCTIONS"] = {"teal", "", {"italic"}, "", false};
-    theme.keyword_styles["STRING_FUNCTIONS"] = {"mint", "", {"italic"}, "", false};
-    theme.keyword_styles["NUMERIC_FUNCTIONS"] = {"coral", "", {"italic"}, "", false};
-    theme.keyword_styles["WINDOW_FUNCTIONS"] = {"light_teal", "", {"italic"}, "veldora_info", true};
-    theme.keyword_styles["DATA_TYPES"] = {"light_blue", "", {}, "", false};
-    theme.keyword_styles["CONSTRAINTS"] = {"bright_blue", "", {}, "veldora_secondary", true};
-    theme.keyword_styles["OPERATORS"] = {"silver", "", {}, "", false};
-    theme.keyword_styles["LOGICAL_OPERATORS"] = {"lavender", "", {}, "", false};
-    theme.keyword_styles["CONDITIONAL"] = {"light_blue", "", {}, "", false};
-    theme.keyword_styles["NULL_HANDLING"] = {"gray", "", {}, "", false};
-    theme.keyword_styles["CLAUSES"] = {"sky_blue", "", {}, "", false};
-    theme.keyword_styles["MODIFIERS"] = {"light_blue", "", {}, "", false};
-    theme.keyword_styles["FILE_OPERATIONS"] = {"ocean_blue", "", {}, "veldora_primary", true};
-    theme.keyword_styles["UTILITY"] = {"dark_gray", "", {}, "", false};
-    theme.keyword_styles["GENERATORS"] = {"cyan", "", {"bold"}, "veldora_magic", true};
-
-    // Veldora gradients
-    Gradient veldora_primary;
-    veldora_primary.name = "veldora_primary";
-    veldora_primary.colors = {"midnight_blue", "dark_blue", "ocean_blue", "sky_blue"};
-    veldora_primary.smooth = true;
-    veldora_primary.intensity = 0.9;
-
-    Gradient purple_dawn;
-    purple_dawn.name = "purple_dawn";
-    purple_dawn.colors = {"gradient_purple_1","gradient_purple_2","gradient_purple_3","gradient_purple_4"};
-    purple_dawn.smooth = true;
-
-    Gradient blue_ocean;
-    blue_ocean.name = "blue_ocean";
-    blue_ocean.colors = {"gradient_blue_1", "gradient_blue_2", "gradient_blue_3", "gradient_blue_4"};
-    blue_ocean.smooth = true;
-
-    Gradient gradient_cyan;
-    gradient_cyan.name = "gradient_cyan";
-    gradient_cyan.colors = {"gradient_cyan_1", "gradient_cyan_2", "gradient_cyan_3", "gradient_cyan_4"};
-    gradient_cyan.smooth = true;
-
-    Gradient veldora_secondary;
-    veldora_secondary.name = "veldora_secondary";
-    veldora_secondary.colors = {"dark_purple", "purple", "lavender", "light_purple"};
-    veldora_secondary.smooth = true;
-    veldora_secondary.intensity = 0.85;
-
-    Gradient veldora_magic;
-    veldora_magic.name = "veldora_magic";
-    veldora_magic.colors = {"dark_cyan", "cyan", "bright_cyan", "white"};
-    veldora_magic.smooth = true;
-    veldora_magic.intensity = 1.0;
-
-    Gradient veldora_ice;
-    veldora_ice.name = "veldora_ice";
-    veldora_ice.colors = {"dark_blue", "blue", "light_blue", "white"};
-    veldora_ice.smooth = true;
-    veldora_ice.intensity = 0.8;
-
-    Gradient veldora_time;
-    veldora_time.name = "veldora_time";
-    veldora_time.colors = {"midnight_blue", "ocean_blue", "sky_blue"};
-    veldora_time.smooth = true;
-    veldora_time.intensity = 0.7;
-
-    Gradient veldora_db;
-    veldora_db.name = "veldora_db";
-    veldora_db.colors = {"sky_blue", "light_blue", "white"};
-    veldora_db.smooth = true;
-    veldora_db.intensity = 0.75;
-
-    Gradient veldora_status;
-    veldora_status.name = "veldora_status";
-    veldora_status.colors = {"dark_gray", "gray", "light_gray"};
-    veldora_status.smooth = true;
-    veldora_status.intensity = 0.6;
-
-    Gradient veldora_header;
-    veldora_header.name = "veldora_header";
-    veldora_header.colors = {"ocean_blue", "sky_blue", "light_blue"};
-    veldora_header.smooth = true;
-    veldora_header.intensity = 0.8;
-
-    Gradient veldora_info;
-    veldora_info.name = "veldora_info";
-    veldora_info.colors = {"dark_teal", "teal", "light_teal"};
-    veldora_info.smooth = true;
-    veldora_info.intensity = 0.75;
-
-    // Add all gradients to theme
-    theme.gradients["veldora_primary"] = veldora_primary;
-    theme.gradients["veldora_secondary"] = veldora_secondary;
-    theme.gradients["veldora_magic"] = veldora_magic;
-    theme.gradients["veldora_ice"] = veldora_ice;
-    theme.gradients["veldora_time"] = veldora_time;
-    theme.gradients["veldora_db"] = veldora_db;
-    theme.gradients["veldora_status"] = veldora_status;
-    theme.gradients["veldora_header"] = veldora_header;
-    theme.gradients["veldora_info"] = veldora_info;
-    theme.gradients["purple_dawn"] = purple_dawn;
-    theme.gradients["gradient_cyan"] = gradient_cyan;
-    theme.gradients["blue_ocean"] = blue_ocean;
-
-    return theme;
-}
-
-ThemeSystem::Theme ThemeSystem::create_synthwave_theme() {
-    Theme theme;
-    
-    theme.info.name = "synthwave";
-    theme.info.description = "Synthwave - Neon retro-futuristic theme";
-    theme.info.author = "ESQL Team";
-    theme.info.version = "1.0";
-    theme.info.tags = {"dark", "neon", "retro", "vibrant", "gradient"};
-    theme.info.builtin = true;
-    
-    // Synthwave keyword styles
-    KeywordStyle data_def_style;
-    data_def_style.color = "bright_magenta";
-    data_def_style.styles = {"bold"};
-    data_def_style.gradient = "synthwave_magenta";
-    data_def_style.use_gradient = true;
-    theme.keyword_styles["DATA_DEFINITION"] = data_def_style;
-    
-    KeywordStyle ai_style;
-    ai_style.color = "bright_cyan";
-    ai_style.styles = {"bold"};
-    ai_style.gradient = "synthwave_cyan";
-    ai_style.use_gradient = true;
-    theme.keyword_styles["AI_CORE"] = ai_style;
-    
-    KeywordStyle plot_style;
-    plot_style.color = "bright_yellow";
-    plot_style.gradient = "synthwave_sunset";
-    plot_style.use_gradient = true;
-    theme.keyword_styles["PLOT_TYPES"] = plot_style;
-    
-    // UI Styles with neon glow
-    theme.ui_styles.prompt_time = "synthwave_magenta"; // Gradient
-    theme.ui_styles.prompt_db = "bright_cyan";
-    theme.ui_styles.prompt_bullet = "bright_magenta";
-    theme.ui_styles.banner_title = "synthwave_magenta"; // Gradient with blink
-    theme.ui_styles.error = "bright_red";
-    theme.ui_styles.success = "bright_green";
-    theme.ui_styles.warning = "bright_yellow";
-    theme.ui_styles.info = "bright_cyan";
-    theme.ui_styles.highlight = "neon_pink";
-    
-    // Synthwave gradients
-    Gradient synthwave_magenta;
-    synthwave_magenta.name = "synthwave_magenta";
-    synthwave_magenta.colors = {"bright_magenta", "magenta", "pink", "light_pink"};
-    synthwave_magenta.smooth = true;
-    synthwave_magenta.intensity = 1.0;
-    theme.gradients["synthwave_magenta"] = synthwave_magenta;
-    
-    Gradient synthwave_cyan;
-    synthwave_cyan.name = "synthwave_cyan";
-    synthwave_cyan.colors = {"bright_cyan", "cyan", "teal", "dark_teal"};
-    synthwave_cyan.smooth = true;
-    synthwave_cyan.intensity = 1.0;
-    theme.gradients["synthwave_cyan"] = synthwave_cyan;
-    
-    Gradient synthwave_sunset;
-    synthwave_sunset.name = "synthwave_sunset";
-    synthwave_sunset.colors = {"bright_red", "orange", "bright_yellow", "yellow"};
-    synthwave_sunset.smooth = false;
-    synthwave_sunset.intensity = 1.0;
-    theme.gradients["synthwave_sunset"] = synthwave_sunset;
-    
-    return theme;
-}*/
-
-// Add missing UIStyles method implementations
 std::string ThemeSystem::UIStyles::get_style(const std::string& element) const {
     if (element == "prompt_time") return prompt_time;
     else if (element == "prompt_db") return prompt_db;
@@ -2259,15 +1992,6 @@ ThemeSystem::Gradient ThemeSystem::create_veldora_magic_gradient() {
     return gradient;
 }
 
-/*ThemeSystem::Gradient ThemeSystem::create_veldora_gradient() {
-    Gradient gradient;
-    gradient.name = "veldora_gradient";
-    gradient.colors = {"midnight_blue", "dark_blue", "ocean_blue", "sky_blue", "ice_blue"};
-    gradient.smooth = true;
-    gradient.intensity = 0.9;
-    return gradient;
-}*/
-
 ThemeSystem::Gradient ThemeSystem::create_synthwave_gradient() {
     Gradient gradient;
     gradient.name = "synthwave_gradient";
@@ -2291,55 +2015,6 @@ void ThemeSystem::initialize_builtin_gradients(Theme& theme) {
     theme.gradients["synthwave_primary"] = create_synthwave_gradient();
 }
 
-/*std::string ThemeSystem::Theme::apply_keyword(const std::string& keyword, const std::string& text) const {
-    std::string group = keyword;
-    
-    auto it = keyword_styles.find(group);
-    if (it == keyword_styles.end()) {
-        // Try alternative group names...
-    }
-    
-    const KeywordStyle& style = it->second;
-    
-    // If gradient is enabled, apply it using ModernShell style
-    if (style.use_gradient && !style.gradient.empty()) {
-        auto grad_it = gradients.find(style.gradient);
-        if (grad_it != gradients.end()) {
-            const Gradient& gradient = grad_it->second;
-            // Apply gradient using ModernShell style
-            std::string gradient_text = GradientUtils::apply_gradient(text, gradient.colors, gradient.smooth);
-            
-            // Apply text styles on top of gradient
-            std::string result = gradient_text;
-            for (const auto& style_name : style.styles) {
-                if (style_name == "bold") {
-                    result = colors::BOLD + result + colors::RESET_BOLD;
-                } else if (style_name == "italic") {
-                    result = colors::ITALIC + result + colors::RESET_ITALIC;
-                } else if (style_name == "underline") {
-                    result = colors::UNDERLINE + result + colors::RESET_UNDERLINE;
-                }
-            }
-            return result;
-        }
-    }
-    
-    // Apply regular color and styles
-    std::string result = ColorMapper::name_to_code(style.color) + text + colors::RESET_ALL;
-    
-    // Apply text styles
-    for (const auto& style_name : style.styles) {
-        if (style_name == "bold") {
-            result = colors::BOLD + result + colors::RESET_BOLD;
-        } else if (style_name == "italic") {
-            result = colors::ITALIC + result + colors::RESET_ITALIC;
-        } else if (style_name == "underline") {
-            result = colors::UNDERLINE + result + colors::RESET_UNDERLINE;
-        }
-    }
-    
-    return result;
-}*/
 
 std::string ThemeSystem::Theme::apply_keyword(const std::string& keyword, const std::string& text) const {
     std::string group = keyword;
@@ -2418,111 +2093,6 @@ std::string ThemeSystem::Theme::apply_keyword(const std::string& keyword, const 
     return result;
 }
 
-/*std::string ThemeSystem::Theme::apply_keyword(const std::string& keyword, const std::string& text) const {
-    //std::cout << "[THEME SYSTEM] Entered apply_keyword()." << std::endl;
-    //std::string upper_keyword = keyword;
-    //std::transform(upper_keyword.begin(), upper_keyword.end(), upper_keyword.begin(), ::toupper);
-    //std::string group = KeywordGroups::get_group_name(upper_keyword);
-    std::string group = keyword; 
-    //std::cout << "[THEME SYSTEM] Group found: " << group << std::endl;
-    //std::cout << "[THEME SYSTEM] Looking for style for group: " << group << std::endl;
-
-    if (!group.empty()) {
-	    //std::cout << "[THEME SYSTEM] Found group name and now applying it." << std::endl; 
-    }
-
-    auto it = keyword_styles.find(group);
-    if (it == keyword_styles.end()) {
-	//std::cout << "[THEME SYSTEM] No direct style for group: " << group << std::endl;
-        // Try alternative group names
-        for (const auto& [gname, gstyle] : keyword_styles) {
-            std::string upper_gname = gname;
-            std::transform(upper_gname.begin(), upper_gname.end(), upper_gname.begin(), ::toupper);
-            if (upper_gname == group ||
-                upper_gname.find(group) != std::string::npos ||
-                group.find(upper_gname) != std::string::npos) {
-                it = keyword_styles.find(gname);
-                break;
-            }
-        }
-        
-        if (it == keyword_styles.end()) {
-            return text; // No style defined for this group
-        }
-    }
-
-    if (it != keyword_styles.end()) {
-        const KeywordStyle& style = it->second;
-        //std::cout << "[THEME SYSTEM] Style found. Color: " << style.color
-                  //<< ", Use gradient: " << style.use_gradient
-                  //<< ", Gradient name: " << style.gradient << std::endl;
-
-        // Test color mapper
-        std::string color_code = ColorMapper::name_to_code(style.color);
-        //std::cout << "[THEME SYSTEM] Color code for '" << style.color << "': "
-                  //<< (color_code.empty() ? "EMPTY" : "FOUND") << std::endl;
-
-        if (color_code.empty()) {
-            //std::cout << "[THEME SYSTEM] WARNING: Color code is empty!" << std::endl;
-        }
-    }
-
-    const KeywordStyle& style = it->second;
-    
-    // If gradient is enabled, apply it
-    if (style.use_gradient && !style.gradient.empty()) {
-        auto grad_it = gradients.find(style.gradient);
-        if (grad_it != gradients.end()) {
-            const Gradient& gradient = grad_it->second;
-            std::vector<std::string> ansi_colors;
-            for (const auto& color_name : gradient.colors) {
-                ansi_colors.push_back(ColorMapper::name_to_code(color_name));
-            }
-            
-            if (!ansi_colors.empty()) {
-                std::string result;
-                size_t color_count = ansi_colors.size();
-                
-                if (gradient.smooth) {
-                    for (size_t i = 0; i < text.length(); ++i) {
-                        double ratio = static_cast<double>(i) / std::max(1.0, static_cast<double>(text.length() - 1));
-                        size_t color_index = static_cast<size_t>(ratio * (color_count - 1));
-                        result += ansi_colors[color_index] + std::string(1, text[i]);
-                    }
-                } else {
-                    size_t segment_length = std::max(size_t(1), text.length() / color_count);
-                    for (size_t i = 0; i < text.length(); ++i) {
-                        size_t color_index = (i / segment_length) % color_count;
-                        result += ansi_colors[color_index] + std::string(1, text[i]);
-                    }
-                }
-                
-                result += colors::RESET_ALL;
-                return result;
-            }
-        }
-    }
-    
-    // Apply regular color and styles
-    std::string result = ColorMapper::name_to_code(style.color) + text + colors::RESET_ALL;
-    
-    // Apply text styles
-    for (const auto& style_name : style.styles) {
-        if (style_name == "bold") {
-            result = colors::BOLD + result + colors::RESET_BOLD;
-        } else if (style_name == "italic") {
-            result = colors::ITALIC + result + colors::RESET_ITALIC;
-        } else if (style_name == "underline") {
-            result = colors::UNDERLINE + result + colors::RESET_UNDERLINE;
-        }
-    }
-
-    //std::cout << "[ThemeSystem] Applied color to keyword and now goung out of function." << std::endl;
-    
-    return result;
-}*/
-
-
 void ThemeSystem::ensure_themes_directory() const {
     // Implement directory creation logic
     // For now, just a stub
@@ -2589,39 +2159,6 @@ bool ThemeSystem::Theme::save(const std::string& file_path) const {
     return true;
 }
 
-/*std::string ThemeSystem::KeywordStyle::apply(const std::string& text) const {
-    std::string result;
-    
-    // Apply gradient if specified
-    if (use_gradient && !gradient.empty()) {
-        // This would need access to theme gradients
-        // For now, just use color
-        result = ColorMapper::name_to_code(color) + text + colors::RESET_ALL;
-    } else {
-        result = ColorMapper::name_to_code(color) + text + colors::RESET_ALL;
-    }
-    
-    // Apply styles
-    for (const auto& style_name : styles) {
-        if (style_name == "bold") {
-            result = colors::BOLD + result + colors::RESET_BOLD;
-        } else if (style_name == "italic") {
-            result = colors::ITALIC + result + colors::RESET_ITALIC;
-        } else if (style_name == "underline") {
-            result = colors::UNDERLINE + result + colors::RESET_UNDERLINE;
-        } else if (style_name == "blink") {
-            result = colors::BLINK + result + colors::RESET_BLINK;
-        }
-    }
-    
-    // Apply background if specified
-    if (!background.empty()) {
-        std::string bg_code = ColorMapper::name_to_code(background);
-        result = bg_code + result + colors::RESET_BG;
-    }
-    
-    return result;
-}*/
 
 std::string ThemeSystem::KeywordStyle::apply(const std::string& text) const {
     std::string result;
@@ -2647,30 +2184,6 @@ std::string ThemeSystem::KeywordStyle::apply(const std::string& text) const {
     return result;
 }
 
-/*std::string ThemeSystem::KeywordStyle::apply(const std::string& element, const std::string& text,
-                                        const std::unordered_map<std::string, Gradient>& gradients) const {
-    std::string style_value = get_style(element);
-    
-    if (style_value.empty()) {
-        return text;
-    }
-    
-    // Check if it's a gradient reference
-    if (is_gradient_reference(style_value)) {
-        std::string gradient_name = get_gradient_name(style_value);
-        auto it = gradients.find(gradient_name);
-        if (it != gradients.end()) {
-            // Apply the gradient
-            return apply_gradient_to_text(text, it->second);
-        }
-        // Fallback to regular color if gradient not found
-        style_value = "blue"; // Default fallback
-    }
-
-    // Regular color application
-    std::string color_code = ColorMapper::name_to_code(style_value);
-    return color_code + text + colors::RESET_ALL;
-}*/
 
 bool ThemeSystem::load_theme(const std::string& theme_name) {
     auto it = themes_.find(theme_name);
@@ -2724,45 +2237,6 @@ std::vector<ThemeSystem::ThemeInfo> ThemeSystem::list_themes() const {
     return theme_list;
 }
 
-/*ThemeSystem::Theme ThemeSystem::create_monokai_theme() {
-    Theme theme = create_default_theme();
-    theme.info.name = "monokai";
-    theme.info.description = "Monokai theme - Popular dark theme";
-    theme.info.tags = {"dark", "popular", "vibrant"};
-    return theme;
-}
-
-ThemeSystem::Theme ThemeSystem::create_dracula_theme() {
-    Theme theme = create_default_theme();
-    theme.info.name = "dracula";
-    theme.info.description = "Dracula theme - Elegant dark theme";
-    theme.info.tags = {"dark", "elegant", "purple"};
-    return theme;
-}
-
-ThemeSystem::Theme ThemeSystem::create_solarized_dark_theme() {
-    Theme theme = create_default_theme();
-    theme.info.name = "solarized_dark";
-    theme.info.description = "Solarized Dark theme - Low contrast, easy on eyes";
-    theme.info.tags = {"dark", "low-contrast", "professional"};
-    return theme;
-}
-
-ThemeSystem::Theme ThemeSystem::create_nord_theme() {
-    Theme theme = create_default_theme();
-    theme.info.name = "nord";
-    theme.info.description = "Nord theme - Arctic, north-bluish theme";
-    theme.info.tags = {"light", "arctic", "blue", "clean"};
-    return theme;
-}
-
-ThemeSystem::Theme ThemeSystem::create_github_dark_theme() {
-    Theme theme = create_default_theme();
-    theme.info.name = "github_dark";
-    theme.info.description = "GitHub Dark theme - GitHub's dark theme";
-    theme.info.tags = {"dark", "github", "modern"};
-    return theme;
-}*/
 
 } // namespace esql
 

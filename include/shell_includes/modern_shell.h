@@ -152,7 +152,7 @@ private:
     
     // UI components
     void print_banner();
-    std::string build_prompt() const;
+    std::string build_prompt();
     void print_prompt();
     void show_help();
     void clear_screen();

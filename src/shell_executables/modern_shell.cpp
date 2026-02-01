@@ -25,7 +25,7 @@ ModernShell::ModernShell(Database& db)
     
     //highlighter_.enable_colors(use_colors_);
     //highlighter_.set_current_database(current_db_);
-    theme_system_.set_current_theme("monkai");
+    theme_system_.set_current_theme("nord");
 
     // Setup theme highlighter
     theme_highlighter_.enable_colors(use_colors_);
@@ -1180,7 +1180,7 @@ void ModernShell::print_banner() {
         // Draw ESQL logo with gradient (6 lines starting from row 14)
         for (int i = 0; i < esql_height; ++i) {
             std::cout << "\033[" << (esql_start_row + i) << ";1H";
-            std::cout << esql::colors::GRAY << esql_logo[i] << esql::colors::RESET; // Use gradient version
+            std::cout << theme_system_.apply_ui_style("banner_title", esql_logo[i]);
         }
 
         // Header box with gradient
@@ -1271,118 +1271,6 @@ void ModernShell::print_banner() {
     }
 }
 
-/*void ModernShell::print_banner() {
-    terminal_.clear_screen();
-
-    if (use_colors_) {
-        // Position cursor at top
-        std::cout << "\033[1;1H";
-
-        // Create Phoenix animator
-        PhoenixAnimator phoenix_animator(terminal_width_);
-
-        // ESQL logo (6 lines)
-        std::vector<std::string> esql_logo = {
-            "   ███████╗███████╗ ██████╗ ██╗   ",
-            "   ██╔════╝██╔════╝██╔═══██╗██║   ",
-            "   █████╗  ███████╗██║   ██║██║   ",
-            "   ██╔══╝  ╚════██║██║   ██║██║   ",
-            "   ███████╗███████║╚██████╔╝███████╗",
-            "   ╚══════╝╚══════╝ ╚═════╝ ╚══════╝"
-        };
-
-        int esql_height = esql_logo.size();
-        int phoenix_height = phoenix_animator.get_current_frame().size();
-
-        // Calculate positioning - align bases with 0 free space
-        int phoenix_start_row = 1; // Phoenix starts at row 1
-        int esql_start_row = 1 + (phoenix_height - esql_height); // ESQL starts at row 14 (1 + 13)
-
-        int phoenix_start_col = terminal_width_ - 45;
-        if (phoenix_start_col < 40) phoenix_start_col = 40;
-
-        // Draw Phoenix art (19 lines starting from row 1)
-        for (int i = 0; i < phoenix_height; ++i) {
-            std::cout << "\033[" << (phoenix_start_row + i) << ";" << phoenix_start_col << "H";
-            std::string colored_line = phoenix_animator.apply_gradient(
-                phoenix_animator.get_current_frame()[i], i * 2);
-            std::cout << colored_line;
-        }
-
-        // Draw ESQL logo (6 lines starting from row 14)
-        for (int i = 0; i < esql_height; ++i) {
-            std::cout << "\033[" << (esql_start_row + i) << ";1H";
-            std::cout << esql::colors::GRAY << esql_logo[i] << esql::colors::RESET;
-        }
-
-        // Header box starts below the combined art (row 20)
-        int header_start_line = phoenix_start_row + phoenix_height + 1; // 1 + 19 + 1 = 21
-        std::cout << "\033[" << header_start_line << ";1H";
-
-        std::cout << esql::colors::CYAN << "╔═══════════════════════════════════════╗\n";
-        std::cout << "║    " << esql::colors::MAGENTA << "E N H A N C E D   ES Q L   S H E L L"
-                  << esql::colors::CYAN << "  ║\n";
-        std::cout << "║        " << esql::colors::YELLOW << "H4CK3R  STYL3  V3RSI0N"
-                  << esql::colors::CYAN << "         ║\n";
-        std::cout << "╚═══════════════════════════════════════╝\n" << esql::colors::RESET;
-
-        // Status messages (4 lines starting from row 25)
-        int status_start_line = header_start_line + 4; // 21 + 4 = 25
-        std::cout << "\033[" << status_start_line << ";1H";
-
-        std::cout << esql::colors::RED << "[*] "<< esql::colors::CYAN
-                  << "Type 'help' for commands, 'exit' to quit\n";
-        std::cout << esql::colors::RED << "[*] " << esql::colors::CYAN
-                  << "Initializing ESQL Database Matrix...\n";
-        std::cout << esql::colors::RED << "[*] " << esql::colors::MAGENTA
-                  << "Quantum ESQL Processor: ONLINE\n";
-        std::cout << esql::colors::RED << "[*] " << esql::colors::GRAY
-                  << "Syntax Highlighting: ACTIVATED" << esql::colors::RESET;
-        std::cout.flush();
-
-        // STEP 1: Phoenix fire effect comes to life for 3 seconds after "Syntax Highlighting"
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Small pause
-        std::thread phoenix_thread([&phoenix_animator, phoenix_start_row, phoenix_start_col]() {
-            phoenix_animator.animate_fire_effect(3000); // 3 seconds of fire
-        });
-        phoenix_thread.join(); // Wait for Phoenix animation to complete
-
-        // STEP 2: First line animation
-        int anim1_line = status_start_line + 4; // 25 + 2 = 27 (right below status messages)
-        std::cout << "\033[" << anim1_line << ";1H";
-        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
-        std::cout.flush();
-
-        ConsoleAnimator animator1(terminal_width_);
-        animator1.animateText("Forged from the fires of performance for the warriors of the digital age", 4000);
-
-        // STEP 3: Second line animation
-        int anim2_line = anim1_line + 1; // 27 + 1 = 28
-        std::cout << "\033[" << anim2_line << ";1H";
-        std::cout << esql::colors::MAGENTA << "[+] " << esql::colors::RESET;
-        std::cout.flush();
-
-        WaveAnimator animator2(terminal_width_);
-        animator2.waveAnimation("accessing the esql framework console", 2);
-
-        // STEP 4: Final connection line
-        int conn_line = anim2_line + 1; // 28 + 1 = 29
-        std::cout << "\033[" << conn_line << ";1H";
-        std::cout << esql::colors::MAGENTA << "[+] "<< esql::colors::CYAN
-                  << "Connected to: " << (use_colors_ ? esql::colors::GRAY : "")
-                  << current_db_ << esql::colors::GREEN << "•"
-                  << (use_colors_ ? esql::colors::RESET : "") << "\n\n";
-
-        // Set prompt position below everything (row 31)
-        //prompt_row_ = conn_line + 2; // 29 + 2 = 31
-        //prompt_col_ = 1;
-
-    } else {
-        // Fallback for no colors
-        std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
-        std::cout << "Connected to: " << current_db_ << "\n\n";
-    }
-}*/
 
 void ModernShell::print_prompt() {
     std::cout << build_prompt();
@@ -1392,11 +1280,12 @@ void ModernShell::clear_screen() {
     terminal_.clear_screen();
 }
 
-/*std::string ModernShell::build_prompt() {
+std::string ModernShell::build_prompt() {
     std::string time_str = get_current_time();
     std::string prompt;
 
     if (use_colors_) {
+        // Use theme system for prompt
         std::string time_part = theme_system_.apply_ui_style("prompt_time",
             "[" + time_str + "]");
         std::string bullet = theme_system_.apply_ui_style("prompt_bullet", " • ");
@@ -1409,9 +1298,9 @@ void ModernShell::clear_screen() {
     }
 
     return prompt;
-}*/
+}
 
-std::string ModernShell::build_prompt() const {
+/*std::string ModernShell::build_prompt() const {
     std::string time_str = get_current_time();
     std::string prompt;
 
@@ -1437,7 +1326,7 @@ std::string ModernShell::build_prompt() const {
     }
 
     return prompt;
-}
+}*/
 
 
 std::string ModernShell::get_current_time() const {
@@ -1519,9 +1408,9 @@ void ModernShell::set_current_database(const std::string& db_name) {
     completion_engine_.set_current_database(db_name);
 }
 
-void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
+/*void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
     if (result.columns.empty()) {
-        std::cout << (use_colors_ ? esql::colors::GREEN : "") << "Query executed successfully.\n" << (use_colors_ ? esql::colors::RESET : "");
+        std::cout << theme_system_.apply_ui_style("success", "Query executed successfully.\n");
         return;
     }
     if (result.columns.size() == 2 && (result.columns[0] == "Property" || result.columns[0] == "Database Structure")) {
@@ -1607,7 +1496,262 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
     std::cout << "+\n" << (use_colors_ ? esql::colors::RESET : "");
 
     std::cout << (use_colors_ ? esql::colors::GRAY : "") << "> " << result.rows.size() << " row" << (result.rows.size() != 1 ? "s" : "") << " in " << std::fixed << std::setprecision(4) << duration << "s" << (use_colors_ ? esql::colors::RESET : "") << "\n";
+}*/
+
+void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
+    if (result.columns.empty()) {
+        std::cout << theme_system_.apply_ui_style("success", "Query executed successfully.\n");
+        return;
+    }
+    if (result.columns.size() == 2 && (result.columns[0] == "Property" || result.columns[0] == "Database Structure")) {
+        print_structure_results(result, duration);
+        return;
+    }
+
+    // Calculate column widths
+    std::vector<size_t> widths(result.columns.size());
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        widths[i] = result.columns[i].length() + 2;
+        for (const auto& row : result.rows) {
+            if (i < row.size() && row[i].length() + 2 > widths[i]) {
+                widths[i] = row[i].length() + 2;
+            }
+        }
+        if (widths[i] > 50) widths[i] = 50;
+    }
+
+    // Draw top border with theme color
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1) 
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw headers with theme - FIXED VERSION
+    std::cout << theme_system_.apply_ui_style("table_border", "|");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        // Create formatted header string with proper width
+        std::ostringstream header_oss;
+        header_oss << std::left << std::setw(widths[i]) << result.columns[i];
+        std::string formatted_header = header_oss.str();
+        
+        // Apply theme to the formatted string
+        std::cout << theme_system_.apply_ui_style("table_header", formatted_header);
+        std::cout << theme_system_.apply_ui_style("table_border", "|");
+    }
+    std::cout << "\n";
+
+    // Draw separator
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1) 
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw rows with theme - FIXED VERSION
+    for (const auto& row : result.rows) {
+        std::cout << theme_system_.apply_ui_style("table_border", "|");
+        for (size_t i = 0; i < row.size(); ++i) {
+            std::string display_value = row[i];
+            if (display_value.length() > widths[i] - 2) {
+                display_value = display_value.substr(0, widths[i] - 5) + "...";
+            }
+            
+            // Create formatted data string with proper width
+            std::ostringstream data_oss;
+            data_oss << std::left << std::setw(widths[i]) << display_value;
+            std::string formatted_data = data_oss.str();
+            
+            // Apply theme to the formatted string
+            std::cout << theme_system_.apply_ui_style("table_data", formatted_data);
+            std::cout << theme_system_.apply_ui_style("table_border", "|");
+        }
+        std::cout << "\n";
+    }
+
+    // Draw bottom border
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1) 
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw summary with theme
+    std::string summary = "> " + std::to_string(result.rows.size()) + 
+                         " row" + (result.rows.size() != 1 ? "s" : "") + 
+                         " in " + std::to_string(duration) + "s";
+    std::cout << theme_system_.apply_ui_style("info", summary) << "\n";
 }
+
+/*void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
+    if (result.columns.empty()) {
+        std::cout << theme_system_.apply_ui_style("success", "Query executed successfully.\n");
+        return;
+    }
+    if (result.columns.size() == 2 && (result.columns[0] == "Property" || result.columns[0] == "Database Structure")) {
+        print_structure_results(result, duration);
+        return;
+    }
+
+    // Calculate column widths
+    std::vector<size_t> widths(result.columns.size());
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        widths[i] = result.columns[i].length() + 2;
+        for (const auto& row : result.rows) {
+            if (i < row.size() && row[i].length() + 2 > widths[i]) {
+                widths[i] = row[i].length() + 2;
+            }
+        }
+        if (widths[i] > 50) widths[i] = 50;
+    }
+
+    // Draw top border with theme color
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1)
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw headers with theme
+    std::cout << theme_system_.apply_ui_style("table_border", "|");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        // Apply theme color, then use stream formatting
+        std::cout << theme_system_.apply_ui_style("table_header", "");
+        std::cout << std::left << std::setw(widths[i]) << result.columns[i];
+        std::cout << theme_system_.apply_ui_style("table_border", "|");
+    }
+    std::cout << "\n";
+
+    // Draw separator
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1)
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw rows with theme
+    for (const auto& row : result.rows) {
+        std::cout << theme_system_.apply_ui_style("table_border", "|");
+        for (size_t i = 0; i < row.size(); ++i) {
+            std::string display_value = row[i];
+            if (display_value.length() > widths[i] - 2) {
+                display_value = display_value.substr(0, widths[i] - 5) + "...";
+            }
+            // Apply theme color, then use stream formatting
+            std::cout << theme_system_.apply_ui_style("table_data", "");
+            std::cout << std::left << std::setw(widths[i]) << display_value;
+            std::cout << theme_system_.apply_ui_style("table_border", "|");
+        }
+        std::cout << "\n";
+    }
+
+    // Draw bottom border
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1)
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw summary with theme
+    std::string summary = "> " + std::to_string(result.rows.size()) +
+                         " row" + (result.rows.size() != 1 ? "s" : "") +
+                         " in " + std::to_string(duration) + "s";
+    std::cout << theme_system_.apply_ui_style("info", summary) << "\n";
+}*/
+
+/*void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double duration) {
+    if (result.columns.empty()) {
+        std::cout << theme_system_.apply_ui_style("success", "Query executed successfully.\n");
+        return;
+    }
+    if (result.columns.size() == 2 && (result.columns[0] == "Property" || result.columns[0] == "Database Structure")) {
+        print_structure_results(result, duration);
+        return;
+    }
+
+    // Calculate column widths
+    std::vector<size_t> widths(result.columns.size());
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        widths[i] = result.columns[i].length() + 2;
+        for (const auto& row : result.rows) {
+            if (i < row.size() && row[i].length() + 2 > widths[i]) {
+                widths[i] = row[i].length() + 2;
+            }
+        }
+        if (widths[i] > 50) widths[i] = 50;
+    }
+
+    // Draw top border with theme color
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1)
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw headers with theme
+    std::cout << theme_system_.apply_ui_style("table_border", "|");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        // Apply theme color, then use stream formatting
+        std::cout << theme_system_.apply_ui_style("table_header", "");
+        std::cout << std::left << std::setw(widths[i]) << result.columns[i];
+        std::cout << theme_system_.apply_ui_style("table_border", "|");
+    }
+    std::cout << "\n";
+
+    // Draw separator
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1)
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw rows with theme
+    for (const auto& row : result.rows) {
+        std::cout << theme_system_.apply_ui_style("table_border", "|");
+        for (size_t i = 0; i < row.size(); ++i) {
+            std::string display_value = row[i];
+            if (display_value.length() > widths[i] - 2) {
+                display_value = display_value.substr(0, widths[i] - 5) + "...";
+            }
+            // Apply theme color, then use stream formatting
+            std::cout << theme_system_.apply_ui_style("table_data", "");
+            std::cout << std::left << std::setw(widths[i]) << display_value;
+            std::cout << theme_system_.apply_ui_style("table_border", "|");
+        }
+        std::cout << "\n";
+    }
+
+    // Draw bottom border
+    std::cout << theme_system_.apply_ui_style("table_border", "+");
+    for (size_t i = 0; i < result.columns.size(); ++i) {
+        std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
+        if (i < result.columns.size() - 1)
+            std::cout << theme_system_.apply_ui_style("table_border", "+");
+    }
+    std::cout << theme_system_.apply_ui_style("table_border", "+\n");
+
+    // Draw summary with theme
+    std::string summary = "> " + std::to_string(result.rows.size()) +
+                         " row" + (result.rows.size() != 1 ? "s" : "") +
+                         " in " + std::to_string(duration) + "s";
+    std::cout << theme_system_.apply_ui_style("info", summary) << "\n";
+}*/
 
 // helper methods for smart column sizing
 size_t ModernShell::calculate_reasonable_content_width(const std::string& value) {
