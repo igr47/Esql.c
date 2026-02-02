@@ -661,6 +661,94 @@ DataExtractor::TrainingData DataExtractor::extract_training_data(const std::stri
 
 
 
+std::map<std::string, DataExtractor::ColumnStats> DataExtractor::analyze_columns(
+    const std::string& database,
+    const std::string& table,
+    const std::vector<std::string>& columns) {
+    
+    std::map<std::string, ColumnStats> stats;
+    
+    // Extract data first
+    auto rows = extract_table_data(database, table, columns, "", 0, 0);
+    
+    if (rows.empty()) {
+        return stats;
+    }
+    
+    // Initialize statistics for each column
+    for (const auto& col_name : columns) {
+        ColumnStats col_stats;
+        col_stats.total_count = rows.size();
+        stats[col_name] = col_stats;
+    }
+
+        // Calculate statistics
+    for (const auto& row : rows) {
+        for (const auto& [col_name, datum] : row) {
+            auto& col_stats = stats[col_name];
+
+            if (datum.is_null()) {
+                col_stats.null_count++;
+                continue;
+            }
+
+            try {
+                float value = 0.0f;
+                if (datum.is_integer()) {
+                    value = static_cast<float>(datum.as_int());
+                } else if (datum.is_float()) {
+                    value = datum.as_float();
+                } else if (datum.is_double()) {
+                    value = static_cast<float>(datum.as_double());
+                } else if (datum.is_boolean()) {
+                    value = datum.as_bool() ? 1.0f : 0.0f;
+		} else if (datum.is_string()) {
+                    // For strings, use length as numeric value for statistics
+                    value = static_cast<float>(datum.as_string().length());
+                }
+
+                col_stats.values.push_back(value);
+                col_stats.sum += value;
+
+                if (value < col_stats.min_value) col_stats.min_value = value;
+                if (value > col_stats.max_value) col_stats.max_value = value;
+
+            } catch (...) {
+                // Skip this value
+                col_stats.null_count++;
+            }
+        }
+    }
+
+    // Calculate final statistics
+    for (auto& [col_name, col_stats] : stats) {
+        if (!col_stats.values.empty()) {
+            col_stats.mean_value = col_stats.sum / col_stats.values.size();
+
+            // Calculate variance
+            float variance = 0.0f;
+            for (float val : col_stats.values) {
+                float diff = val - col_stats.mean_value;
+                variance += diff * diff;
+            }
+            variance /= col_stats.values.size();
+            col_stats.std_value = std::sqrt(variance);
+
+            // Sort for percentile calculations
+            std::sort(col_stats.values.begin(), col_stats.values.end());
+            size_t q1_idx = col_stats.values.size() * 0.25;
+            size_t q3_idx = col_stats.values.size() * 0.75;
+            size_t median_idx = col_stats.values.size() * 0.5;
+
+            if (q1_idx < col_stats.values.size()) col_stats.q1_value = col_stats.values[q1_idx];
+            if (q3_idx < col_stats.values.size()) col_stats.q3_value = col_stats.values[q3_idx];
+	    if (median_idx < col_stats.values.size()) col_stats.median_value = col_stats.values[median_idx];
+        }
+    }
+
+    return stats;
+}
+
 float DataExtractor::encode_string_feature(const std::string& column_name, const std::string& value) {
         std::lock_guard<std::mutex> lock(encoding_mutex_);
 

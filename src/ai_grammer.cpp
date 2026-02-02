@@ -507,6 +507,37 @@ namespace AST {
 	 return result;
     }
 
+    std::string DetectAnomalyStatement::toEsql() const {
+        std::stringstream ss;
+        ss << "DETECT ANOMALY USING ";
+        if (!model_name.empty()) {
+            ss << "MODEL " << model_name;
+        } else {
+            ss << algorithm;
+        }
+        ss << " ON " << input_table;
+        if (!parameters.empty()) {
+            ss << " WITH (";
+            bool first = true;
+            for (const auto& [key, value] : parameters) {
+                if (!first) ss << ", ";
+                ss << key << " = " << value;
+                first = false;
+            }
+            ss << ")";
+        }
+        if (!where_clause.empty()) {
+            ss << " WHERE " << where_clause;
+        }
+        if (!output_table.empty()) {
+            ss << " INTO " << output_table;
+	}
+        if (generate_alerts) {
+            ss << " WITH ALERTS";
+        }
+        return ss.str();
+    }
+
     std::string MultiPredictStatement::toEsql() const {
 	 std::string result = " MULTI PREDICTING USING " + model_name;
 

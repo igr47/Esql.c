@@ -166,6 +166,21 @@ namespace AST {
         std::string toEsql() const override;
     };
 
+    class DetectAnomalyStatement : public AIStatement {
+    public:
+	std::string model_name;
+	std::string algorithm = "isolation_forest";
+	std::string input_table;
+	std::string output_table;
+	std::unordered_map<std::string, std::string> parameters;
+	std::string where_clause;
+	bool generate_alerts = false;
+	float contamination = 0.1f;
+	std::string threshold_method = "auto";
+
+	std::string toEsql() const override;
+    };
+
     class MultiPredictStatement : public AIStatement {
     public:
         std::string model_name;

@@ -147,6 +147,7 @@ public:
     ExecutionEngine::ResultSet executeCreatePipeline(AST::CreatePipelineStatement& stmt);
     ExecutionEngine::ResultSet executeBatchAI(AST::BatchAIStatement& stmt);
     ExecutionEngine::ResultSet executeForecast(AST::ForecastStatement& stmt);
+    ExecutionEngine::ResultSet executeDetectAnomaly(AST::DetectAnomalyStatement& stmt);
 
     // SQL-integrated AI functions
     ExecutionEngine::ResultSet executeSelectWithAIFunctions(AST::SelectStatement& stmt);

@@ -69,14 +69,33 @@ public:
         double max_value;
         double mean_value;
         double std_value;
+	double q1_value;    
+        double median_value;
+        double q3_value;
         bool is_categorical;
         std::vector<std::string> categories;
+	std::vector<double> values;  
+	double sum;    
+
+	ColumnStats() :
+		total_count(0),
+                null_count(0),
+                distinct_count(0),
+                min_value(std::numeric_limits<double>::max()),
+                max_value(std::numeric_limits<double>::lowest()),
+                mean_value(0.0),
+                std_value(0.0),
+                q1_value(0.0),
+                median_value(0.0),
+                q3_value(0.0),
+                is_categorical(false),
+                sum(0.0) {}
 
         std::string to_string() const;
     };
 
-    std::unordered_map<std::string, ColumnStats>
-    analyze_columns(const std::string& db_name,const std::string& table_name,const std::vector<std::string>& columns);
+    std::map<std::string, ColumnStats>
+    analyze_columns(const std::string& database,const std::string& table,const std::vector<std::string>& columns);
 
     // Data validation
     struct ValidationResult {

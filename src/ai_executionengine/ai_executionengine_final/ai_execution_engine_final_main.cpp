@@ -78,6 +78,8 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
             return executeCreateModel(*create_model);
 	} else if (auto* execute_forecast = dynamic_cast<AST::ForecastStatement*>(stmt.get())) {
             return executeForecast(*execute_forecast);
+	} else if (auto detect_anomaly = dynamic_cast<AST::DetectAnomalyStatement*>(stmt.get())) {
+		return executeDetectAnomaly(*detect_anomaly);
         } else if (auto create_or_replace = dynamic_cast<AST::CreateOrReplaceModelStatement*>(stmt.get())) {
             return executeCreateOrReplaceModel(*create_or_replace);
         } else if (auto describe_model = dynamic_cast<AST::DescribeModelStatement*>(stmt.get())) {
