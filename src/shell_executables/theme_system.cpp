@@ -1057,11 +1057,16 @@ ThemeSystem::Theme ThemeSystem::create_nord_theme() {
     theme.keyword_styles["DATA_CONTROL"] = data_control_style;
 
     // UI Styles with Nord palette
-    theme.ui_styles.prompt_time = "nord3"; // Nord polar night
-    theme.ui_styles.prompt_db = "nord_blue";
+    //theme.ui_styles.prompt_time = "nord3"; // Nord polar night
+    theme.ui_styles.prompt_time = "gradient:nord_polar";
+    //theme.ui_styles.prompt_db = "nord_blue";
+    theme.ui_styles.prompt_db = "gradient:nord_fjord";
     theme.ui_styles.prompt_bullet = "nord_green";
     theme.ui_styles.banner_title = "nord_blue";
-    theme.ui_styles.banner_subtitle = "nord_cyan";
+    //theme.ui_styles.banner_subtitle = "nord_cyan";
+    theme.ui_styles.banner_subtitle = "gradient:nord_fjord";
+    //theme.ui_styles.banner_status = "nord_green";
+    theme.ui_styles.banner_status = "gradient:nord_polar";
     theme.ui_styles.error = "nord_red";
     theme.ui_styles.success = "nord_green";
     theme.ui_styles.warning = "nord_orange";
@@ -1092,6 +1097,29 @@ ThemeSystem::Theme ThemeSystem::create_nord_theme() {
     theme.ui_styles.additional_styles["nord_magenta"] = "\033[38;5;176m"; // #B48EAD
     theme.ui_styles.additional_styles["nord3"] = "\033[38;5;240m";        // #4C566A
     theme.ui_styles.additional_styles["nord4"] = "\033[38;5;250m";        // #D8DEE9
+
+    ThemeSystem::Gradient nord_aurora_gradient;
+    nord_aurora_gradient.name = "nord_aurora";
+    nord_aurora_gradient.colors = {"nord_purple", "nord_magenta", "nord_red", "nord_orange", "nord_yellow"};
+    nord_aurora_gradient.smooth = true;
+    nord_aurora_gradient.intensity = 0.9;
+
+    ThemeSystem::Gradient nord_fjord_gradient;
+    nord_fjord_gradient.name = "nord_fjord";
+    nord_fjord_gradient.colors = {"nord_blue", "nord_cyan", "light_teal", "cyan"};
+    nord_fjord_gradient.smooth = true;
+    nord_fjord_gradient.intensity = 0.85;
+
+    ThemeSystem::Gradient nord_polar_gradient;
+    nord_polar_gradient.name = "nord_polar";
+    nord_polar_gradient.colors = {"nord3", "nord4", "white"};
+    nord_polar_gradient.smooth = true;
+    nord_polar_gradient.intensity = 0.7;
+
+    // Add them to the theme
+    theme.gradients["nord_aurora"] = nord_aurora_gradient;
+    theme.gradients["nord_fjord"] = nord_fjord_gradient;
+    theme.gradients["nord_polar"] = nord_polar_gradient;
 
     return theme;
 }

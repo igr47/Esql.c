@@ -1138,8 +1138,175 @@ std::string ModernShell::apply_character_gradient(const std::string& text, const
     return result;
 }
 
-
 void ModernShell::print_banner() {
+    terminal_.clear_screen();
+
+    if (use_colors_) {
+        // Position cursor at top
+        std::cout << "\033[1;1H";
+
+        // Create Phoenix animator
+        PhoenixAnimator phoenix_animator(terminal_width_);
+
+        // ESQL logo (6 lines)
+        std::vector<std::string> esql_logo = {
+            "   ███████╗███████╗ ██████╗ ██╗   ",
+            "   ██╔════╝██╔════╝██╔═══██╗██║   ",
+            "   █████╗  ███████╗██║   ██║██║   ",
+            "   ██╔══╝  ╚════██║██║   ██║██║   ",
+            "   ███████╗███████║╚██████╔╝███████╗",
+            "   ╚══════╝╚══════╝ ╚═════╝ ╚══════╝"
+        };
+
+        int esql_height = esql_logo.size();
+        int phoenix_height = phoenix_animator.get_current_frame().size();
+
+        // Calculate positioning
+        int phoenix_start_row = 1;
+        int esql_start_row = 1 + (phoenix_height - esql_height);
+
+        int phoenix_start_col = terminal_width_ - 45;
+        if (phoenix_start_col < 40) phoenix_start_col = 40;
+
+        // Draw Phoenix art with theme-appropriate colors
+        // We can make the phoenix use theme colors too
+        for (int i = 0; i < phoenix_height; ++i) {
+            std::cout << "\033[" << (phoenix_start_row + i) << ";" << phoenix_start_col << "H";
+
+            // Get current frame line
+            std::string frame_line = phoenix_animator.get_current_frame()[i];
+
+            // Apply theme-based gradient to phoenix based on theme
+            std::string current_theme = theme_system_.get_current_theme().info.name;
+            std::string colored_line;
+
+            if (current_theme == "veldora") {
+                // Blue dragon theme
+                colored_line = phoenix_animator.apply_gradient(frame_line, i * 3);
+            } else if (current_theme == "synthwave") {
+                // Neon theme - more vibrant
+                colored_line = phoenix_animator.apply_gradient(frame_line, i * 4);
+            } else if (current_theme == "nord") {
+                // Arctic blue theme
+                colored_line = phoenix_animator.apply_gradient(frame_line, i * 2);
+            } else if (current_theme == "monokai") {
+                // Fire theme
+                colored_line = phoenix_animator.apply_gradient(frame_line, i * 5);
+            } else {
+                // Default
+                colored_line = phoenix_animator.apply_gradient(frame_line, i * 2);
+            }
+
+            std::cout << colored_line;
+        }
+
+        // Draw ESQL logo with theme gradient - apply gradient to each line individually
+        for (int i = 0; i < esql_height; ++i) {
+            std::cout << "\033[" << (esql_start_row + i) << ";1H";
+            // Apply gradient to each line of the logo
+            std::cout << theme_system_.apply_ui_style("banner_title", esql_logo[i]);
+        }
+
+        // Header box with theme gradients
+        int header_start_line = phoenix_start_row + phoenix_height + 1;
+        std::cout << "\033[" << header_start_line << ";1H";
+
+        // Apply theme gradients to banner text
+        std::string title_line1 = "    E N H A N C E D   ES Q L   S H E L L  ";
+        std::string title_line2 = "        H4CK3R  STYL3  V3RSI0N         ";
+
+        // Use theme gradients from current theme
+        std::string gradient_title1 = theme_system_.apply_ui_style("banner_title", title_line1);
+        std::string gradient_title2 = theme_system_.apply_ui_style("banner_subtitle", title_line2);
+
+        // Draw the banner box
+        std::cout << theme_system_.apply_ui_style("table_border", "╔═══════════════════════════════════════╗\n");
+        std::cout << theme_system_.apply_ui_style("table_border", "║") << gradient_title1
+                  << theme_system_.apply_ui_style("table_border", "║\n");
+        std::cout << theme_system_.apply_ui_style("table_border", "║") << gradient_title2
+                  << theme_system_.apply_ui_style("table_border", "         ║\n");
+        std::cout << theme_system_.apply_ui_style("table_border", "╚═══════════════════════════════════════╝\n");
+
+        // Status messages with theme gradients
+        int status_start_line = header_start_line + 4;
+        std::cout << "\033[" << status_start_line << ";1H";
+
+        std::vector<std::string> status_messages = {
+            "Type 'help' for commands, 'exit' to quit",
+            "Initializing ESQL Database Matrix...",
+            "Quantum ESQL Processor: ONLINE",
+            "Syntax Highlighting: ACTIVATED"
+        };
+
+        for (size_t i = 0; i < status_messages.size(); ++i) {
+            std::cout << theme_system_.apply_ui_style("info", "[*] ");
+            std::cout << theme_system_.apply_ui_style("banner_status", status_messages[i]) << "\n";
+        }
+
+        std::cout.flush();
+
+        // Phoenix fire effect with theme-appropriate colors
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        // Get current theme to determine animation style
+        std::string theme_name = theme_system_.get_current_theme().info.name;
+        int fire_duration = 3000;
+
+        if (theme_name == "synthwave") {
+            fire_duration = 4000; // Longer for synthwave
+        } else if (theme_name == "veldora") {
+            fire_duration = 3500; // Dragon fire
+        }
+
+        std::thread phoenix_thread([&phoenix_animator, phoenix_start_row, phoenix_start_col, theme_name]() {
+            phoenix_animator.animate_fire_effect(theme_name == "synthwave" ? 4000 :
+                                                theme_name == "veldora" ? 3500 : 3000);
+        });
+        phoenix_thread.join();
+
+        // First line animation - apply theme to animation
+        int anim1_line = status_start_line + 4;
+        std::cout << "\033[" << anim1_line << ";1H";
+        std::cout << theme_system_.apply_ui_style("info", "[+] ");
+        std::cout.flush();
+
+        // We need a themed animator - for now use default
+        ConsoleAnimator animator1(terminal_width_);
+        animator1.animateText("Forged from the fires of performance for the warriors of the digital age", 4000);
+
+        // Second line animation
+        int anim2_line = anim1_line + 1;
+        std::cout << "\033[" << anim2_line << ";1H";
+        std::cout << theme_system_.apply_ui_style("info", "[+] ");
+        std::cout.flush();
+
+        WaveAnimator animator2(terminal_width_);
+        animator2.waveAnimation("accessing the esql framework console", 2);
+
+        // Final connection line with theme gradient
+        int conn_line = anim2_line + 1;
+        std::cout << "\033[" << conn_line << ";1H";
+
+        std::ostringstream connection_oss;
+        connection_oss << "Connected to: " << current_db_ << " ●";
+        std::cout << theme_system_.apply_ui_style("info", "[+] ")
+                  << theme_system_.apply_ui_style("success", connection_oss.str()) << "\n\n";
+
+        // Set prompt position below everything
+        prompt_row_ = conn_line + 2;
+        prompt_col_ = 1;
+
+    } else {
+        // Fallback for no colors
+        std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
+        std::cout << "Connected to: " << current_db_ << "\n\n";
+
+        prompt_row_ = 3;
+        prompt_col_ = 1;
+    }
+}
+
+/*void ModernShell::print_banner() {
     terminal_.clear_screen();
 
     if (use_colors_) {
@@ -1269,7 +1436,7 @@ void ModernShell::print_banner() {
         std::cout << "ESQL SHELL - Enhanced Query Language Shell\n";
         std::cout << "Connected to: " << current_db_ << "\n\n";
     }
-}
+}*/
 
 
 void ModernShell::print_prompt() {
