@@ -18,13 +18,13 @@ static ThemeSystem::Theme create_default_theme_static();
 ThemeSystem::ThemeSystem() {
     themes_directory_ = "~/.esql/themes/";
     ensure_themes_directory();
-    
+
     // Initialize built-in themes
     initialize_builtin_themes();
-    
+
     // Load custom themes
     load_custom_themes();
-    
+
     // Set default theme
     set_current_theme("default");
 }
@@ -44,38 +44,38 @@ void ThemeSystem::initialize_builtin_themes() {
 // Static version that can be called from const context
 static ThemeSystem::Theme create_default_theme_static() {
     ThemeSystem::Theme theme;
-    
+
     theme.info.name = "default";
     theme.info.description = "Default ESQL theme - Clean and readable";
     theme.info.author = "ESQL Team";
     theme.info.version = "1.0";
     theme.info.tags = {"light", "clean", "readable"};
     theme.info.builtin = true;
-    
+
     // Default keyword styles
     ThemeSystem::KeywordStyle data_def_style;
     data_def_style.color = "blue";
     data_def_style.styles = {"bold"};
     theme.keyword_styles["DATA_DEFINITION"] = data_def_style;
-    
+
     ThemeSystem::KeywordStyle data_manip_style;
     data_manip_style.color = "green";
     data_manip_style.styles = {"bold"};
     theme.keyword_styles["DATA_MANIPULATION"] = data_manip_style;
-    
+
     ThemeSystem::KeywordStyle ai_style;
     ai_style.color = "magenta";
     ai_style.styles = {"bold"};
     theme.keyword_styles["AI_CORE"] = ai_style;
-    
+
     ThemeSystem::KeywordStyle function_style;
     function_style.color = "cyan";
     theme.keyword_styles["AGGREGATE_FUNCTIONS"] = function_style;
-    
+
     ThemeSystem::KeywordStyle type_style;
     type_style.color = "yellow";
     theme.keyword_styles["DATA_TYPES"] = type_style;
-    
+
     // UI Styles
     theme.ui_styles.prompt_time = "gray";
     theme.ui_styles.prompt_db = "blue";
@@ -85,7 +85,7 @@ static ThemeSystem::Theme create_default_theme_static() {
     theme.ui_styles.success = "green";
     theme.ui_styles.warning = "yellow";
     theme.ui_styles.info = "cyan";
-    
+
     // Initialize gradients
     ThemeSystem::Gradient ocean_gradient;
     ocean_gradient.name = "ocean";
@@ -93,7 +93,7 @@ static ThemeSystem::Theme create_default_theme_static() {
     ocean_gradient.smooth = true;
     ocean_gradient.intensity = 0.9;
     theme.gradients["ocean"] = ocean_gradient;
-    
+
     return theme;
 }
 
@@ -1106,7 +1106,7 @@ ThemeSystem::Theme ThemeSystem::create_nord_theme() {
 
     ThemeSystem::Gradient nord_fjord_gradient;
     nord_fjord_gradient.name = "nord_fjord";
-    nord_fjord_gradient.colors = {"nord_blue", "nord_cyan", "light_teal", "cyan"};
+    nord_fjord_gradient.colors = {"nord_blue", "nord_cyan", "nord_yellow", "cyan"};
     nord_fjord_gradient.smooth = true;
     nord_fjord_gradient.intensity = 0.85;
 
@@ -1802,12 +1802,12 @@ std::string ThemeSystem::UIStyles::get_style(const std::string& element) const {
     else if (element == "highlight") return highlight;
     else if (element == "suggestion") return suggestion;
     else if (element == "cursor") return cursor;
-    
+
     auto it = additional_styles.find(element);
     if (it != additional_styles.end()) {
         return it->second;
     }
-    
+
     return "";
 }
 
@@ -2144,22 +2144,22 @@ bool ThemeSystem::create_theme(const std::string& name, const std::string& base_
     if (themes_.find(name) != themes_.end()) {
         return false;
     }
-    
+
     // Find base theme
     auto base_it = themes_.find(base_theme);
     if (base_it == themes_.end()) {
         return false;
     }
-    
+
     // Copy base theme
     Theme new_theme = base_it->second;
     new_theme.info.name = name;
     new_theme.info.builtin = false;
     new_theme.info.description = "Custom theme based on " + base_theme;
-    
+
     // Add to themes map
     themes_[name] = new_theme;
-    
+
     // Save to file
     std::string file_path = get_theme_file_path(name);
     return new_theme.save(file_path);
@@ -2190,14 +2190,14 @@ bool ThemeSystem::Theme::save(const std::string& file_path) const {
 
 std::string ThemeSystem::KeywordStyle::apply(const std::string& text) const {
     std::string result;
-    
+
     if (!color.empty()) {
         std::string color_code = ColorMapper::name_to_code(color);
         result = color_code + text + colors::RESET_ALL;
     } else {
         result = text;
     }
-    
+
     // Apply styles
     for (const auto& style_name : styles) {
         if (style_name == "bold") {
@@ -2208,7 +2208,7 @@ std::string ThemeSystem::KeywordStyle::apply(const std::string& text) const {
             result = colors::UNDERLINE + result + colors::RESET_UNDERLINE;
         }
     }
-    
+
     return result;
 }
 
@@ -2219,7 +2219,7 @@ bool ThemeSystem::load_theme(const std::string& theme_name) {
         current_theme_ = theme_name;
         return true;
     }
-    
+
     // Try to load from custom themes
     std::string theme_path = get_theme_file_path(theme_name);
     if (std::filesystem::exists(theme_path)) {
@@ -2230,7 +2230,7 @@ bool ThemeSystem::load_theme(const std::string& theme_name) {
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -2245,7 +2245,7 @@ const ThemeSystem::Theme& ThemeSystem::get_current_theme() const {
     if (it != themes_.end()) {
         return it->second;
     }
-    
+
     // Use the static function that doesn't require a 'this' pointer
     static Theme default_theme = create_default_theme_static();
     return default_theme;
@@ -2256,12 +2256,12 @@ std::vector<ThemeSystem::ThemeInfo> ThemeSystem::list_themes() const {
     for (const auto& [name, theme] : themes_) {
         theme_list.push_back(theme.info);
     }
-    
-    std::sort(theme_list.begin(), theme_list.end(), 
+
+    std::sort(theme_list.begin(), theme_list.end(),
               [](const ThemeInfo& a, const ThemeInfo& b) {
                   return a.name < b.name;
               });
-    
+
     return theme_list;
 }
 
