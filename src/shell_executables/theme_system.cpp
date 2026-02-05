@@ -544,16 +544,19 @@ ThemeSystem::Theme ThemeSystem::create_monokai_theme() {
     theme.keyword_styles["DATA_CONTROL"] = data_control_style;
 
     // UI Styles
-    theme.ui_styles.prompt_time = "gray";
-    theme.ui_styles.prompt_db = "sun_yellow";
+    theme.ui_styles.prompt_time = "gradient:monokai_ocean";
+    theme.ui_styles.prompt_db = "gradient:monokai_ocean";
     theme.ui_styles.prompt_bullet = "fire_red";
     theme.ui_styles.banner_title = "fire_red";
-    theme.ui_styles.banner_subtitle = "sun_yellow";
+    //theme.ui_styles.banner_subtitle = "sun_yellow";
     theme.ui_styles.error = "fire_red";
     theme.ui_styles.success = "grass_green";
     theme.ui_styles.warning = "orange";
     theme.ui_styles.info = "sky_blue";
     theme.ui_styles.highlight = "magenta";
+    theme.ui_styles.banner_subtitle = "gradient:monokai_fire";
+    theme.ui_styles.banner_status = "gradient:monokai_forest";
+
 
     // Additional syntax styles
     theme.ui_styles.set_style("string_literal", "mint");
@@ -564,6 +567,30 @@ ThemeSystem::Theme ThemeSystem::create_monokai_theme() {
     theme.ui_styles.set_style("identifier", "sky_blue");
     theme.ui_styles.set_style("parameter", "gold");
     theme.ui_styles.set_style("bracket", "lavender");
+
+    ThemeSystem::Gradient monokai_fire_gradient;
+    monokai_fire_gradient.name = "monokai_fire";
+    monokai_fire_gradient.colors = {"fire_red", "orange", "sun_yellow", "coral"};
+    monokai_fire_gradient.smooth = true;
+    monokai_fire_gradient.intensity = 0.9;
+
+    ThemeSystem::Gradient monokai_forest_gradient;
+    monokai_forest_gradient.name = "monokai_forest";
+    monokai_forest_gradient.colors = {"forest_green", "grass_green", "mint", "light_green"};
+    monokai_forest_gradient.smooth = true;
+    monokai_forest_gradient.intensity = 0.85;
+
+    ThemeSystem::Gradient monokai_ocean_gradient;
+    monokai_ocean_gradient.name = "monokai_ocean";
+    monokai_ocean_gradient.colors = {"gradient_cyan_1", "gradient_cyan_2", "gradient_cyan_3", "gradient_cyan_4"};
+    monokai_ocean_gradient.smooth = true;
+    monokai_ocean_gradient.intensity = 0.8;
+
+    // Add to monokai theme and update UI styles
+    theme.gradients["monokai_fire"] = monokai_fire_gradient;
+    theme.gradients["monokai_forest"] = monokai_forest_gradient;
+    theme.gradients["monokai_ocean"] = monokai_ocean_gradient;
+    //theme.ui_styles.banner_title = "gradient:monokai_fire";
 
     return theme;
 }
