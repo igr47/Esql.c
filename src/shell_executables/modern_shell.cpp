@@ -15,14 +15,14 @@
 #include <sys/select.h>
 #endif
 
-ModernShell::ModernShell(Database& db) 
+ModernShell::ModernShell(Database& db)
     : db_(db), current_db_("default"), completion_engine_(db), autosuggestion_manager_(history_), theme_system_(),
       theme_commands_(theme_system_), theme_highlighter_(theme_system_)   {
-    
+
     // Initialize terminal
     terminal_.enable_raw_mode();
     terminal_.get_terminal_size(terminal_width_, terminal_height_);
-    
+
     //highlighter_.enable_colors(use_colors_);
     //highlighter_.set_current_database(current_db_);
     theme_system_.set_current_theme("monokai");
@@ -55,7 +55,7 @@ void ModernShell::run() {
 void ModernShell::run_interactive() {
     clear_screen();
     print_banner();
-    
+
     // Initialize state
     current_input_.clear();
     cursor_pos_ = 0;
@@ -66,7 +66,7 @@ void ModernShell::run_interactive() {
     move_to_prompt_position();
     print_prompt();
     update_prompt_position();
-    
+
     refresh_display(true);
 
     // Buffer for detecting escape sequence responses
@@ -104,11 +104,11 @@ void ModernShell::run_interactive() {
             // Read the next characters with timeout
             struct timeval tv = {0, 50000}; // 50ms timeout
             fd_set fds;
-            
+
             // Check if there are more characters available
             FD_ZERO(&fds);
             FD_SET(STDIN_FILENO, &fds);
-            
+
             if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
                 char seq[2];
                 // Read the '[' character
@@ -139,7 +139,7 @@ void ModernShell::run_interactive() {
                     }
                 }
             }
-            
+
             // If we get here, it's just the Escape key
             if (in_multiline_mode_) {
                 in_multiline_mode_ = false;
@@ -156,7 +156,7 @@ void ModernShell::run_interactive() {
 
         // Handle regular characters
         esql::KeyCode key = convert_char_to_keycode(c);
-        
+
         switch (key) {
             case esql::KeyCode::Enter:
                 handle_enter();
@@ -432,8 +432,8 @@ void ModernShell::update_screen() {
 
 void ModernShell::refresh_display(bool force_redraw) {
     ensure_input_space();
-    if (force_redraw || 
-        current_input_ != last_rendered_input_ || 
+    if (force_redraw ||
+        current_input_ != last_rendered_input_ ||
         cursor_pos_ != last_cursor_pos_ ||
         build_prompt() != current_prompt_) {
         update_screen();
@@ -536,7 +536,7 @@ void ModernShell::handle_enter() {
     terminal_.get_cursor_position(current_row, current_col);
     if (current_row >= terminal_height_ - 1) {
         std::cout << "\n";
-    } 
+    }
     print_prompt();
     update_prompt_position();
 
@@ -560,16 +560,16 @@ void ModernShell::handle_character(char c) {
 
 void ModernShell::handle_backspace() {
     if (cursor_pos_ == 0 || current_input_.empty()) return;
-    
+
     // Move cursor back one character (considering UTF-8)
     cursor_pos_ = esql::UTF8Processor::prev_char_boundary(current_input_, cursor_pos_);
-    
+
     // Delete character at cursor position
     current_input_ = esql::UTF8Processor::delete_char_at_byte(current_input_, cursor_pos_);
 
     // Update autosuggestion
     update_autosuggestion();
-    
+
     refresh_display();
 }
 
@@ -603,31 +603,31 @@ void ModernShell::handle_tab() {
 // Helper to get the word prefix
 std::string ModernShell::get_current_word_prefix() {
     if (cursor_pos_ == 0 || current_input_.empty()) return "";
-    
+
     size_t word_start = cursor_pos_;
-    while (word_start > 0 && 
-           (std::isalnum(current_input_[word_start-1]) || 
-            current_input_[word_start-1] == '_' || 
+    while (word_start > 0 &&
+           (std::isalnum(current_input_[word_start-1]) ||
+            current_input_[word_start-1] == '_' ||
             current_input_[word_start-1] == '.')) {
         --word_start;
     }
-    
+
     return current_input_.substr(word_start, cursor_pos_ - word_start);
 }
 
 // Method to show completion list
 void ModernShell::show_completions(const std::vector<std::string>& completions) {
     if (completions.empty()) return;
-    
+
     std::cout << "\n"; // Move to new line
-    
+
     // Calculate display parameters
     int max_width = 0;
     for (const auto& comp : completions) {
         int width = esql::UTF8Processor::display_width(comp);
         if (width > max_width) max_width = width;
     }
-    
+
     max_width += 2; // Add padding
 
     int items_per_row = std::max(1, terminal_width_ / max_width);
@@ -765,7 +765,7 @@ void ModernShell::handle_navigation(esql::KeyCode key) {
                 refresh_display();
             }
             break;
-            
+
         case esql::KeyCode::Right:
             if (cursor_pos_ < current_input_.size()) {
                 cursor_pos_ = esql::UTF8Processor::next_char_boundary(current_input_, cursor_pos_);
@@ -774,7 +774,7 @@ void ModernShell::handle_navigation(esql::KeyCode key) {
                 accept_autosuggestion();
             }
             break;
-            
+
         case esql::KeyCode::Up: {
             std::string history_item = history_.navigate_up();
             if (!history_item.empty()) {
@@ -787,7 +787,7 @@ void ModernShell::handle_navigation(esql::KeyCode key) {
             }
             break;
         }
-            
+
         case esql::KeyCode::Down: {
             std::string history_item = history_.navigate_down();
             current_input_ = history_item;
@@ -797,17 +797,17 @@ void ModernShell::handle_navigation(esql::KeyCode key) {
             refresh_display();
             break;
         }
-            
+
         case esql::KeyCode::Home:
             cursor_pos_ = 0;
             refresh_display();
             break;
-            
+
         case esql::KeyCode::End:
             cursor_pos_ = current_input_.size();
             refresh_display();
             break;
-            
+
         default:
             break;
     }
@@ -842,26 +842,26 @@ esql::KeyCode ModernShell::convert_char_to_keycode(char c) {
 
 esql::KeyCode ModernShell::handle_escape_sequence() {
     char seq[3] = {0};
-    
+
     // Use non-blocking read with timeout
     struct timeval tv = {0, 100000}; // 100ms timeout
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
-    
+
     if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) <= 0) {
         return esql::KeyCode::Escape;
     }
-    
+
     if (read(STDIN_FILENO, &seq[0], 1) != 1) {
         return esql::KeyCode::Escape;
     }
-    
+
     if (seq[0] == '[') {
         if (read(STDIN_FILENO, &seq[1], 1) != 1) {
             return esql::KeyCode::Escape;
         }
-        
+
         switch (seq[1]) {
             case 'A': return esql::KeyCode::Up;
             case 'B': return esql::KeyCode::Down;
@@ -869,17 +869,17 @@ esql::KeyCode ModernShell::handle_escape_sequence() {
             case 'D': return esql::KeyCode::Left;
             case 'H': return esql::KeyCode::Home;
             case 'F': return esql::KeyCode::End;
-            case '1': 
-                if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') 
+            case '1':
+                if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~')
                     return esql::KeyCode::Home;
                 break;
-            case '4': 
-                if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') 
+            case '4':
+                if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~')
                     return esql::KeyCode::End;
                 break;
         }
     }
-    
+
     return esql::KeyCode::None;
 }
 
@@ -887,13 +887,13 @@ bool ModernShell::handle_possible_resize() {
     static int last_width = -1, last_height = -1;
     int width, height;
     terminal_.get_terminal_size(width, height);
-    
+
     if (width != last_width || height != last_height) {
         last_width = width;
         last_height = height;
         terminal_width_ = width;
         terminal_height_ = height;
-        
+
         // Clear and redraw
         clear_screen();
         print_banner();
@@ -911,31 +911,31 @@ bool ModernShell::handle_possible_resize() {
 
 void ModernShell::run_termux_fallback() {
     if (use_colors_) {
-        std::cout << esql::colors::BLUE << "Termux mode activated (using line-based input)\n\n" 
+        std::cout << esql::colors::BLUE << "Termux mode activated (using line-based input)\n\n"
                   << esql::colors::RESET;
     }
-    
+
     while (!should_exit_) {
         print_prompt();
-        
+
         std::string line;
         std::getline(std::cin, line);
-        
+
         if (line.empty()) continue;
         if (line == "exit" || line == "quit") {
             break;
         }
-        
+
         execute_command(line);
     }
 }
 
 void ModernShell::execute_command(const std::string& command) {
     if (command.empty()) return;
-    
+
     std::string upper_cmd = command;
     std::transform(upper_cmd.begin(), upper_cmd.end(), upper_cmd.begin(), ::toupper);
-    
+
     if (upper_cmd == "EXIT" || upper_cmd == "QUIT") {
         should_exit_ = true;
         return;
@@ -974,11 +974,11 @@ void ModernShell::execute_command(const std::string& command) {
                     }
                     db_name.erase(0, db_name.find_first_not_of(" \t"));
                     db_name.erase(db_name.find_last_not_of(" \t") + 1);
-                    
+
                     if (!db_name.empty()) {
                         current_db_ = db_name;
                         theme_highlighter_.set_current_database(current_db_);
-                        completion_engine_.set_current_database(current_db_); 
+                        completion_engine_.set_current_database(current_db_);
                     }
                 }
             }
@@ -986,16 +986,16 @@ void ModernShell::execute_command(const std::string& command) {
             if (upper_cmd.find("CREATE ") == 0 || upper_cmd.find("DROP ") == 0 || upper_cmd.find("ALTER ") == 0) {
                 completion_engine_.refresh_metadata();
             }
-            
+
             // OUTPUT RESULTS DIRECTLY - don't route through renderer
             print_results(result, actual_duration);
-            
+
         } catch (const std::exception& e) {
-            std::cerr << (use_colors_ ? esql::colors::RED : "") << "Error: " << e.what() 
+            std::cerr << (use_colors_ ? esql::colors::RED : "") << "Error: " << e.what()
                       << (use_colors_ ? esql::colors::RESET : "") << "\n";
         }
     }
-    
+
     // Ensure we're ready for next input
     //std::cout << std::endl;
     //ensure_input_space();
@@ -1357,7 +1357,7 @@ void ModernShell::print_banner() {
         // Apply gradient to header text only (not the box borders)
         std::string title_line1 = "    E N H A N C E D   ES Q L   S H E L L  ";
         std::string title_line2 = "        H4CK3R  STYL3  V3RSI0N         ";
-        
+
         std::string gradient_title1 = gradient_system_.apply_gradient(
             title_line1, GradientSystem::GradientType::PURPLE_DAWN, true);
         std::string gradient_title2 = gradient_system_.apply_gradient(
@@ -1383,8 +1383,8 @@ void ModernShell::print_banner() {
         for (size_t i = 0; i < status_messages.size(); ++i) {
             std::cout << esql::colors::RED << "[*] ";
             std::string gradient_msg = gradient_system_.apply_gradient(
-                status_messages[i], 
-                GradientSystem::GradientType::BLUE_OCEAN, 
+                status_messages[i],
+                GradientSystem::GradientType::BLUE_OCEAN,
                 true
             );
             std::cout << gradient_msg << esql::colors::RESET << "\n";
@@ -1420,15 +1420,15 @@ void ModernShell::print_banner() {
         // STEP 4: Final connection line with subtle gradient
         int conn_line = anim2_line + 1;
         std::cout << "\033[" << conn_line << ";1H";
-        
+
         std::string connection_text = "Connected to: " + current_db_ + " ●";
         std::string gradient_connection = gradient_system_.apply_gradient(
-            connection_text, 
-            GradientSystem::GradientType::GREEN_FOREST, 
+            connection_text,
+            GradientSystem::GradientType::GREEN_FOREST,
             true
         );
-        
-        std::cout << esql::colors::MAGENTA << "[+] " << gradient_connection 
+
+        std::cout << esql::colors::MAGENTA << "[+] " << gradient_connection
                   << esql::colors::RESET << "\n\n";
 
     } else {
@@ -1542,9 +1542,9 @@ void ModernShell::show_help() {
 }
 
 /*void ModernShell::show_help() {
-    std::cout << "\n" << (use_colors_ ? esql::colors::CYAN : "") << "Available commands:" 
+    std::cout << "\n" << (use_colors_ ? esql::colors::CYAN : "") << "Available commands:"
               << (use_colors_ ? esql::colors::RESET : "") << "\n";
-    
+
     const std::vector<std::pair<std::string, std::string>> commands = {
         {"SELECT", "Query data from tables"},
         {"INSERT", "Add new records"},
@@ -1560,10 +1560,10 @@ void ModernShell::show_help() {
         {"EXIT/QUIT", "Quit the shell"},
         {"CLEAR", "Clear the screen"}
     };
-    
+
     for (const auto& [cmd, desc] : commands) {
-        std::cout << "  " << (use_colors_ ? esql::colors::MAGENTA : "") << cmd 
-                  << (use_colors_ ? esql::colors::GREEN : "") << " - " << desc 
+        std::cout << "  " << (use_colors_ ? esql::colors::MAGENTA : "") << cmd
+                  << (use_colors_ ? esql::colors::GREEN : "") << " - " << desc
                   << (use_colors_ ? esql::colors::RESET : "") << "\n";
     }
     std::cout << "\n";
@@ -1691,7 +1691,7 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
     std::cout << theme_system_.apply_ui_style("table_border", "+");
     for (size_t i = 0; i < result.columns.size(); ++i) {
         std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
-        if (i < result.columns.size() - 1) 
+        if (i < result.columns.size() - 1)
             std::cout << theme_system_.apply_ui_style("table_border", "+");
     }
     std::cout << theme_system_.apply_ui_style("table_border", "+\n");
@@ -1703,7 +1703,7 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
         std::ostringstream header_oss;
         header_oss << std::left << std::setw(widths[i]) << result.columns[i];
         std::string formatted_header = header_oss.str();
-        
+
         // Apply theme to the formatted string
         std::cout << theme_system_.apply_ui_style("table_header", formatted_header);
         std::cout << theme_system_.apply_ui_style("table_border", "|");
@@ -1714,7 +1714,7 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
     std::cout << theme_system_.apply_ui_style("table_border", "+");
     for (size_t i = 0; i < result.columns.size(); ++i) {
         std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
-        if (i < result.columns.size() - 1) 
+        if (i < result.columns.size() - 1)
             std::cout << theme_system_.apply_ui_style("table_border", "+");
     }
     std::cout << theme_system_.apply_ui_style("table_border", "+\n");
@@ -1727,12 +1727,12 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
             if (display_value.length() > widths[i] - 2) {
                 display_value = display_value.substr(0, widths[i] - 5) + "...";
             }
-            
+
             // Create formatted data string with proper width
             std::ostringstream data_oss;
             data_oss << std::left << std::setw(widths[i]) << display_value;
             std::string formatted_data = data_oss.str();
-            
+
             // Apply theme to the formatted string
             std::cout << theme_system_.apply_ui_style("table_data", formatted_data);
             std::cout << theme_system_.apply_ui_style("table_border", "|");
@@ -1744,14 +1744,14 @@ void ModernShell::print_results(const ExecutionEngine::ResultSet& result, double
     std::cout << theme_system_.apply_ui_style("table_border", "+");
     for (size_t i = 0; i < result.columns.size(); ++i) {
         std::cout << theme_system_.apply_ui_style("table_border", std::string(widths[i], '-'));
-        if (i < result.columns.size() - 1) 
+        if (i < result.columns.size() - 1)
             std::cout << theme_system_.apply_ui_style("table_border", "+");
     }
     std::cout << theme_system_.apply_ui_style("table_border", "+\n");
 
     // Draw summary with theme
-    std::string summary = "> " + std::to_string(result.rows.size()) + 
-                         " row" + (result.rows.size() != 1 ? "s" : "") + 
+    std::string summary = "> " + std::to_string(result.rows.size()) +
+                         " row" + (result.rows.size() != 1 ? "s" : "") +
                          " in " + std::to_string(duration) + "s";
     std::cout << theme_system_.apply_ui_style("info", summary) << "\n";
 }
@@ -2084,7 +2084,7 @@ bool ModernShell::is_boolean(const std::string& value) {
     for (size_t i = 0; i < result.columns.size(); ++i) {
         std::cout << (use_colors_ ? esql::colors::MAGENTA : "") << std::left << std::setw(widths[i]) << result.columns[i] << (use_colors_ ? esql::colors::CYAN : "") << "|";
     }
-    
+
     std::cout << (use_colors_ ? esql::colors::RESET : "") << "\n";
 
     std::cout << (use_colors_ ? esql::colors::CYAN : "") << "+";
@@ -2154,7 +2154,7 @@ void ModernShell::print_structure_results(const ExecutionEngine::ResultSet& resu
             std::cout << "   " << (use_colors_ ? esql::colors::BLUE : "") << std::left << std::setw(53) << right << (use_colors_ ? esql::colors::RESET : "") << "\n";
         }
     }
-    
+
     std::cout << (use_colors_ ? esql::colors::CYAN : "") << std::string(60, '=') << "\n" << (use_colors_ ? esql::colors::RESET : "");
     std::cout << (use_colors_ ? esql::colors::GRAY : "") << "> Report generated in " << std::fixed << std::setprecision(4) << duration << "s" << (use_colors_ ? esql::colors::RESET : "") << "\n";
 }

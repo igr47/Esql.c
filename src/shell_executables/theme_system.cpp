@@ -556,7 +556,10 @@ ThemeSystem::Theme ThemeSystem::create_monokai_theme() {
     theme.ui_styles.highlight = "magenta";
     theme.ui_styles.banner_subtitle = "gradient:monokai_fire";
     theme.ui_styles.banner_status = "gradient:monokai_forest";
-
+    theme.ui_styles.banner_table_border = "gradient:monokai_fire";
+    theme.ui_styles.table_border = "grass_green";
+    theme.ui_styles.table_header = "coral";
+    theme.ui_styles.table_data = "sky_blue";
 
     // Additional syntax styles
     theme.ui_styles.set_style("string_literal", "mint");
