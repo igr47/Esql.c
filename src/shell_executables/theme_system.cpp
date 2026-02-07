@@ -1360,16 +1360,20 @@ ThemeSystem::Theme ThemeSystem::create_github_dark_theme() {
     theme.keyword_styles["DATA_CONTROL"] = data_control_style;
 
     // UI Styles with GitHub Dark palette
-    theme.ui_styles.prompt_time = "gh_gray";
-    theme.ui_styles.prompt_db = "gh_blue";
+    theme.ui_styles.prompt_time = "gradient:github_blue";
+    theme.ui_styles.prompt_db = "gradient:github_green";
     theme.ui_styles.prompt_bullet = "gh_green";
     theme.ui_styles.banner_title = "gh_blue";
-    theme.ui_styles.banner_subtitle = "gh_cyan";
+    theme.ui_styles.banner_subtitle = "gradient:github_green";
+    theme.ui_styles.banner_status = "gradient:github_orange";
     theme.ui_styles.error = "gh_red";
     theme.ui_styles.success = "gh_green";
     theme.ui_styles.warning = "gh_orange";
     theme.ui_styles.info = "gh_cyan";
     theme.ui_styles.highlight = "gh_yellow";
+    theme.ui_styles.table_border = "gh_blue";
+    theme.ui_styles.table_header = "gh_green";
+    theme.ui_styles.table_data = "gh_cyan";
 
     // Additional syntax styles
     theme.ui_styles.set_style("string_literal", "gh_green");
@@ -1392,6 +1396,28 @@ ThemeSystem::Theme ThemeSystem::create_github_dark_theme() {
     theme.ui_styles.additional_styles["gh_purple"] = "\033[38;5;140m"; // #BC8CFF
     theme.ui_styles.additional_styles["gh_gray"] = "\033[38;5;246m";   // #8B949E
     theme.ui_styles.additional_styles["gh_fg"] = "\033[38;5;250m";     // #C9D1D9
+
+    ThemeSystem::Gradient github_blue_gradient;
+    github_blue_gradient.name = "github_blue";
+    github_blue_gradient.colors = {"gh_blue", "gh_cyan", "light_blue", "white"};
+    github_blue_gradient.smooth = true;
+    github_blue_gradient.intensity = 0.9;
+
+    ThemeSystem::Gradient github_green_gradient;
+    github_green_gradient.name = "github_green";
+    github_green_gradient.colors = {"gh_green", "light_green", "mint", "white"};
+    github_green_gradient.smooth = true;
+    github_green_gradient.intensity = 0.85;
+
+    ThemeSystem::Gradient github_orange_gradient;
+    github_orange_gradient.name = "github_orange";
+    github_orange_gradient.colors = {"gh_orange", "gh_red", "coral", "light_orange"};
+    github_orange_gradient.smooth = true;
+    github_orange_gradient.intensity = 0.9;
+
+    theme.gradients["github_blue"] = github_blue_gradient;
+    theme.gradients["github_green"] = github_green_gradient;
+    theme.gradients["github_orange"] = github_orange_gradient;
 
     return theme;
 }
