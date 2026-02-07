@@ -947,16 +947,20 @@ ThemeSystem::Theme ThemeSystem::create_solarized_dark_theme() {
     theme.keyword_styles["DATA_CONTROL"] = data_control_style;
 
     // UI Styles with Solarized palette
-    theme.ui_styles.prompt_time = "base01"; // Solarized base01
-    theme.ui_styles.prompt_db = "blue";
+    theme.ui_styles.prompt_time = "gradient:solarized_cyan"; // Solarized base01
+    theme.ui_styles.prompt_db = "gradient:solarized_base";
     theme.ui_styles.prompt_bullet = "cyan";
-    theme.ui_styles.banner_title = "yellow";
-    theme.ui_styles.banner_subtitle = "cyan";
+    theme.ui_styles.banner_title = "base1";
+    theme.ui_styles.banner_subtitle = "gradient:solarized_cyan";
+    theme.ui_styles.banner_status = "gradient:solarized_cyan";
     theme.ui_styles.error = "red";
     theme.ui_styles.success = "green";
     theme.ui_styles.warning = "orange";
     theme.ui_styles.info = "blue";
     theme.ui_styles.highlight = "cyan";
+    theme.ui_styles.table_border = "base01";
+    theme.ui_styles.table_header = "base00";
+    theme.ui_styles.table_data = "base1";
 
     // Additional syntax styles
     theme.ui_styles.set_style("string_literal", "cyan");
@@ -973,6 +977,28 @@ ThemeSystem::Theme ThemeSystem::create_solarized_dark_theme() {
     theme.ui_styles.additional_styles["base01"] = "\033[38;5;240m"; // #586e75
     theme.ui_styles.additional_styles["base1"] = "\033[38;5;251m";  // #93a1a1
     theme.ui_styles.additional_styles["violet"] = "\033[38;5;61m";  // #6c71c4
+
+    ThemeSystem::Gradient solarized_sunset_gradient;
+    solarized_sunset_gradient.name = "solarized_sunset";
+    solarized_sunset_gradient.colors = {"violet", "magenta", "red", "orange", "yellow"};
+    solarized_sunset_gradient.smooth = true;
+    solarized_sunset_gradient.intensity = 0.9;
+
+    ThemeSystem::Gradient solarized_cyan_gradient;
+    solarized_cyan_gradient.name = "solarized_cyan";
+    solarized_cyan_gradient.colors = {"base01", "base00","base1"};
+    solarized_cyan_gradient.smooth = true;
+    solarized_cyan_gradient.intensity = 0.85;
+
+    ThemeSystem::Gradient solarized_base_gradient;
+    solarized_base_gradient.name = "solarized_base";
+    solarized_base_gradient.colors = {"base1", "base00", "base01"};
+    solarized_base_gradient.smooth = true;
+    solarized_base_gradient.intensity = 0.85;
+
+    theme.gradients["solarized_sunset"] = solarized_sunset_gradient;
+    theme.gradients["solarized_cyan"] = solarized_cyan_gradient;
+    theme.gradients["solarized_base"] = solarized_base_gradient;
 
     return theme;
 }
