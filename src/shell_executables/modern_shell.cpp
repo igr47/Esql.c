@@ -25,7 +25,7 @@ ModernShell::ModernShell(Database& db)
 
     //highlighter_.enable_colors(use_colors_);
     //highlighter_.set_current_database(current_db_);
-    theme_system_.set_current_theme("monokai");
+    theme_system_.set_current_theme("dracula");
 
     // Setup theme highlighter
     theme_highlighter_.enable_colors(use_colors_);

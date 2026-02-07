@@ -743,16 +743,21 @@ ThemeSystem::Theme ThemeSystem::create_dracula_theme() {
     theme.keyword_styles["DATA_CONTROL"] = data_control_style;
 
     // UI Styles with Dracula palette
-    theme.ui_styles.prompt_time = "purple";
-    theme.ui_styles.prompt_db = "cyan";
+    theme.ui_styles.prompt_time = "gradient:dracula_purple";
+    theme.ui_styles.prompt_db = "gradient:dracula_purple_reverse";
     theme.ui_styles.prompt_bullet = "pink";
     theme.ui_styles.banner_title = "purple";
-    theme.ui_styles.banner_subtitle = "pink";
+    theme.ui_styles.banner_subtitle = "gradient:dracula_purple_reverse";
+    theme.ui_styles.banner_status = "gradient:dracula_purple";
     theme.ui_styles.error = "red";
-    theme.ui_styles.success = "green";
+    theme.ui_styles.success = "grass_green";
     theme.ui_styles.warning = "orange";
     theme.ui_styles.info = "cyan";
     theme.ui_styles.highlight = "yellow";
+    theme.ui_styles.table_border = "purple";
+    theme.ui_styles.table_header = "pink";
+    theme.ui_styles.table_data = "magenta";
+
 
     // Additional syntax styles
     theme.ui_styles.set_style("string_literal", "light_green");
@@ -763,6 +768,36 @@ ThemeSystem::Theme ThemeSystem::create_dracula_theme() {
     theme.ui_styles.set_style("identifier", "magenta");
     theme.ui_styles.set_style("parameter", "gold");
     theme.ui_styles.set_style("bracket", "violet");
+
+    ThemeSystem::Gradient dracula_purple_gradient;
+    dracula_purple_gradient.name = "dracula_purple";
+    dracula_purple_gradient.colors = {"dark_purple", "purple", "magenta", "pink"};
+    dracula_purple_gradient.smooth = true;
+    dracula_purple_gradient.intensity = 0.9;
+
+    ThemeSystem::Gradient dracula_purple_reverse;
+    dracula_purple_reverse.name = "dracula_purple_reverse";
+    dracula_purple_reverse.colors = {"pink", "magenta", "purple", "dark_purple"};
+    dracula_purple_reverse.smooth = true;
+    dracula_purple_reverse.intensity = 0.9;
+
+    ThemeSystem::Gradient dracula_cyan_gradient;
+    dracula_cyan_gradient.name = "dracula_cyan";
+    dracula_cyan_gradient.colors = {"dark_cyan", "cyan", "light_cyan", "bright_cyan"};
+    dracula_cyan_gradient.smooth = true;
+    dracula_cyan_gradient.intensity = 0.85;
+
+    ThemeSystem::Gradient dracula_green_gradient;
+    dracula_green_gradient.name = "dracula_green";
+    dracula_green_gradient.colors = {"dark_green", "green", "light_green", "mint"};
+    dracula_green_gradient.smooth = true;
+    dracula_green_gradient.intensity = 0.8;
+
+    // Add to dracula theme
+    theme.gradients["dracula_purple"] = dracula_purple_gradient;
+    theme.gradients["dracula_cyan"] = dracula_cyan_gradient;
+    theme.gradients["dracula_green"] = dracula_green_gradient;
+    theme.gradients["dracula_purple_reverse"] = dracula_purple_reverse;
 
     return theme;
 }
