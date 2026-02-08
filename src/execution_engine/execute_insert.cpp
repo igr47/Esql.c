@@ -200,6 +200,220 @@ ExecutionEngine::ResultSet ExecutionEngine::executeInsert(AST::InsertStatement& 
     }
 }
 
+DatabaseSchema::Column::Type ExecutionEngine::inferColumnTypeFromCSVData(const std::vector<std::string>& columnValues) {
+    if (columnValues.empty()) {
+        // Default to TEXT if no data
+        return DatabaseSchema::Column::TEXT;
+    }
+
+    bool allIntegers = true;
+    bool allFloats = true;
+    bool allBooleans = true;
+    bool allDates = true;
+    bool allDateTimes = true;
+
+    for (const auto& value : columnValues) {
+        std::string trimmed = trim(value);
+
+        // Check if empty/null
+        if (trimmed.empty() || trimmed == "NULL" || trimmed == "null") {
+            continue; // Skip NULL values for type inference
+        }
+
+        // Check for integer
+        if (allIntegers) {
+            bool isInteger = !trimmed.empty();
+            bool hasDigit = false;
+            for (size_t i = 0; i < trimmed.size(); i++) {
+                char c = trimmed[i];
+                if (i == 0 && (c == '-' || c == '+')) {
+                    continue;
+                }
+                if (!std::isdigit(c)) {
+                    isInteger = false;
+                    break;
+                }
+                hasDigit = true;
+            }
+            allIntegers = isInteger && hasDigit;
+        }
+
+        // Check for float
+        if (allFloats) {
+            bool isFloat = !trimmed.empty();
+            bool hasDigit = false;
+            bool hasDecimal = false;
+            for (size_t i = 0; i < trimmed.size(); i++) {
+                char c = trimmed[i];
+                if (i == 0 && (c == '-' || c == '+')) {
+                    continue;
+                }
+                if (c == '.') {
+                    if (hasDecimal) {
+                        isFloat = false;
+                        break;
+                    }
+                    hasDecimal = true;
+                } else if (!std::isdigit(c)) {
+                    isFloat = false;
+                    break;
+                } else {
+                    hasDigit = true;
+                }
+            }
+            allFloats = isFloat && hasDigit;
+        }
+
+        // Check for boolean
+        if (allBooleans) {
+            std::string lower = trimmed;
+            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            allBooleans = (lower == "true" || lower == "false" ||
+                          lower == "yes" || lower == "no" ||
+                          lower == "1" || lower == "0" ||
+                          lower == "t" || lower == "f");
+        }
+
+        // Check for date (YYYY-MM-DD)
+        if (allDates) {
+            if (trimmed.size() >= 10 && trimmed[4] == '-' && trimmed[7] == '-') {
+                // Basic date format check
+                try {
+                    int year = std::stoi(trimmed.substr(0, 4));
+                    int month = std::stoi(trimmed.substr(5, 2));
+                    int day = std::stoi(trimmed.substr(8, 2));
+                    allDates = (year >= 1000 && year <= 9999 &&
+                               month >= 1 && month <= 12 &&
+                               day >= 1 && day <= 31);
+                } catch (...) {
+                    allDates = false;
+                }
+            } else {
+                allDates = false;
+            }
+        }
+
+        // Check for datetime (YYYY-MM-DD HH:MM:SS)
+        if (allDateTimes) {
+            if (trimmed.size() >= 19 && trimmed[4] == '-' && trimmed[7] == '-' &&
+                trimmed[10] == ' ' && trimmed[13] == ':' && trimmed[16] == ':') {
+                try {
+                    int year = std::stoi(trimmed.substr(0, 4));
+                    int month = std::stoi(trimmed.substr(5, 2));
+                    int day = std::stoi(trimmed.substr(8, 2));
+                    int hour = std::stoi(trimmed.substr(11, 2));
+                    int minute = std::stoi(trimmed.substr(14, 2));
+                    int second = std::stoi(trimmed.substr(17, 2));
+                    allDateTimes = (year >= 1000 && year <= 9999 &&
+                                   month >= 1 && month <= 12 &&
+                                   day >= 1 && day <= 31 &&
+                                   hour >= 0 && hour <= 23 &&
+                                   minute >= 0 && minute <= 59 &&
+                                   second >= 0 && second <= 59);
+                } catch (...) {
+                    allDateTimes = false;
+                }
+            } else {
+                allDateTimes = false;
+            }
+        }
+    }
+
+    // Determine the most specific type
+    if (allIntegers) {
+        return DatabaseSchema::Column::INTEGER;
+    } else if (allFloats) {
+        return DatabaseSchema::Column::FLOAT;
+    } else if (allBooleans) {
+        return DatabaseSchema::Column::BOOLEAN;
+    } else if (allDates) {
+        return DatabaseSchema::Column::DATE;
+    } else if (allDateTimes) {
+        return DatabaseSchema::Column::DATETIME;
+    } else {
+        return DatabaseSchema::Column::TEXT;
+    }
+}
+
+void ExecutionEngine::createTableFromCSV(const std::string& tableName,
+                                        const std::vector<std::string>& columnNames,
+                                        const std::vector<std::vector<std::string>>& sampleData) {
+
+    // Create table statement
+    auto createStmt = std::make_unique<AST::CreateTableStatement>();
+    createStmt->tablename = tableName;
+
+    // Prepare column definitions based on sample data
+    for (size_t colIdx = 0; colIdx < columnNames.size(); colIdx++) {
+        AST::ColumnDefination colDef;
+        colDef.name = columnNames[colIdx];
+
+        // Collect values for this column from sample data
+        std::vector<std::string> columnValues;
+        for (const auto& row : sampleData) {
+            if (colIdx < row.size()) {
+                columnValues.push_back(row[colIdx]);
+            }
+        }
+
+               // Infer type from sample data
+        DatabaseSchema::Column::Type inferredType = inferColumnTypeFromCSVData(columnValues);
+
+        // Convert to string type
+        switch (inferredType) {
+            case DatabaseSchema::Column::INTEGER:
+                colDef.type = "INT";
+                break;
+            case DatabaseSchema::Column::FLOAT:
+                colDef.type = "FLOAT";
+                break;
+            case DatabaseSchema::Column::BOOLEAN:
+                colDef.type = "BOOL";
+                break;
+            case DatabaseSchema::Column::DATE:
+                colDef.type = "DATE";
+                break;
+            case DatabaseSchema::Column::DATETIME:
+                colDef.type = "DATETIME";
+                break;
+            case DatabaseSchema::Column::TEXT:
+            default:
+                colDef.type = "TEXT";
+                break;
+        }
+
+        // Add NOT NULL constraint if column has no NULL values in sample
+        bool hasNulls = false;
+        for (const auto& value : columnValues) {
+            std::string trimmed = trim(value);
+            if (trimmed.empty() || trimmed == "NULL" || trimmed == "null") {
+                hasNulls = true;
+                break;
+            }
+        }
+
+        if (!hasNulls) {
+            colDef.constraints.push_back("NOT_NULL");
+        }
+
+        createStmt->columns.push_back(std::move(colDef));
+    }
+
+    // Execute the create table statement
+    try {
+        std::cout << "Creating table '" << tableName << "' automatically from CSV with "
+                  << columnNames.size() << " columns" << std::endl;
+
+        // Execute the create table
+        executeCreateTable(*createStmt);
+
+        std::cout << "Table '" << tableName << "' created successfully" << std::endl;
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Failed to create table automatically: " + std::string(e.what()));
+    }
+}
+
+
 std::vector<std::string> ExecutionEngine::parseCSVLineAdvanced(const std::string& line, char delimiter) {
     std::vector<std::string> result;
     std::string field;
@@ -421,7 +635,106 @@ if (hasHeader) {
 ExecutionEngine::ResultSet ExecutionEngine::executeCSVInsert(AST::InsertStatement& stmt) {
     auto table = storage.getTable(db.currentDatabase(), stmt.table);
     if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
+        //throw std::runtime_error("Table not found: " + stmt.table);
+        std::cout << "Table '" << stmt.table << " not found. Attempting to create from CSV..." << std::endl;
+
+        std::fstream csvFile(stmt.filename);
+
+        if (!csvFile.is_open()) {
+            throw std::runtime_error("Cannot open CSV file: " + stmt.filename + ". Make sure fle exists and is readable");
+        }
+
+        try {
+            std::string line;
+            int lineNumber;
+            std::vector<std::string> columnNames;
+            std::vector<std::vector<std::string>> sampleData;
+
+            // Read header/first row for column names
+            if (std::getline(csvFile, line)) {
+                lineNumber++;
+                if (!line.empty() && line.back() == '\r') {
+                    line.pop_back(); // Remove carriage return
+                }
+
+                columnNames = parseCSVLineAdvanced(line, stmt.delimiter);
+
+                // Clean column names (remove quotes, trim)
+                for (auto& colName : columnNames) {
+                    colName = trim(colName);
+                    // Remove quotes if present
+                    if (colName.size() >= 2 && ((colName[0] == '\'' && colName.back() == '\'') || (colName[0] == '"' && colName.back() == '"'))) {
+                        colName = colName.substr(1, colName.size() -2);
+                        colName = trim(colName);
+                    }
+                }
+
+                std::cout << "Detected " << columnNames.size() << " columns in csv: ";
+                for (size_t i = 0; i < columnNames.size(); i++) {
+                    std::cout << "'" << columnNames[i] << "'";
+                    if (i < columnNames.size() - 1) std::cout << ", ";
+                }
+                std::cout << std::endl;
+            }
+
+            // Read sample rows for type inference (first 100 row or all if less)
+            const size_t MAX_SAMPLE_ROWS = 100;
+            size_t sampleRowsRead = 0;
+
+            while (std::getline(csvFile, line) && sampleRowsRead < MAX_SAMPLE_ROWS) {
+                lineNumber++;
+
+                // Skip empty lines
+                if (line.empty() || std::all_of(line.begin(), line.end(), ::isspace)) {
+                    continue;
+                }
+
+                // Remove carriage return if present
+                if (!line.empty() && line.back() == '\r') {
+                    line.pop_back();
+                }
+
+                std::vector<std::string> rowValues;
+                try {
+                    rowValues = parseCSVLineAdvanced(line, stmt.delimiter);
+                    sampleData.push_back(rowValues);
+                    sampleRowsRead++;
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Line " << lineNumber << ": Error parsing CSV: " << e.what() << ". Skipping for type inference." << std::endl;
+                    continue;
+                }
+            }
+
+            csvFile.close();
+
+            if (columnNames.empty()) {
+                throw std::runtime_error("Could not determine column names from csv file");
+            }
+
+            // Create table from inferred schema
+            createTableFromCSV(stmt.table, columnNames,sampleData);
+
+            // Re-open file for actual data insertion
+            csvFile.open(stmt.filename);
+            if (!csvFile.is_open()) {
+                throw std::runtime_error("Cannot reopen CSV file: " + stmt.filename);
+            }
+
+            // Skip header row if it exists
+            if (stmt.hasHeader) {
+                std::getline(csvFile, line); // Skip header
+            }
+
+            std::cout << "Table created successfully. Proceeding with data insertion..." << std::endl;
+        } catch (const std::exception& e) {
+            csvFile.close();
+            throw std::runtime_error("Failed to create table from CSV: " + std::string(e.what()));
+        }
+
+        table = storage.getTable(db.currentDatabase(), stmt.table);
+        if (!table) {
+            throw std::runtime_error("Table creation failed or table not accessible");
+        }
     }
 
     std::ifstream csvFile(stmt.filename);
@@ -644,215 +957,112 @@ ExecutionEngine::ResultSet ExecutionEngine::executeBulkInsert(AST::BulkInsertSta
 }
 
 
-/*ExecutionEngine::ResultSet ExecutionEngine::executeLoadData(AST::LoadDataStatement& stmt) {
+ExecutionEngine::ResultSet ExecutionEngine::executeLoadData(AST::LoadDataStatement& stmt) {
     auto table = storage.getTable(db.currentDatabase(), stmt.table);
     if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
-    }
+        //throw std::runtime_error("Table not found: " + stmt.table);
+              std::cout << "Table '" << stmt.table << "' not found. Attempting to create from CSV..." << std::endl;
 
-    std::ifstream dataFile(stmt.filename);
-    if (!dataFile.is_open()) {
-        throw std::runtime_error("Cannot open data file: " + stmt.filename +
-                               ". Make sure the file exists and is readable.");
-    }
+        std::ifstream csvFile(stmt.filename);
+        if (!csvFile.is_open()) {
+            throw std::runtime_error("Cannot open CSV file: " + stmt.filename +
+                                   ". Make sure the file exists and is readable.");
+        }
 
-    int inserted_count = 0;
-    int skipped_count = 0;
-    bool wasInTransaction = inTransaction();
+        try {
+            std::string line;
+            int lineNumber = 0;
+            std::vector<std::string> columnNames;
+            std::vector<std::vector<std::string>> sampleData;
 
-    if (!wasInTransaction) {
-        beginTransaction();
-    }
-
-    try {
-        std::string line;
-        int lineNumber = 0;
-        std::vector<std::string> fileHeaders;
-        std::vector<int> columnMap;
-
-        // Read and process header if present
-        if (stmt.hasHeader) {
-            if (std::getline(dataFile, line)) {
+            // Read header/first row for column names
+            if (std::getline(csvFile, line)) {
                 lineNumber++;
                 if (!line.empty() && line.back() == '\r') {
                     line.pop_back(); // Remove carriage return
                 }
-                fileHeaders = parseCSVLineAdvanced(line, stmt.delimiter);
 
-                // Create mapping from file columns to table columns
-                if (stmt.columns.empty()) {
-                    // Use file headers to map to table columns
-                    columnMap = mapColumns(fileHeaders, table, true);
-                } else {
-                    // Use specified column order
-                    columnMap.resize(stmt.columns.size());
-                    for (size_t i = 0; i < stmt.columns.size(); i++) {
-                        const std::string& colName = stmt.columns[i];
-                        bool found = false;
-                        for (size_t j = 0; j < table->columns.size(); j++) {
-                            if (table->columns[j].name == colName) {
-                                columnMap[i] = j;
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (!found) {
-                            throw std::runtime_error("Specified column '" + colName +
-                                                   "' not found in table '" + stmt.table + "'");
-                        }
+                                columnNames = parseCSVLineAdvanced(line, stmt.delimiter);
+
+                // Clean column names (remove quotes, trim)
+                for (auto& colName : columnNames) {
+                    colName = trim(colName);
+                    // Remove quotes if present
+                    if (colName.size() >= 2 && ((colName[0] == '\'' && colName.back() == '\'') ||
+                                               (colName[0] == '"' && colName.back() == '"'))) {
+                        colName = colName.substr(1, colName.size() - 2);
+                        colName = trim(colName);
                     }
                 }
-            }
-        } else {
-            // No header - create mapping based on order
-            if (stmt.columns.empty()) {
-                // Map file columns directly to table columns in order
-                columnMap.resize(table->columns.size());
-                for (size_t i = 0; i < table->columns.size(); i++) {
-                    columnMap[i] = i;
+
+                std::cout << "Detected " << columnNames.size() << " columns in CSV: ";
+                for (size_t i = 0; i < columnNames.size(); i++) {
+                    std::cout << "'" << columnNames[i] << "'";
+                    if (i < columnNames.size() - 1) std::cout << ", ";
                 }
-            } else {
-                // Use specified column order
-                columnMap.resize(stmt.columns.size());
-                for (size_t i = 0; i < stmt.columns.size(); i++) {
-                    const std::string& colName = stmt.columns[i];
-                    bool found = false;
-                    for (size_t j = 0; j < table->columns.size(); j++) {
-                        if (table->columns[j].name == colName) {
-                            columnMap[i] = j;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        throw std::runtime_error("Specified column '" + colName +
-                                               "' not found in table '" + stmt.table + "'");
-                    }
+                std::cout << std::endl;
+            }
+
+            // Read sample rows for type inference (first 100 rows or all if less)
+            const size_t MAX_SAMPLE_ROWS = 100;
+            size_t sampleRowsRead = 0;
+
+                     while (std::getline(csvFile, line) && sampleRowsRead < MAX_SAMPLE_ROWS) {
+                lineNumber++;
+
+                // Skip empty lines
+                if (line.empty() || std::all_of(line.begin(), line.end(), ::isspace)) {
+                    continue;
                 }
-            }
-        }
 
-        // Read and insert data rows
-        while (std::getline(dataFile, line)) {
-            lineNumber++;
+                // Remove carriage return if present
+                if (!line.empty() && line.back() == '\r') {
+                    line.pop_back();
+                }
 
-            // Skip empty lines
-            if (line.empty() || std::all_of(line.begin(), line.end(), ::isspace)) {
-                continue;
-            }
-
-            // Remove carriage return if present
-            if (!line.empty() && line.back() == '\r') {
-                line.pop_back();
-            }
-
-            std::vector<std::string> fileValues;
-            try {
-                fileValues = parseCSVLineAdvanced(line, stmt.delimiter);
-            } catch (const std::exception& e) {
-                throw std::runtime_error("Line " + std::to_string(lineNumber) +
-                                       ": Error parsing CSV: " + std::string(e.what()));
-            }
-
-            // Build row from file values
-            std::unordered_map<std::string, std::string> row;
-            bool skipRow = false;
-
-            for (size_t fileIdx = 0; fileIdx < fileValues.size(); fileIdx++) {
-                if (fileIdx < columnMap.size() && columnMap[fileIdx] >= 0) {
-                    int tableIdx = columnMap[fileIdx];
-                    if (tableIdx < static_cast<int>(table->columns.size())) {
-                        const auto& column = table->columns[tableIdx];
-
-                        // Skip auto-generated columns
-                        if (column.autoIncreament || column.generateDate ||
-                            column.generateDateTime || column.generateUUID) {
-                            continue;
-                        }
-
-                        try {
-                            std::string processedValue = processCSVValue(fileValues[fileIdx], column);
-                            row[column.name] = processedValue;
-                        } catch (const std::exception& e) {
-                            std::cerr << "Warning: Line " << lineNumber
-                                     << ", Column '" << column.name
-                                     << "': " << e.what()
-                                     << ". Skipping row." << std::endl;
-                            skipRow = true;
-                            break;
-                        }
-                    }
+                std::vector<std::string> rowValues;
+                try {
+                    rowValues = parseCSVLineAdvanced(line, stmt.delimiter);
+                    sampleData.push_back(rowValues);
+                    sampleRowsRead++;
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Line " << lineNumber << ": Error parsing CSV: "
+                              << e.what() << ". Skipping for type inference." << std::endl;
+                    continue;
                 }
             }
 
-            if (skipRow) {
-                skipped_count++;
-                continue;
+            csvFile.close();
+
+                       if (columnNames.empty()) {
+                throw std::runtime_error("Could not determine column names from CSV file");
             }
 
-            // Apply default values for columns not in file
-            applyDefaultValues(row, table);
+            // Create table from inferred schema
+            createTableFromCSV(stmt.table, columnNames, sampleData);
 
-            // Apply auto-generated values
-            applyGeneratedValues(row, table);
-
-            // Handle auto-increment
-            handleAutoIncreament(row, table);
-
-            try {
-                // Validate against schema
-                validateRowAgainstSchema(row, table);
-
-                // Insert the row
-                storage.insertRow(db.currentDatabase(), stmt.table, row);
-                inserted_count++;
-
-                // Commit in batches for large files (every 1000 rows)
-                if (!wasInTransaction && inserted_count % 1000 == 0) {
-                    commitTransaction();
-                    beginTransaction();
-                    std::cout << "Processed " << inserted_count << " rows..." << std::endl;
-                }
-            } catch (const std::exception& e) {
-                std::cerr << "Warning: Line " << lineNumber
-                         << ": " << e.what()
-                         << ". Skipping row." << std::endl;
-                skipped_count++;
+            // Re-open file for actual data insertion
+            csvFile.open(stmt.filename);
+            if (!csvFile.is_open()) {
+                throw std::runtime_error("Cannot reopen CSV file: " + stmt.filename);
             }
-        }
 
-        if (!wasInTransaction) {
-            commitTransaction();
-        }
-
-        dataFile.close();
-
-        std::string message = std::to_string(inserted_count) + " row(s) loaded from file '" +
-                             stmt.filename + "' into '" + stmt.table + "'";
-        if (skipped_count > 0) {
-            message += ", " + std::to_string(skipped_count) + " row(s) skipped due to errors";
-        }
-
-        return ResultSet({"Status", {{message}}});
-
-    } catch (const std::exception& e) {
-        dataFile.close();
-
-        if (!wasInTransaction && inTransaction()) {
-            try {
-                rollbackTransaction();
-            } catch (const std::exception& rollback_error) {
-                std::cerr << "Warning: Failed to rollback transaction: " << rollback_error.what() << std::endl;
+            // Skip header row if it exists
+            if (stmt.hasHeader) {
+                std::getline(csvFile, line); // Skip header
             }
-        }
-        throw;
-    }
-}*/
 
-ExecutionEngine::ResultSet ExecutionEngine::executeLoadData(AST::LoadDataStatement& stmt) {
-    auto table = storage.getTable(db.currentDatabase(), stmt.table);
-    if (!table) {
-        throw std::runtime_error("Table not found: " + stmt.table);
+            std::cout << "Table created successfully. Proceeding with data insertion..." << std::endl;
+
+        } catch (const std::exception& e) {
+            csvFile.close();
+            throw std::runtime_error("Failed to create table from CSV: " + std::string(e.what()));
+        }
+                // Now get the newly created table
+        table = storage.getTable(db.currentDatabase(), stmt.table);
+        if (!table) {
+            throw std::runtime_error("Table creation failed or table not accessible");
+        }
     }
 
     std::ifstream dataFile(stmt.filename);

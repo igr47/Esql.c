@@ -1849,7 +1849,7 @@ void SematicAnalyzer::analyzeLoadData(AST::LoadDataStatement& loadStmt) {
     // Check if table exists
     currentTable = storage.getTable(db.currentDatabase(), loadStmt.table);
     if (!currentTable) {
-        throw SematicError("Table does not exist: " + loadStmt.table);
+        //throw SematicError("Table does not exist: " + loadStmt.table);
     }
 
     // Check if file type is supported

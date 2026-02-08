@@ -108,6 +108,8 @@ private:
     std::string trim(const std::string& str);
     std::string processCSVValue(const std::string& csvValue, const DatabaseSchema::Column& column);
     std::vector<int> mapColumns(const std::vector<std::string>& csvHeaders, const DatabaseSchema::Table* table,bool hasHeader);
+    void createTableFromCSV(const std::string& tableName, const std::vector<std::string>& columnNames,const std::vector<std::vector<std::string>>& sampleData);
+    DatabaseSchema::Column::Type inferColumnTypeFromCSVData(const std::vector<std::string>& columnValues);
     ExecutionEngine::ResultSet executeCSVInsert(AST::InsertStatement& stmt);
 
     // Data manipulation operations
