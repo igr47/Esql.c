@@ -1611,6 +1611,8 @@ std::unordered_map<std::string, std::string> AIParser::parseHyperparameters() {
         } else if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
             param_value = base_parser_.getCurrentToken().lexeme;
 
+            std::cout << "[PARSER DEBUG] Got NUMBER_LITERAL token: lexeme='" << param_value << "' for parameter " << param_name << std::endl;
+
             // Validate numeric parameter ranges
             validateNumericParameter(param_name, param_value, base_parser_.getCurrentToken());
 
@@ -1643,6 +1645,8 @@ std::unordered_map<std::string, std::string> AIParser::parseHyperparameters() {
     return params;
 }
 
+
+
 void AIParser::validateNumericParameter(const std::string& param_name,
                                       const std::string& param_value,
                                       const Token& token) {
@@ -1667,7 +1671,40 @@ void AIParser::validateNumericParameter(const std::string& param_name,
         {"other_rate", {0.0f, 1.0f}}
     };
 
-    auto it = param_ranges.find(param_name);
+        auto it = param_ranges.find(param_name);
+    if (it != param_ranges.end()) {
+        try {
+            // Trim whitespace first
+            std::string trimmed = param_value;
+            trimmed.erase(0, trimmed.find_first_not_of(" \t\n\r\f\v"));
+            trimmed.erase(trimmed.find_last_not_of(" \t\n\r\f\v") + 1);
+
+            std::cout << "[DEBUG] Validating " << param_name << " = '" << trimmed
+                      << "' (original: '" << param_value << "')" << std::endl;
+
+            float value = std::stof(trimmed);
+            const auto& range = it->second;
+
+            // For learning_rate specifically, accept very small values
+            if (param_name == "learning_rate" && value < 0.0f) {
+                throw ParseError(token.line, token.column,
+                               "Parameter 'learning_rate' must be >= 0");
+            }
+
+                        if (value < range.first || value > range.second) {
+                throw ParseError(token.line, token.column,
+                               "Parameter '" + param_name + "' must be between " +
+                               std::to_string(range.first) + " and " + std::to_string(range.second));
+            }
+        } catch (const std::exception& e) {
+            // Catch and rethrow with more info
+            throw ParseError(token.line, token.column,
+                           "Invalid numeric value '" + param_value + "' for parameter '" +
+                           param_name + "': " + e.what());
+        }
+    }
+
+    /*auto it = param_ranges.find(param_name);
     if (it != param_ranges.end()) {
         try {
             float value = std::stof(param_value);
@@ -1687,7 +1724,7 @@ void AIParser::validateNumericParameter(const std::string& param_name,
             throw ParseError(token.line, token.column,
                            "Invalid numeric value for parameter '" + param_name + "'");
         }
-    }
+    }*/
 }
 
 void AIParser::validateParameterDependencies(const std::unordered_map<std::string, std::string>& params,const std::string& current_param,

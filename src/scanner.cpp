@@ -10,26 +10,8 @@ Token::Token(Type type,const std::string& lexeme,size_t line,size_t column):type
 Lexer::Lexer(const std::string& input) : input(input),position(0),line(1),column(1){
 	 initializeKeyWords();
 }
-Token Lexer::nextToken(){
-	skipWhitespace();
-	if(position>=input.length()){
-		return Token(Token::Type::END_OF_INPUT,"",line,column);
-	}
-	char current=input[position];
-	size_t start=position;
-	size_t tokenline=line;
-	size_t tokencolumn=column;
-	//Handle identifiers and keywords
-	if(isalpha(current) || current=='_'){
-		return readIdentifierOrKeyword(tokenline,tokencolumn);
-	}else if(isdigit(current)){
-		return readNumber(tokenline,tokencolumn);
-	}else if(current=='\'' || current=='"'){
-		return readString(tokenline,tokencolumn);
-	}else{
-		return readOperatorOrPanctuation(tokenline,tokencolumn);
-	}
-}
+
+
 void Lexer::initializeKeyWords(){
 	keywords={
 		{"SELECT",Token::Type::SELECT}, {"ANALYZE", Token::Type::ANALYZE},
@@ -113,8 +95,8 @@ void Lexer::initializeKeyWords(){
         {"STRUCTURE",Token::Type::STRUCTURE},         {"WITH_TUNING_GRID", Token::Type::WITH_TUNING_GRID},
         {"STDDEV", Token::Type::STDDEV},              {"CLUSTERING", Token::Type::CLUSTERING},
         {"VARIANCE", Token::Type::VARIANCE},          {"OUTLIER", Token::Type::OUTLIER},
-        {"PERCENTILE_CONT", Token::Type::PERCENTILE_CONT}, {"DISTRIBUTION", Token::Type::DISTRIBUTION}, 
-        {"CORR", Token::Type::CORR},                 {"QUALITY", Token::Type::QUALITY}, 
+        {"PERCENTILE_CONT", Token::Type::PERCENTILE_CONT}, {"DISTRIBUTION", Token::Type::DISTRIBUTION},
+        {"CORR", Token::Type::CORR},                 {"QUALITY", Token::Type::QUALITY},
         {"REGR_SLOPE", Token::Type::REGR_SLOPE},     {"FORECAST", Token::Type::FORECAST},
         {"YEAR", Token::Type::YEAR},             {"COLUMNS", Token::Type::COLUMNS},
         {"MONTH", Token::Type::MONTH},           {"HORIZON", Token::Type::HORIZON},
@@ -227,25 +209,114 @@ Token Lexer::readIdentifierOrKeyword(size_t tokenline,size_t tokencolumn){
 	Token::Type type=(it!=keywords.end()) ? it->second : Token::Type::IDENTIFIER;
 	return Token(type,lexeme,tokenline,tokencolumn);
 }
-Token Lexer::readNumber(size_t tokenline,size_t tokencolumn){
-	size_t start=position;
-	bool hasDecimal=false;
-	while(position<input.length()){
-		char current=input[position];
-		if(isdigit(current)){
-			position ++;
-			column ++;
-		}else if(current=='.' && !hasDecimal){
-			hasDecimal=true;
-			position ++;
-			column ++;
-		}else{
-			break;
-		}
-	}
-	std::string lexeme=input.substr(start,position-start);
-	return Token(Token::Type::NUMBER_LITERAL,lexeme,tokenline,tokencolumn);
+
+
+Token Lexer::readNumber(size_t tokenline, size_t tokencolumn) {
+    size_t start = position;
+
+    // Check for optional sign
+    bool hasSign = false;
+    if (position < input.length() && (input[position] == '-' || input[position] == '+')) {
+        hasSign = true;
+        position++;
+        column++;
+    }
+
+    bool hasDecimal = false;
+    bool hasDigit = false;
+
+    while (position < input.length()) {
+        char current = input[position];
+        if (isdigit(current)) {
+            hasDigit = true;
+            position++;
+            column++;
+        } else if (current == '.' && !hasDecimal) {
+            hasDecimal = true;
+            position++;
+            column++;
+            // Check if there's at least one digit after decimal
+            if (position < input.length() && isdigit(input[position])) {
+                hasDigit = true;
+            }
+        } else {
+            break;
+        }
+    }
+
+    std::string lexeme = input.substr(start, position - start);
+
+    // Validate that we have a valid number
+    // A valid number must have at least one digit
+    if (!hasDigit) {
+        // Not a valid number - backtrack
+        position = start;
+        column = tokencolumn;
+
+        if (hasSign) {
+            // Return the sign as an operator
+            if (lexeme[0] == '-') {
+                return Token(Token::Type::MINUS, "-", tokenline, tokencolumn);
+            } else {
+                return Token(Token::Type::PLUS, "+", tokenline, tokencolumn);
+            }
+        }
+        return Token(Token::Type::DOT, ".", tokenline, tokencolumn);
+    }
+
+    return Token(Token::Type::NUMBER_LITERAL, lexeme, tokenline, tokencolumn);
 }
+
+Token Lexer::nextToken() {
+    skipWhitespace();
+    if (position >= input.length()) {
+        return Token(Token::Type::END_OF_INPUT, "", line, column);
+    }
+
+    char current = input[position];
+    size_t tokenline = line;
+    size_t tokencolumn = column;
+
+    // Handle identifiers and keywords
+    if (isalpha(current) || current == '_') {
+        return readIdentifierOrKeyword(tokenline, tokencolumn);
+    }
+    // Handle numbers (including negative numbers)
+    else if (isdigit(current) || current == '.') {
+        return readNumber(tokenline, tokencolumn);
+    }
+    // Handle negative numbers - check if '-' is followed by a digit
+    else if (current == '-') {
+        // Peek ahead to see if it's a negative number
+        if (position + 1 < input.length()) {
+            char next = input[position + 1];
+            if (isdigit(next) || next == '.') {
+                return readNumber(tokenline, tokencolumn);
+            }
+        }
+        // Otherwise, it's just a minus operator
+        return readOperatorOrPanctuation(tokenline, tokencolumn);
+    }
+    // Handle positive numbers with explicit '+'
+    else if (current == '+') {
+        // Peek ahead to see if it's a positive number
+        if (position + 1 < input.length()) {
+            char next = input[position + 1];
+            if (isdigit(next) || next == '.') {
+                return readNumber(tokenline, tokencolumn);
+            }
+        }
+        // Otherwise, it's just a plus operator
+        return readOperatorOrPanctuation(tokenline, tokencolumn);
+    }
+    else if (current == '\'' || current == '"') {
+        return readString(tokenline, tokencolumn);
+    }
+    else {
+        return readOperatorOrPanctuation(tokenline, tokencolumn);
+    }
+}
+
 
 Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
     char quote_char = input[position];
@@ -303,60 +374,6 @@ Token Lexer::readString(size_t tokenline, size_t tokencolumn) {
     return Token(Token::Type::ERROR, "Unterminated string", tokenline, tokencolumn);
 }
 
-/*Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
-	char current=input[position];
-	char next=(position+1<input.length() ? input[position] : '\n');
-	//Handle multi charachter operators
-	switch(current){
-		case '=':
-			position++; column++;
-			return Token(Token::Type::EQUAL,"=",tokenline,tokencolumn);
-		case '<':
-			if(next=='='){
-				position+=2; column+=2;
-				return Token(Token::Type::LESS_EQUAL,"<=",tokenline,tokencolumn);
-			}
-			position ++; column++;
-			return Token(Token::Type::LESS,"<",tokenline,tokencolumn);
-		case '>':
-			if(next=='='){
-				position+=2; column+=2;
-				return Token(Token::Type::GREATER_EQUAL,">=",tokenline,tokencolumn);
-			}
-			position++; column++;
-			return Token(Token::Type::GREATER,">",tokenline,tokencolumn);
-		case '!':
-			if(next=='='){
-				position+=2; column+=2;
-				return Token(Token::Type::NOT_EQUAL,"!=",tokenline,tokencolumn);
-			}
-			break;
-		case '.':
-			position++; column++;
-			return Token(Token::Type::DOT,".",tokenline,tokencolumn);
-		case ',':
-			position++; column++;
-			return Token(Token::Type::COMMA,",",tokenline,tokencolumn);
-		case '(':
-			position++; column++;
-			return Token(Token::Type::L_PAREN,"(",tokenline,tokencolumn);
-		case ')':
-			position++; column++;
-			return Token(Token::Type::R_PAREN,")",tokenline,tokencolumn);
-		case ';':
-			position++; column++;
-			return Token(Token::Type::SEMICOLON,";",tokenline,tokencolumn);
-		case ':':
-			position++; column++;
-			return Token(Token::Type::COLON,":",tokenline,tokencolumn);
-		case '*':
-			position++; column++;
-			return Token(Token::Type::ASTERIST,"*",tokenline,tokencolumn);
-	}
-
-	position++; column++;
-	return Token(Token::Type::ERROR,std::string(1,current),tokenline,tokencolumn);
-}*/
 
 Token Lexer::readOperatorOrPanctuation(size_t tokenline,size_t tokencolumn){
     char current=input[position];
