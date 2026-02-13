@@ -31,7 +31,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(
             stmt.parameters.find("replace") == stmt.parameters.end()) {
             throw std::runtime_error("Model already exists. Use CREATE OR REPLACE MODEL to replace it.");
         }
-        
+
         // Extract parameters
         std::string table_name, target_column;
         if (stmt.parameters.find("source_table") != stmt.parameters.end()) {
@@ -68,7 +68,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(
         esql::DataExtractor::TrainingData training_data;
         std::string detected_problem;
         size_t num_classes = 0;
-        
+
         if (classification_data.valid_samples > 0) {
             // Check if it looks like classification (few unique labels)
             std::set<float> unique_labels(classification_data.labels.begin(),
@@ -117,6 +117,8 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(
             throw std::runtime_error("Insufficient training data. Need at least 10 samples, got " +
                                     std::to_string(training_data.valid_samples));
         }
+
+
 
         std::cout << "[AIExecutionEngineFinal] Extracted " << training_data.valid_samples
                   << " training samples" << std::endl;
@@ -185,7 +187,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(
                 fd.std_value = 1.0f;
             }
 
-            fd.default_value = fd.mean_value;
+        fd.default_value = fd.mean_value;
             schema.features.push_back(fd);
         }
 
@@ -200,10 +202,21 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(
         schema.metadata["training_options"] = stmt.training_options.to_json().dump();
         schema.metadata["tuning_options"] = stmt.tuning_options.to_json().dump();
 
+        training_data.split(0.8f, 0.1f, 0.1f, stmt.training_options.seed);
+
+        esql::DataExtractor::TrainingData train_data_for_preprocess;
+        train_data_for_preprocess.features = training_data.train.features;
+        train_data_for_preprocess.labels = training_data.train.labels;
+        train_data_for_preprocess.feature_names = training_data.feature_names;
+        train_data_for_preprocess.label_name = training_data.label_name;
+        train_data_for_preprocess.total_samples = training_data.train.size;
+        train_data_for_preprocess.valid_samples = training_data.train.size;
+
+
         // Preprocess data
         esql::DataExtractor::TrainingData processed_data =
             DataPreprocessor::preprocess(
-                training_data,
+                train_data_for_preprocess,
                 stmt.data_sampling,
                 stmt.sampling_ratio,
                 stmt.feature_scaling,
@@ -245,20 +258,45 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(
             num_classes
         );
 
+        train_params["early_stopping_round"] = "10";
+        if (train_params.find("num_iterations") == train_params.end()) {
+            train_params["num_iterations"] = "200";  // Allowed more iterations with early stopping
+        }
+
         // Create and train the model
         std::cout << "[AIExecutionEngineFinal] Creating and training model..." << std::endl;
         auto model = std::make_unique<esql::ai::AdaptiveLightGBMModel>(schema);
 
-        bool training_success = model->train(
+        /*bool training_success = model->train(
             processed_data.features,
             processed_data.labels,
             train_params
+        );*/
+
+        bool training_success = model->train_with_splits(
+                training_data.train,
+                training_data.validation,
+                train_params,
+                10 // Early stopping rounds
         );
+
+        /*bool training_success = model->train_with_splits(
+                processed_data, // Training data (preprocessed)
+                training_data.validation, // Validation data (unseen, used for early stopping)
+                train_params,
+                10 // Early stopping rouns
+        );*/
+
+        // Calculate final metrics on validation set (unseen data)
+        /*model->calculate_training_metrics(
+                training_data.validation.features,
+                training_data.validation.labels
+        );*/
 
         if (!training_success) {
             throw std::runtime_error("Model training failed");
         }
-        
+
         // Register the model
         if (!registry.register_model(stmt.model_name, std::move(model))) {
             throw std::runtime_error("Failed to register model");

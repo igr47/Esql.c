@@ -37,9 +37,32 @@ public:
         size_t total_samples = 0;
         size_t valid_samples = 0;
 
+        // Split datasets
+        struct SplitData {
+            std::vector<std::vector<float>> features;
+            std::vector<float> labels;
+            std::vector<std::string> original_labels;
+            size_t size =0;
+
+            bool empty() const { return features.empty(); }
+            void clear() {
+                features.clear();
+                labels.clear();
+                original_labels.clear();
+                size = 0;
+            }
+        };
+
+        SplitData train;
+        SplitData test;
+        SplitData validation;
+
         TrainingData() : total_samples(0), valid_samples(0) {}
 
         std::string to_string() const;
+
+        // Split into train/test/validation sets
+        void split(float train_ratio = 0.8f, float test_ratio = 0.1f, float validation_ration = 0.1f, int seed = 42);
     };
 
     void log_encoding_stats() const;
@@ -69,13 +92,13 @@ public:
         double max_value;
         double mean_value;
         double std_value;
-	double q1_value;    
+	double q1_value;
         double median_value;
         double q3_value;
         bool is_categorical;
         std::vector<std::string> categories;
-	std::vector<double> values;  
-	double sum;    
+	std::vector<double> values;
+	double sum;
 
 	ColumnStats() :
 		total_count(0),

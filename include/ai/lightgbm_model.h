@@ -4,6 +4,7 @@
 
 #include "model_interface.h"
 #include "datum.h"
+#include "data_extractor.h"
 #include <LightGBM/c_api.h>
 #include <unordered_map>
 #include <vector>
@@ -108,6 +109,9 @@ public:
     bool train(const std::vector<std::vector<float>>& features,
                const std::vector<float>& labels,
                const std::unordered_map<std::string, std::string>& params = {});
+
+    bool train_with_splits(const DataExtractor::TrainingData::SplitData& train_data, const DataExtractor::TrainingData::SplitData& validation_data,
+            const std::unordered_map<std::string, std::string>& params = {}, int early_stopping_rounds = 10);
 
     // Drift detection
     bool needs_retraining() const;

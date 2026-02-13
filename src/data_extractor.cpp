@@ -27,6 +27,90 @@ std::string DataExtractor::TrainingData::to_string() const {
     return ss.str();
 }
 
+// ===============================================
+//  Data spliting in ttraining data
+//  ==============================================
+void DataExtractor::TrainingData::split(float train_ratio, float test_ratio, float validation_ratio,int seed) {
+    // Clear existing splits
+    train.clear();
+    test.clear();
+    validation.clear();
+
+    if (features.empty() || labels.empty()) {
+        std::cerr << "[TrainingData] Cannot split - empty dataset" << std::endl;
+        return;
+    }
+
+    // Verify ratios sum to approximately 1.0
+    float sum = train_ratio + test_ratio + validation_ratio;
+    if (std::abs(sum - 1.0f) > 0.001f) {
+        std::cerr << "[TrainingData] Split ratios must sum to 1.0, adjusting..." << std::endl;
+        // Normalize
+        train_ratio /= sum;
+        test_ratio /= sum;
+        validation_ratio /= sum;
+    }
+
+    // Create indices and shuffle
+    std::vector<size_t> indices(features.size());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::mt19937 rng(seed);
+    std::shuffle(indices.begin(), indices.end(), rng);
+
+    // Calculate split points
+    size_t train_size = static_cast<size_t>(features.size() * train_ratio);
+    size_t test_size = static_cast<size_t>(features.size() * test_ratio);
+    size_t validation_size = features.size() - train_size - test_size;
+
+    std::cout << "[TrainingData] Splitting dataset: "
+              << features.size() << " total samples" << std::endl;
+    std::cout << "  Train: " << train_size << " (" << (train_ratio * 100) << "%)" << std::endl;
+    std::cout << "  Test: " << test_size << " (" << (test_ratio * 100) << "%)" << std::endl;
+    std::cout << "  Validation: " << validation_size << " (" << (validation_ratio * 100) << "%)" << std::endl;
+
+    // Assign to splits
+    size_t pos = 0;
+
+    // Training set
+    for (size_t i = 0; i < train_size && pos < indices.size(); ++i, ++pos) {
+        size_t idx = indices[pos];
+        train.features.push_back(features[idx]);
+        train.labels.push_back(labels[idx]);
+        if (!original_labels.empty()) {
+            train.original_labels.push_back(original_labels[idx]);
+        }
+    }
+    train.size = train.features.size();
+
+    // Test set
+    for (size_t i = 0; i < test_size && pos < indices.size(); ++i, ++pos) {
+        size_t idx = indices[pos];
+        test.features.push_back(features[idx]);
+        test.labels.push_back(labels[idx]);
+        if (!original_labels.empty()) {
+            test.original_labels.push_back(original_labels[idx]);
+        }
+    }
+    test.size = test.features.size();
+
+    // Validation set
+    while (pos < indices.size()) {
+        size_t idx = indices[pos++];
+        validation.features.push_back(features[idx]);
+        validation.labels.push_back(labels[idx]);
+        if (!original_labels.empty()) {
+            validation.original_labels.push_back(original_labels[idx]);
+        }
+    }
+    validation.size = validation.features.size();
+
+    std::cout << "[TrainingData] Split complete - "
+              << "Train: " << train.size << ", "
+              << "Test: " << test.size << ", "
+              << "Validation: " << validation.size << std::endl;
+}
+
 // ============================================
 // ColumnStats Implementation
 // ============================================
@@ -106,7 +190,7 @@ DataExtractor::DataCursor::DataCursor(DataExtractor* parent,
       current_position_(0),
       total_rows_(0),
       buffer_position_(0) {
-    
+
     // Get total rows from storage
     try {
         auto sample_data = storage_->getTableData(db_name, table_name);
@@ -115,7 +199,7 @@ DataExtractor::DataCursor::DataCursor(DataExtractor* parent,
         std::cerr << "[DataCursor] Failed to get table data: " << e.what() << std::endl;
         total_rows_ = 0;
     }
-    
+
     // Load first chunk
     load_next_chunk();
 }
@@ -144,25 +228,25 @@ std::unordered_map<std::string, Datum> DataExtractor::DataCursor::next() {
     auto row = std::move(buffer_[buffer_position_]);
     buffer_position_++;
     current_position_++;
-        
+
     return row;
 }
 
 void DataExtractor::DataCursor::load_next_chunk(size_t chunk_size) {
     buffer_.clear();
     buffer_position_ = 0;
-    
+
     try {
         // Calculate how many rows to fetch
         size_t rows_to_fetch = std::min(chunk_size, total_rows_ - current_position_);
-        
+
         if (rows_to_fetch == 0) {
             return;
         }
-        
+
         // Get raw data from storage
         auto raw_data = storage_->getTableData(db_name_, table_name_);
-        
+
         // Convert to Datum format using parent's converter
         buffer_.reserve(rows_to_fetch);
         for (size_t i = current_position_; i < current_position_ + rows_to_fetch && i < raw_data.size(); ++i) {
@@ -179,7 +263,7 @@ void DataExtractor::DataCursor::load_next_chunk(size_t chunk_size) {
             }
             buffer_.push_back(std::move(row));
         }
-        
+
     } catch (const std::exception& e) {
         std::cerr << "[DataCursor] Failed to load chunk: " << e.what() << std::endl;
         buffer_.clear();
@@ -665,16 +749,16 @@ std::map<std::string, DataExtractor::ColumnStats> DataExtractor::analyze_columns
     const std::string& database,
     const std::string& table,
     const std::vector<std::string>& columns) {
-    
+
     std::map<std::string, ColumnStats> stats;
-    
+
     // Extract data first
     auto rows = extract_table_data(database, table, columns, "", 0, 0);
-    
+
     if (rows.empty()) {
         return stats;
     }
-    
+
     // Initialize statistics for each column
     for (const auto& col_name : columns) {
         ColumnStats col_stats;

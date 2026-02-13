@@ -198,6 +198,21 @@ std::unordered_map<std::string, std::string> AIExecutionEngineFinal::Hyperparame
     return params;
 }
 
+
+/*float AIExecutionEngineFinal::HyperparameterTuner::evaluateParameters(const esql::DataExtractor::TrainingData& data,const std::unordered_map<std::string, std::string>& params,const std::string& algorithm,
+    const std::string& problem_type,const std::vector<esql::ai::FeatureDescriptor>& feature_descriptors,int folds,int seed) {
+
+    // Use cross-validation or holdout validation
+    if (folds >= 2) {
+        return evaluateWithCrossValidation(data, params, algorithm, problem_type,
+                                          feature_descriptors, folds, seed);
+    } else {
+        // Simple train/validation split (80/20)
+        return evaluateWithHoldout(data, params, algorithm, problem_type,
+                                  feature_descriptors, 0.8f, seed);
+    }
+}*/
+
 float AIExecutionEngineFinal::HyperparameterTuner::evaluateParameters(const esql::DataExtractor::TrainingData& data,const std::unordered_map<std::string, std::string>& params,
             const std::string& algorithm,const std::string& problem_type,const std::vector<esql::ai::FeatureDescriptor>& feature_descriptors,int folds,int seed) {
     if (data.features.empty() || folds < 2) {
