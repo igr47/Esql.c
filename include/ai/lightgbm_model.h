@@ -112,6 +112,7 @@ public:
 
     bool train_with_splits(const DataExtractor::TrainingData::SplitData& train_data, const DataExtractor::TrainingData::SplitData& validation_data,
             const std::unordered_map<std::string, std::string>& params = {}, int early_stopping_rounds = 10);
+    void extract_native_metrics(BoosterHandle booster, const ModelSchema& schema);
 
     // Drift detection
     bool needs_retraining() const;
