@@ -1,5 +1,6 @@
 #include "ai/lightgbm_model.h"
 #include "ai/algorithm_registry.h"
+#include "ai/forecast_engine.h"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -9,120 +10,107 @@
 namespace esql {
 namespace ai {
 
-std::vector<Tensor> AdaptiveLightGBMModel::forecast(const std::vector<Tensor>& historical_data,
-                                                   size_t steps_ahead,
-                                                   const std::unordered_map<std::string, std::string>& options) {
+std::vector<Tensor> AdaptiveLightGBMModel::forecast(
+    const std::vector<Tensor>& historical_data,
+    size_t steps_ahead,
+    const std::unordered_map<std::string, std::string>& options) {
 
     if (!is_loaded_) {
         throw std::runtime_error("[LightGBM] Model not loaded for forecasting");
     }
 
-    if (historical_data.empty()) {
-        throw std::runtime_error("[LightGBM] Historical data required for forecasting");
+    std::cout << "[LightGBM] Starting advanced forecast: "
+              << historical_data.size() << " points, " << steps_ahead << " steps ahead" << std::endl;
+
+    // Create forecast engine with this model
+    auto shared_this = std::shared_ptr<AdaptiveLightGBMModel>(this, [](AdaptiveLightGBMModel*){});
+    ForecastEngine engine(shared_this);
+
+    // Parse options
+    ForecastConfig config;
+
+    // Method selection
+    if (options.count("method")) {
+        std::string method = options.at("method");
+        if (method == "recursive") config.method = ForecastConfig::Method::RECURSIVE;
+        else if (method == "direct") config.method = ForecastConfig::Method::DIRECT;
+        else if (method == "mimo") config.method = ForecastConfig::Method::MIMO;
+        else if (method == "ensemble") config.method = ForecastConfig::Method::ENSEMBLE;
     }
 
-    std::cout << "[LightGBM] Entered Forecast Method." << std::endl;
-    
-    std::cout << "[LightGBM] Forecasting with " << historical_data.size()
-              << " historical data points, " << steps_ahead << " steps ahead" << std::endl;
-    std::cout << "[LightGBM] Model has " << schema_.features.size() << " features" << std::endl;
+    // Uncertainty method
+    if (options.count("uncertainty")) {
+        std::string unc = options.at("uncertainty");
+        if (unc == "conformal") config.uncertainty = ForecastConfig::UncertaintyMethod::CONFORMAL;
+        else if (unc == "bootstrap") config.uncertainty = ForecastConfig::UncertaintyMethod::BOOTSTRAP;
+        else if (unc == "quantile") config.uncertainty = ForecastConfig::UncertaintyMethod::QUANTILE;
+    }
 
-    // Get forecasting method from options or default
-    std::string method = options.count("method") > 0 ? options.at("method") : "recursive";
-    bool include_confidence = options.count("confidence") > 0 ? (options.at("confidence") == "true") : false;
+    // Seasonality
+    if (options.count("seasonality")) {
+        config.seasonality_period = std::stoul(options.at("seasonality"));
+    }
+    if (options.count("detect_seasonality")) {
+        config.detect_seasonality = (options.at("detect_seasonality") == "true");
+    }
 
-    std::vector<Tensor> forecasts;
+    // Confidence level
+    if (options.count("confidence_level")) {
+        config.confidence_level = std::stof(options.at("confidence_level"));
+    }
 
-    if (method == "recursive") {
-        std::cout << "[LightGBM] Entered recursive forecasting for regression model" << std::endl;
-        
-        // For regression models, use the most recent data point
-        const auto& last_data = historical_data.back().data;
-        
-        if (last_data.size() != schema_.features.size()) {
-            std::stringstream ss;
-            ss << "[LightGBM] Input size mismatch. Expected " << schema_.features.size()
-               << " features, got " << last_data.size();
-            throw std::runtime_error(ss.str());
-        }
-        
-        // Start with the most recent data
-        std::vector<float> current_features = last_data;
-        
-        // Find target feature (exam_score)
-        size_t target_feature_idx = 0;
-        for (size_t i = 0; i < schema_.features.size(); ++i) {
-            if (schema_.features[i].name == "exam_score" || 
-                schema_.features[i].db_column.find("exam") != std::string::npos ||
-                schema_.features[i].name.find("score") != std::string::npos) {
-                target_feature_idx = i;
-                std::cout << "[LightGBM] Using feature '" << schema_.features[i].name 
-                          << "' as target at index " << i << std::endl;
-                break;
+    // Number of scenarios
+    if (options.count("scenarios")) {
+        config.num_bootstrap_samples = std::stoul(options.at("scenarios"));
+    }
+
+    // Dampen trend for long horizons
+    if (options.count("dampen_trend")) {
+        config.dampen_trend = (options.at("dampen_trend") == "true");
+    }
+
+    // Perform forecast
+    EnhancedForecast enhanced_forecast = engine.forecast(historical_data, steps_ahead, config);
+
+    // Convert to tensor format for backward compatibility
+    std::vector<Tensor> result;
+
+    if (options.count("return_format")) {
+        std::string format = options.at("return_format");
+
+        if (format == "full") {
+            // Return all information as JSON tensor
+            nlohmann::json j = enhanced_forecast.to_json();
+            std::string json_str = j.dump();
+            std::vector<float> json_data(json_str.begin(), json_str.end());
+            result.push_back(Tensor(json_data, {json_data.size()}));
+        } else if (format == "scenarios") {
+            // Return scenarios
+            for (const auto& scenario : enhanced_forecast.scenarios) {
+                result.push_back(Tensor(scenario, {scenario.size()}));
             }
+        } else if (format == "intervals") {
+            // Return intervals
+            result.push_back(Tensor(enhanced_forecast.lower_bound, {enhanced_forecast.lower_bound.size()}));
+            result.push_back(Tensor(enhanced_forecast.upper_bound, {enhanced_forecast.upper_bound.size()}));
         }
-        
-        std::cout << "[LightGBM] Starting " << steps_ahead << " step forecast" << std::endl;
-        
-        for (size_t step = 0; step < steps_ahead; ++step) {
-            std::cout << "[LightGBM] Step " << (step + 1) << "/" << steps_ahead << std::endl;
-            
-            // Create input tensor
-            Tensor input_tensor(current_features, {schema_.features.size()});
-            
-            try {
-                // Predict
-                Tensor prediction = predict(input_tensor);
-                
-                if (prediction.data.empty()) {
-                    throw std::runtime_error("Empty prediction returned");
-                }
-                
-                float predicted_value = prediction.data[0];
-                forecasts.push_back(Tensor({predicted_value}, {1}));
-                
-                std::cout << "[LightGBM] Predicted: " << predicted_value << std::endl;
-                
-                // Update features for next step
-                current_features[target_feature_idx] = predicted_value;
-                
-                // Update time-related features
-                for (size_t i = 0; i < current_features.size(); ++i) {
-                    const auto& feature_name = schema_.features[i].name;
-                    if (feature_name.find("time") != std::string::npos ||
-                        feature_name.find("step") != std::string::npos ||
-                        feature_name.find("period") != std::string::npos) {
-                        current_features[i] += 1.0f;
-                    }
-                }
-                
-            } catch (const std::exception& e) {
-                std::cerr << "[LightGBM] Forecast error at step " << step 
-                          << ": " << e.what() << std::endl;
-                forecasts.push_back(Tensor({0.0f}, {1}));
-            }
-        }
-        
-        std::cout << "[LightGBM] Finished forecasting." << std::endl;
-    }
-    
-    // Add confidence intervals if requested
-    if (include_confidence) {
-        std::vector<Tensor> forecasts_with_ci;
-        for (size_t i = 0; i < forecasts.size(); ++i) {
-            const auto& forecast_tensor = forecasts[i];
-            float value = forecast_tensor.data.empty() ? 0.0f : forecast_tensor.data[0];
-            float std_dev = 5.0f; // Adjust based on your model's error
-            float z_score = 1.96f;
-            
-            forecasts_with_ci.push_back(forecast_tensor);
-            forecasts_with_ci.push_back(Tensor({value - z_score * std_dev}, {1}));
-            forecasts_with_ci.push_back(Tensor({value + z_score * std_dev}, {1}));
-        }
-        return forecasts_with_ci;
     }
 
-    return forecasts;
+    // Default: return point forecasts
+    if (result.empty()) {
+        result.push_back(Tensor(enhanced_forecast.point_forecast, {enhanced_forecast.point_forecast.size()}));
+
+        if (options.count("include_intervals")) {
+            result.push_back(Tensor(enhanced_forecast.lower_bound, {enhanced_forecast.lower_bound.size()}));
+            result.push_back(Tensor(enhanced_forecast.upper_bound, {enhanced_forecast.upper_bound.size()}));
+        }
+    }
+
+    // Update statistics
+    schema_.stats.total_predictions += steps_ahead;
+    prediction_count_ += steps_ahead;
+
+    return result;
 }
 
 } // namespace esql

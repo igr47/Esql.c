@@ -138,7 +138,7 @@ namespace AST {
 
     class ForecastStatement : public AIStatement {
     public:
-	std::string model_name;
+	    std::string model_name;
         std::string input_table;
         std::string time_column;
         std::vector<std::string> value_columns;
@@ -148,6 +148,15 @@ namespace AST {
         size_t num_scenarios = 100;
         std::string output_table;
         std::string scenario_type = "monte_carlo"; // monte_carlo, bootstrap, parametric
+
+        std::string method = "ensemble";  // recursive, direct, mimo, ensemble
+        std::string uncertainty = "conformal";  // conformal, bootstrap, quantile
+        int seasonality_period = 0;  // 0 = auto-detect
+        float confidence_level = 0.95f;
+        bool dampen_trend = false;
+        bool backtest = false;
+        int backtest_splits = 5;
+        std::string exogenous_table;  // Table with future exogenous variables
 
         std::string toEsql() const override;
     };
