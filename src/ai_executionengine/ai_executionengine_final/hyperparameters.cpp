@@ -223,7 +223,7 @@ std::unordered_map<std::string, std::string> AIExecutionEngineFinal::Hyperparame
         defaults["scale_pos_weight"] = "1.0";
     } else if (problem_type == "multiclass") {
         defaults["objective"] = "multiclass";
-        defaults["metric"] = "multi_logloss";
+        defaults["metric"] = "multi_logloss,auc_mu";
         if (num_classes > 0) {
             defaults["num_class"] = std::to_string(num_classes);
         }
