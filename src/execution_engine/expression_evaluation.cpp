@@ -1,10 +1,17 @@
 #include "execution_engine_includes/executionengine_main.h"
+#include "ai_expression_evaluator.h"
 #include "database.h"
 #include <iostream>
 #include <string>
 #include <stdexcept>
 #include <cmath>
 #include <limits>
+
+static std::unique_ptr<AIExpressionEvaluator> g_ai_evaluator = nullptr;
+
+void ExecutionEngine::setAIEvaluator(std::unique_ptr<AIExpressionEvaluator> evaluator) {
+    g_ai_evaluator = std::move(evaluator);
+}
 
 // Expression evaluation methods
 std::vector<std::string> ExecutionEngine::evaluateSelectColumns(
@@ -24,11 +31,39 @@ bool ExecutionEngine::evaluateWhereClause(const AST::Expression* where,const std
     return result == "true" || result == "1";
 }
 
+std::string ExecutionEngine::evaluateExpressionWrapper(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row) {
+    return evaluateExpression(expr, row);
+}
+
 std::string ExecutionEngine::evaluateExpression(const AST::Expression* expr,
                                               const std::unordered_map<std::string, std::string>& row) {
     if (!expr) {
         return "NULL";
     } 
+
+       // Handle AI function calls
+    if (auto* ai_func = dynamic_cast<const AST::AIFunctionCall*>(expr)) {
+        if (g_ai_evaluator) {
+            return g_ai_evaluator->evaluateAIFunction(ai_func, row);
+        }
+        return "NULL";
+    }
+    
+    // Handle AI scalar expressions
+    if (auto* ai_scalar = dynamic_cast<const AST::AIScalarExpression*>(expr)) {
+        if (g_ai_evaluator) {
+            return g_ai_evaluator->evaluateAIScalar(ai_scalar, row);
+        }
+        return "NULL";
+    }
+    
+    // Handle model function calls (direct model name as function)
+    if (auto* model_func = dynamic_cast<const AST::ModelFunctionCall*>(expr)) {
+        if (g_ai_evaluator) {
+            return g_ai_evaluator->evaluateModelFunction(model_func, row);
+        }
+        return "NULL";
+    }
 
     // Handle CASE expressions
     if (auto* caseExpr = dynamic_cast<const AST::CaseExpression*>(expr)) {

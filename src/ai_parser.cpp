@@ -1304,6 +1304,79 @@ std::unique_ptr<AST::FeatureImportanceStatement> AIParser::parseFeatureImportanc
 }
 
 std::unique_ptr<AST::Expression> AIParser::parseAIFunctionCall() {
+    Token current = base_parser_.getCurrentToken();
+
+    // Check for AI_* functions
+    AST::AIFunctionType func_type;
+
+    switch(current.type) {
+        case Token::Type::AI_PREDICT:
+            func_type = AST::AIFunctionType::PREDICT;
+            break;
+        case Token::Type::AI_PREDICT_CLASS:
+            func_type = AST::AIFunctionType::PREDICT_CLASS;
+            break;
+        case Token::Type::AI_PREDICT_PROBA:
+            func_type = AST::AIFunctionType::PREDICT_PROBA;
+            break;
+        case Token::Type::AI_PREDICT_VALUE:
+            func_type = AST::AIFunctionType::PREDICT_VALUE;
+            break;
+        case Token::Type::AI_PREDICT_CLUSTER:
+            func_type = AST::AIFunctionType::PREDICT_CLUSTER;
+            break;
+        case Token::Type::AI_PREDICT_ANOMALY:
+            func_type = AST::AIFunctionType::PREDICT_ANOMALY;
+            break;
+        case Token::Type::AI_EXPLAIN:
+            func_type = AST::AIFunctionType::EXPLAIN;
+            break;
+        case Token::Type::FORECAST:
+            func_type = AST::AIFunctionType::FORECAST;
+            break;
+        default:
+            return nullptr;
+    }
+
+    base_parser_.consumeToken(current.type);
+    base_parser_.consumeToken(Token::Type::L_PAREN);
+
+    // Parse model name
+    std::string model_name = parseModelName();
+
+ // Parse arguments if any
+    std::vector<std::unique_ptr<AST::Expression>> arguments;
+    if (base_parser_.checkMatch(Token::Type::COMMA)) {
+        base_parser_.consumeToken(Token::Type::COMMA);
+        while (!base_parser_.checkMatch(Token::Type::R_PAREN)) {
+            arguments.push_back(base_parser_.parseExpressionWrapper());
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+        }
+    }
+
+    base_parser_.consumeToken(Token::Type::R_PAREN);
+
+    // Parse WITH options
+    std::unordered_map<std::string, std::string> options;
+    if (base_parser_.checkMatch(Token::Type::WITH)) {
+        options = parseAIOptions();
+    }
+
+    // Parse alias
+    std::unique_ptr<AST::Expression> alias = nullptr;
+    if (base_parser_.checkMatch(Token::Type::AS)) {
+        base_parser_.consumeToken(Token::Type::AS);
+        alias = base_parser_.parseIdentifierWrapper();
+    }
+
+    return std::make_unique<AST::AIFunctionCall>(
+        func_type, model_name, std::move(arguments), std::move(alias), options
+    );
+}
+
+/*std::unique_ptr<AST::Expression> AIParser::parseAIFunctionCall() {
     // Save the current token for error reporting
     Token current = base_parser_.getCurrentToken();
 
@@ -1360,7 +1433,7 @@ std::unique_ptr<AST::Expression> AIParser::parseAIFunctionCall() {
     return std::make_unique<AST::AIFunctionCall>(
         func_type, model_name, std::move(arguments), std::move(alias), options
     );
-}
+}*/
 
 std::unique_ptr<AST::Expression> AIParser::parseAIFunction() {
     Token current = base_parser_.getCurrentToken();

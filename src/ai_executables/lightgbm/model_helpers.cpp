@@ -283,7 +283,25 @@ bool AdaptiveLightGBMModel::train_with_splits(
             &valid_dataset
         );
 
-        if (result == 0 && valid_dataset) {
+        /*if (valid_dataset) {
+            // Verify dataset has samples
+            int32_t num_data = 0;
+            int32_t num_features_check = 0;
+            result = LGBM_DatasetGetNumData(valid_dataset, &num_data);
+            result = LGBM_DatasetGetNumFeature(valid_dataset, &num_features_check);
+            std::cout << "[LightGBM] Validation dataset created: " << num_data << " samples, " << num_features_check << " features" << std::endl;
+
+            // Verify labels were set
+            int32_t label_len = 0;
+            result = LGBM_DatasetGetField(valid_dataset, "label", &label_len, nullptr, nullptr);
+            std::cout << "[LightGBM] Validation labels count: " << label_len << std::endl;
+        }*/
+
+        if (result != 0 || !valid_dataset) {
+            std::cerr << "[LightGBM] Failed to create validation dataset: " << LGBM_GetLastError() << std::endl;
+            // Continue without validation data
+            valid_dataset = nullptr;
+        } else {
             // Set validation labels
             std::vector<float> valid_labels_float(validation_data.labels.begin(),
                                                   validation_data.labels.end());
@@ -305,6 +323,7 @@ bool AdaptiveLightGBMModel::train_with_splits(
 
     // Create booster
     BoosterHandle booster = nullptr;
+    std::cout << "[LightGBM] Creating booster with parameters: " << param_str.c_str() << std::endl;
     result = LGBM_BoosterCreate(train_dataset, param_str.c_str(), &booster);
 
     if (result != 0 || !booster) {
@@ -317,11 +336,42 @@ bool AdaptiveLightGBMModel::train_with_splits(
 
     // Add validation dataset to booster
     if (valid_dataset) {
+        std::cout << "[LightGBM] Adding validation dataset to booster..." << std::endl;
         result = LGBM_BoosterAddValidData(booster, valid_dataset);
         if (result != 0) {
             std::cerr << "[LightGBM] Failed to add validation data: "
                       << LGBM_GetLastError() << std::endl;
         }
+        int out_len = 0;
+        result = LGBM_BoosterGetEvalCounts(booster, &out_len);
+        if (result == 0) {
+            std::cout << "[LightGBM] Number of datasets in booster after adding validation: " << out_len << std::endl;
+
+            // Also check the evaluation names to confirm
+            int num_metrics = 0;
+            size_t required_len = 0;
+            result = LGBM_BoosterGetEvalNames(booster, 0, &num_metrics, 0, &required_len, nullptr);
+
+            if (result == 0 && num_metrics > 0) {
+                std::vector<char> name_buffer(required_len);
+                std::vector<char*> name_ptrs(num_metrics);
+                for (int i = 0; i < num_metrics; ++i) {
+                    name_ptrs[i] = name_buffer.data() + i * 256; // Rough estimate
+                }
+
+                size_t actual_len = 0;
+                LGBM_BoosterGetEvalNames(booster, num_metrics, &num_metrics,
+                                        required_len, &actual_len, name_ptrs.data());
+
+                std::cout << "[LightGBM] Evaluation metrics: ";
+                for (int i = 0; i < num_metrics; ++i) {
+                    std::cout << name_ptrs[i] << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+    } else {
+        std::cout << "[LightGBM] No validation dataset to add" << std::endl;
     }
 
     // Get number of iterations
@@ -468,6 +518,9 @@ bool AdaptiveLightGBMModel::train_with_splits(
     }*/
 
     if (!validation_data.empty()) {
+        int out_len;
+        LGBM_BoosterGetEvalCounts(booster_, &out_len);
+        std::cout << "[LightGBM] Number of datasets in boster: " << out_len << std::endl;
         std::cout << "[LightGBM] Calculating validation metrics using LightGBM native evaluator..." << std::endl;
         extract_native_metrics(booster_, schema_);
     } else {
@@ -707,6 +760,17 @@ void AdaptiveLightGBMModel::extract_native_metrics(BoosterHandle booster, const 
                 schema_.accuracy = 1.0f - static_cast<float>(value);
                 break;
             }
+
+            if (name == "auc_mu") {
+                schema_.metadata["auc_mu"] = std::to_string(value);
+                std::cout << "[LightGBM] AUC-mu: " << value << std::endl;
+            }
+
+            // Store multi_logloss
+            if (name == "multi_logloss") {
+                schema_.metadata["logloss"] = std::to_string(value);
+            }
+
         }
 
         if (schema_.accuracy == 0.0f) {
@@ -1016,7 +1080,7 @@ std::string AdaptiveLightGBMModel::generate_parameters(
             if (schema_.problem_type == "binary_classification") {
                 default_params["metric"] = "binary_logloss,auc,binary_error";
             } else {
-                default_params["metric"] = "multi_logloss,multi_error";
+                default_params["metric"] = "multi_logloss,auc_mu,multi_error";
             }
         }
 
@@ -1053,7 +1117,7 @@ std::string AdaptiveLightGBMModel::generate_parameters(
             default_params["metric"] = "binary_logloss";
         } else if (schema_.problem_type == "multiclass") {
             default_params["objective"] = "multiclass";
-            default_params["metric"] = "multi_logloss";
+            default_params["metric"] = "multi_logloss,auc_mu";
             auto it = schema_.metadata.find("num_classes");
             if (it != schema_.metadata.end()) {
                 default_params["num_class"] = it->second;

@@ -15,6 +15,7 @@
 #include <set>
 
 class AIExecutionEngineFinal;
+class AIExpressionEvaluator;
 
 namespace Visualization {
     class PlotStatement;  // Forward declaration
@@ -53,6 +54,8 @@ public:
     bool internalEvaluateWhere(const AST::Expression* where,const std::unordered_map<std::string, std::string>& row) {
         return evaluateWhereClause(where, row);
     }
+    
+    std::string evaluateExpressionWrapper(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row); 
 
 private:
     Database& db;
@@ -146,6 +149,8 @@ private:
     std::string calculateAggregateForExpression(const AST::AggregateExpression* aggregate,const std::vector<std::unordered_map<std::string, std::string>>& groupData);
     double evaluateNumericCaseExpression(const AST::CaseExpression* caseExpr,const std::unordered_map<std::string, std::string>& row);
 
+    void setAIEvaluator(std::unique_ptr<AIExpressionEvaluator> evaluator);
+
     // Expression evaluation
     std::vector<std::string> evaluateSelectColumns(
         const std::vector<std::unique_ptr<AST::Expression>>& columns,
@@ -154,6 +159,7 @@ private:
                             const std::unordered_map<std::string, std::string>& row);
     std::string evaluateExpression(const AST::Expression* expr,
                                  const std::unordered_map<std::string, std::string>& row);
+    //std::string evaluateExpressionWrapper(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row);
     std::string evaluateValue(const AST::Expression* expr,
                             const std::unordered_map<std::string, std::string>& row);
     bool isNumericString(const std::string& str);

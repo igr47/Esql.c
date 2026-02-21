@@ -1,6 +1,7 @@
 #include "execution_engine_includes/executionengine_main.h"
 #include "ai_execution_engine_final.h"
 #include "plotter_includes/plotter.h"
+#include "ai_expression_evaluator.h"
 #include "database.h"
 #include <iostream>
 #include <string>
@@ -8,6 +9,10 @@
 
 ExecutionEngine::ExecutionEngine(Database& db, fractal::DiskStorage& storage): db(db), storage(storage) {
     ai_engine_ = std::make_unique<AIExecutionEngineFinal>(*this, db, storage);
+
+    // Initialize AI expression evaluator with reference to this engine
+    auto ai_evaluator = std::make_unique<AIExpressionEvaluator>(db, *this);
+    setAIEvaluator(std::move(ai_evaluator));
 }
 
 ExecutionEngine::~ExecutionEngine() = default;

@@ -53,7 +53,8 @@ namespace AST {
         EXPLAIN,           // Model explanation/SHAP values
         TRAIN_MODEL,       // Model training function
         MODEL_METRICS,     // Get model metrics
-        FEATURE_IMPORTANCE // Get feature importance
+        FEATURE_IMPORTANCE, // Get feature importance
+        FORECAST
     };
 
     // Training options structure for CREATE MODEL

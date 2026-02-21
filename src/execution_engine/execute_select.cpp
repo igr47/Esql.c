@@ -794,7 +794,35 @@ ExecutionEngine::ResultSet ExecutionEngine::executeSelectWithAggregates(AST::Sel
                 aggregatedRow[colKey] = exprValue;
                 aggregatedRow[displayName] = exprValue;
             }
-        }
+        } 
+        
+        /*else if (auto* ai_func = dynamic_cast<const AST::AIFunctionCall*>(col.get())) {
+            // For AI functions in GROUP BY, we need to evaluate them per group
+            // // But AI functions typically produce different values per row
+            // // So they should be treated as non-aggregate expressions
+            if (std::find(groupColumns.begin(), groupColumns.end(), colKey) != groupColumns.end()) {
+                // It's a group column - evaluate on first row
+                if (!group.empty()) {
+                    std::string value = g_ai_evaluator->evaluateAIFunction(ai_func, group[0]);
+                    aggregatedRow[displayName] = value;
+                    aggregatedRow[colKey] = value;
+                }
+            } else {
+                // Not a group column - we need to decide how to aggregate AI results
+                // Options:
+               // 1. Use the first row's prediction
+               // 2. Use the most common prediction (for classification)
+               // 3. Average predictions (for regression)
+
+                if (!group.empty()) {
+                    // For simplicity, use first row's prediction
+                    std::string value = g_ai_evaluator->evaluateAIFunction(ai_func, group[0]);
+                    aggregatedRow[displayName] = value;
+                    aggregatedRow[colKey] = value;
+
+                }
+            }
+        }*/
 
         // Apply HAVING clause if specified
         if (stmt.having) {
