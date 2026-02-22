@@ -33,6 +33,7 @@ public:
     void analyzeExplain(AST::ExplainStatement& stmt);
     void analyzeFeatureImportance(AST::FeatureImportanceStatement& stmt);
     void analyzeForecast(AST::ForecastStatement& stmt);
+    void analyzeSimulate(AST::SimulateStatement& stmt);
 
     // Helper validation methods
     bool validateAlgorithm(const std::string& algorithm);
