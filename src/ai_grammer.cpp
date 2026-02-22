@@ -356,6 +356,7 @@ namespace AST {
             case AIFunctionType::TRAIN_MODEL: func_name = "AI_TRAIN"; break;
             case AIFunctionType::MODEL_METRICS: func_name = "AI_MODEL_METRICS"; break;
             case AIFunctionType::FEATURE_IMPORTANCE: func_name = "AI_FEATURE_IMPORTANCE"; break;
+            case AIFunctionType::FORECAST: func_name = "AI_FORECAST"; break;
         }
 
         std::string result = func_name + "('" + model_name + "'";
@@ -471,6 +472,28 @@ namespace AST {
     }
 
     std::string SimulateStatement::toEsql() const {
+        std::string result = " SIMULATING USING " + model_name;
+
+        if (!input_table.empty()) {
+            result += " ON TABLE " + input_table;
+        }
+
+        if (!output_table.empty()) {
+            result += " OUTPUT TABLE " + output_table;
+        } 
+
+        if (!time_column.empty()) {
+            result += " TIME " + time_column;
+        }
+
+        if (!time_interval.empty()) {
+            result += " INTERVAL " + time_interval;
+        }
+
+        return result;
+    }
+
+    /*std::string SimulateStatement::toEsql() const {
 	 std::string result = " SIMULATING USING " + model_name;
 
 	 if (!base_table.empty()) {
@@ -505,7 +528,7 @@ namespace AST {
 	 }
 
 	 return result;
-    }
+    }*/
 
     std::string DetectAnomalyStatement::toEsql() const {
         std::stringstream ss;

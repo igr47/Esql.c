@@ -559,7 +559,6 @@ void AIParser::parseAdvancedOptions(AST::CreateModelStatement& stmt) {
     }
 }
 
-// Add to ai_parser.cpp:
 
 std::unique_ptr<AST::ForecastStatement> AIParser::parseForecast() {
     auto stmt = std::make_unique<AST::ForecastStatement>();
@@ -654,6 +653,292 @@ std::unique_ptr<AST::ForecastStatement> AIParser::parseForecast() {
     return stmt;
 }
 
+std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
+    auto stmt = std::make_unique<AST::SimulateStatement>();
+
+    // Parse SIMULATE MARKET [USING model_name]
+    base_parser_.consumeToken(Token::Type::SIMULATE);
+
+    // Optional MARKET keyword
+    if (base_parser_.checkMatch(Token::Type::MARKET)) {
+        base_parser_.consumeToken(Token::Type::MARKET);
+    }
+
+    // USING model_name
+    if (base_parser_.checkMatch(Token::Type::USING)) {
+        base_parser_.consumeToken(Token::Type::USING);
+        stmt->model_name = base_parser_.getCurrentToken().lexeme;
+        if (!isValidModelName(stmt->model_name)) {
+            throw ParseError(base_parser_.getCurrentToken().line,
+                           base_parser_.getCurrentToken().column,
+                           "Invalid model name: " + stmt->model_name);
+ }
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+    }
+
+    // FROM input_table
+    if (base_parser_.checkMatch(Token::Type::FROM)) {
+        base_parser_.consumeToken(Token::Type::FROM);
+        stmt->input_table = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+    }
+
+    // Parse simulation parameters
+    parseSimulationParameters(*stmt);
+
+    // Parse scenario parameters
+    if (base_parser_.checkMatch(Token::Type::WITH_SCENARIO)) {
+        base_parser_.consumeToken(Token::Type::WITH_SCENARIO);
+        stmt->scenario_type = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+
+        if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
+            base_parser_.consumeToken(Token::Type::L_PAREN);
+            stmt->scenario_params = parseHyperparameters();
+            base_parser_.consumeToken(Token::Type::R_PAREN);
+        }
+    }
+
+    // Parse technical indicators to generate
+    if (base_parser_.checkMatch(Token::Type::GENERATE)) {
+        base_parser_.consumeToken(Token::Type::GENERATE);
+        base_parser_.consumeToken(Token::Type::INDICATORS);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        stmt->generate_indicators.clear();
+        do {
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+            stmt->generate_indicators.push_back(base_parser_.getCurrentToken().lexeme);
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    // Parse output options
+    if (base_parser_.checkMatch(Token::Type::OUTPUT)) {
+        base_parser_.consumeToken(Token::Type::OUTPUT);
+
+        if (base_parser_.checkMatch(Token::Type::DETAILED)) {
+            base_parser_.consumeToken(Token::Type::DETAILED);
+            stmt->output_detailed = true;
+        }
+
+        if (base_parser_.checkMatch(Token::Type::INTERVAL)) {
+            base_parser_.consumeToken(Token::Type::INTERVAL);
+            stmt->output_interval = base_parser_.getCurrentToken().lexeme;
+            base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+        }
+    }
+
+    // INTO output_table
+    if (base_parser_.checkMatch(Token::Type::INTO)) {
+        base_parser_.consumeToken(Token::Type::INTO);
+        stmt->output_table = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+    }
+
+    // Parse real-time options
+    if (base_parser_.checkMatch(Token::Type::REAL_TIME)) {
+        base_parser_.consumeToken(Token::Type::REAL_TIME);
+        stmt->real_time_emulation = true;
+
+        if (base_parser_.checkMatch(Token::Type::DELAY)) {
+            base_parser_.consumeToken(Token::Type::DELAY);
+            if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                try {
+                    int delay_ms = std::stoi(base_parser_.getCurrentToken().lexeme);
+                    stmt->step_delay = std::chrono::milliseconds(delay_ms);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } catch (...) {
+                    throw ParseError(base_parser_.getCurrentToken().line,
+                                   base_parser_.getCurrentToken().column,
+                                   "Invalid delay value");
+                }
+            }
+        }
+
+        if (base_parser_.checkMatch(Token::Type::EMIT_EVENTS)) {
+            base_parser_.consumeToken(Token::Type::EMIT_EVENTS);
+            stmt->emit_events = true;
+        }
+    }
+
+    return stmt;
+}
+
+void AIParser::parseSimulationParameters(AST::SimulateStatement& stmt) {
+    while (base_parser_.checkMatchAny({
+        Token::Type::STEPS, Token::Type::PATHS, Token::Type::INTERVAL,
+        Token::Type::NOISE, Token::Type::TREND, Token::Type::SEASONALITY,
+        Token::Type::VOLATILITY_CLUSTERING, Token::Type::MEAN_REVERSION,
+        Token::Type::MEAN_REVERSION_STRENGTH, Token::Type::VOLATILITY_SCALE,
+        Token::Type::SPREAD, Token::Type::LIQUIDITY_IMPACT,
+        Token::Type::SLIPPAGE, Token::Type::MICROSTRUCTURE
+    })) {
+        Token current = base_parser_.getCurrentToken();
+
+        switch (current.type) {
+            case Token::Type::STEPS:
+                base_parser_.consumeToken(Token::Type::STEPS);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.num_steps = std::stoul(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid number of steps");
+                    }
+                }
+                break;
+
+            case Token::Type::PATHS:
+                base_parser_.consumeToken(Token::Type::PATHS);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.num_paths = std::stoul(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid number of paths");
+                    }
+                }
+                break;
+
+            case Token::Type::INTERVAL:
+                base_parser_.consumeToken(Token::Type::INTERVAL);
+                stmt.time_interval = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                break;
+
+            case Token::Type::NOISE:
+                base_parser_.consumeToken(Token::Type::NOISE);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.noise_level = std::stof(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid noise level");
+                    }
+                }
+                break;
+
+            case Token::Type::TREND:
+                base_parser_.consumeToken(Token::Type::TREND);
+                if (base_parser_.checkMatch(Token::Type::TRUE) ||
+                    base_parser_.checkMatch(Token::Type::FALSE)) {
+                    stmt.include_trend = (base_parser_.getCurrentToken().type == Token::Type::TRUE);
+                    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                }
+                break;
+
+            case Token::Type::SEASONALITY:
+                base_parser_.consumeToken(Token::Type::SEASONALITY);
+                if (base_parser_.checkMatch(Token::Type::TRUE) ||
+                    base_parser_.checkMatch(Token::Type::FALSE)) {
+                    stmt.include_seasonality = (base_parser_.getCurrentToken().type == Token::Type::TRUE);
+                    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                }
+                break;
+
+            case Token::Type::VOLATILITY_CLUSTERING:
+                base_parser_.consumeToken(Token::Type::VOLATILITY_CLUSTERING);
+                if (base_parser_.checkMatch(Token::Type::TRUE) ||
+                    base_parser_.checkMatch(Token::Type::FALSE)) {
+                    stmt.include_volatility_clustering = (base_parser_.getCurrentToken().type == Token::Type::TRUE);
+                    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                }
+                break;
+
+            case Token::Type::MEAN_REVERSION:
+                base_parser_.consumeToken(Token::Type::MEAN_REVERSION);
+                if (base_parser_.checkMatch(Token::Type::TRUE) ||
+                    base_parser_.checkMatch(Token::Type::FALSE)) {
+                    stmt.include_mean_reversion = (base_parser_.getCurrentToken().type == Token::Type::TRUE);
+                    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                }
+                break;
+
+            case Token::Type::MEAN_REVERSION_STRENGTH:
+                base_parser_.consumeToken(Token::Type::MEAN_REVERSION_STRENGTH);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.mean_reversion_strength = std::stof(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid mean reversion strength");
+                    }
+                }
+                break;
+
+            case Token::Type::VOLATILITY_SCALE:
+                base_parser_.consumeToken(Token::Type::VOLATILITY_SCALE);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.volatility_scale = std::stof(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid volatility scale");
+                    }
+                }
+                break;
+
+            case Token::Type::SPREAD:
+                base_parser_.consumeToken(Token::Type::SPREAD);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.spread = std::stof(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid spread value");
+                    }
+                }
+                break;
+
+            case Token::Type::LIQUIDITY_IMPACT:
+                base_parser_.consumeToken(Token::Type::LIQUIDITY_IMPACT);
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.liquidity_impact = std::stof(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid liquidity impact");
+                    }
+                }
+                break;
+
+            case Token::Type::SLIPPAGE:
+                base_parser_.consumeToken(Token::Type::SLIPPAGE);
+                stmt.include_slippage = true;
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt.slippage_factor = std::stof(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(current.line, current.column,
+                                       "Invalid slippage factor");
+                    }
+                }
+                break;
+
+            case Token::Type::MICROSTRUCTURE:
+                base_parser_.consumeToken(Token::Type::MICROSTRUCTURE);
+                stmt.simulate_microstructure = true;
+                break;
+
+            default:
+                base_parser_.advanceToken();
+                break;
+        }
+    }
+}
 
 std::unique_ptr<AST::TrainModelStatement> AIParser::parseTrainModel() {
     auto stmt = std::make_unique<AST::TrainModelStatement>();

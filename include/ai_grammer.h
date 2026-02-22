@@ -165,7 +165,64 @@ namespace AST {
     class SimulateStatement : public AIStatement {
     public:
         std::string model_name;
+        std::string input_table;
+        std::string output_table;
+        std::string time_column;
+        std::string time_interval = "1h";  // Default: 1 hour
+        std::vector<std::string> value_columns;
+        std::vector<std::string> feature_columns;  // Additional features for conditioning
+
+        // Simulation parameters
+        size_t num_steps = 100;           // Number of simulation steps
+        size_t num_paths = 1;              // Number of Monte Carlo paths
+        float noise_level = 0.01f;         // Random noise level (0-1)
+        bool include_trend = true;
+        bool include_seasonality = true;
+        bool include_volatility_clustering = true;
+        bool include_mean_reversion = false;
+        float mean_reversion_strength = 0.1f;
+        float volatility_scale = 1.0f;
+
+        // Conditional simulation
+        std::string scenario_type = "base";  // base, bull, bear, custom
+        std::unordered_map<std::string, std::string> scenario_params;
+
+        // Market microstructure
+        bool simulate_microstructure = false;
+        float spread = 0.0001f;             // Bid-ask spread
+        float liquidity_impact = 0.01f;      // Market impact factor
+        bool include_slippage = false;
+        float slippage_factor = 0.001f;
+
+        // Technical indicators to generate
+        std::vector<std::string> generate_indicators = {
+            "SMA_20", "SMA_50", "EMA_12", "EMA_26", "RSI", "MACD",
+            "BOLLINGER", "ATR", "OBV", "VOLUME_PROFILE"
+        };
+
+        // Output format
+        bool output_detailed = true;         // Include all simulated metrics
+        bool output_ohlc = true;              // Generate OHLC bars
+        std::string output_interval = "1h";   // Output aggregation interval
+
+        // Real-time simulation
+        bool real_time_emulation = false;
+        std::chrono::milliseconds step_delay = std::chrono::milliseconds(100);
+        bool emit_events = false;              // For real-time plotting
+
+        std::string toEsql() const override;
+        nlohmann::json to_json() const;
+        static SimulateStatement from_json(const nlohmann::json& j);
+    };
+
+    /*class SimulateStatement : public AIStatement {
+    public:
+        std::string model_name;
         std::string base_table;
+        std::string input_table;
+        std::string output_table;
+        std::string time_column;
+        std::string time_interval = "1h"; // Default: 1 hour
         std::string intervention_table;  // Table with what-if scenarios
         std::vector<std::string> scenario_columns;
         size_t simulation_steps = 1;
@@ -174,7 +231,7 @@ namespace AST {
         std::string comparison_metric = "absolute_difference";
 
         std::string toEsql() const override;
-    };
+    };*/
 
     class DetectAnomalyStatement : public AIStatement {
     public:

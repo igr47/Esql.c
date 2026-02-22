@@ -139,18 +139,26 @@ EnhancedForecast ForecastEngine::forecast(
     }
 
     // Step 4: Engineer time features
+    std::cout << "[ForecastEngine] Starting feature engineering." << std::endl;
     auto engineered_history = engineer_time_features(historical_data, effective_config);
+    std::cout << "[ForecatEngine] Finished feature engineering." << std::endl;
 
     // Step 5: Generate forecasts using selected method
     switch (effective_config.method) {
         case ForecastConfig::Method::RECURSIVE:
+            std::cout << "[ForecasEngine] Entered recurrsive_forecast branch." << std::endl;
             result = recursive_forecast(engineered_history, horizon, effective_config, exogenous_future);
+            std::cout << "[ForecastEngine] Finished recusive_forecast branch." << std::endl;
             break;
         case ForecastConfig::Method::DIRECT:
+            std::cout << "[ForecastEngine] Entered direct_forecas branch." << std::endl;
             result = direct_forecast(engineered_history, horizon, effective_config, exogenous_future);
+            std::cout << "[ForecastEngine] Finished direct_forecast branch." << std::endl;
             break;
         case ForecastConfig::Method::MIMO:
+            std::cout << "[ForecastEngine] Entered mimo_forecast branch." << std::endl;
             result = mimo_forecast(engineered_history, horizon, effective_config, exogenous_future);
+            std::cout << "[ForecastEngine] Finished mimi_forecast branch." << std::endl; 
             break;
         case ForecastConfig::Method::DIRREC:
             // Hybrid approach - use both direct and recursive
@@ -164,7 +172,9 @@ EnhancedForecast ForecastEngine::forecast(
             }
             break;
         case ForecastConfig::Method::ENSEMBLE:
+            std::cout << "[ForecastEngine] Entering ensemle_forecast method." << std::endl;
             result = ensemble_forecast(engineered_history, horizon, effective_config, exogenous_future);
+            std::cout << "[ForecastEngine] Finished ensemble forecasting." << std::endl;
             break;
     }
 
@@ -592,14 +602,14 @@ std::vector<Tensor> ForecastEngine::engineer_time_features(
 
     // Add lagged features
     if (config.max_lag > 0 && target_series.size() > config.max_lag) {
-        auto lagged = create_lagged_features(target_series, config.max_lag);
+        //auto lagged = create_lagged_features(target_series, config.max_lag);
 
         // For simplicity, we'll just return the original data
         // In a real implementation, you'd concatenate features
     }
 
     // Add time-based features (trend, seasonal dummies, etc.)
-    for (size_t i = 0; i < enhanced_data.size(); ++i) {
+    /*for (size_t i = 0; i < enhanced_data.size(); ++i) {
         std::vector<float> new_features = enhanced_data[i].data;
 
         // Add trend component
@@ -614,7 +624,7 @@ std::vector<Tensor> ForecastEngine::engineer_time_features(
         }
 
         enhanced_data[i] = Tensor(new_features, {new_features.size()});
-    }
+    }*/
 
     return enhanced_data;
 }
@@ -931,18 +941,24 @@ EnhancedForecast ForecastEngine::ensemble_forecast(
                 }
             }
         }
+        std::cout << "[ForecastEngine] Entering recursive in ensemble." << std::endl;
         auto rec_forecast = recursive_forecast(modified_history, horizon, config, exogenous);
+        std::cout << "[ForecasEngine] Finished recursive in ensemble." << std::endl;
         all_forecasts.push_back(rec_forecast.point_forecast);
         weights.push_back(1.0f);
     }
 
     // 2. Direct forecast
+    std::cout << "[ForecastEngine] Entering direct forecast in ensemble." << std::endl;
     auto dir_forecast_val = direct_forecast(history, horizon, config, exogenous);
+    std::cout << "[ForecastEngine] Finished direct forecast in ensemle." << std::endl;
     all_forecasts.push_back(dir_forecast_val.point_forecast);
     weights.push_back(1.0f);
 
     // 3. MIMO forecast
+    std::cout << "[ForecastEngine] Entering mimo_forecast in ensemble." << std::endl;
     auto mimo_forecast_val = mimo_forecast(history, horizon, config, exogenous);
+    std::cout << "[ForecastEngine] Finished mimo_forecast in ensemble." << std::endl;
     all_forecasts.push_back(mimo_forecast_val.point_forecast);
     weights.push_back(1.0f);
 

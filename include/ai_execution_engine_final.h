@@ -148,6 +148,9 @@ public:
     ExecutionEngine::ResultSet executeBatchAI(AST::BatchAIStatement& stmt);
     ExecutionEngine::ResultSet executeForecast(AST::ForecastStatement& stmt);
     ExecutionEngine::ResultSet executeDetectAnomaly(AST::DetectAnomalyStatement& stmt);
+    ExecutionEngine::ResultSet executeSimulate(AST::SimulateStatement& stmt);
+    std::chrono::seconds parseTimeInterval(const std::string& interval);
+    //void saveSimulationResults(const std::string& table_name,const ExecutionEngine::ResultSet& results);
 
     // SQL-integrated AI functions
     ExecutionEngine::ResultSet executeSelectWithAIFunctions(AST::SelectStatement& stmt);
