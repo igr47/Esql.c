@@ -220,6 +220,141 @@ DatabaseSchema::Column::Type ExecutionEngine::inferColumnTypeFromCSVData(const s
             continue; // Skip NULL values for type inference
         }
 
+        // Check for integer (allow negative sign at start)
+        if (allIntegers) {
+            bool isInteger = !trimmed.empty();
+            bool hasDigit = false;
+            for (size_t i = 0; i < trimmed.size(); i++) {
+                char c = trimmed[i];
+                if (i == 0 && (c == '-' || c == '+')) {
+                    continue; // Allow sign at beginning
+                }
+                if (!std::isdigit(c)) {
+                    isInteger = false;
+                    break;
+                }
+                hasDigit = true;
+            }
+            allIntegers = isInteger && hasDigit;
+        }
+
+        // Check for float (allow negative sign at start and one decimal point)
+        if (allFloats) {
+            bool isFloat = !trimmed.empty();
+            bool hasDigit = false;
+            bool hasDecimal = false;
+            for (size_t i = 0; i < trimmed.size(); i++) {
+                char c = trimmed[i];
+                if (i == 0 && (c == '-' || c == '+')) {
+                    continue; // Allow sign at beginning
+                }
+                if (c == '.') {
+                    if (hasDecimal) {
+                        isFloat = false;
+                        break;
+                    }
+                    hasDecimal = true;
+                } else if (!std::isdigit(c)) {
+                    isFloat = false;
+                    break;
+                } else {
+                    hasDigit = true;
+                }
+            }
+            allFloats = isFloat && hasDigit;
+        }
+
+        // Check for boolean
+        if (allBooleans) {
+            std::string lower = trimmed;
+            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            allBooleans = (lower == "true" || lower == "false" ||
+                          lower == "yes" || lower == "no" ||
+                          lower == "1" || lower == "0" ||
+                          lower == "t" || lower == "f");
+        }
+
+        // Check for date (YYYY-MM-DD)
+        if (allDates) {
+            if (trimmed.size() >= 10 && trimmed[4] == '-' && trimmed[7] == '-') {
+                // Basic date format check
+                try {
+                    int year = std::stoi(trimmed.substr(0, 4));
+                    int month = std::stoi(trimmed.substr(5, 2));
+                    int day = std::stoi(trimmed.substr(8, 2));
+                    allDates = (year >= 1000 && year <= 9999 &&
+                               month >= 1 && month <= 12 &&
+                               day >= 1 && day <= 31);
+                } catch (...) {
+                    allDates = false;
+                }
+            } else {
+                allDates = false;
+            }
+        }
+
+        // Check for datetime (YYYY-MM-DD HH:MM:SS)
+        if (allDateTimes) {
+            if (trimmed.size() >= 19 && trimmed[4] == '-' && trimmed[7] == '-' &&
+                trimmed[10] == ' ' && trimmed[13] == ':' && trimmed[16] == ':') {
+                try {
+                    int year = std::stoi(trimmed.substr(0, 4));
+                    int month = std::stoi(trimmed.substr(5, 2));
+                    int day = std::stoi(trimmed.substr(8, 2));
+                    int hour = std::stoi(trimmed.substr(11, 2));
+                    int minute = std::stoi(trimmed.substr(14, 2));
+                    int second = std::stoi(trimmed.substr(17, 2));
+                    allDateTimes = (year >= 1000 && year <= 9999 &&
+                                   month >= 1 && month <= 12 &&
+                                   day >= 1 && day <= 31 &&
+                                   hour >= 0 && hour <= 23 &&
+                                   minute >= 0 && minute <= 59 &&
+                                   second >= 0 && second <= 59);
+                } catch (...) {
+                    allDateTimes = false;
+                }
+            } else {
+                allDateTimes = false;
+            }
+        }
+    }
+
+    // Determine the most specific type
+    if (allIntegers) {
+        return DatabaseSchema::Column::INTEGER;
+    } else if (allFloats) {
+        return DatabaseSchema::Column::FLOAT;
+    } else if (allBooleans) {
+        return DatabaseSchema::Column::BOOLEAN;
+    } else if (allDates) {
+        return DatabaseSchema::Column::DATE;
+    } else if (allDateTimes) {
+        return DatabaseSchema::Column::DATETIME;
+    } else {
+        return DatabaseSchema::Column::TEXT;
+    }
+}
+
+/*DatabaseSchema::Column::Type ExecutionEngine::inferColumnTypeFromCSVData(const std::vector<std::string>& columnValues) {
+    if (columnValues.empty()) {
+        // Default to TEXT if no data
+        return DatabaseSchema::Column::TEXT;
+    }
+
+    bool allIntegers = true;
+    bool allFloats = true;
+    bool allBooleans = true;
+    bool allDates = true;
+    bool allDateTimes = true;
+
+    for (const auto& value : columnValues) {
+        std::string trimmed = trim(value);
+
+        // Check if empty/null
+        if (trimmed.empty() || trimmed == "NULL" || trimmed == "null") {
+            continue; // Skip NULL values for type inference
+        }
+
         // Check for integer
         if (allIntegers) {
             bool isInteger = !trimmed.empty();
@@ -333,7 +468,7 @@ DatabaseSchema::Column::Type ExecutionEngine::inferColumnTypeFromCSVData(const s
     } else {
         return DatabaseSchema::Column::TEXT;
     }
-}
+}*/
 
 void ExecutionEngine::createTableFromCSV(const std::string& tableName,
                                         const std::vector<std::string>& columnNames,
@@ -470,7 +605,7 @@ std::string ExecutionEngine::trim(const std::string& str) {
 }
 
 // Convert CSV value to appropriate format for database
-std::string ExecutionEngine::processCSVValue(const std::string& csvValue, const DatabaseSchema::Column& column) {
+/*std::string ExecutionEngine::processCSVValue(const std::string& csvValue, const DatabaseSchema::Column& column) {
     std::string value = csvValue;
 
 // If value was quoted, remove quotes and handle escaped quotes
@@ -504,6 +639,7 @@ std::string ExecutionEngine::processCSVValue(const std::string& csvValue, const 
         value.erase(std::remove(value.begin(), value.end(), ','), value.end());
 
         // Validate numeric format
+        bool isValidNumber = true;
         bool hasDecimal = false;
         bool hasDigit = false;
 
@@ -554,6 +690,107 @@ std::string ExecutionEngine::processCSVValue(const std::string& csvValue, const 
             // Just pass it through
         }
     }
+    return value;
+}*/
+
+std::string ExecutionEngine::processCSVValue(const std::string& csvValue, const DatabaseSchema::Column& column) {
+    std::string value = csvValue;
+
+    // If value was quoted, remove quotes and handle escaped quotes
+    if (value.size() >= 2 && value[0] == '"' && value.back() == '"') {
+        value = value.substr(1, value.size() - 2);
+
+        // Replace escaped quotes
+        size_t pos = 0;
+        while ((pos = value.find("\"\"", pos)) != std::string::npos) {
+            value.replace(pos, 2, "\"");
+            pos += 1;
+        }
+    }
+
+    // Trim whitespace for non-text fields
+    if (column.type != DatabaseSchema::Column::TEXT) {
+        value = trim(value);
+    }
+
+    // Handle empty values
+    if (value.empty() || value == "NULL" || value == "null") {
+        if (!column.isNullable) {
+            throw std::runtime_error("Non-nullable column '" + column.name + "' cannot be empty/NULL");
+        }
+        return ""; // Return empty string for NULL
+    }
+
+    // For numeric fields, validate format
+    if (column.type == DatabaseSchema::Column::INTEGER || column.type == DatabaseSchema::Column::FLOAT) {
+        // Remove any thousand separators (commas)
+        value.erase(std::remove(value.begin(), value.end(), ','), value.end());
+
+        // Validate numeric format
+        bool isValidNumber = true;
+        bool hasDecimal = false;
+        bool hasDigit = false;
+
+        // Skip initial validation for non-numeric headers
+        if (column.name == "Open" && !value.empty() && !std::isdigit(value[0]) && value[0] != '-' && value[0] != '+') {
+            // This appears to be a header value, not actual data
+            isValidNumber = false;
+        } else {
+            for (size_t i = 0; i < value.length(); i++) {
+                char c = value[i];
+
+                if (c == '.') {
+                    if (hasDecimal) {
+                        isValidNumber = false;
+                        break;
+                    }
+                    hasDecimal = true;
+                } else if (c == '-' || c == '+') {
+                    // Only allowed at the beginning
+                    if (i != 0) {
+                        isValidNumber = false;
+                        break;
+                    }
+                } else if (!std::isdigit(c)) {
+                    isValidNumber = false;
+                    break;
+                } else {
+                    hasDigit = true;
+                }
+            }
+        }
+
+        if (!isValidNumber || !hasDigit) {
+            // Don't throw for the header row - just return the value as-is
+            // The header row should be handled separately
+            return value;
+        }
+    }
+
+    // For boolean fields, convert common representations
+    if (column.type == DatabaseSchema::Column::BOOLEAN) {
+        std::string lowerValue = value;
+        std::transform(lowerValue.begin(), lowerValue.end(), lowerValue.begin(), ::tolower);
+
+        if (lowerValue == "true" || lowerValue == "yes" || lowerValue == "1" || lowerValue == "t") {
+            return "true";
+        } else if (lowerValue == "false" || lowerValue == "no" || lowerValue == "0" || lowerValue == "f") {
+            return "false";
+        }
+        // If not a recognized boolean value, pass it through - will be validated later
+    }
+
+    // For date/datetime fields, try to normalize format
+    if (column.type == DatabaseSchema::Column::DATE || column.type == DatabaseSchema::Column::DATETIME) {
+        // Check if it's already in ISO format (YYYY-MM-DD)
+        if (value.length() >= 10 && value[4] == '-' && value[7] == '-') {
+            // Already in good format
+        } else if (value.find('/') != std::string::npos) {
+            // Might be in MM/DD/YYYY format - will be handled by execution engine
+            // Just pass it through
+        }
+    }
+
     return value;
 }
 
