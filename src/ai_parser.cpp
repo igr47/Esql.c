@@ -38,7 +38,9 @@ std::unique_ptr<AST::Statement> AIParser::parseAIStatement() {
     } else if (base_parser_.checkMatch(Token::Type::CREATE) && base_parser_.checkPeekToken().type == Token::Type::PIPELINE) {
         return parseCreatePipeline();
     } else if (base_parser_.checkMatch(Token::Type::FORECAST)) {
-	return parseForecast();
+        return parseForecast();
+    } else if (base_parser_.checkMatch(Token::Type::SIMULATE)) {
+        return parseSimulate();
     }
 
     throw ParseError(current.line, current.column, "Expected AI statement");
