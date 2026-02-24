@@ -3,11 +3,29 @@
 
 #include "scanner.h"
 #include "parser.h"
+#include "plotter.h"
 #include <vector>
 #include <string>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <unordered_map>
+#include <optional>
+#include <chrono>
+#include <vector>
+#include <string>
+#include <unordered_map>
+#include <memory>
+
+namespace Visualization {
+    class PlotStatement;
+    struct SimulationPlotConfig;
+}
+
+namespace esql {
+namespace ai {
+    struct SimulationPath;
+}
+}
 
 // AI-specific token types to add to Token::Type enum
 /*
@@ -174,7 +192,7 @@ namespace AST {
 
         // Simulation parameters
         size_t num_steps = 100;           // Number of simulation steps
-        size_t num_paths = 1;              // Number of Monte Carlo paths
+        size_t num_paths = 100;              // Number of Monte Carlo paths
         float noise_level = 0.01f;         // Random noise level (0-1)
         bool include_trend = true;
         bool include_seasonality = true;
@@ -209,6 +227,8 @@ namespace AST {
         bool real_time_emulation = false;
         std::chrono::milliseconds step_delay = std::chrono::milliseconds(100);
         bool emit_events = false;              // For real-time plotting
+        std::optional<Visualization::PlotStatement::SimulationPlotConfig> plot_config;
+        void parsePlotConfig(const std::unordered_map<std::string, std::string>& config_map);
 
         std::string toEsql() const override;
         nlohmann::json to_json() const;

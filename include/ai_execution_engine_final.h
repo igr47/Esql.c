@@ -93,6 +93,10 @@ private:
     ExecutionEngine& base_engine_;
     Database& db_;
     fractal::DiskStorage& storage_;
+    std::unique_ptr<Visualization::ImPlotSimulationPlotter> plotter_;
+    std::atomic<bool> plotting_started_{false};
+    std::thread plotting_thread_;
+    std::mutex plot_mutex_;
 
     std::unique_ptr<AIExecutionEngine> ai_engine_;
     std::unique_ptr<esql::DataExtractor> data_extractor_;

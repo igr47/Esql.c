@@ -3,9 +3,11 @@
 #include "parser.h"
 #include "scanner.h"
 #include "ai/algorithm_registry.h"
+#include "plotter_includes/plotter.h"
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include <cctype>
 
 AIParser::AIParser(Lexer& lexer, Parse& parser) : lexer_(lexer), base_parser_(parser) {}
 
@@ -40,6 +42,7 @@ std::unique_ptr<AST::Statement> AIParser::parseAIStatement() {
     } else if (base_parser_.checkMatch(Token::Type::FORECAST)) {
         return parseForecast();
     } else if (base_parser_.checkMatch(Token::Type::SIMULATE)) {
+        //return std::unique_ptr<AST::Statement>(parseSimulate().release());
         return parseSimulate();
     }
 
@@ -766,6 +769,56 @@ std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
             base_parser_.consumeToken(Token::Type::EMIT_EVENTS);
             stmt->emit_events = true;
         }
+    }
+
+    if (base_parser_.checkMatch(Token::Type::PLOT)) {
+        base_parser_.consumeToken(Token::Type::PLOT);
+
+        // Parse plot type (CANDLESTICK, LINE, etc.)
+        std::string plot_type = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+
+        std::unordered_map<std::string, std::string> config_map;
+        // Parse plot configuration in parentheses
+        if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
+            base_parser_.consumeToken(Token::Type::L_PAREN);
+
+            //std::unordered_map<std::string, std::string> config_map;
+
+            while (!base_parser_.checkMatch(Token::Type::R_PAREN)) {
+                std::string key = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(Token::Type::IDENTIFIER);
+                base_parser_.consumeToken(Token::Type::EQUAL);
+
+                std::string value;
+                if (base_parser_.checkMatch(Token::Type::STRING_LITERAL)) {
+                    value = base_parser_.getCurrentToken().lexeme;
+                    // Remove quotes
+                    if (value.size() >= 2) {
+                        value = value.substr(1, value.size() - 2);
+                    }
+                    base_parser_.consumeToken(Token::Type::STRING_LITERAL);
+                } else if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    value = base_parser_.getCurrentToken().lexeme;
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+            } else if (base_parser_.checkMatch(Token::Type::TRUE) ||
+                base_parser_.checkMatch(Token::Type::FALSE)) {
+                value = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+            }
+
+            config_map[key] = value;
+
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+            }
+        }
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+
+        // Store plot configuration
+        stmt->parsePlotConfig(config_map);
     }
 
     return stmt;

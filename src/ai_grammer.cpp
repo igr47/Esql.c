@@ -1,4 +1,5 @@
 #include "ai_grammer.h"
+#include "plotter_includes/plotter.h"
 #include <sstream>
 
 namespace AST {
@@ -491,6 +492,65 @@ namespace AST {
         }
 
         return result;
+    }
+
+    void SimulateStatement::parsePlotConfig(const std::unordered_map<std::string, std::string>& config_map) {
+        Visualization::PlotStatement::SimulationPlotConfig config;
+
+        for (const auto& [key, value] : config_map) {
+            std::string lower_key = key;
+            std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(), ::tolower);
+
+            if (lower_key == "interval") {
+                try {
+                    int ms = std::stoi(value);
+                    config.update_interval = std::chrono::milliseconds(ms);
+                } catch (...) {}
+            }
+            else if (lower_key == "window") {
+                config.window_title = value;
+            }
+            else if (lower_key == "volume") {
+                config.show_volume = (value == "true" || value == "TRUE" || value == "1");
+            }
+            else if (lower_key == "indicators") {
+                config.show_indicators = (value == "true" || value == "TRUE" || value == "1");
+            }
+            else if (lower_key == "size") {
+                auto pos = value.find(',');
+                if (pos != std::string::npos) {
+                    try {
+                        config.window_width = std::stoi(value.substr(0, pos));
+                        config.window_height = std::stoi(value.substr(pos + 1));
+                    } catch (...) {}
+                }
+            }
+            else if (lower_key == "animate") {
+                config.animate = (value == "true" || value == "TRUE" || value == "1");
+            }
+            else if (lower_key == "grid") {
+                config.show_grid = (value == "true" || value == "TRUE" || value == "1");
+            }
+            else if (lower_key == "legend") {
+                config.show_legend = (value == "true" || value == "TRUE" || value == "1");
+            }
+            else if (lower_key == "bull_color") {
+                config.bull_color = value;
+            }
+            else if (lower_key == "bear_color") {
+                config.bear_color = value;
+            }
+            else if (lower_key == "max_points") {
+                try {
+                    config.max_points_display = std::stoul(value);
+                } catch (...) {}
+                      }
+            else if (lower_key == "autofit") {
+                config.auto_fit = (value == "true" || value == "TRUE" || value == "1");
+            }
+        }
+
+        plot_config = config;
     }
 
     /*std::string SimulateStatement::toEsql() const {

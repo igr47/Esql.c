@@ -4,6 +4,7 @@
 
 #include "parser.h"
 #include "ai_grammer.h"
+#include "plotter_includes/implotter.h"
 #include <memory>
 #include <vector>
 #include <set>

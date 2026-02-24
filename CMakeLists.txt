@@ -3,6 +3,11 @@ project(ESQL)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 # FFTW3 for Fourier transforms
 find_library(FFTW3_LIBRARY NAMES fftw3 fftw3-3)
 find_path(FFTW3_INCLUDE_DIR NAMES fftw3.h)
@@ -197,6 +202,94 @@ else()
     message(WARNING "matplotplusplus not found. Visualization features will be disabled.")
 endif()
 
+# ============================================
+# Add ImGui and ImPlot
+# ============================================
+
+# Download and build ImGui
+include(FetchContent)
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.90.5-docking  # Docking branch for better window management
+)
+
+FetchContent_Declare(
+    implot
+    GIT_REPOSITORY https://github.com/epezent/implot.git
+    GIT_TAG v0.16
+)
+
+FetchContent_MakeAvailable(imgui implot)
+
+# Create ImGui library
+set(IMGUI_SOURCES
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+add_library(imgui STATIC ${IMGUI_SOURCES})
+target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
+
+# Create ImPlot library
+set(IMPLOT_SOURCES
+    ${implot_SOURCE_DIR}/implot.cpp
+    ${implot_SOURCE_DIR}/implot_demo.cpp
+    ${implot_SOURCE_DIR}/implot_items.cpp
+)
+
+add_library(implot STATIC ${IMPLOT_SOURCES})
+target_include_directories(implot PUBLIC ${implot_SOURCE_DIR})
+target_link_libraries(implot PRIVATE imgui)
+
+# Find OpenGL and GLFW - FIXED SECTION
+find_package(OpenGL REQUIRED)
+
+# Find GLFW3 - this creates the 'glfw' target automatically
+find_package(glfw3 3.3 REQUIRED)
+
+# Verify it worked
+if(TARGET glfw)
+    message(STATUS "Found GLFW3: ${glfw}")
+endif()
+
+# Find or download GLAD (OpenGL loader)
+find_path(GLAD_INCLUDE_DIR
+    NAMES glad/glad.h
+    PATHS
+        /usr/include
+        /usr/local/include
+        ${CMAKE_SOURCE_DIR}/glad/include
+)
+
+if(NOT GLAD_INCLUDE_DIR)
+    message(STATUS "Downloading GLAD...")
+    file(DOWNLOAD
+        https://raw.githubusercontent.com/Dav1dde/glad/master/glad.h
+        ${CMAKE_CURRENT_BINARY_DIR}/glad/include/glad/glad.h
+    )
+    file(DOWNLOAD
+        https://raw.githubusercontent.com/Dav1dde/glad/master/glad.c
+        ${CMAKE_CURRENT_BINARY_DIR}/glad/src/glad.c
+    )
+    set(GLAD_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/glad/include)
+    set(GLAD_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/glad/src/glad.c)
+endif()
+
+if(GLAD_SOURCES)
+    add_library(glad STATIC ${GLAD_SOURCES})
+    target_include_directories(glad PUBLIC ${GLAD_INCLUDE_DIR})
+endif()
+
 # AI sources
 file(GLOB AI_SOURCES
     "src/ai_executables/*.cpp"
@@ -232,6 +325,11 @@ file(GLOB AI_EXECUTION_ENGINE_FINAL_SOURCES
     "src/ai_executionengine/ai_executionengine_final/*.cpp"
 )
 
+# New ImPlot plotter sources
+file(GLOB IMPLOT_PLOTTER_SOURCES
+    "src/plotter/implot/*.cpp"
+)
+
 set(CORE_SOURCES
     src/scanner.cpp
     src/token_utils.cpp
@@ -263,6 +361,7 @@ set(ALL_SOURCES
     ${AI_SOURCES}
     ${LIGHTGBM_SOURCES}
     ${PLOTTER_SOURCES}
+    ${IMPLOT_PLOTTER_SOURCES}
 )
 
 add_executable(e_sql ${ALL_SOURCES})
@@ -326,7 +425,6 @@ if(MATPLOTPP_LIBRARY)
     target_link_libraries(e_sql ${MATPLOTPP_LIBRARY})
 
     # matplotplusplus dependencies
-    find_package(OpenGL REQUIRED)
     target_link_libraries(e_sql OpenGL::GL)
 
     # Additional dependencies for matplotplusplus
@@ -359,5 +457,24 @@ if(LIGHTGBM_LIBRARY)
     endif()
 endif()
 
+# Link ImGui and ImPlot libraries - FIXED: using 'glfw' not 'glfw3'
+target_link_libraries(e_sql
+    imgui
+    implot
+    glad
+    OpenGL::GL
+    glfw
+)
+
 # Add standard C++ libraries that might be needed
 target_link_libraries(e_sql stdc++fs)  # For filesystem support (C++17)
+
+# Set compiler flags for better performance
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(e_sql PRIVATE -O3 -march=native -flto)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(e_sql PRIVATE -g -O0)
+endif()
+
+# Create necessary directories
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/plotter/implot)

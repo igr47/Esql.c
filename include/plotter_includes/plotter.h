@@ -13,8 +13,16 @@
 #include <chrono>
 #include <limits>
 #include <nlohmann/json.hpp>
+#include <optional>
 
-
+namespace esql {
+namespace ai {
+    struct SimulationPath;
+    struct OrderBook;
+    struct TechnicalIndicators;
+    enum class MarketRegime;
+}
+}
 
 namespace Visualization {
 
@@ -50,6 +58,44 @@ namespace Visualization {
         GEO_GRID,         // Grid data on map
         GEO_FLOW          // Flow/vector field on map
     };
+
+    /*struct SimulationPlotConfig {
+        // Timing
+        std::chrono::milliseconds update_interval{200};  // Default 200ms
+        bool real_time_update = true;
+        bool animate = true;
+
+        // Window settings
+        std::string window_title = "Market Simulation";
+        int window_width = 1600;
+        int window_height = 900;
+        bool window_resizable = true;
+
+        // Chart elements
+        bool show_volume = true;
+        bool show_indicators = true;
+        bool show_grid = true;
+        bool show_legend = true;
+        bool show_order_book = false;  // For microstructure simulation
+
+        // Technical indicators to show
+        std::vector<std::string> indicators = {"SMA20", "SMA50", "RSI", "MACD", "BB"};
+
+        // Chart style
+        std::string bull_color = "#00ff00";  // Green
+        std::string bear_color = "#ff0000";   // Red
+        std::string volume_color = "#3366cc";
+        
+        // Performance
+        size_t max_points_display = 1000;  // Max points to show at once
+        bool auto_fit = true;  // Auto-fit axis to data
+        double zoom_sensitivity = 0.1;
+
+        // Data source
+        std::string price_column = "price";
+        std::string volume_column = "volume";
+        std::string timestamp_column = "timestamp";
+    };*/
 
     // Enhanced Plot configuration for Matplot++
     struct PlotConfig {
@@ -572,7 +618,11 @@ namespace Visualization {
             GEO_POLYGON,
             GEO_GRID,
             GEO_FLOW,
-            CANDLESTICK
+            CANDLESTICK,
+            SIMULATION_CANDLESTICK,
+            SIMULATION_LINE,
+            SIMULATION_SCATTER,
+            SIMULATION_ORDERBOOK
         };
 
         enum class OutputFormat {
@@ -585,6 +635,44 @@ namespace Visualization {
             GIF,
             MP4,
             HTML
+        };
+
+        struct SimulationPlotConfig {
+            // Timing
+            std::chrono::milliseconds update_interval{200};  // Default 200ms
+            bool real_time_update = true;
+            bool animate = true;
+
+            // Window settings
+            std::string window_title = "Market Simulation";
+            int window_width = 1600;
+            int window_height = 900;
+            bool window_resizable = true;
+
+            // Chart elements
+            bool show_volume = true;
+            bool show_indicators = true;
+            bool show_grid = true;
+            bool show_legend = true;
+            bool show_order_book = false;  // For microstructure simulation
+
+            // Technical indicators to show
+            std::vector<std::string> indicators = {"SMA20", "SMA50", "RSI", "MACD", "BB"};
+
+            // Chart style
+            std::string bull_color = "#00ff00";  // Green
+            std::string bear_color = "#ff0000";   // Red
+            std::string volume_color = "#3366cc";
+       
+            // Performance
+            size_t max_points_display = 1000;  // Max points to show at once
+            bool auto_fit = true;  // Auto-fit axis to data
+            double zoom_sensitivity = 0.1;
+
+            // Data source
+            std::string price_column = "price";
+            std::string volume_column = "volume";
+            std::string timestamp_column = "timestamp";
         };
 
         PlotSubType subType = PlotSubType::STANDARD;
@@ -600,6 +688,20 @@ namespace Visualization {
         std::vector<std::string> lonColumns;
         std::vector<std::string> regionColumns;
         std::vector<std::string> valueColumns;
+
+        // New simulation-specific members
+        SimulationPlotConfig sim_config;
+        bool is_simulation_plot = false;
+        std::shared_ptr<esql::ai::SimulationPath> simulation_data;  // Shared pointer to simulation results
+        std::vector<std::shared_ptr<esql::ai::SimulationPath>> all_paths;  // Multiple paths
+        size_t current_path_index = 0;
+        bool show_all_paths = false;  // Show all paths or just one
+
+        // Animation state
+        size_t current_step = 0;
+        bool is_playing = true;
+        bool is_paused = false;
+        double playback_speed = 1.0;
 
         std::string targetColumn; // For distribution/trend plots
         std::string timeColumn; // For time series

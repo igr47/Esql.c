@@ -145,6 +145,10 @@ public:
     void set_volatility_model(const std::string& model_type, double initial_vol);
     void set_regime_detection(bool enable);
     void set_microstructure_simulation(bool enable, double spread = 0.0001);
+
+    void set_include_mean_reversion(bool enable) { include_mean_reversion_ = enable; }
+    void set_mean_reversion_strength(double strength) { mean_reversion_strength_ = strength; }
+    void set_include_volatility_clustering(bool enable) { include_volatility_clustering_ = enable; }
     
     // Technical indicator generation
     /*struct TechnicalIndicators {
