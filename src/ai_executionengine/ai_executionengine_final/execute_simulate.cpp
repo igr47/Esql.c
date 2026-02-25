@@ -235,6 +235,11 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
 
         std::cout << "[AIExecutionEngineFinal] Generated " << result.rows.size() << " result rows" << std::endl;
 
+        std::cout << "[DEBUG] plot_config.has_value() = " << (stmt.plot_config.has_value() ? "true" : "false") << std::endl;
+        if (stmt.plot_config.has_value()) {
+            std::cout << "[DEBUG] plot_config window_title = " << stmt.plot_config->window_title << std::endl;
+        }
+
         // NOW, handle plotting if requested (non-blocking)
         if (stmt.plot_config.has_value() && !paths.empty()) {
             const auto& plot_config = stmt.plot_config.value();

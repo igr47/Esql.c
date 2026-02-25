@@ -661,6 +661,197 @@ std::unique_ptr<AST::ForecastStatement> AIParser::parseForecast() {
 std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
     auto stmt = std::make_unique<AST::SimulateStatement>();
 
+    std::cout << "[PARSER DEBUG] Starting parseSimulate()" << std::endl;
+
+    // Parse SIMULATE MARKET [USING model_name]
+    base_parser_.consumeToken(Token::Type::SIMULATE);
+
+    // Optional MARKET keyword
+    if (base_parser_.checkMatch(Token::Type::MARKET)) {
+        base_parser_.consumeToken(Token::Type::MARKET);
+    }
+
+    // USING model_name
+    if (base_parser_.checkMatch(Token::Type::USING)) {
+        base_parser_.consumeToken(Token::Type::USING);
+        stmt->model_name = base_parser_.getCurrentToken().lexeme;
+        if (!isValidModelName(stmt->model_name)) {
+            throw ParseError(base_parser_.getCurrentToken().line,
+                           base_parser_.getCurrentToken().column,
+                           "Invalid model name: " + stmt->model_name);
+        }
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        std::cout << "[PARSER DEBUG] Model name: " << stmt->model_name << std::endl;
+    }
+
+    // FROM input_table
+    if (base_parser_.checkMatch(Token::Type::FROM)) {
+        base_parser_.consumeToken(Token::Type::FROM);
+        stmt->input_table = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        std::cout << "[PARSER DEBUG] Input table: " << stmt->input_table << std::endl;
+    }
+
+    // Parse simulation parameters (STEPS, PATHS, INTERVAL, etc.)
+    std::cout << "[PARSER DEBUG] Calling parseSimulationParameters()" << std::endl;
+    parseSimulationParameters(*stmt);
+
+    std::cout << "[PARSER DEBUG] After parseSimulationParameters - num_steps: "
+              << stmt->num_steps << ", num_paths: " << stmt->num_paths << std::endl;
+
+    // Parse scenario parameters
+    if (base_parser_.checkMatch(Token::Type::WITH_SCENARIO)) {
+        base_parser_.consumeToken(Token::Type::WITH_SCENARIO);
+        stmt->scenario_type = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+        std::cout << "[PARSER DEBUG] Scenario type: " << stmt->scenario_type << std::endl;
+
+        if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
+            base_parser_.consumeToken(Token::Type::L_PAREN);
+            stmt->scenario_params = parseHyperparameters();
+            base_parser_.consumeToken(Token::Type::R_PAREN);
+        }
+    }
+
+    // Parse technical indicators to generate
+    if (base_parser_.checkMatch(Token::Type::GENERATE)) {
+        base_parser_.consumeToken(Token::Type::GENERATE);
+        base_parser_.consumeToken(Token::Type::INDICATORS);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        stmt->generate_indicators.clear();
+        do {
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+            stmt->generate_indicators.push_back(base_parser_.getCurrentToken().lexeme);
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    // Parse output options
+    if (base_parser_.checkMatch(Token::Type::OUTPUT)) {
+        base_parser_.consumeToken(Token::Type::OUTPUT);
+
+        if (base_parser_.checkMatch(Token::Type::DETAILED)) {
+            base_parser_.consumeToken(Token::Type::DETAILED);
+            stmt->output_detailed = true;
+        }
+
+        if (base_parser_.checkMatch(Token::Type::INTERVAL)) {
+            base_parser_.consumeToken(Token::Type::INTERVAL);
+            stmt->output_interval = base_parser_.getCurrentToken().lexeme;
+            base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+        }
+    }
+
+    // INTO output_table
+    if (base_parser_.checkMatch(Token::Type::INTO)) {
+        base_parser_.consumeToken(Token::Type::INTO);
+        stmt->output_table = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        std::cout << "[PARSER DEBUG] Output table: " << stmt->output_table << std::endl;
+    }
+
+    // Parse real-time options
+    if (base_parser_.checkMatch(Token::Type::REAL_TIME)) {
+        base_parser_.consumeToken(Token::Type::REAL_TIME);
+        stmt->real_time_emulation = true;
+
+        if (base_parser_.checkMatch(Token::Type::DELAY)) {
+            base_parser_.consumeToken(Token::Type::DELAY);
+            if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                try {
+                    int delay_ms = std::stoi(base_parser_.getCurrentToken().lexeme);
+                    stmt->step_delay = std::chrono::milliseconds(delay_ms);
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } catch (...) {
+                    throw ParseError(base_parser_.getCurrentToken().line,
+                                   base_parser_.getCurrentToken().column,
+                                   "Invalid delay value");
+                }
+            }
+        }
+
+        if (base_parser_.checkMatch(Token::Type::EMIT_EVENTS)) {
+            base_parser_.consumeToken(Token::Type::EMIT_EVENTS);
+            stmt->emit_events = true;
+        }
+    }
+
+    // Parse PLOT clause
+    if (base_parser_.checkMatch(Token::Type::PLOT)) {
+        std::cout << "[PARSER DEBUG] Found PLOT token" << std::endl;
+
+        base_parser_.consumeToken(Token::Type::PLOT);
+
+        // Parse plot type (CANDLESTICK, LINE, etc.)
+        std::string plot_type = base_parser_.getCurrentToken().lexeme;
+        std::cout << "[PARSER DEBUG] Plot type: " << plot_type << std::endl;
+        base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+
+        // Create a new SimulationPlotConfig
+        Visualization::PlotStatement::SimulationPlotConfig config;
+        config.window_title = plot_type + " - Market Simulation";
+
+        // Parse plot configuration in parentheses
+        if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
+            std::cout << "[PARSER DEBUG] Found opening parenthesis" << std::endl;
+            base_parser_.consumeToken(Token::Type::L_PAREN);
+
+            std::unordered_map<std::string, std::string> config_map;
+
+            while (!base_parser_.checkMatch(Token::Type::R_PAREN)) {
+                std::string key = base_parser_.getCurrentToken().lexeme;
+                std::cout << "[PARSER DEBUG] Found config key: " << key << std::endl;
+                base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+                base_parser_.consumeToken(Token::Type::EQUAL);
+
+                std::string value;
+                if (base_parser_.checkMatch(Token::Type::STRING_LITERAL)) {
+                    value = base_parser_.getCurrentToken().lexeme;
+                    if (value.size() >= 2) {
+                        value = value.substr(1, value.size() - 2);
+                    }
+                    base_parser_.consumeToken(Token::Type::STRING_LITERAL);
+                } else if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    value = base_parser_.getCurrentToken().lexeme;
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } else if (base_parser_.checkMatch(Token::Type::TRUE) ||
+                           base_parser_.checkMatch(Token::Type::FALSE)) {
+                    value = base_parser_.getCurrentToken().lexeme;
+                    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                }
+                std::cout << "[PARSER DEBUG] Value: " << value << std::endl;
+
+                config_map[key] = value;
+
+                if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                    base_parser_.consumeToken(Token::Type::COMMA);
+                }
+            }
+
+            base_parser_.consumeToken(Token::Type::R_PAREN);
+
+            // Parse the config map
+            std::cout << "[PARSER DEBUG] Parsing config map with " << config_map.size() << " entries" << std::endl;
+            stmt->parsePlotConfig(config, config_map);
+        }
+
+        // Set the plot config in the statement
+        stmt->plot_config = config;
+        std::cout << "[PARSER DEBUG] plot_config has value: " << (stmt->plot_config.has_value() ? "true" : "false") << std::endl;
+    }
+
+    return stmt;
+}
+
+/*std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
+    auto stmt = std::make_unique<AST::SimulateStatement>();
+
     // Parse SIMULATE MARKET [USING model_name]
     base_parser_.consumeToken(Token::Type::SIMULATE);
 
@@ -771,7 +962,80 @@ std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
         }
     }
 
-    if (base_parser_.checkMatch(Token::Type::PLOT)) {
+if (base_parser_.checkMatch(Token::Type::PLOT)) {
+    std::cout << "[PARSER DEBUG] Found PLOT token" << std::endl;
+    
+    base_parser_.consumeToken(Token::Type::PLOT);
+
+    // Parse plot type
+    std::string plot_type = base_parser_.getCurrentToken().lexeme;
+    std::cout << "[PARSER DEBUG] Plot type: " << plot_type << std::endl;
+    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+
+    // Create a new SimulationPlotConfig
+    Visualization::PlotStatement::SimulationPlotConfig config;
+    config.window_title = plot_type + " - Market Simulation";
+    
+    // Parse plot configuration in parentheses
+    if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
+        std::cout << "[PARSER DEBUG] Found opening parenthesis" << std::endl;
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        std::unordered_map<std::string, std::string> config_map;
+
+        while (!base_parser_.checkMatch(Token::Type::R_PAREN)) {
+            std::string key = base_parser_.getCurrentToken().lexeme;
+            std::cout << "[PARSER DEBUG] Found config key: " << key << std::endl;
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+            
+            if (!base_parser_.checkMatch(Token::Type::EQUAL)) {
+                throw ParseError(base_parser_.getCurrentToken().line,
+                               base_parser_.getCurrentToken().column,
+                               "Expected = after config key");
+            }
+            base_parser_.consumeToken(Token::Type::EQUAL);
+
+            std::string value;
+            if (base_parser_.checkMatch(Token::Type::STRING_LITERAL)) {
+                value = base_parser_.getCurrentToken().lexeme;
+                // Remove quotes
+                if (value.size() >= 2) {
+                    value = value.substr(1, value.size() - 2);
+                }
+                std::cout << "[PARSER DEBUG] String value: " << value << std::endl;
+                base_parser_.consumeToken(Token::Type::STRING_LITERAL);
+            } else if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                value = base_parser_.getCurrentToken().lexeme;
+                std::cout << "[PARSER DEBUG] Number value: " << value << std::endl;
+                base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+            } else if (base_parser_.checkMatch(Token::Type::TRUE) ||
+                       base_parser_.checkMatch(Token::Type::FALSE)) {
+                value = base_parser_.getCurrentToken().lexeme;
+                std::cout << "[PARSER DEBUG] Boolean value: " << value << std::endl;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+            }
+
+            config_map[key] = value;
+
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+        }
+        
+        std::cout << "[PARSER DEBUG] Found closing parenthesis" << std::endl;
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+        
+        // Parse the config map
+        std::cout << "[PARSER DEBUG] Parsing config map with " << config_map.size() << " entries" << std::endl;
+        stmt->parsePlotConfig(config, config_map);
+    }
+    
+    // Set the plot config in the statement
+    std::cout << "[PARSER DEBUG] Setting plot_config in statement" << std::endl;
+    stmt->plot_config = config;
+    std::cout << "[PARSER DEBUG] plot_config has value: " << (stmt->plot_config.has_value() ? "true" : "false") << std::endl;
+}
+    *if (base_parser_.checkMatch(Token::Type::PLOT)) {
         base_parser_.consumeToken(Token::Type::PLOT);
 
         // Parse plot type (CANDLESTICK, LINE, etc.)
@@ -819,10 +1083,10 @@ std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
 
         // Store plot configuration
         stmt->parsePlotConfig(config_map);
-    }
+    }*
 
     return stmt;
-}
+}*/
 
 void AIParser::parseSimulationParameters(AST::SimulateStatement& stmt) {
     while (base_parser_.checkMatchAny({
@@ -834,6 +1098,7 @@ void AIParser::parseSimulationParameters(AST::SimulateStatement& stmt) {
         Token::Type::SLIPPAGE, Token::Type::MICROSTRUCTURE
     })) {
         Token current = base_parser_.getCurrentToken();
+        std::cout << "[PARSER DEBUG] Parsing parameter: " << current.lexeme << std::endl;
 
         switch (current.type) {
             case Token::Type::STEPS:
@@ -841,6 +1106,7 @@ void AIParser::parseSimulationParameters(AST::SimulateStatement& stmt) {
                 if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
                     try {
                         stmt.num_steps = std::stoul(base_parser_.getCurrentToken().lexeme);
+                        std::cout << "[PARSER DEBUG] Set num_steps to: " << stmt.num_steps << std::endl;
                         base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
                     } catch (...) {
                         throw ParseError(current.line, current.column,
@@ -854,6 +1120,7 @@ void AIParser::parseSimulationParameters(AST::SimulateStatement& stmt) {
                 if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
                     try {
                         stmt.num_paths = std::stoul(base_parser_.getCurrentToken().lexeme);
+                        std::cout << "[PARSER DEBUG] Set num_paths to: " << stmt.num_paths << std::endl;
                         base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
                     } catch (...) {
                         throw ParseError(current.line, current.column,
@@ -865,6 +1132,7 @@ void AIParser::parseSimulationParameters(AST::SimulateStatement& stmt) {
             case Token::Type::INTERVAL:
                 base_parser_.consumeToken(Token::Type::INTERVAL);
                 stmt.time_interval = base_parser_.getCurrentToken().lexeme;
+                std::cout << "[PARSER DEBUG] Set time_interval to: " << stmt.time_interval << std::endl;
                 base_parser_.consumeToken(base_parser_.getCurrentToken().type);
                 break;
 

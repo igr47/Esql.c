@@ -121,7 +121,7 @@ void Lexer::initializeKeyWords(){
         {"LOAD", Token::Type::LOAD},        {"LIQUIDITY_IMPACT", Token::Type::LIQUIDITY_IMPACT},
         {"DATA", Token::Type::DATA},        {"SLIPPAGE", Token::Type::SLIPPAGE},
         {"INFILE", Token::Type::INFILE},    {"MICROSTRUCTURE", Token::Type::MICROSTRUCTURE},
-        {"LOCAL", Token::Type::LOCAL},
+        {"LOCAL", Token::Type::LOCAL},      {"STEPS", Token::Type::STEPS},
         {"HEADER", Token::Type::HEADER},
         {"DELIMITER", Token::Type::DELIMITER},
         {"RESIDUALS", Token::Type::RESIDUALS},

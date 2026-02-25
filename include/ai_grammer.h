@@ -228,7 +228,8 @@ namespace AST {
         std::chrono::milliseconds step_delay = std::chrono::milliseconds(100);
         bool emit_events = false;              // For real-time plotting
         std::optional<Visualization::PlotStatement::SimulationPlotConfig> plot_config;
-        void parsePlotConfig(const std::unordered_map<std::string, std::string>& config_map);
+        //void parsePlotConfig(const std::unordered_map<std::string, std::string>& config_map);
+        void parsePlotConfig(Visualization::PlotStatement::SimulationPlotConfig& config,const std::unordered_map<std::string, std::string>& config_map);
 
         std::string toEsql() const override;
         nlohmann::json to_json() const;

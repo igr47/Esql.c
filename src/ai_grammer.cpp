@@ -494,7 +494,70 @@ namespace AST {
         return result;
     }
 
-    void SimulateStatement::parsePlotConfig(const std::unordered_map<std::string, std::string>& config_map) {
+void SimulateStatement::parsePlotConfig(Visualization::PlotStatement::SimulationPlotConfig& config, 
+                               const std::unordered_map<std::string, std::string>& config_map) {
+    std::cout << "[PARSER DEBUG] Entering parsePlotConfig with " << config_map.size() << " entries" << std::endl;
+    for (const auto& [key, value] : config_map) {
+          std::cout << "[PARSER DEBUG] Processing config: " << key << " = " << value << std::endl;
+        std::string lower_key = key;
+        std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(), ::tolower);
+
+        if (lower_key == "interval") {
+            try {
+                int ms = std::stoi(value);
+                config.update_interval = std::chrono::milliseconds(ms);
+                 std::cout << "[PARSER DEBUG] Set update_interval to " << ms << "ms" << std::endl;
+            } catch (...) {}
+        }
+        else if (lower_key == "window" || lower_key == "title") {
+            config.window_title = value;
+            std::cout << "[PARSER DEBUG] Set window_title to " << value << std::endl;
+        }
+        else if (lower_key == "volume") {
+            config.show_volume = (value == "true" || value == "TRUE" || value == "1");
+            std::cout << "[PARSER DEBUG] Set show_volume to " << config.show_volume << std::endl;
+        }
+        else if (lower_key == "indicators") {
+            config.show_indicators = (value == "true" || value == "TRUE" || value == "1");
+             std::cout << "[PARSER DEBUG] Set show_indicators to " << config.show_indicators << std::endl;
+        }
+        else if (lower_key == "size") {
+            auto pos = value.find(',');
+            if (pos != std::string::npos) {
+                try {
+                    config.window_width = std::stoi(value.substr(0, pos));
+                    config.window_height = std::stoi(value.substr(pos + 1));
+                       std::cout << "[PARSER DEBUG] Set window size to " << config.window_width << "x" << config.window_height << std::endl;
+                } catch (...) {}
+            }
+        }
+        else if (lower_key == "animate") {
+            config.animate = (value == "true" || value == "TRUE" || value == "1");
+        }
+        else if (lower_key == "grid") {
+            config.show_grid = (value == "true" || value == "TRUE" || value == "1");
+        }
+        else if (lower_key == "legend") {
+            config.show_legend = (value == "true" || value == "TRUE" || value == "1");
+        }
+        else if (lower_key == "bull_color") {
+            config.bull_color = value;
+        }
+        else if (lower_key == "bear_color") {
+            config.bear_color = value;
+        }
+        else if (lower_key == "max_points") {
+            try {
+                config.max_points_display = std::stoul(value);
+            } catch (...) {}
+        }
+        else if (lower_key == "autofit") {
+            config.auto_fit = (value == "true" || value == "TRUE" || value == "1");
+        }
+    }
+}
+
+    /*void SimulateStatement::parsePlotConfig(const std::unordered_map<std::string, std::string>& config_map) {
         Visualization::PlotStatement::SimulationPlotConfig config;
 
         for (const auto& [key, value] : config_map) {
@@ -551,7 +614,7 @@ namespace AST {
         }
 
         plot_config = config;
-    }
+    }*/
 
     /*std::string SimulateStatement::toEsql() const {
 	 std::string result = " SIMULATING USING " + model_name;
