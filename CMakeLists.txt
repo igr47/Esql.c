@@ -238,7 +238,9 @@ target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
-target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
+#target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
+
+target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLEW)
 
 # Create ImPlot library
 set(IMPLOT_SOURCES
@@ -251,7 +253,7 @@ add_library(implot STATIC ${IMPLOT_SOURCES})
 target_include_directories(implot PUBLIC ${implot_SOURCE_DIR})
 target_link_libraries(implot PRIVATE imgui)
 
-# Find OpenGL and GLFW - FIXED SECTION
+# Find OpenGL and GLFW
 find_package(OpenGL REQUIRED)
 
 # Find GLFW3 - this creates the 'glfw' target automatically
@@ -262,33 +264,15 @@ if(TARGET glfw)
     message(STATUS "Found GLFW3: ${glfw}")
 endif()
 
-# Find or download GLAD (OpenGL loader)
-find_path(GLAD_INCLUDE_DIR
-    NAMES glad/glad.h
-    PATHS
-        /usr/include
-        /usr/local/include
-        ${CMAKE_SOURCE_DIR}/glad/include
-)
+# ============================================
+# Replace GLAD with GLEW
+# ============================================
+find_package(GLEW REQUIRED)
+message(STATUS "Found GLEW: ${GLEW_LIBRARIES}")
+message(STATUS "GLEW include: ${GLEW_INCLUDE_DIRS}")
 
-if(NOT GLAD_INCLUDE_DIR)
-    message(STATUS "Downloading GLAD...")
-    file(DOWNLOAD
-        https://raw.githubusercontent.com/Dav1dde/glad/master/glad.h
-        ${CMAKE_CURRENT_BINARY_DIR}/glad/include/glad/glad.h
-    )
-    file(DOWNLOAD
-        https://raw.githubusercontent.com/Dav1dde/glad/master/glad.c
-        ${CMAKE_CURRENT_BINARY_DIR}/glad/src/glad.c
-    )
-    set(GLAD_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/glad/include)
-    set(GLAD_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/glad/src/glad.c)
-endif()
-
-if(GLAD_SOURCES)
-    add_library(glad STATIC ${GLAD_SOURCES})
-    target_include_directories(glad PUBLIC ${GLAD_INCLUDE_DIR})
-endif()
+#target_include_directories(e_sql PRIVATE ${GLEW_INCLUDE_DIRS})
+#target_link_libraries(e_sql ${GLEW_LIBRARIES})
 
 # AI sources
 file(GLOB AI_SOURCES
@@ -373,7 +357,10 @@ target_include_directories(e_sql PRIVATE
     include/ai
     include/plotter_includes
     ${Boost_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}  # Add GLEW include directories
 )
+
+target_include_directories(e_sql PRIVATE ${GLEW_INCLUDE_DIRS})
 
 # Add Eigen3 includes
 if(EIGEN3_INCLUDE_DIR)
@@ -457,13 +444,15 @@ if(LIGHTGBM_LIBRARY)
     endif()
 endif()
 
-# Link ImGui and ImPlot libraries - FIXED: using 'glfw' not 'glfw3'
+# Link ImGui, ImPlot, and GLEW libraries
 target_link_libraries(e_sql
     imgui
     implot
-    glad
+    ${GLEW_LIBRARIES}  # Replace glad with GLEW
     OpenGL::GL
     glfw
+    ${CMAKE_DL_LIBS}   # Add for dynamic loading support
+    pthread            # Add pthread for threading
 )
 
 # Add standard C++ libraries that might be needed

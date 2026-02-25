@@ -97,6 +97,8 @@ private:
     std::atomic<bool> plotting_started_{false};
     std::thread plotting_thread_;
     std::mutex plot_mutex_;
+    std::atomic<bool> plot_thread_running_;
+    std::thread plot_thread_;
 
     std::unique_ptr<AIExecutionEngine> ai_engine_;
     std::unique_ptr<esql::DataExtractor> data_extractor_;

@@ -241,81 +241,82 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
         }
 
         // NOW, handle plotting if requested (non-blocking)
-        if (stmt.plot_config.has_value() && !paths.empty()) {
-            const auto& plot_config = stmt.plot_config.value();
-            
-            std::cout << "[AIExecutionEngineFinal] Starting real-time plotting in separate thread..." << std::endl;
-            
-            // Create a shared pointer to the path data that will outlive this function
-            auto path_data = std::make_shared<std::vector<esql::ai::SimulationPath>>(std::move(paths));
-            
-            // Start plotting in a detached thread so it doesn't block
-            std::thread([this, path_data, plot_config]() {
-                try {
-                    // Initialize plotter if not already done
-                    {
-                        std::lock_guard<std::mutex> lock(plot_mutex_);
-                        if (!plotter_) {
-                            plotter_ = std::make_unique<Visualization::ImPlotSimulationPlotter>();
-                            plotter_->initialize();
-                        }
-                    }
-                    
-                    // Setup plot window
-                    plotter_->setupWindow(plot_config);
-                    
-                    // Get the first path for plotting
-                    const auto& first_path = (*path_data)[0];
-                    size_t total_steps = first_path.prices.size();
-                    
-                    std::cout << "[Plotting] Starting animation with " << total_steps << " steps..." << std::endl;
-                    
-                    // Animated playback
-                    for (size_t step = 0; step < total_steps; ++step) {
-                        auto start_time = std::chrono::steady_clock::now();
-                        
-                        // Plot current step
-                        plotter_->plotSimulationCandlestick(
-                            std::make_shared<esql::ai::SimulationPath>(first_path),
-                            plot_config,
-                            step
-                        );
-                        
-                        // Check if window was closed
-                        if (plotter_->isWindowClosed()) {
-                            std::cout << "[Plotting] Window closed, stopping animation." << std::endl;
-                            break;
-                        }
-                        
-                        // Control update rate
-                        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::steady_clock::now() - start_time
-                        );
-                        
-                        auto sleep_time = plot_config.update_interval - elapsed;
-                        if (sleep_time > std::chrono::milliseconds(0)) {
-                            std::this_thread::sleep_for(sleep_time);
-                        }
-                    }
-                    
-                    // Keep window open after animation
-                    std::cout << "[Plotting] Animation complete. Window will stay open. Close it to continue." << std::endl;
-                    
-                    while (!plotter_->isWindowClosed()) {
-                        plotter_->renderLoop();
-                        std::this_thread::sleep_for(std::chrono::milliseconds(16));
-                    }
-                    
-                    std::cout << "[Plotting] Plot window closed." << std::endl;
-                    
-                } catch (const std::exception& e) {
-                    std::cerr << "[Plotting] Error in plotting thread: " << e.what() << std::endl;
-                }
-            }).detach();  // Detach so it runs independently
-            
-            std::cout << "[AIExecutionEngineFinal] Plotting thread started and detached." << std::endl;
-        }
+        // In execute_simulate.cpp - Replace the plotting thread section
 
+if (stmt.plot_config.has_value() && !paths.empty()) {
+    const auto& plot_config = stmt.plot_config.value();
+
+    std::cout << "[AIExecutionEngineFinal] Starting real-time plotting in separate thread..." << std::endl;
+
+    // Move paths data to heap so it survives thread detachment
+    auto path_data = std::make_shared<std::vector<esql::ai::SimulationPath>>(std::move(paths));
+
+    // Create a completely isolated thread for plotting
+    std::thread([path_data, plot_config]() {
+        try {
+            // Sleep briefly to allow main thread to finish printing results
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            std::cout << "[PLOT DEBUG] Plotting thread started with ID: "
+                      << std::this_thread::get_id() << std::endl;
+
+            // Create plotter in THIS thread
+            auto plotter = std::make_unique<Visualization::ImPlotSimulationPlotter>();
+
+            // Initialize GLFW and create context in THIS thread
+            plotter->initialize();
+
+            // Setup window - creates OpenGL context in THIS thread
+            plotter->setupWindow(plot_config);
+
+            if (plotter->isWindowClosed()) {
+                std::cerr << "[PLOT DEBUG] Window setup failed" << std::endl;
+                return;
+            }
+
+            const auto& first_path = (*path_data)[0];
+            size_t total_steps = first_path.prices.size();
+
+            std::cout << "[Plotting] Starting animation with " << total_steps << " steps..." << std::endl;
+
+            // Animated playback
+            for (size_t step = 0; step < total_steps && !plotter->isWindowClosed(); ++step) {
+                auto start_time = std::chrono::steady_clock::now();
+
+                plotter->plotSimulationCandlestick(
+                    std::make_shared<esql::ai::SimulationPath>(first_path),
+                    plot_config,
+                    step
+                );
+
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - start_time
+                );
+
+                auto sleep_time = plot_config.update_interval - elapsed;
+                if (sleep_time > std::chrono::milliseconds(0)) {
+                    std::this_thread::sleep_for(sleep_time);
+                }
+            }
+
+            // Keep window open
+            std::cout << "[Plotting] Animation complete. Window will stay open." << std::endl;
+
+            while (!plotter->isWindowClosed()) {
+                plotter->renderLoop();
+                std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            }
+
+            std::cout << "[Plotting] Plot window closed." << std::endl;
+            plotter->shutdown();
+
+        } catch (const std::exception& e) {
+            std::cerr << "[Plotting] Fatal error: " << e.what() << std::endl;
+        }
+    }).detach();
+
+    std::cout << "[AIExecutionEngineFinal] Plotting thread started and detached." << std::endl;
+}
         // If output table specified, save results
         if (!stmt.output_table.empty()) {
             //saveSimulationResults(stmt.output_table, result);

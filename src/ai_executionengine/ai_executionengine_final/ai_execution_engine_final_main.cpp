@@ -43,6 +43,10 @@ AIExecutionEngineFinal::AIExecutionEngineFinal(ExecutionEngine& base_engine, Dat
 }
 
 AIExecutionEngineFinal::~AIExecutionEngineFinal() {
+    plot_thread_running_ = false;
+    if (plot_thread_.joinable()) {
+        plot_thread_.join();
+    }
     stopWorkerThreads();
 }
 
