@@ -107,15 +107,20 @@ void ImPlotSimulationPlotter::setupWindow(const PlotStatement::SimulationPlotCon
     if (!window_) {
         std::cerr << "[ImPlot] Failed to create GLFW window" << std::endl;
         return;
+    } else {
+        std::cout << "[Implot] GLFW Window  created successfully. " << std::endl;
     }
 
     // Make context current in THIS thread
+    std::cout << "[Implot] Entering window context creation." << std::endl;
     glfwMakeContextCurrent(window_);
 
     // Verify context is current
     if (glfwGetCurrentContext() != window_) {
         std::cerr << "[ImPlot] Failed to make OpenGL context current" << std::endl;
         return;
+    } else {
+        std::cout << "[Implot] Successfully madde OpenGL context current." << std::endl;
     }
 
     glfwSwapInterval(1); // Enable vsync
@@ -128,12 +133,13 @@ void ImPlotSimulationPlotter::setupWindow(const PlotStatement::SimulationPlotCon
 
     GLenum glew_err = glewInit();
     if (glew_err != GLEW_OK) {
-        std::cerr << "[ImPlot] Failed to initialize GLEW: "
+       std::cerr << "[ImPlot] Failed to initialize GLEW: "
                   << glewGetErrorString(glew_err) << std::endl;
-        glfwDestroyWindow(window_);
-        window_ = nullptr;
-        return;
+        //glfwDestroyWindow(window_);
+        //window_ = nullptr;
+        //return;
     }
+    std::cerr << "GLEW error code: " << glew_err << std::endl;
 
     // Clear the error that GLEW might have generated
     glGetError();

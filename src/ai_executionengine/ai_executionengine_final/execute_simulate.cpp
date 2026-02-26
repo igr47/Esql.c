@@ -10,7 +10,7 @@
 // Fixed executeSimulate function
 ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
     AST::SimulateStatement& stmt) {
-    
+
     std::cout << "[AIExecutionEngineFinal] Executing SIMULATE MARKET: "
               << stmt.model_name << std::endl;
 
@@ -36,11 +36,11 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
         simulator->set_volatility_model("GARCH", 0.02);
         simulator->set_mean_reversion_strength(/*stmt.include_mean_reversion,*/ stmt.mean_reversion_strength);
         simulator->set_include_volatility_clustering(stmt.include_volatility_clustering);
-        
+
         if (stmt.simulate_microstructure) {
             simulator->set_microstructure_simulation(true, stmt.spread);
         }
-        
+
         simulator->set_regime_detection(true);
 
         // Load initial conditions from input table if provided
@@ -103,7 +103,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
         // Run simulation to get all paths
         std::cout << "[AIExecutionEngineFinal] Running simulation with "
                   << stmt.num_steps << " steps and " << stmt.num_paths << " paths..." << std::endl;
-        
+
         auto paths = simulator->simulate(
             stmt.num_steps,
             stmt.num_paths,
@@ -123,54 +123,54 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
         // FIRST, generate all result rows (this must happen regardless of plotting)
         for (size_t path_idx = 0; path_idx < paths.size(); ++path_idx) {
             const auto& path = paths[path_idx];
-            
+
             // Generate timestamps
             auto base_time = std::chrono::system_clock::now();
             auto interval = parseTimeInterval(stmt.time_interval);
-            
+
             for (size_t step = 0; step < path.prices.size(); ++step) {
                 std::vector<std::string> row;
-                
+
                 // simulation_id
                 row.push_back(std::to_string(simulation_id));
-                
+
                 // step
                 row.push_back(std::to_string(step));
-                
+
                 // path
                 row.push_back(std::to_string(path_idx));
-                
+
                 // timestamp
                 auto time_point = base_time + interval * static_cast<int64_t>(step);
                 auto tt = std::chrono::system_clock::to_time_t(time_point);
                 std::stringstream ts;
                 ts << std::put_time(std::localtime(&tt), "%Y-%m-%d %H:%M:%S");
                 row.push_back(ts.str());
-                
+
                 // price
                 row.push_back(std::to_string(path.prices[step]));
-                
+
                 // return
                 if (step > 0 && step - 1 < path.returns.size()) {
                     row.push_back(std::to_string(path.returns[step-1]));
                 } else {
                     row.push_back("0.0");
                 }
-                
+
                 // volatility
                 if (step < path.volatilities.size()) {
                     row.push_back(std::to_string(path.volatilities[step]));
                 } else {
                     row.push_back("0.0");
                 }
-                
+
                 // volume
                 if (step < path.volumes.size()) {
                     row.push_back(std::to_string(path.volumes[step]));
                 } else {
                     row.push_back("0.0");
                 }
-                
+
                 // regime
                 std::string regime_str;
                 if (step < path.regimes.size()) {
@@ -190,7 +190,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
                     regime_str = "UNKNOWN";
                 }
                 row.push_back(regime_str);
-                
+
                 // indicators
                 double sma_20_val = 0.0;
                 if (!path.indicators.sma_20.empty()) {
@@ -198,18 +198,18 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
                     sma_20_val = path.indicators.sma_20[idx];
                 }
                 row.push_back(std::to_string(sma_20_val));
-                
+
                 double rsi_val = 50.0;
                 if (!path.indicators.rsi.empty()) {
                     size_t idx = std::min(step, path.indicators.rsi.size() - 1);
                     rsi_val = path.indicators.rsi[idx];
                 }
                 row.push_back(std::to_string(rsi_val));
-                
+
                 // bid/ask
                 double bid_price = path.prices[step] * 0.9999;
                 double ask_price = path.prices[step] * 1.0001;
-                
+
                 if (!path.events.empty() && step < path.events.size()) {
                     if (path.events[step].bid_price > 0) {
                         bid_price = path.events[step].bid_price;
@@ -220,7 +220,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
                 }
                 row.push_back(std::to_string(bid_price));
                 row.push_back(std::to_string(ask_price));
-                
+
                 // confidence
                 double confidence = 0.95;
                 if (step < path.volatilities.size() && path.volatilities[step] > 0) {
@@ -228,7 +228,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
                     confidence = std::max(0.5, std::min(0.99, confidence));
                 }
                 row.push_back(std::to_string(confidence));
-                
+
                 result.rows.push_back(row);
             }
         }
@@ -339,7 +339,7 @@ if (stmt.plot_config.has_value() && !paths.empty()) {
 std::chrono::seconds AIExecutionEngineFinal::parseTimeInterval(const std::string& interval) {
     char unit = interval.back();
     int value = std::stoi(interval.substr(0, interval.length() - 1));
-    
+
     switch (unit) {
         case 's': return std::chrono::seconds(value);
         case 'm': return std::chrono::minutes(value);
