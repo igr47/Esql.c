@@ -1,6 +1,7 @@
-#include "ai_grammer.h"
 #include "plotter_includes/plotter.h"
+#include "ai_grammer.h"
 #include <sstream>
+
 
 namespace AST {
 
@@ -472,7 +473,116 @@ namespace AST {
 	return result;
     }
 
-    std::string DetectSeasonalityStatement::toEsql() const {
+    std::string PrepareTimeSeriesStatement::toEsql() const {
+        std::stringstream ss;
+        ss << "PREPARE TIME SERIES " << output_table << "\n";
+    ss << "FROM " << source_table << "\n";
+    ss << "TIME COLUMN " << time_column << "\n";
+    ss << "TARGET " << target_column << "\n";
+
+    if (!feature_columns.empty()) {
+        ss << "FEATURES (";
+        for (size_t i = 0; i < feature_columns.size(); ++i) {
+            if (i > 0) ss << ", ";
+            ss << feature_columns[i];
+        }
+        ss << ")\n";
+    }
+
+    ss << "WITH ";
+    bool has_params = false;
+
+    if (!lags.empty()) {
+        ss << "LAGS (";
+        for (size_t i = 0; i < lags.size(); ++i) {
+            if (i > 0) ss << ", ";
+            ss << lags[i];
+        }
+        ss << ")";
+        has_params = true;
+    }
+
+    if (!rolling_windows.empty()) {
+        if (has_params) ss << " ";
+        ss << "ROLLING WINDOWS (";
+        for (size_t i = 0; i < rolling_windows.size(); ++i) {
+            if (i > 0) ss << ", ";
+            ss << rolling_windows[i];
+        }
+        ss << ")";
+        has_params = true;
+    }
+
+    if (add_datetime_features) {
+        if (has_params) ss << " ";
+        ss << "ADD DATETIME FEATURES";
+        has_params = true;
+    }
+
+    if (add_seasonal_features) {
+        if (has_params) ss << " ";
+        ss << "ADD SEASONAL FEATURES";
+        has_params = true;
+    }
+
+    if (!auto_detect) {
+        if (has_params) ss << " ";
+        ss << "NO AUTO DETECT";
+        has_params = true;
+    }
+
+    if (check_stationarity) {
+        if (has_params) ss << " ";
+        ss << "CHECK STATIONARITY";
+        has_params = true;
+    }
+
+    if (make_stationary) {
+        if (has_params) ss << " ";
+        ss << "MAKE STATIONARY";
+        has_params = true;
+    }
+
+    // Add split ratios if they're not default
+    if (std::abs(train_ratio - 0.7) > 0.01 ||
+        std::abs(validation_ratio - 0.15) > 0.01 ||
+        std::abs(test_ratio - 0.15) > 0.01) {
+
+        if (has_params) ss << " ";
+        ss << "SPLIT (TRAIN = " << train_ratio
+           << ", VALIDATION = " << validation_ratio
+           << ", TEST = " << test_ratio << ")";
+        has_params = true;
+    }
+
+    if (!has_params) {
+        // Remove the "WITH " if no parameters
+        std::string result = ss.str();
+        size_t pos = result.rfind("WITH ");
+        if (pos != std::string::npos) {
+            result.erase(pos, 5);
+        }
+        return result;
+    }
+
+    return ss.str();
+}
+
+std::string DetectSeasonalityStatement::toEsql() const {
+    std::stringstream ss;
+    ss << "DETECT SEASONALITY IN " << source_table << "\n";
+    ss << "TIME COLUMN " << time_column << "\n";
+    ss << "VALUE COLUMN " << value_column;
+
+    if (max_lag != 50) {
+        ss << "\nWITH (max_lag = " << max_lag << ")";
+    }
+
+    return ss.str();
+}
+
+
+    /*std::string DetectSeasonalityStatement::toEsql() const {
         std::string result = " DETECTING SEASONALITY USING" + source_table;
 
         if (!time_column.empty()) {
@@ -482,7 +592,7 @@ namespace AST {
         if (!value_column.empty()) {
             result += " ON VALUE COLUMN " + value_column;
         }
-    }
+    }*/
 
     std::string SimulateStatement::toEsql() const {
         std::string result = " SIMULATING USING " + model_name;

@@ -45,6 +45,8 @@ std::unique_ptr<AST::Statement> AIParser::parseAIStatement() {
         return parseSimulate();
     } else if (base_parser_.checkMatch(Token::Type::DETECT)) {
         return parseDetectSeasonality();
+    } else if (base_parser_.checkMatch(Token::Type::PREPARE)) {
+        return parsePrepareTimeSeries();
     }
 
     throw ParseError(current.line, current.column, "Expected AI statement");
@@ -659,7 +661,7 @@ std::unique_ptr<AST::ForecastStatement> AIParser::parseForecast() {
     return stmt;
 }
 
-std::unique_ptr<AST::DetectSeasonalityStatement> AIParser::parseDetectSeasonality() {
+/*std::unique_ptr<AST::DetectSeasonalityStatement> AIParser::parseDetectSeasonality() {
     auto stmt = std::make_unique<AST::DetectSeasonalityStatement>();
 
     base_parser_.consumeToken(Token::Type::DETECT);
@@ -680,6 +682,254 @@ std::unique_ptr<AST::DetectSeasonalityStatement> AIParser::parseDetectSeasonalit
 
     stmt->value_column = base_parser_.getCurrentToken().lexeme;
     base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    return stmt;
+}*/
+
+std::unique_ptr<AST::PrepareTimeSeriesStatement> AIParser::parsePrepareTimeSeries() {
+    auto stmt = std::make_unique<AST::PrepareTimeSeriesStatement>();
+
+    // Parse PREPARE TIME SERIES output_table
+    base_parser_.consumeToken(Token::Type::PREPARE);
+    base_parser_.consumeToken(Token::Type::TIME_SERIES);
+
+    stmt->output_table = base_parser_.getCurrentToken().lexeme;
+    if (!isValidModelName(stmt->output_table)) {
+        throw ParseError(base_parser_.getCurrentToken().line,
+                        base_parser_.getCurrentToken().column,
+                        "Invalid output table name: " + stmt->output_table);
+    }
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse FROM source_table
+    base_parser_.consumeToken(Token::Type::FROM);
+    stmt->source_table = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse TIME COLUMN
+    base_parser_.consumeToken(Token::Type::TIME);
+    base_parser_.consumeToken(Token::Type::COLUMN);
+    stmt->time_column = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse TARGET column
+    base_parser_.consumeToken(Token::Type::TARGET);
+    stmt->target_column = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse optional FEATURES clause
+    if (base_parser_.checkMatch(Token::Type::FEATURES)) {
+        base_parser_.consumeToken(Token::Type::FEATURES);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        do {
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+            stmt->feature_columns.push_back(base_parser_.getCurrentToken().lexeme);
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    // Parse optional WITH clause for time series parameters
+    if (base_parser_.checkMatch(Token::Type::WITH)) {
+        base_parser_.consumeToken(Token::Type::WITH);
+
+        while (!base_parser_.checkMatch(Token::Type::END_OF_INPUT) &&
+               !base_parser_.checkMatch(Token::Type::SEMICOLON) &&
+               !base_parser_.checkMatchAny({Token::Type::INTO, Token::Type::WHERE})) {
+
+            Token current = base_parser_.getCurrentToken();
+
+            if (base_parser_.checkMatch(Token::Type::LAGS)) {
+                base_parser_.consumeToken(Token::Type::LAGS);
+                base_parser_.consumeToken(Token::Type::L_PAREN);
+
+                stmt->lags.clear();
+                do {
+                    if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                        base_parser_.consumeToken(Token::Type::COMMA);
+                    }
+                    if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                        try {
+                            int lag = std::stoi(base_parser_.getCurrentToken().lexeme);
+                            stmt->lags.push_back(lag);
+                            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                        } catch (...) {
+                            throw ParseError(current.line, current.column,
+                                           "Invalid lag value");
+                        }
+                    }
+                } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+                base_parser_.consumeToken(Token::Type::R_PAREN);
+
+            } else if (base_parser_.checkMatch(Token::Type::ROLLING_WINDOWS)) {
+                base_parser_.consumeToken(Token::Type::ROLLING_WINDOWS);
+                base_parser_.consumeToken(Token::Type::L_PAREN);
+
+                stmt->rolling_windows.clear();
+                do {
+                    if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                        base_parser_.consumeToken(Token::Type::COMMA);
+                    }
+                    if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                        try {
+                            int window = std::stoi(base_parser_.getCurrentToken().lexeme);
+                            stmt->rolling_windows.push_back(window);
+                            base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                        } catch (...) {
+                            throw ParseError(current.line, current.column,
+                                           "Invalid rolling window value");
+                        }
+                    }
+                } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+                base_parser_.consumeToken(Token::Type::R_PAREN);
+
+            } else if (base_parser_.checkMatch(Token::Type::ADD_DATETIME_FEATURES)) {
+                base_parser_.consumeToken(Token::Type::ADD_DATETIME_FEATURES);
+                stmt->add_datetime_features = true;
+
+            } else if (base_parser_.checkMatch(Token::Type::ADD_SEASONAL_FEATURES)) {
+                base_parser_.consumeToken(Token::Type::ADD_SEASONAL_FEATURES);
+                stmt->add_seasonal_features = true;
+
+            } else if (base_parser_.checkMatch(Token::Type::NO_AUTO_DETECT)) {
+                base_parser_.consumeToken(Token::Type::NO_AUTO_DETECT);
+                stmt->auto_detect = false;
+
+            } else if (base_parser_.checkMatch(Token::Type::CHECK_STATIONARITY)) {
+                base_parser_.consumeToken(Token::Type::CHECK_STATIONARITY);
+                stmt->check_stationarity = true;
+
+            } else if (base_parser_.checkMatch(Token::Type::MAKE_STATIONARY)) {
+                base_parser_.consumeToken(Token::Type::MAKE_STATIONARY);
+                stmt->make_stationary = true;
+
+            } else if (base_parser_.checkMatch(Token::Type::SPLIT)) {
+                base_parser_.consumeToken(Token::Type::SPLIT);
+                base_parser_.consumeToken(Token::Type::L_PAREN);
+
+                while (!base_parser_.checkMatch(Token::Type::R_PAREN)) {
+                    if (base_parser_.checkMatch(Token::Type::TRAIN)) {
+                        base_parser_.consumeToken(Token::Type::TRAIN);
+                        base_parser_.consumeToken(Token::Type::EQUAL);
+                        if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                            try {
+                                stmt->train_ratio = std::stof(base_parser_.getCurrentToken().lexeme);
+                                base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                            } catch (...) {
+                                throw ParseError(current.line, current.column,
+                                               "Invalid train ratio");
+                            }
+                        }
+                    } else if (base_parser_.checkMatch(Token::Type::VALIDATION)) {
+                        base_parser_.consumeToken(Token::Type::VALIDATION);
+                        base_parser_.consumeToken(Token::Type::EQUAL);
+                        if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                            try {
+                                stmt->validation_ratio = std::stof(base_parser_.getCurrentToken().lexeme);
+                                base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                            } catch (...) {
+                                throw ParseError(current.line, current.column,
+                                               "Invalid validation ratio");
+                            }
+                        }
+                    } else if (base_parser_.checkMatch(Token::Type::TEST)) {
+                        base_parser_.consumeToken(Token::Type::TEST);
+                        base_parser_.consumeToken(Token::Type::EQUAL);
+                        if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                            try {
+                                stmt->test_ratio = std::stof(base_parser_.getCurrentToken().lexeme);
+                                base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                            } catch (...) {
+                                throw ParseError(current.line, current.column,
+                                               "Invalid test ratio");
+                            }
+                        }
+                    }
+
+                    if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                        base_parser_.consumeToken(Token::Type::COMMA);
+                    }
+                }
+
+                base_parser_.consumeToken(Token::Type::R_PAREN);
+            } else {
+                // Unknown token, break to avoid infinite loop
+                break;
+            }
+        }
+    }
+
+    return stmt;
+}
+
+std::unique_ptr<AST::DetectSeasonalityStatement> AIParser::parseDetectSeasonality() {
+    auto stmt = std::make_unique<AST::DetectSeasonalityStatement>();
+
+    // Parse DETECT SEASONALITY IN source_table
+    base_parser_.consumeToken(Token::Type::DETECT);
+    base_parser_.consumeToken(Token::Type::SEASONALITY);
+    base_parser_.consumeToken(Token::Type::IN);
+
+    stmt->source_table = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse TIME COLUMN
+    base_parser_.consumeToken(Token::Type::TIME);
+    base_parser_.consumeToken(Token::Type::COLUMN);
+    stmt->time_column = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse VALUE COLUMN
+    base_parser_.consumeToken(Token::Type::VALUE);
+    base_parser_.consumeToken(Token::Type::COLUMN);
+    stmt->value_column = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse optional WITH clause for parameters
+    if (base_parser_.checkMatch(Token::Type::WITH)) {
+        base_parser_.consumeToken(Token::Type::WITH);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        do {
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+
+            std::string param_name = base_parser_.getCurrentToken().lexeme;
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+            base_parser_.consumeToken(Token::Type::EQUAL);
+
+            if (param_name == "max_lag") {
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    try {
+                        stmt->max_lag = std::stoi(base_parser_.getCurrentToken().lexeme);
+                        base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                    } catch (...) {
+                        throw ParseError(base_parser_.getCurrentToken().line,
+                                       base_parser_.getCurrentToken().column,
+                                       "Invalid max_lag value");
+                    }
+                }
+            } else {
+                // Unknown parameter, skip value
+                if (base_parser_.checkMatch(Token::Type::NUMBER_LITERAL)) {
+                    base_parser_.consumeToken(Token::Type::NUMBER_LITERAL);
+                } else if (base_parser_.checkMatch(Token::Type::STRING_LITERAL)) {
+                    base_parser_.consumeToken(Token::Type::STRING_LITERAL);
+                } else {
+                    base_parser_.advanceToken();
+                }
+            }
+        } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
 
     return stmt;
 }
