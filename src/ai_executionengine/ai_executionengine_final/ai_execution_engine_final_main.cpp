@@ -86,6 +86,8 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
 		    return executeDetectAnomaly(*detect_anomaly);
         } else if (auto simulate = dynamic_cast<AST::SimulateStatement*>(stmt.get())) {
             return executeSimulate(*simulate);
+        } else if (auto detect = dynamic_cast<AST::DetectSeasonalityStatement*>(stmt.get())) {
+            return executeDetectSeasonality(*detect);
         } else if (auto create_or_replace = dynamic_cast<AST::CreateOrReplaceModelStatement*>(stmt.get())) {
             return executeCreateOrReplaceModel(*create_or_replace);
         } else if (auto describe_model = dynamic_cast<AST::DescribeModelStatement*>(stmt.get())) {
@@ -98,7 +100,7 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
             return executeBatchAI(*batch_ai);
         } else if (auto* ai_stmt = dynamic_cast<AST::AIStatement*>(stmt.get())) {
             return ai_engine_->executeAIStatement(std::move(stmt));
-        } 
+        }
 
         // Fall back to base execution engine
         return base_engine_.execute(std::move(stmt));

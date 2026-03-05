@@ -74,18 +74,34 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeSimulate(
         }
 
         // Calibrate simulator if we have historical data
-        if (!stmt.input_table.empty()) {
-            auto historical_data = data_extractor_->extract_table_data(
-                db_.currentDatabase(),
-                stmt.input_table,
-                {},
-                "",
-                1000,  // Get up to 1000 rows for calibration
-                0
-            );
+        if (!stmt.input_table.empty() && !stmt.time_column.empty()) {
+            if (!stmt.input_table.empty() && !stmt.time_column.empty()) {
+                std::cout << "[AIExecutionEngineFinal] Preparing time series features from: " << stmt.input_table << std::endl;
 
-            if (historical_data.size() >= 100) {
-                simulator->calibrate_from_historical_data(historical_data);
+                // Create a temporary prepared table
+                std::string prepared_table = stmt.input_table + "_prepared_" + std::to_string(std::time(nullptr));
+
+                if (prepareMarketSimulationData(
+                    stmt.input_table,
+                    stmt.time_column,
+                    stmt.value_columns.empty() ? "price" : stmt.value_columns[0],
+                    prepared_table,
+                    30
+                ))
+
+                std::cout << "[AIExecutionEngineFinal] Using enhanced data from: " << prepared_table << std::endl;
+
+                auto historical_data = data_extractor_->extract_table_data(
+                    db_.currentDatabase(),
+                    stmt.input_table, // Should replace it withprepared_table but i have not implemented it
+                    {},
+                    "",
+                    1000,  // Get up to 1000 rows for calibration
+                    0
+                );
+                if (historical_data.size() >= 100) {
+                    simulator->calibrate_from_historical_data(historical_data);
+                }
             }
         }
 

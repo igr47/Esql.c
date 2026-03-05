@@ -42,8 +42,9 @@ std::unique_ptr<AST::Statement> AIParser::parseAIStatement() {
     } else if (base_parser_.checkMatch(Token::Type::FORECAST)) {
         return parseForecast();
     } else if (base_parser_.checkMatch(Token::Type::SIMULATE)) {
-        //return std::unique_ptr<AST::Statement>(parseSimulate().release());
         return parseSimulate();
+    } else if (base_parser_.checkMatch(Token::Type::DETECT)) {
+        return parseDetectSeasonality();
     }
 
     throw ParseError(current.line, current.column, "Expected AI statement");
@@ -658,6 +659,31 @@ std::unique_ptr<AST::ForecastStatement> AIParser::parseForecast() {
     return stmt;
 }
 
+std::unique_ptr<AST::DetectSeasonalityStatement> AIParser::parseDetectSeasonality() {
+    auto stmt = std::make_unique<AST::DetectSeasonalityStatement>();
+
+    base_parser_.consumeToken(Token::Type::DETECT);
+    base_parser_.consumeToken(Token::Type::SEASONALITY);
+    base_parser_.consumeToken(Token::Type::IN);
+
+    stmt->source_table = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    base_parser_.consumeToken(Token::Type::TIME);
+    base_parser_.consumeToken(Token::Type::COLUMN);
+
+    stmt->time_column = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    base_parser_.consumeToken(Token::Type::VALUE);
+    base_parser_.consumeToken(Token::Type::COLUMN);
+
+    stmt->value_column = base_parser_.getCurrentToken().lexeme;
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    return stmt;
+}
+
 std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
     auto stmt = std::make_unique<AST::SimulateStatement>();
 
@@ -964,7 +990,7 @@ std::unique_ptr<AST::SimulateStatement> AIParser::parseSimulate() {
 
 if (base_parser_.checkMatch(Token::Type::PLOT)) {
     std::cout << "[PARSER DEBUG] Found PLOT token" << std::endl;
-    
+
     base_parser_.consumeToken(Token::Type::PLOT);
 
     // Parse plot type
@@ -975,7 +1001,7 @@ if (base_parser_.checkMatch(Token::Type::PLOT)) {
     // Create a new SimulationPlotConfig
     Visualization::PlotStatement::SimulationPlotConfig config;
     config.window_title = plot_type + " - Market Simulation";
-    
+
     // Parse plot configuration in parentheses
     if (base_parser_.checkMatch(Token::Type::L_PAREN)) {
         std::cout << "[PARSER DEBUG] Found opening parenthesis" << std::endl;
@@ -987,7 +1013,7 @@ if (base_parser_.checkMatch(Token::Type::PLOT)) {
             std::string key = base_parser_.getCurrentToken().lexeme;
             std::cout << "[PARSER DEBUG] Found config key: " << key << std::endl;
             base_parser_.consumeToken(Token::Type::IDENTIFIER);
-            
+
             if (!base_parser_.checkMatch(Token::Type::EQUAL)) {
                 throw ParseError(base_parser_.getCurrentToken().line,
                                base_parser_.getCurrentToken().column,
@@ -1021,15 +1047,15 @@ if (base_parser_.checkMatch(Token::Type::PLOT)) {
                 base_parser_.consumeToken(Token::Type::COMMA);
             }
         }
-        
+
         std::cout << "[PARSER DEBUG] Found closing parenthesis" << std::endl;
         base_parser_.consumeToken(Token::Type::R_PAREN);
-        
+
         // Parse the config map
         std::cout << "[PARSER DEBUG] Parsing config map with " << config_map.size() << " entries" << std::endl;
         stmt->parsePlotConfig(config, config_map);
     }
-    
+
     // Set the plot config in the statement
     std::cout << "[PARSER DEBUG] Setting plot_config in statement" << std::endl;
     stmt->plot_config = config;

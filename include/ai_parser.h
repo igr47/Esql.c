@@ -24,6 +24,7 @@ public:
     std::unique_ptr<AST::TrainModelStatement> parseTrainModel();
     std::unique_ptr<AST::PredictStatement> parsePredict();
     std::unique_ptr<AST::ForecastStatement> parseForecast();
+    std::unique_ptr<AST::DetectSeasonalityStatement> parseDetectSeasonality();
     std::unique_ptr<AST::SimulateStatement> parseSimulate();
     void parseSimulationParameters(AST::SimulateStatement& stmt);
     std::unique_ptr<AST::ShowModelsStatement> parseShowModels();

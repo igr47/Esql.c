@@ -1964,7 +1964,6 @@ namespace fractal {
                 }
                 release_page(right_sibling, true);
             }
-
             release_page(grandparent->header.page_id, true);
         }
     }

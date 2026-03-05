@@ -53,7 +53,7 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	}else if(match(Token::Type::CREATE)){
 		advance();
 		if(match(Token::Type::TABLE)){
-			advance();
+            advance();
 		        return parseCreateTableStatement();
 		}else if(match(Token::Type::DATABASE)){
 			advance();
@@ -86,7 +86,8 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	}else if(match(Token::Type::ALTER)){
 		return parseAlterTableStatement();
 	} else if (match(Token::Type::CREATE_MODEL) || match(Token::Type::CREATE_OR_REPLACE) || match(Token::Type::TRAIN) ||
-            match(Token::Type::AI_TRAIN) ||match(Token::Type::DROP_MODEL) ||match(Token::Type::SHOW_MODELS) ||match(Token::Type::DESCRIBE_MODEL) || match(Token::Type::ANALYZE) || match(Token::Type::PREDICT) || match(Token::Type::FORECAST) || match(Token::Type::SIMULATE)) {
+            match(Token::Type::AI_TRAIN) ||match(Token::Type::DROP_MODEL) ||match(Token::Type::SHOW_MODELS) ||match(Token::Type::DESCRIBE_MODEL) || match(Token::Type::ANALYZE) || match(Token::Type::PREDICT) || match(Token::Type::FORECAST) || match(Token::Type::SIMULATE)
+            || match(Token::Type::DETECT)) {
 
             AIParser ai_parser(lexer,*this);
             return ai_parser.parseAIStatement();

@@ -665,7 +665,7 @@ namespace Visualization {
             std::string volume_color = "#3366cc";
        
             // Performance
-            size_t max_points_display = 1000;  // Max points to show at once
+            size_t max_points_display = 5000;  // Max points to show at once
             bool auto_fit = true;  // Auto-fit axis to data
             double zoom_sensitivity = 0.1;
 

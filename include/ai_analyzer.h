@@ -34,6 +34,7 @@ public:
     void analyzeFeatureImportance(AST::FeatureImportanceStatement& stmt);
     void analyzeForecast(AST::ForecastStatement& stmt);
     void analyzeSimulate(AST::SimulateStatement& stmt);
+    void analyzeDetect(AST::DetectSeasonalityStatement& stmt);
 
     // Helper validation methods
     bool validateAlgorithm(const std::string& algorithm);

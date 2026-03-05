@@ -131,6 +131,43 @@ namespace AST {
         std::string toEsql() const override;
     };
 
+    class PrepareTimeSeriesStatement : public AIStatement {
+    public:
+        std::string output_table;
+        std::string source_table;
+        std::string time_column;
+        std::string target_column;
+        std::vector<std::string> feature_columns;
+
+        // Time series parameters
+        std::vector<int> lags = {1, 7, 30};  // Default lags
+        std::vector<int> rolling_windows = {7, 14, 30};  // Default windows
+        bool add_datetime_features = true;
+        bool add_seasonal_features = true;
+        bool auto_detect = true;  // Auto-detect best features
+                                  //
+        // Stationarity
+        bool check_stationarity = true;
+        bool make_stationary = false;  // Apply differencing if needed
+
+        // Splitting
+        double train_ratio = 0.7;
+        double validation_ratio = 0.15;
+        double test_ratio = 0.15;
+
+        std::string toEsql() const override;
+    };
+
+    class DetectSeasonalityStatement : public AIStatement {
+    public:
+        std::string source_table;
+        std::string time_column;
+        std::string value_column;
+        int max_lag = 50;
+
+        std::string toEsql() const override;
+    };
+
     class CreateModelStatement : public AIStatement {
     public:
         std::string model_name;

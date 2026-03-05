@@ -6,6 +6,7 @@
 
 #include "ai_execution_engine.h"
 #include "execution_engine_includes/executionengine_main.h"
+#include "ai/time_series_preprocessor.h"
 #include "ai_parser.h"
 #include "data_analysis.h"
 #include "datum.h"
@@ -158,6 +159,14 @@ public:
     std::chrono::seconds parseTimeInterval(const std::string& interval);
     //void saveSimulationResults(const std::string& table_name,const ExecutionEngine::ResultSet& results);
 
+    // Time series specific metods
+    ExecutionEngine::ResultSet executePrepareTimeSeries(AST::PrepareTimeSeriesStatement& stmt);
+    ExecutionEngine::ResultSet executeDetectSeasonality(AST::DetectSeasonalityStatement& stmt);
+
+    // Enhanced simulation preparation
+    bool prepareMarketSimulationData(const std::string& source_table, const std::string& time_column, const std::string& price_column, const std::string& output_table, int lookback_window = 30);
+
+
     // SQL-integrated AI functions
     ExecutionEngine::ResultSet executeSelectWithAIFunctions(AST::SelectStatement& stmt);
     ExecutionEngine::ResultSet executeCreateTableAsAIPrediction(AST::CreateTableStatement& stmt);
@@ -192,6 +201,8 @@ private:
     void initializeWorkerThreads(size_t num_threads = 4);
     void stopWorkerThreads();
     void addTask(std::function<void()> task);
+
+    std::unique_ptr<esql::ai::TimeSeriesPreprocessor> time_series_preprocessor_;
 
        // Helper methods for executeAnalyzeData
     std::vector<std::unordered_map<std::string, esql::Datum>> extract_chunk(esql::DataExtractor::DataCursor& cursor, size_t chunk_size);

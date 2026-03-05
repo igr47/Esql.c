@@ -341,7 +341,7 @@ namespace AST {
     AIFunctionCall::AIFunctionCall(AIFunctionType type, const std::string& model,
                                    std::vector<std::unique_ptr<Expression>> args,
                                    std::unique_ptr<Expression> al,
-                                   const std::unordered_map<std::string, std::string>& opts) 
+                                   const std::unordered_map<std::string, std::string>& opts)
         : function_type(type), model_name(model), arguments(std::move(args)), alias(std::move(al)), options(opts) {}
 
     std::string AIFunctionCall::toString() const {
@@ -455,7 +455,7 @@ namespace AST {
 	if (include_confidence) {
 	   result += " WITH CONFIDENCE ";
 	}
-        
+
         if (include_scenarios) {
 	   result += " WITH SCENARIOS ";
 	}
@@ -472,6 +472,18 @@ namespace AST {
 	return result;
     }
 
+    std::string DetectSeasonalityStatement::toEsql() const {
+        std::string result = " DETECTING SEASONALITY USING" + source_table;
+
+        if (!time_column.empty()) {
+            result += " ON TIME COLUMN " + time_column;
+        }
+
+        if (!value_column.empty()) {
+            result += " ON VALUE COLUMN " + value_column;
+        }
+    }
+
     std::string SimulateStatement::toEsql() const {
         std::string result = " SIMULATING USING " + model_name;
 
@@ -481,7 +493,7 @@ namespace AST {
 
         if (!output_table.empty()) {
             result += " OUTPUT TABLE " + output_table;
-        } 
+        }
 
         if (!time_column.empty()) {
             result += " TIME " + time_column;
@@ -494,7 +506,7 @@ namespace AST {
         return result;
     }
 
-void SimulateStatement::parsePlotConfig(Visualization::PlotStatement::SimulationPlotConfig& config, 
+void SimulateStatement::parsePlotConfig(Visualization::PlotStatement::SimulationPlotConfig& config,
                                const std::unordered_map<std::string, std::string>& config_map) {
     std::cout << "[PARSER DEBUG] Entering parsePlotConfig with " << config_map.size() << " entries" << std::endl;
     for (const auto& [key, value] : config_map) {
