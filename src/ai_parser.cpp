@@ -691,7 +691,8 @@ std::unique_ptr<AST::PrepareTimeSeriesStatement> AIParser::parsePrepareTimeSerie
 
     // Parse PREPARE TIME SERIES output_table
     base_parser_.consumeToken(Token::Type::PREPARE);
-    base_parser_.consumeToken(Token::Type::TIME_SERIES);
+    base_parser_.consumeToken(Token::Type::TIME);
+    base_parser_.consumeToken(Token::Type::SERIES);
 
     stmt->output_table = base_parser_.getCurrentToken().lexeme;
     if (!isValidModelName(stmt->output_table)) {

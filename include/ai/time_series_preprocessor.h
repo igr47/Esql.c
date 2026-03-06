@@ -96,6 +96,8 @@ public:
         const std::vector<TimeSeriesFeature>& feature_definitions
     );
 
+    std::chrono::system_clock::time_point parse_timestamp(const Datum& datum);
+
     // Auto-detect time series features based on data characteristics
     std::vector<TimeSeriesFeature> auto_detect_features(
         const DataExtractor::TrainingData& data,
