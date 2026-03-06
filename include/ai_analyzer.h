@@ -34,6 +34,7 @@ public:
     void analyzeFeatureImportance(AST::FeatureImportanceStatement& stmt);
     void analyzeForecast(AST::ForecastStatement& stmt);
     void analyzeSimulate(AST::SimulateStatement& stmt);
+    void analyzePrepare(AST::PrepareTimeSeriesStatement& stmt);
     void analyzeDetect(AST::DetectSeasonalityStatement& stmt);
 
     // Helper validation methods

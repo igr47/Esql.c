@@ -42,6 +42,8 @@ void AIAnalyzer::analyze(std::unique_ptr<AST::Statement>& stmt) {
         analyzeSimulate(*analyze_simulate);
     } else if (auto* analyze_detect = dynamic_cast<AST::DetectSeasonalityStatement*>(stmt.get())) {
         analyzeDetect(*analyze_detect);
+    } else if (auto* analyze_prepare = dynamic_cast<AST::PrepareTimeSeriesStatement*>(stmt.get())) {
+        analyzePrepare(*analyze_prepare);
     } else {
         throw SematicError("Unknown AI statement type");
     }
@@ -169,6 +171,10 @@ void AIAnalyzer::analyzeSimulate(AST::SimulateStatement& stmt) {
 
 void AIAnalyzer::analyzeDetect(AST::DetectSeasonalityStatement& stmt) {
     std::cout << "[AIAnalyzer] Analyzing DETECT statement on column:" << stmt.value_column << std::endl;
+}
+
+void AIAnalyzer::analyzePrepare(AST::PrepareTimeSeriesStatement& stmt) {
+    std::cout << "[AIAnalyzer] Analyzing PREPARE statement" << std::endl;
 }
 
 void AIAnalyzer::analyzePredict(AST::PredictStatement& stmt) {

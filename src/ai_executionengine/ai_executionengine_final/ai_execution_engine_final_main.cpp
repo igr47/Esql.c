@@ -88,6 +88,8 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::execute(std::unique_ptr<AST::
             return executeSimulate(*simulate);
         } else if (auto detect = dynamic_cast<AST::DetectSeasonalityStatement*>(stmt.get())) {
             return executeDetectSeasonality(*detect);
+        } else if (auto prepare = dynamic_cast<AST::PrepareTimeSeriesStatement*>(stmt.get())) {
+            return executePrepareTimeSeries(*prepare);
         } else if (auto create_or_replace = dynamic_cast<AST::CreateOrReplaceModelStatement*>(stmt.get())) {
             return executeCreateOrReplaceModel(*create_or_replace);
         } else if (auto describe_model = dynamic_cast<AST::DescribeModelStatement*>(stmt.get())) {
