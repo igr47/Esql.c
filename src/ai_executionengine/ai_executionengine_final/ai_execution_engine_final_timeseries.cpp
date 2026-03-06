@@ -1,5 +1,9 @@
 #include "ai_execution_engine_final.h"
 #include "database.h"
+#include "diskstorage.h"
+#include "execution_engine_includes/executionengine_main.h"
+#include "datum.h"
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -7,11 +11,15 @@
 #include <set>
 #include <cmath>
 
-ExecutionEngine::ResultSet AIExecutionEngineFinal::executePrepareTimeSeries(AST::PrepareTimeSeriesStatement& stmt) {
-    std::cout << "[AIExecutionEngineFinal] Executing PREPARE TIME SERIES: " << stmt.output_table << std::endl;
+
+ExecutionEngine::ResultSet AIExecutionEngineFinal::executePrepareTimeSeries(
+    AST::PrepareTimeSeriesStatement& stmt) {
+
+    std::cout << "[AIExecutionEngineFinal] Executing PREPARE TIME SERIES: "
+              << stmt.output_table << std::endl;
 
     ExecutionEngine::ResultSet result;
-    result.columns = {"status", "message", "samples", "features", "train_samples", "validation_samples", "test_samples"};
+    result.columns = {"status", "message", "rows_processed", "features_added"};
 
     try {
         // Initialize time series preprocessor if not already
@@ -19,7 +27,20 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executePrepareTimeSeries(AST:
             time_series_preprocessor_ = std::make_unique<esql::ai::TimeSeriesPreprocessor>();
         }
 
-        // Extract training data
+        // Get the source table data (all rows, all columns)
+        auto source_data = data_extractor_->extract_table_data(
+            db_.currentDatabase(),
+            stmt.source_table,
+            {}, // Get all columns
+            "", // No filter
+            0, 0 // No limit
+        );
+
+        if (source_data.empty()) {
+            throw std::runtime_error("No data found in source table: " + stmt.source_table);
+        }
+
+        // Extract training data format for time series processing
         auto training_data = data_extractor_->extract_training_data(
             db_.currentDatabase(),
             stmt.source_table,
@@ -29,12 +50,9 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executePrepareTimeSeries(AST:
                 stmt.feature_columns
         );
 
-        if (training_data.features.empty()) {
-            throw std::runtime_error("No data extracted from source table");
-        }
-
-        // Auto-detect features if requested
+        // Build feature definitions
         std::vector<esql::ai::TimeSeriesFeature> features;
+
         if (stmt.auto_detect) {
             features = time_series_preprocessor_->auto_detect_features(
                 training_data,
@@ -43,15 +61,17 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executePrepareTimeSeries(AST:
             );
             std::cout << "[AIExecutionEngineFinal] Auto-detected "
                       << features.size() << " time series features" << std::endl;
-
         } else {
-            // Will use specified features. Not implemented bbut will do it later. Using default for now
-            esql::ai::TimeSeriesFeature lag_feature;
-            lag_feature.type = esql::ai::TimeSeriesFeatureType::LAG;
-            lag_feature.source_column = stmt.target_column;
-            lag_feature.multiple_lags = stmt.lags;
-            features.push_back(lag_feature);
+            // Add lags
+            if (!stmt.lags.empty()) {
+                esql::ai::TimeSeriesFeature lag_feature;
+                lag_feature.type = esql::ai::TimeSeriesFeatureType::LAG;
+                lag_feature.source_column = stmt.target_column;
+                lag_feature.multiple_lags = stmt.lags;
+                features.push_back(lag_feature);
+            }
 
+            // Add rolling windows
             if (!stmt.rolling_windows.empty()) {
                 esql::ai::TimeSeriesFeature rolling_mean;
                 rolling_mean.type = esql::ai::TimeSeriesFeatureType::ROLLING_MEAN;
@@ -65,76 +85,103 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executePrepareTimeSeries(AST:
                 rolling_std.rolling_windows = stmt.rolling_windows;
                 features.push_back(rolling_std);
             }
+
+            // Add datetime features if requested
+            if (stmt.add_datetime_features) {
+                esql::ai::TimeSeriesFeature dow_feature;
+                dow_feature.type = esql::ai::TimeSeriesFeatureType::DAY_OF_WEEK;
+                dow_feature.source_column = stmt.time_column;
+                features.push_back(dow_feature);
+
+                esql::ai::TimeSeriesFeature month_feature;
+                month_feature.type = esql::ai::TimeSeriesFeatureType::MONTH;
+                month_feature.source_column = stmt.time_column;
+                features.push_back(month_feature);
+
+                esql::ai::TimeSeriesFeature hour_feature;
+                hour_feature.type = esql::ai::TimeSeriesFeatureType::HOUR;
+                hour_feature.source_column = stmt.time_column;
+                features.push_back(hour_feature);
+
+                esql::ai::TimeSeriesFeature sin_cos_feature;
+                sin_cos_feature.type = esql::ai::TimeSeriesFeatureType::SIN_COS_TIME;
+                sin_cos_feature.source_column = stmt.time_column;
+                features.push_back(sin_cos_feature);
+            }
         }
 
-        // Prepare time series dataset
-        auto dataset = time_series_preprocessor_->prepare_time_series(
-            training_data,
+        // Generate features using the preprocessor
+        auto generated = time_series_preprocessor_->generate_features_for_table(
+            source_data,
             stmt.time_column,
             stmt.target_column,
             features
         );
 
-        if (dataset.empty()) {
-            throw std::runtime_error("Failed to prepare time series dataset");
+        if (generated.rows.empty()) {
+            throw std::runtime_error("Failed to generate time series features");
         }
 
-        // Check and handle stationarity
-        if (stmt.check_stationarity) {
-            bool stationary = time_series_preprocessor_->is_stationary(dataset.values);
-            std::cout << "[AIExecutionEngineFinal] Series is "
-                      << (stationary ? "" : "NOT ") << "stationary" << std::endl;
+        std::cout << "[AIExecutionEngineFinal] Generated " << generated.column_names.size()
+                  << " features for " << generated.rows.size() << " rows" << std::endl;
 
-            if (!stationary && stmt.make_stationary) {
-                std::cout << "[AIExecutionEngineFinal] Applying differencing to make series stationary" << std::endl;
-                auto diff_values = time_series_preprocessor_->difference(dataset.values, 1);
+        // Print generated features to console (for verification)
+        std::cout << "\n" << std::string(80, '=') << std::endl;
+        std::cout << "GENERATED TIME SERIES FEATURES" << std::endl;
+        std::cout << std::string(80, '=') << std::endl;
 
-                // Replace values with differenced series
-                dataset.values = diff_values;
+        for (size_t i = 0; i < generated.column_names.size(); ++i) {
+            std::cout << "\nFeature: " << generated.column_names[i]
+                      << " [" << generated.column_types[i] << "]" << std::endl;
+
+            // Show sample values
+            std::cout << "  Samples: [";
+            for (size_t row = 0; row < std::min((size_t)5, generated.rows.size()); ++row) {
+                if (row > 0) std::cout << ", ";
+                if (i < generated.rows[row].size()) {
+                    if (generated.rows[row][i].is_null()) {
+                        std::cout << "NULL";
+                    } else {
+                        std::cout << generated.rows[row][i].to_string();
+                    }
+                }
             }
+            std::cout << ", ...]" << std::endl;
         }
+        std::cout << std::string(80, '=') << "\n" << std::endl;
 
-        // Create temporal splits
-        time_series_preprocessor_->temporal_split(
-            dataset,
-            stmt.train_ratio,
-            stmt.validation_ratio,
-            stmt.test_ratio
+        // Create the new table with combined data
+        bool success = createNewTable(
+            stmt.output_table,
+            stmt.source_table,
+            generated.column_names,
+            generated.rows,
+            source_data
         );
 
-        // Create feature descriptors for schema
-        auto feature_descriptors = time_series_preprocessor_->create_feature_descriptors(dataset);
+        if (!success) {
+            throw std::runtime_error("Failed to create new table: " + stmt.output_table);
+        }
 
-        // Save prepared dataset to output table (simplified - you'd need to implement actual storage)
-        std::cout << "[AIExecutionEngineFinal] Saving prepared dataset to table: "
-                  << stmt.output_table << std::endl;
-
-        // Here you would save the dataset to your database
-        // For now, just prepare result
-
+        // Prepare result
         std::vector<std::string> row;
         row.push_back("SUCCESS");
-        row.push_back("Time series data prepared successfully");
-        row.push_back(std::to_string(dataset.size()));
-        row.push_back(std::to_string(dataset.feature_names.size()));
-        row.push_back(std::to_string(dataset.split.train_indices.size()));
-        row.push_back(std::to_string(dataset.split.validation_indices.size()));
-        row.push_back(std::to_string(dataset.split.test_indices.size()));
+        row.push_back("Time series features table created successfully");
+        row.push_back(std::to_string(source_data.size()));
+        row.push_back(std::to_string(generated.column_names.size()));
         result.rows.push_back(row);
 
         // Log operation
         logAIOperation("PREPARE_TIME_SERIES", stmt.output_table, "SUCCESS",
-                      "Created " + std::to_string(dataset.feature_names.size()) +
-                      " time series features");
+                      "Added " + std::to_string(generated.column_names.size()) +
+                      " features to " + std::to_string(source_data.size()) + " rows");
 
     } catch (const std::exception& e) {
         logAIOperation("PREPARE_TIME_SERIES", stmt.output_table, "FAILED", e.what());
+
         std::vector<std::string> row;
         row.push_back("FAILED");
         row.push_back(e.what());
-        row.push_back("0");
-        row.push_back("0");
-        row.push_back("0");
         row.push_back("0");
         row.push_back("0");
         result.rows.push_back(row);
@@ -143,6 +190,189 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executePrepareTimeSeries(AST:
     return result;
 }
 
+bool AIExecutionEngineFinal::createNewTable(const std::string& output_table,const std::string& source_table,
+    const std::vector<std::string>& new_feature_columns,
+    const std::vector<std::vector<esql::Datum>>& new_feature_values,
+    const std::vector<std::unordered_map<std::string, esql::Datum>>& source_data) {
+
+    std::cout << "[AIExecutionEngineFinal] Creating new table: " << output_table << std::endl;
+
+    try {
+        // Get source table schema
+        auto* source_table_schema = storage_.getTable(db_.currentDatabase(), source_table);
+        if (!source_table_schema) {
+            throw std::runtime_error("Source table not found: " + source_table);
+        }
+
+        // Step 1: Prepare column names and sample data for type inference
+        std::vector<std::string> all_column_names;
+        std::vector<std::vector<std::string>> sample_data;
+
+        // Add source table column names
+        for (const auto& col : source_table_schema->columns) {
+            all_column_names.push_back(col.name);
+        }
+
+        // Add new feature column names
+        for (const auto& feat_name : new_feature_columns) {
+            all_column_names.push_back(feat_name);
+        }
+
+        std::cout << "[AIExecutionEngineFinal] Total columns: " << all_column_names.size()
+                  << " (" << source_table_schema->columns.size() << " original + "
+                  << new_feature_columns.size() << " new)" << std::endl;
+
+        // Step 2: Prepare sample data for type inference (first 100 rows)
+        size_t num_rows = source_data.size();
+        size_t sample_size = std::min((size_t)100, num_rows);
+
+        for (size_t row_idx = 0; row_idx < sample_size; ++row_idx) {
+            std::vector<std::string> sample_row;
+
+            // Add source data for this row
+            const auto& source_row = source_data[row_idx];
+            for (const auto& col : source_table_schema->columns) {
+                auto it = source_row.find(col.name);
+                if (it != source_row.end() && !it->second.is_null()) {
+                    if (it->second.is_string()) {
+                        // Quote strings for CSV-style type inference
+                        sample_row.push_back("'" + it->second.as_string() + "'");
+                    } else {
+                        sample_row.push_back(it->second.to_string());
+                    }
+                } else {
+                    sample_row.push_back("NULL");
+                }
+            }
+
+            // Add new feature values for this row
+            if (row_idx < new_feature_values.size()) {
+                for (const auto& datum : new_feature_values[row_idx]) {
+                    if (datum.is_null()) {
+                        sample_row.push_back("NULL");
+                    } else if (datum.is_string()) {
+                        sample_row.push_back("'" + datum.as_string() + "'");
+                    } else {
+                        sample_row.push_back(datum.to_string());
+                    }
+                }
+            } else {
+                // Fill with NULLs if we don't have feature values
+                for (size_t i = 0; i < new_feature_columns.size(); ++i) {
+                    sample_row.push_back("NULL");
+                }
+            }
+
+            sample_data.push_back(sample_row);
+        }
+
+        // Step 3: Use existing CSV table creation logic to create the table with proper types
+        base_engine_.createTableFromCSVWrapper(output_table, all_column_names, sample_data);
+
+        std::cout << "[AIExecutionEngineFinal] Table structure created successfully" << std::endl;
+
+        // Step 4: Insert all data in batches
+        bool wasInTransaction = base_engine_.inTransaction();
+        if (!wasInTransaction) {
+            base_engine_.beginTransaction();
+        }
+
+        const size_t BATCH_SIZE = 1000;
+        std::vector<std::unordered_map<std::string, std::string>> batch_rows;
+        size_t rows_inserted = 0;
+
+        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+            std::unordered_map<std::string, std::string> insert_row;
+
+            // Add source data for this row
+            const auto& source_row = source_data[row_idx];
+            for (const auto& col : source_table_schema->columns) {
+                auto it = source_row.find(col.name);
+                if (it != source_row.end() && !it->second.is_null()) {
+                    if (it->second.is_string()) {
+                        // Remove quotes if present for insertion
+                        std::string val = it->second.as_string();
+                        if (val.size() >= 2 && val.front() == '\'' && val.back() == '\'') {
+                            val = val.substr(1, val.size() - 2);
+                        }
+                        insert_row[col.name] = val;
+                    } else {
+                        insert_row[col.name] = it->second.to_string();
+                    }
+                } else {
+                    insert_row[col.name] = ""; // NULL
+                }
+            }
+
+            // Add new feature values for this row
+            if (row_idx < new_feature_values.size()) {
+                const auto& feature_row = new_feature_values[row_idx];
+                for (size_t feat_idx = 0; feat_idx < new_feature_columns.size(); ++feat_idx) {
+                    if (feat_idx < feature_row.size()) {
+                        const auto& datum = feature_row[feat_idx];
+                        if (datum.is_null()) {
+                            insert_row[new_feature_columns[feat_idx]] = "";
+                        } else if (datum.is_string()) {
+                            std::string val = datum.as_string();
+                            if (val.size() >= 2 && val.front() == '\'' && val.back() == '\'') {
+                                val = val.substr(1, val.size() - 2);
+                            }
+                            insert_row[new_feature_columns[feat_idx]] = val;
+                        } else {
+                            insert_row[new_feature_columns[feat_idx]] = datum.to_string();
+                        }
+                    } else {
+                        insert_row[new_feature_columns[feat_idx]] = "";
+                    }
+                }
+            } else {
+                // Fill with NULLs if we don't have feature values
+                for (const auto& feat_name : new_feature_columns) {
+                    insert_row[feat_name] = "";
+                }
+            }
+
+            batch_rows.push_back(insert_row);
+            rows_inserted++;
+
+            // Insert in batches
+            if (batch_rows.size() >= BATCH_SIZE) {
+                storage_.bulkInsert(db_.currentDatabase(), output_table, batch_rows);
+                batch_rows.clear();
+                std::cout << "[AIExecutionEngineFinal] Inserted " << rows_inserted
+                         << " rows..." << std::endl;
+            }
+        }
+
+        // Insert remaining rows
+        if (!batch_rows.empty()) {
+            storage_.bulkInsert(db_.currentDatabase(), output_table, batch_rows);
+        }
+
+        if (!wasInTransaction) {
+            base_engine_.commitTransaction();
+        }
+
+        std::cout << "[AIExecutionEngineFinal] Successfully inserted " << rows_inserted
+                  << " rows into table '" << output_table << "'" << std::endl;
+
+        return true;
+
+    } catch (const std::exception& e) {
+        std::cerr << "[AIExecutionEngineFinal] Failed to create new table: " << e.what() << std::endl;
+
+        // Rollback transaction if needed
+        if (base_engine_.inTransaction()) {
+            try {
+                base_engine_.rollbackTransaction();
+            } catch (...) {
+                // Ignore rollback errors
+            }
+        }
+
+        return false;
+    }
+}
 
 ExecutionEngine::ResultSet AIExecutionEngineFinal::executeDetectSeasonality(AST::DetectSeasonalityStatement& stmt) {
     std::cout << "[AIExecutionEngineFinal] Detecting seasonality in: "

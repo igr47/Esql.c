@@ -734,6 +734,11 @@ std::unique_ptr<AST::PrepareTimeSeriesStatement> AIParser::parsePrepareTimeSerie
         base_parser_.consumeToken(Token::Type::R_PAREN);
     }
 
+    /*if (base_parser_.checkMatch(Token::Type::OUTPUT)) {
+        stmt->output_table = base_parser_.getCurrentToken().lexeme;
+        base_parser.consumeToken(Token::Type::IDENTIFIER);
+    }*/
+
     // Parse optional WITH clause for time series parameters
     if (base_parser_.checkMatch(Token::Type::WITH)) {
         base_parser_.consumeToken(Token::Type::WITH);

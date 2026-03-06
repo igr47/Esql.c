@@ -255,176 +255,261 @@ std::chrono::system_clock::time_point TimeSeriesPreprocessor::parse_timestamp(co
     return std::chrono::system_clock::now();
 }
 
-/*TimeSeriesDataset TimeSeriesPreprocessor::prepare_time_series(
-    const DataExtractor::TrainingData& data,
+TimeSeriesPreprocessor::FeatureGenerationResult TimeSeriesPreprocessor::generate_features_for_table(
+    const std::vector<std::unordered_map<std::string, esql::Datum>>& original_data,
     const std::string& time_column,
     const std::string& target_column,
     const std::vector<TimeSeriesFeature>& feature_definitions) {
 
-    TimeSeriesDataset dataset;
-    dataset.target_column = target_column;
+    FeatureGenerationResult result;
 
-    // Find target column index in feature names
-    size_t target_idx = 0;
-    size_t time_idx = static_cast<size_t>(-1); // Invalid index initialization
-    bool time_column_found = false;
-
-    for (size_t i = 0; i < data.feature_names.size(); ++i) {
-        if (data.feature_names[i] == target_column) {
-            target_idx = i;
-            break;
-        }
-        if (data.feature_names[i] == time_column) {
-            time_idx = i;
-            time_column_found = true;
-        }
+    if (original_data.empty()) {
+        return result;
     }
 
-    if (!time_column_found) {
-        std::cerr << "[TimeSeriesPreprocessor] Warning: Time column '" << time_column << "' not found in feature names. TImestamps will not be extracted" << std::endl;
-    }
+    size_t num_rows = original_data.size();
+    result.num_rows = num_rows;
 
-    // Extract values and timestamps if available
-    for (size_t i = 0; i < data.features.size(); ++i) {
-        // Extract target value
-        if (i < data.features.size()) {
-            if (target_idx < data.features[i].size()) {
-                dataset.values.push_back(data.features[i][target_idx]);
-            } else {
-                // Fall back to lables if target not in features
-                if (i < data.labels.size()) {
-                    dataset.values.push_back(data.labels[i]);
-                } else {
-                    dataset.values.push_back(0.0f);
-                }
+    // Extract target series
+    std::vector<double> target_series;
+    std::vector<double> time_values;
+    std::vector<std::chrono::system_clock::time_point> timestamps;
+
+    for (const auto& row : original_data) {
+        auto target_it = row.find(target_column);
+        if (target_it != row.end() && !target_it->second.is_null()) {
+            try {
+                target_series.push_back(target_it->second.as_double());
+            } catch (...) {
+                target_series.push_back(0.0);
             }
-        }
-
-        // Extract timestamps from time column if available
-        if (time_column_found && time_idx < data.features[i].size()) {
-            // The time column value is stored as a float in features, but we need to convert it back
-            // to a proper timestamp. This assumes the time_column was originally a timestamp that was conveted
-            // to  float(e.g., Unix timestamp)
-            float time_value = data.features[i][time_idx];
-
-            // Convert to timepoint
-            auto timestamp = prepare_timestamp(time_value);
-            dataset.timestamps.push_back(timestamp);
         } else {
-            // If time column not available, generate synthetic timestamps (hourly)
-            std::cout << "[TImeSeriesPreprocessor] Generating synthetic timestamps." << std::endl;
-            auto now = std::chrono::syste_clock::now();
-            auto timestamp = now + std::chrono::hours(static_cast<long long>(i));
-            dataset.timestamp.push_back(timestamp);
+            target_series.push_back(0.0);
         }
-    }
 
-    //  Build feature matrix (excluding time column  from features since it is used for indexibg)
-    dataset.feature_names.clear();
-    dataset.features.clear();
-
-    // Determine which columns as features (exclude target and time column if needed)
-    std::vector<bool> keep_as_feature(data.feature_names.size(), true);
-
-    // Initialize features with original data (excluding target)
-    for (size_t i = 0; i < data.features.size(); ++i) {
-        std::vector<float> row;
-        for (size_t j = 0; j < data.features[i].size(); ++j) {
-            if (j != target_idx) { // Exclude target from features
-                row.push_back(data.features[i][j]);
-                if (dataset.feature_names.empty() || i == 0) {
-                    if (j < data.feature_names.size()) {
-                        dataset.feature_names.push_back(data.feature_names[j]);
-                    }
+        // Extract timestamp
+        auto time_it = row.find(time_column);
+        if (time_it != row.end() && !time_it->second.is_null()) {
+            if (time_it->second.is_string()) {
+                timestamps.push_back(parse_timestamp(time_it->second));
+            } else {
+                try {
+                    double ts = time_it->second.as_double();
+                    auto tp = std::chrono::system_clock::from_time_t(static_cast<time_t>(ts));
+                    timestamps.push_back(tp);
+                } catch (...) {
+                    timestamps.push_back(std::chrono::system_clock::now());
                 }
             }
+        } else {
+            timestamps.push_back(std::chrono::system_clock::now());
         }
-        dataset.features.push_back(row);
     }
 
-    // Apply feature definitions
+    // Generate features based on definitions
     for (const auto& def : feature_definitions) {
         switch (def.type) {
-            case TimeSeriesFeatureType::LAG:
-                if (!def.multiple_lags.empty()) {
-                    add_lag_features(dataset, def.source_column, def.multiple_lags);
-                } else {
-                    add_lag_features(dataset, def.source_column, {def.lag_period});
-                }
-                break;
+            case TimeSeriesFeatureType::LAG: {
+                std::vector<int> lags = def.multiple_lags.empty() ?
+                                        std::vector<int>{def.lag_period} :
+                                        def.multiple_lags;
 
-            case TimeSeriesFeatureType::ROLLING_MEAN:
-                if (!def.rolling_windows.empty()) {
-                    for (int window : def.rolling_windows) {
-                        auto rolling = compute_rolling_mean(dataset.values, window);
-                        for (size_t i = 0; i < dataset.features.size() && i < rolling.size(); ++i) {
-                            dataset.features[i].push_back(rolling[i]);
-                        }
-                        dataset.feature_names.push_back("rolling_mean_" + std::to_string(window));
-                    }
-                }
-                break;
+                for (int lag : lags) {
+                    std::string col_name = target_column + "_lag_" + std::to_string(lag);
+                    std::vector<Datum> lag_values;
 
-            case TimeSeriesFeatureType::ROLLING_STD:
-                if (!def.rolling_windows.empty()) {
-                    for (int window : def.rolling_windows) {
-                        auto rolling = compute_rolling_std(dataset.values, window);
-                        for (size_t i = 0; i < dataset.features.size() && i < rolling.size(); ++i) {
-                            dataset.features[i].push_back(rolling[i]);
-                        }
-                        dataset.feature_names.push_back("rolling_std_" + std::to_string(window));
-                    }
-                }
-                break;
-
-            case TimeSeriesFeatureType::DIFFERENCE:
-                {
-                    auto diff = difference(dataset.values, def.lag_period);
-                    for (size_t i = 0; i < dataset.features.size() && i < diff.size(); ++i) {
-                        dataset.features[i].push_back(diff[i]);
-                    }
-                    dataset.feature_names.push_back("diff_" + std::to_string(def.lag_period));
-                }
-                break;
-
-            case TimeSeriesFeatureType::PERCENT_CHANGE:
-                {
-                    std::vector<float> pct_change(dataset.values.size(), 0.0f);
-                    for (size_t i = def.lag_period; i < dataset.values.size(); ++i) {
-                        if (std::abs(dataset.values[i - def.lag_period]) > 1e-10f) {
-                            pct_change[i] = (dataset.values[i] - dataset.values[i - def.lag_period]) /
-                                           std::abs(dataset.values[i - def.lag_period]);
+                    for (size_t i = 0; i < num_rows; ++i) {
+                        if (i >= static_cast<size_t>(lag)) {
+                            lag_values.push_back(Datum::create_double(target_series[i - lag]));
+                        } else {
+                            lag_values.push_back(Datum::create_null());
                         }
                     }
-                    for (size_t i = 0; i < dataset.features.size(); ++i) {
-                        dataset.features[i].push_back(pct_change[i]);
-                    }
-                    dataset.feature_names.push_back("pct_change_" + std::to_string(def.lag_period));
-                }
-                break;
 
-            case TimeSeriesFeatureType::EXPONENTIAL_SMOOTHING:
-                {
-                    auto ewma = compute_ewma(dataset.values, def.alpha);
-                    for (size_t i = 0; i < dataset.features.size(); ++i) {
-                        dataset.features[i].push_back(ewma[i]);
-                    }
-                    dataset.feature_names.push_back("ewma_" + std::to_string(def.alpha).substr(0, 4));
+                    result.add_column(col_name, "DOUBLE", lag_values);
                 }
                 break;
+            }
+
+            case TimeSeriesFeatureType::ROLLING_MEAN: {
+                for (int window : def.rolling_windows) {
+                    std::string col_name = target_column + "_rolling_mean_" + std::to_string(window);
+                    std::vector<Datum> mean_values;
+
+                    for (size_t i = 0; i < num_rows; ++i) {
+                        int start = std::max(0, static_cast<int>(i) - window + 1);
+                        int count = static_cast<int>(i) - start + 1;
+
+                        double sum = 0.0;
+                        for (int j = start; j <= static_cast<int>(i); ++j) {
+                            sum += target_series[j];
+                        }
+                        mean_values.push_back(Datum::create_double(sum / count));
+                    }
+
+                    result.add_column(col_name, "DOUBLE", mean_values);
+                }
+                break;
+            }
+
+            case TimeSeriesFeatureType::ROLLING_STD: {
+                for (int window : def.rolling_windows) {
+                    std::string col_name = target_column + "_rolling_std_" + std::to_string(window);
+                    std::vector<Datum> std_values;
+
+                    for (size_t i = 0; i < num_rows; ++i) {
+                        int start = std::max(0, static_cast<int>(i) - window + 1);
+                        int count = static_cast<int>(i) - start + 1;
+
+                        if (count < 2) {
+                            std_values.push_back(Datum::create_double(0.0));
+                            continue;
+                        }
+
+                        // Calculate mean first
+                        double sum = 0.0;
+                        for (int j = start; j <= static_cast<int>(i); ++j) {
+                            sum += target_series[j];
+                        }
+                        double mean = sum / count;
+
+                        // Calculate standard deviation
+                        double sum_sq_diff = 0.0;
+                        for (int j = start; j <= static_cast<int>(i); ++j) {
+                            double diff = target_series[j] - mean;
+                            sum_sq_diff += diff * diff;
+                        }
+                        double std = std::sqrt(sum_sq_diff / (count - 1));
+                        std_values.push_back(Datum::create_double(std));
+                    }
+
+                    result.add_column(col_name, "DOUBLE", std_values);
+                }
+                break;
+            }
+
+            case TimeSeriesFeatureType::PERCENT_CHANGE: {
+                std::string col_name = target_column + "_pct_change_" + std::to_string(def.lag_period);
+                std::vector<Datum> pct_values;
+
+                for (size_t i = 0; i < num_rows; ++i) {
+                    if (i >= static_cast<size_t>(def.lag_period) &&
+                        std::abs(target_series[i - def.lag_period]) > 1e-10) {
+                        double pct = (target_series[i] - target_series[i - def.lag_period]) /
+                                     std::abs(target_series[i - def.lag_period]);
+                        pct_values.push_back(Datum::create_double(pct));
+                    } else {
+                        pct_values.push_back(Datum::create_null());
+                    }
+                }
+
+                result.add_column(col_name, "DOUBLE", pct_values);
+                break;
+            }
+
+            case TimeSeriesFeatureType::DIFFERENCE: {
+                std::string col_name = target_column + "_diff_" + std::to_string(def.lag_period);
+                std::vector<Datum> diff_values;
+
+                for (size_t i = 0; i < num_rows; ++i) {
+                    if (i >= static_cast<size_t>(def.lag_period)) {
+                        double diff = target_series[i] - target_series[i - def.lag_period];
+                        diff_values.push_back(Datum::create_double(diff));
+                    } else {
+                        diff_values.push_back(Datum::create_null());
+                    }
+                }
+
+                result.add_column(col_name, "DOUBLE", diff_values);
+                break;
+            }
+
+            case TimeSeriesFeatureType::DAY_OF_WEEK:
+            case TimeSeriesFeatureType::MONTH:
+            case TimeSeriesFeatureType::HOUR:
+            case TimeSeriesFeatureType::YEAR:
+            case TimeSeriesFeatureType::IS_WEEKEND:
+            case TimeSeriesFeatureType::SIN_COS_TIME: {
+                // Handle datetime features
+                std::vector<Datum> year_values, month_values, day_values,
+                                   hour_values, minute_values, weekend_values,
+                                   hour_sin_values, hour_cos_values,
+                                   dow_sin_values, dow_cos_values;
+
+                for (const auto& tp : timestamps) {
+                    auto tt = std::chrono::system_clock::to_time_t(tp);
+                    std::tm* tm = std::localtime(&tt);
+
+                    year_values.push_back(Datum::create_int(tm->tm_year + 1900));
+                    month_values.push_back(Datum::create_int(tm->tm_mon + 1));
+                    day_values.push_back(Datum::create_int(tm->tm_mday));
+                    hour_values.push_back(Datum::create_int(tm->tm_hour));
+                    minute_values.push_back(Datum::create_int(tm->tm_min));
+
+                    bool is_weekend = (tm->tm_wday == 0 || tm->tm_wday == 6);
+                    weekend_values.push_back(Datum::create_bool(is_weekend));
+
+                    double hour_sin = std::sin(2 * M_PI * tm->tm_hour / 24.0);
+                    double hour_cos = std::cos(2 * M_PI * tm->tm_hour / 24.0);
+                    hour_sin_values.push_back(Datum::create_double(hour_sin));
+                    hour_cos_values.push_back(Datum::create_double(hour_cos));
+
+                    double dow_sin = std::sin(2 * M_PI * tm->tm_wday / 7.0);
+                    double dow_cos = std::cos(2 * M_PI * tm->tm_wday / 7.0);
+                    dow_sin_values.push_back(Datum::create_double(dow_sin));
+                    dow_cos_values.push_back(Datum::create_double(dow_cos));
+                }
+
+                // Add columns based on requested features
+                for (const auto& def : feature_definitions) {
+                    switch (def.type) {
+                        case TimeSeriesFeatureType::YEAR:
+                            result.add_column("year", "INTEGER", year_values);
+                            break;
+                        case TimeSeriesFeatureType::MONTH:
+                            result.add_column("month", "INTEGER", month_values);
+                            break;
+                        case TimeSeriesFeatureType::DAY_OF_WEEK:
+                            result.add_column("day_of_week", "INTEGER", day_values);
+                            break;
+                        case TimeSeriesFeatureType::HOUR:
+                            result.add_column("hour", "INTEGER", hour_values);
+                            break;
+                        case TimeSeriesFeatureType::IS_WEEKEND:
+                            result.add_column("is_weekend", "BOOLEAN", weekend_values);
+                            break;
+                        case TimeSeriesFeatureType::SIN_COS_TIME:
+                            result.add_column("hour_sin", "DOUBLE", hour_sin_values);
+                            result.add_column("hour_cos", "DOUBLE", hour_cos_values);
+                            result.add_column("dow_sin", "DOUBLE", dow_sin_values);
+                            result.add_column("dow_cos", "DOUBLE", dow_cos_values);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                break;
+            }
 
             default:
                 break;
         }
     }
 
-    // Add datetime features if we have timestamps
-    if (!dataset.timestamps.empty()) {
-        add_datetime_features(dataset, time_column);
-    }
+    return result;
+}
 
-    return dataset;
-}*/
+
+void TimeSeriesPreprocessor::FeatureGenerationResult::add_column(const std::string& name, const std::string& type, const std::vector<esql::Datum>& values) {
+    column_names.push_back(name);
+    column_types.push_back(type);
+    if (rows.empty()) {
+        rows.resize(values.size());
+    }
+    for (size_t i = 0; i < values.size(); ++i) {
+        rows[i].push_back(values[i]);
+    }
+}
 
 void TimeSeriesPreprocessor::add_lag_features(
     TimeSeriesDataset& dataset,
