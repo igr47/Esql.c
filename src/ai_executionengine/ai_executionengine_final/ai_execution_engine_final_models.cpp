@@ -48,11 +48,56 @@ ExecutionEngine::ResultSet AIExecutionEngineFinal::executeCreateModel(
             throw std::runtime_error("Target column required for CREATE MODEL. Use: TARGET column_name");
         }
 
+        // Get all columns from te table
+        std::vector<std::string> all_columns = data_extractor_->get_all_columns(db_.currentDatabase(), table_name);
+
         // Extract feature columns
         std::vector<std::string> feature_columns;
-        for (const auto& [name, _] : stmt.features) {
-            feature_columns.push_back(name);
+
+        // Case 1: User explicitly specified features
+        if (!stmt.features.empty()) {
+            for (const auto& [name, _] : stmt.features) {
+                feature_columns.push_back(name);
+            }
+
+            std::cout << "[AIExecutionEngineFInal] Using " << feature_columns.size() << " explicitly specified features" << std::endl;
         }
+        // Case 2: User specified columns to exclude
+        else if (!stmt.exclude_features.empty()) {
+            // Use all columns except target and excluded ones
+            for (const auto& col : all_columns) {
+                if (col != target_column && std::find(stmt.exclude_features.begin(), stmt.exclude_features.end(), col)
+                        == stmt.exclude_features.end()) {
+                    feature_columns.push_back(col);
+                }
+            }
+
+            std::cout << "[AIExecutionEngineFinal] Using all columns except target and "
+                      << stmt.exclude_features.size() << " excluded features. Total features: "
+                      << feature_columns.size() << std::endl;
+
+            // Log excluded columns
+            std::cout << "[AIExecutionEngineFinal] Excluded columns: ";
+            for (const auto& excl : stmt.exclude_features) {
+                std::cout << excl << " ";
+            }
+            std::cout << std::endl;
+        }
+        // Case 3: Use all features (default)
+        else if (stmt.use_all_features) {
+            // Use all columns except target
+            for (const auto& col : all_columns) {
+                // Use all columns except target
+                for (const auto& col : all_columns) {
+                    if (col != target_column) {
+                        feature_columns.push_back(col);
+                    }
+                }
+            }
+            std::cout << "[AIExecutionEngineFinal] Using all " << feature_columns.size() << " columns as features (excluding target column: " << target_column << ")" << std::endl;
+        }
+
+
 
         std::cout << "[AIExecutionEngineFinal] Extracting training data from table: "
                   << table_name << " with " << feature_columns.size() << " features" << std::endl;

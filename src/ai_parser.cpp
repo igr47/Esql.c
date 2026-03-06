@@ -62,6 +62,158 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
     } else {
         base_parser_.consumeToken(Token::Type::CREATE_MODEL);
     }
+
+    // Parse model name
+    stmt->model_name = base_parser_.getCurrentToken().lexeme;
+    if (!isValidModelName(stmt->model_name)) {
+        throw ParseError(base_parser_.getCurrentToken().line,
+                        base_parser_.getCurrentToken().column,
+                        "Invalid model name: " + stmt->model_name);
+    }
+    base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+    // Parse USING clause
+    if (base_parser_.checkMatch(Token::Type::USING)) {
+        base_parser_.consumeToken(Token::Type::USING);
+        // Convert to uppercase for consistency
+        std::transform(stmt->algorithm.begin(), stmt->algorithm.end(),
+                      stmt->algorithm.begin(), ::toupper);
+        base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+    }
+
+    // NEW: Check for EXCLUDE FEATURES clause
+    bool has_exclude_features = false;
+    if (base_parser_.checkMatch(Token::Type::EXCLUDE)) {
+        base_parser_.consumeToken(Token::Type::EXCLUDE);
+        base_parser_.consumeToken(Token::Type::FEATURES);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+        has_exclude_features = true;
+
+        do {
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+
+            std::string exclude_column = base_parser_.getCurrentToken().lexeme;
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+            stmt->exclude_features.push_back(exclude_column);
+        } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    // NEW: Check if FEATURES clause exists
+    bool has_features_clause = false;
+    if (base_parser_.checkMatch(Token::Type::FEATURES)) {
+        has_features_clause = true;
+        base_parser_.consumeToken(Token::Type::FEATURES);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        do {
+            if (base_parser_.checkMatch(Token::Type::COMMA)) {
+                base_parser_.consumeToken(Token::Type::COMMA);
+            }
+
+            std::string feature_name = base_parser_.getCurrentToken().lexeme;
+            base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+            // Parse feature type if specified
+            std::string feature_type = "AUTO";
+            if (base_parser_.checkMatch(Token::Type::AS) ||
+                base_parser_.checkMatch(Token::Type::COLON)) {
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+
+                if (base_parser_.checkMatchAny({
+                    Token::Type::INT, Token::Type::FLOAT, Token::Type::BOOL,
+                    Token::Type::TEXT, Token::Type::CATEGORICAL, Token::Type::NUMERIC
+                })) {
+                    feature_type = base_parser_.getCurrentToken().lexeme;
+                    base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+                }
+            }
+
+            stmt->features.emplace_back(feature_name, feature_type);
+        } while (base_parser_.checkMatch(Token::Type::COMMA));
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    // NEW: If no FEATURES and no EXCLUDE FEATURES, use all features
+    if (!has_features_clause && !has_exclude_features) {
+        stmt->use_all_features = true;
+    }
+
+    // Parse TARGET clause
+    base_parser_.consumeToken(Token::Type::TARGET);
+
+    if (base_parser_.checkMatch(Token::Type::IDENTIFIER)) {
+        // Target is a column name
+        std::string target_column = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+
+        // Parse target type if specified
+        if (base_parser_.checkMatch(Token::Type::AS) ||
+            base_parser_.checkMatch(Token::Type::COLON)) {
+            base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+            if (base_parser_.checkMatchAny({
+                Token::Type::CLASSIFICATION, Token::Type::REGRESSION,
+                Token::Type::BINARY, Token::Type::MULTICLASS, Token::Type::CLUSTERING, Token::Type::RANKING
+            })) {
+                stmt->target_type = base_parser_.getCurrentToken().lexeme;
+                base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+            }
+        }
+
+        stmt->parameters["target_column"] = target_column;
+    } else if (base_parser_.checkMatchAny({
+        Token::Type::CLASSIFICATION, Token::Type::REGRESSION,
+        Token::Type::CLUSTERING, Token::Type::BINARY, Token::Type::MULTICLASS, Token::Type::RANKING
+    })) {
+        // Target type directly specified
+        stmt->target_type = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(base_parser_.getCurrentToken().type);
+    }
+
+    // Parse FROM clause if present
+    if (base_parser_.checkMatch(Token::Type::FROM)) {
+        base_parser_.consumeToken(Token::Type::FROM);
+        std::string source_table = base_parser_.getCurrentToken().lexeme;
+        base_parser_.consumeToken(Token::Type::IDENTIFIER);
+        stmt->parameters["source_table"] = source_table;
+    }
+
+    // Parse training options
+    parseTrainingOptions(*stmt);
+
+    // Parse tuning options
+    parseTuningOptions(*stmt);
+
+    // Parse advanced options
+    parseAdvancedOptions(*stmt);
+
+    // Parse WITH clause for parameters
+    if (base_parser_.checkMatch(Token::Type::WITH)) {
+        base_parser_.consumeToken(Token::Type::WITH);
+        base_parser_.consumeToken(Token::Type::L_PAREN);
+
+        stmt->parameters.merge(parseHyperparameters());
+
+        base_parser_.consumeToken(Token::Type::R_PAREN);
+    }
+
+    return stmt;
+}
+
+/*std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
+    auto stmt = std::make_unique<AST::CreateModelStatement>();
+
+    // Parse CREATE [OR REPLACE] MODEL
+    if (base_parser_.checkMatch(Token::Type::CREATE_OR_REPLACE)) {
+        base_parser_.consumeToken(Token::Type::CREATE_OR_REPLACE);
+        stmt->parameters["replace"] = "true";
+    } else {
+        base_parser_.consumeToken(Token::Type::CREATE_MODEL);
+    }
         // Parse model name
     stmt->model_name = base_parser_.getCurrentToken().lexeme;
     if (!isValidModelName(stmt->model_name)) {
@@ -79,7 +231,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
         // Convert to uppercase for consistency
         std::transform(stmt->algorithm.begin(), stmt->algorithm.end(),stmt->algorithm.begin(), ::toupper);
 
-        /*// Validate algorithm
+        * Validate algorithm
         auto& algo_registry = esql::ai::AlgorithmRegistry::instance();
         if (!algo_registry.is_algorithm_supported(stmt->algorithm)) {
             throw ParseError(base_parser_.getCurrentToken().line,base_parser_.getCurrentToken().column,"Unsupported algorithm: " + stmt->algorithm + ". Supported: " +
@@ -92,7 +244,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
                                }
                                return result;
                            }());
-        }*/
+        }*
         base_parser_.consumeToken(base_parser_.getCurrentToken().type);
     } else {
         //stmt-> model_name = "LIGHTGBM";
@@ -189,7 +341,7 @@ std::unique_ptr<AST::CreateModelStatement> AIParser::parseCreateModel() {
     }
 
     return stmt;
-}
+}*/
 
 void AIParser::parseTrainingOptions(AST::CreateModelStatement& stmt) {
     while (base_parser_.checkMatchAny({

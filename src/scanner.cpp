@@ -136,7 +136,7 @@ void Lexer::initializeKeyWords(){
         {"STREAMPLOT", Token::Type::STREAMPLOT},    {"VALIDATION", Token::Type::VALIDATION},
         {"PNG", Token::Type::PNG},                  {"SPLIT", Token::Type::SPLIT},
         {"PDF", Token::Type::PDF},                  {"TEST", Token::Type::TEST},
-        {"SVG", Token::Type::SVG},
+        {"SVG", Token::Type::SVG},               {"EXCLUDE", Token::Type::EXCLUDE},
         {"EPS", Token::Type::EPS},
         {"JPG", Token::Type::JPG},
         {"JPEG", Token::Type::JPEG},
