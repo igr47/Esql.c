@@ -228,6 +228,7 @@ namespace AST {
         std::string time_interval = "1h";  // Default: 1 hour
         std::vector<std::string> value_columns;
         std::vector<std::string> feature_columns;  // Additional features for conditioning
+        std::string initial_conditions_query;
 
         // Simulation parameters
         size_t num_steps = 100;           // Number of simulation steps

@@ -49,9 +49,165 @@ public:
 // ============================================
 class RegimeDetector {
 private:
-    size_t lookback_ = 50;
-    double bull_threshold_ = 0.05;
-    double bear_threshold_ = -0.05;
+    size_t lookback_ = 20;  // Reduced from 50 for more responsiveness
+    double bull_threshold_ = 0.02;   // 2% for bull
+    double bear_threshold_ = -0.02;  // -2% for bear
+    double high_vol_threshold_ = 0.03;
+
+    // Track previous regimes for smoother transitions
+    MarketRegime previous_regime_ = MarketRegime::SIDEWAYS;
+    size_t regime_duration_ = 0;
+
+public:
+    MarketRegime detect(const std::vector<double>& prices, double volatility) {
+        if (prices.size() < lookback_) {
+            return MarketRegime::SIDEWAYS;
+        }
+
+        // Calculate multiple trend periods for better detection
+        double short_trend = calculate_trend(prices, 10);  // Short-term trend
+        double medium_trend = calculate_trend(prices, 20); // Medium-term trend
+        double long_trend = calculate_trend(prices, 50);   // Long-term trend
+
+        // Calculate trend strength and direction
+        double trend = medium_trend;  // Use medium-term as primary
+
+        // Detect regime based on trend and volatility
+        MarketRegime detected_regime;
+
+        // First check volatility-based regimes
+        if (volatility > high_vol_threshold_) {
+            if (trend > 0.01) {
+                detected_regime = MarketRegime::RALLY;
+            } else if (trend < -0.01) {
+                detected_regime = MarketRegime::CRASH;
+            } else {
+                detected_regime = MarketRegime::HIGH_VOLATILITY;
+            }
+        }
+        // Check trend-based regimes
+        else if (trend > bull_threshold_) {
+            // Check if it's a strong bull or moderate
+            if (trend > 0.05) {
+                detected_regime = MarketRegime::RALLY;
+            } else {
+                detected_regime = MarketRegime::BULL;
+            }
+        }
+        else if (trend < bear_threshold_) {
+            // Check if it's a strong bear or moderate
+            if (trend < -0.05) {
+                detected_regime = MarketRegime::CRASH;
+            } else {
+                detected_regime = MarketRegime::BEAR;
+            }
+        }
+        // Check for mean reversion
+        else if (is_mean_reverting(prices)) {
+            detected_regime = MarketRegime::MEAN_REVERTING;
+        }
+        // Check for breakout
+        else if (is_breakout(prices)) {
+            detected_regime = MarketRegime::BREAKOUT;
+        }
+        else {
+            detected_regime = MarketRegime::SIDEWAYS;
+        }
+
+        // Apply smoothing to avoid rapid regime changes
+        return smooth_regime(detected_regime);
+    }
+
+    void set_lookback(size_t period) { lookback_ = period; }
+    void set_thresholds(double bull, double bear, double high_vol) {
+        bull_threshold_ = bull;
+        bear_threshold_ = bear;
+        high_vol_threshold_ = high_vol;
+    }
+
+private:
+    double calculate_trend(const std::vector<double>& prices, size_t period) {
+        if (prices.size() < period) return 0.0;
+
+        size_t start_idx = prices.size() - period;
+        double start_price = prices[start_idx];
+        double end_price = prices.back();
+
+        return (end_price - start_price) / start_price;
+    }
+
+    bool is_mean_reverting(const std::vector<double>& prices) {
+        if (prices.size() < 30) return false;
+
+        // Calculate moving average
+        double sum = 0.0;
+        for (size_t i = prices.size() - 20; i < prices.size(); ++i) {
+            sum += prices[i];
+        }
+        double ma = sum / 20.0;
+        double current_price = prices.back();
+
+        // Calculate deviation from MA
+        double deviation = std::abs(current_price - ma) / ma;
+
+        // Check if price is oscillating around MA
+        if (deviation < 0.01) {
+            // Calculate price changes to see if it's mean-reverting
+            double total_change = 0.0;
+            for (size_t i = prices.size() - 10; i < prices.size() - 1; ++i) {
+                total_change += std::abs(prices[i+1] - prices[i]);
+            }
+            double avg_change = total_change / 9.0;
+
+            return avg_change / ma > 0.005; // Some volatility but reverting to mean
+        }
+
+        return false;
+    }
+
+    bool is_breakout(const std::vector<double>& prices) {
+        if (prices.size() < 30) return false;
+
+        // Find recent range
+        double recent_high = *std::max_element(prices.end() - 20, prices.end());
+        double recent_low = *std::min_element(prices.end() - 20, prices.end());
+        double range = recent_high - recent_low;
+        double current_price = prices.back();
+
+        // Check if price is breaking out of range
+        if (current_price > recent_high * 1.02) {  // 2% above recent high
+            return true;
+        }
+        if (current_price < recent_low * 0.98) {   // 2% below recent low
+            return true;
+        }
+
+        return false;
+    }
+
+    MarketRegime smooth_regime(MarketRegime new_regime) {
+        // Don't change regime too quickly
+        if (new_regime == previous_regime_) {
+            regime_duration_++;
+            return new_regime;
+        }
+
+        // Require at least 3 periods to confirm regime change
+        if (regime_duration_ < 3) {
+            return previous_regime_;
+        }
+
+        // Allow change
+        previous_regime_ = new_regime;
+        regime_duration_ = 1;
+        return new_regime;
+    }
+};
+/*class RegimeDetector {
+private:
+    size_t lookback_ = 20; //50;
+    double bull_threshold_ = 0.02; //0.05;
+    double bear_threshold_ = -0.02; //-0.05;
     double high_vol_threshold_ = 0.03;
 
 public:
@@ -99,7 +255,7 @@ public:
         bear_threshold_ = bear;
         high_vol_threshold_ = high_vol;
     }
-};
+};*/
 
 // ============================================
 // Microstructure Engine
@@ -204,6 +360,9 @@ MarketSimulator::MarketSimulator()
     volatility_model_ = std::make_unique<GARCHModel>();
     regime_detector_ = std::make_unique<RegimeDetector>();
     microstructure_ = std::make_unique<MicrostructureEngine>();
+
+    regime_detector_->set_thresholds(0.02, -0.02, 0.03);
+    regime_detector_->set_lookback(20);
 }
 
 MarketSimulator::~MarketSimulator() {
@@ -283,8 +442,34 @@ MarketRegime MarketSimulator::detect_regime(const std::vector<double>& prices) {
         return MarketRegime::SIDEWAYS;
     }
 
+    // Calculate rolling volatility for better detection
+    if (prices.size() >= 20) {
+        std::vector<double> returns;
+        for (size_t i = prices.size() - 20; i < prices.size() - 1; ++i) {
+            returns.push_back((prices[i+1] - prices[i]) / prices[i]);
+        }
+
+        double mean_return = std::accumulate(returns.begin(), returns.end(), 0.0) / returns.size();
+        double variance = 0.0;
+        for (double r : returns) {
+            variance += (r - mean_return) * (r - mean_return);
+        }
+        double current_vol = std::sqrt(variance / returns.size());
+
+        // Use rolling volatility instead of static volatility
+        return regime_detector_->detect(prices, current_vol);
+    }
+
     return regime_detector_->detect(prices, volatility_);
 }
+
+/*MarketRegime MarketSimulator::detect_regime(const std::vector<double>& prices) {
+    if (!detect_regimes_) {
+        return MarketRegime::SIDEWAYS;
+    }
+
+    return regime_detector_->detect(prices, volatility_);
+}*/
 
 std::vector<SimulationPath> MarketSimulator::simulate(
     size_t num_steps,

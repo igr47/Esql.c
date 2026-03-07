@@ -8,6 +8,14 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# ============================================
+# Library Paths
+# ============================================
+
+set(IMGUI_DIR "${CMAKE_SOURCE_DIR}/imgui" CACHE PATH "Path to ImGui source")
+set(IMPLOT_DIR "${CMAKE_SOURCE_DIR}/implot" CACHE PATH "Path to ImPlot source")
+set(GLFW_DIR "${CMAKE_SOURCE_DIR}/glfw" CACHE PATH "Path to GLFW source")
+
 # FFTW3 for Fourier transforms
 find_library(FFTW3_LIBRARY NAMES fftw3 fftw3-3)
 find_path(FFTW3_INCLUDE_DIR NAMES fftw3.h)
@@ -203,85 +211,125 @@ else()
 endif()
 
 # ============================================
-# Add ImGui and ImPlot
+# Build ImGui from source
 # ============================================
 
-# Download and build ImGui
-include(FetchContent)
-FetchContent_Declare(
-    imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.90.5-docking  # Docking branch for better window management
-)
+if(EXISTS "${IMGUI_DIR}/imgui.cpp" AND EXISTS "${IMGUI_DIR}/imgui.h")
+    message(STATUS "Building ImGui from source")
 
-FetchContent_Declare(
-    implot
-    GIT_REPOSITORY https://github.com/epezent/implot.git
-    GIT_TAG v0.16
-)
+    set(IMGUI_SOURCES
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    )
 
-FetchContent_MakeAvailable(imgui implot)
+    add_library(imgui STATIC ${IMGUI_SOURCES})
+    target_include_directories(imgui PUBLIC
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+    )
 
-# Create ImGui library
-set(IMGUI_SOURCES
-    ${imgui_SOURCE_DIR}/imgui.cpp
-    ${imgui_SOURCE_DIR}/imgui_demo.cpp
-    ${imgui_SOURCE_DIR}/imgui_draw.cpp
-    ${imgui_SOURCE_DIR}/imgui_tables.cpp
-    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
-)
+    # Use GLAD for OpenGL loading
+    target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-add_library(imgui STATIC ${IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC
-    ${imgui_SOURCE_DIR}
-    ${imgui_SOURCE_DIR}/backends
-)
-#target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
-
-target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLEW)
-
-# Create ImPlot library
-set(IMPLOT_SOURCES
-    ${implot_SOURCE_DIR}/implot.cpp
-    ${implot_SOURCE_DIR}/implot_demo.cpp
-    ${implot_SOURCE_DIR}/implot_items.cpp
-)
-
-add_library(implot STATIC ${IMPLOT_SOURCES})
-target_include_directories(implot PUBLIC ${implot_SOURCE_DIR})
-target_link_libraries(implot PRIVATE imgui)
-
-# Find OpenGL and GLFW
-find_package(OpenGL REQUIRED)
-
-# Find GLFW3 - this creates the 'glfw' target automatically
-find_package(glfw3 3.3 REQUIRED)
-
-# Verify it worked
-if(TARGET glfw)
-    message(STATUS "Found GLFW3: ${glfw}")
+    message(STATUS "ImGui built from source")
+else()
+    message(FATAL_ERROR "ImGui source files not found at ${IMGUI_DIR}")
 endif()
 
 # ============================================
-# Replace GLAD with GLEW
+# Build ImPlot from source
 # ============================================
-find_package(GLEW REQUIRED)
-message(STATUS "Found GLEW: ${GLEW_LIBRARIES}")
-message(STATUS "GLEW include: ${GLEW_INCLUDE_DIRS}")
 
-#target_include_directories(e_sql PRIVATE ${GLEW_INCLUDE_DIRS})
-#target_link_libraries(e_sql ${GLEW_LIBRARIES})
+if(EXISTS "${IMPLOT_DIR}/implot.cpp" AND EXISTS "${IMPLOT_DIR}/implot.h")
+    message(STATUS "Building ImPlot from source")
+
+    set(IMPLOT_SOURCES
+        ${IMPLOT_DIR}/implot.cpp
+        ${IMPLOT_DIR}/implot_demo.cpp
+        ${IMPLOT_DIR}/implot_items.cpp
+    )
+
+    add_library(implot STATIC ${IMPLOT_SOURCES})
+    target_include_directories(implot PUBLIC ${IMPLOT_DIR})
+    target_link_libraries(implot PRIVATE imgui)
+
+    message(STATUS "ImPlot built from source")
+else()
+    message(FATAL_ERROR "ImPlot source files not found at ${IMPLOT_DIR}")
+endif()
+
+# ============================================
+# Build GLFW from source
+# ============================================
+
+if(EXISTS "${GLFW_DIR}/CMakeLists.txt")
+    message(STATUS "Building GLFW from source")
+
+    # Add GLFW as a subdirectory
+    add_subdirectory(${GLFW_DIR} ${CMAKE_CURRENT_BINARY_DIR}/glfw)
+
+    # GLFW creates a target named 'glfw'
+    set(GLFW_LIBRARY glfw)
+    set(GLFW_INCLUDE_DIR "${GLFW_DIR}/include")
+
+    message(STATUS "GLFW built from source")
+else()
+    message(FATAL_ERROR "GLFW source not found at ${GLFW_DIR}")
+endif()
+
+# ============================================
+# GLAD Static Library (build from source)
+# ============================================
+
+# Build GLAD as a static library from the provided source files
+#set(GLAD_SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/glad_generated/glad")
+#set(GLAD_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/glad")
+
+set(GLAD_BASE_DIR ${CMAKE_SOURCE_DIR}/external/glad_generated/glad)
+set(GLAD_INCLUDE_DIR ${GLAD_BASE_DIR}/include)
+set(GLAD_SOURCE_FILE ${GLAD_BASE_DIR}/src/glad.c)
+
+if(EXISTS "${GLAD_SOURCE_FILE}" AND EXISTS "${GLAD_INCLUDE_DIR}/glad/glad.h")
+    message(STATUS "Building GLAD static library from source")
+
+    #add_library(glad STATIC
+    #"${GLAD_SOURCE_DIR}/src/glad.c"
+    #)
+    add_library(glad STATIC ${GLAD_SOURCE_FILE})
+
+    target_include_directories(glad PUBLIC ${GLAD_INCLUDE_DIR})
+    #target_include_directories(glad PUBLIC
+    #${GLAD_INCLUDE_DIR}
+    #${GLAD_SOURCE_DIR}/include
+    #)
+
+    # Set GLAD to use OpenGL 3.3 Core profile
+    target_compile_definitions(glad PRIVATE
+        GLAD_GLAPI_EXPORT
+        GLAD_GL_IMPLEMENTATION
+    )
+
+    message(STATUS "GLAD static library created successfully")
+else()
+    message(FATAL_ERROR "GLAD source files not found. Expected: ${GLAD_SOURCE_FILE} and ${GLAD_INCLUDE_DIR}/glad/glad.h")
+endif()
+
+# Find OpenGL
+find_package(OpenGL REQUIRED)
 
 # AI sources
 file(GLOB AI_SOURCES
     "src/ai_executables/*.cpp"
 )
 
-#LIGHTGBM sources
-file (GLOB LIGHTGBM_SOURCES
-     "src/ai_executables/lightgbm/*.cpp"
+# LIGHTGBM sources
+file(GLOB LIGHTGBM_SOURCES
+    "src/ai_executables/lightgbm/*.cpp"
 )
 
 # Execution Engine sources
@@ -294,17 +342,17 @@ file(GLOB SHELL_SOURCES
     "src/shell_executables/*.cpp"
 )
 
-#Plotter executables
+# Plotter executables
 file(GLOB PLOTTER_SOURCES
     "src/plotter/*.cpp"
 )
 
-#Ai ExecutionEngine_Base sorces
+# Ai ExecutionEngine_Base sources
 file(GLOB AI_EXECUTION_ENGINE_BASE_SOURCES
     "src/ai_executionengine/ai_executionengine_base/*.cpp"
 )
 
-#Ai ExecutionEngine Final sorces
+# Ai ExecutionEngine Final sources
 file(GLOB AI_EXECUTION_ENGINE_FINAL_SOURCES
     "src/ai_executionengine/ai_executionengine_final/*.cpp"
 )
@@ -357,10 +405,11 @@ target_include_directories(e_sql PRIVATE
     include/ai
     include/plotter_includes
     ${Boost_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}  # Add GLEW include directories
+    ${IMGUI_DIR}
+    ${IMPLOT_DIR}
+    ${GLFW_INCLUDE_DIR}
+    ${GLAD_INCLUDE_DIR}
 )
-
-target_include_directories(e_sql PRIVATE ${GLEW_INCLUDE_DIRS})
 
 # Add Eigen3 includes
 if(EIGEN3_INCLUDE_DIR)
@@ -444,15 +493,15 @@ if(LIGHTGBM_LIBRARY)
     endif()
 endif()
 
-# Link ImGui, ImPlot, and GLEW libraries
+# Link libraries - building from source
 target_link_libraries(e_sql
-    imgui
-    implot
-    ${GLEW_LIBRARIES}  # Replace glad with GLEW
+    imgui          # Built from source
+    implot         # Built from source
+    glad           # Built from source
+    ${GLFW_LIBRARY} # Built from source (via add_subdirectory)
     OpenGL::GL
-    glfw
-    ${CMAKE_DL_LIBS}   # Add for dynamic loading support
-    pthread            # Add pthread for threading
+    ${CMAKE_DL_LIBS}
+    pthread
 )
 
 # Add standard C++ libraries that might be needed
@@ -467,3 +516,15 @@ endif()
 
 # Create necessary directories
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/plotter/implot)
+
+# Print summary
+message(STATUS "=========================================")
+message(STATUS "Build Configuration Summary:")
+message(STATUS "  ImGui: Built from source")
+message(STATUS "  ImPlot: Built from source")
+message(STATUS "  GLFW: Built from source")
+message(STATUS "  GLAD: Built from source")
+message(STATUS "  OpenGL: ${OPENGL_LIBRARIES}")
+message(STATUS "  LightGBM: ${LIGHTGBM_LIBRARY}")
+message(STATUS "  Matplot++: ${MATPLOTPP_LIBRARY}")
+message(STATUS "=========================================")
