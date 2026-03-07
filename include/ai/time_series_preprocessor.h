@@ -83,14 +83,42 @@ struct TimeSeriesDataset {
     size_t size() const { return values.size(); }
 };
 
+
+
+/*struct FeatureGenerationResult {
+    std::vector<std::string> column_names;
+    std::vector<std::string> column_types;
+    std::vector<std::vector<Datum>> rows;
+    size_t num_rows;
+
+    std::vector<std::vector<std::string>> get_sample_data(size_t max_samples = 100) const;
+    void add_column(const std::string& name, const std::string& type, const std::vector<Datum>& values);
+}*/
+
 // Main time series preprocessor
 class TimeSeriesPreprocessor {
 public:
     TimeSeriesPreprocessor();
 
+    struct FeatureGenerationResult {
+        std::vector<std::string> column_names;
+        std::vector<std::string> column_types;
+        std::vector<std::vector<esql::Datum>> rows;
+        size_t num_rows = 0;
+
+        void add_column(const std::string& name, const std::string& type, const std::vector<esql::Datum>& values);
+    };
+
     // Convert regular training data to time series dataset
     TimeSeriesDataset prepare_time_series(
         const DataExtractor::TrainingData& data,
+        const std::string& time_column,
+        const std::string& target_column,
+        const std::vector<TimeSeriesFeature>& feature_definitions
+    );
+
+    FeatureGenerationResult generate_features_for_table(
+        const std::vector<std::unordered_map<std::string, esql::Datum>>& original_data,
         const std::string& time_column,
         const std::string& target_column,
         const std::vector<TimeSeriesFeature>& feature_definitions
@@ -183,6 +211,7 @@ private:
         std::vector<float> mins;
         std::vector<float> maxs;
     } scaler_params_;
+
 
     bool scaler_fitted_ = false;
 

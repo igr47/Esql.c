@@ -54,8 +54,11 @@ public:
     bool internalEvaluateWhere(const AST::Expression* where,const std::unordered_map<std::string, std::string>& row) {
         return evaluateWhereClause(where, row);
     }
-    
-    std::string evaluateExpressionWrapper(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row); 
+
+    std::string evaluateExpressionWrapper(const AST::Expression* expr, const std::unordered_map<std::string, std::string>& row);
+    void createTableFromCSVWrapper(const std::string& tableName, const std::vector<std::string>& columnNames, const std::vector<std::vector<std::string>>& sampleData) {
+        return createTableFromCSV(tableName, columnNames, sampleData);
+    }
 
 private:
     Database& db;

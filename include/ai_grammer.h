@@ -173,6 +173,8 @@ namespace AST {
         std::string model_name;
         std::string algorithm;
         std::vector<std::pair<std::string, std::string>> features; // name, type
+        std::vector<std::string> exclude_features; // Columns to exclude from featuress
+        bool use_all_features = false; // If true use all columns except target
         std::string target_type; // "CLASSIFICATION", "REGRESSION", "CLUSTERING"
         std::unordered_map<std::string, std::string> parameters;
 

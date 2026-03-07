@@ -203,6 +203,7 @@ private:
     void addTask(std::function<void()> task);
 
     std::unique_ptr<esql::ai::TimeSeriesPreprocessor> time_series_preprocessor_;
+    bool createNewTable(const std::string& output_table,const std::string& source_table,const std::vector<std::string>& new_feature_columns,const std::vector<std::vector<esql::Datum>>& new_feature_values,const std::vector<std::unordered_map<std::string, esql::Datum>>& source_data);
 
        // Helper methods for executeAnalyzeData
     std::vector<std::unordered_map<std::string, esql::Datum>> extract_chunk(esql::DataExtractor::DataCursor& cursor, size_t chunk_size);

@@ -166,6 +166,8 @@ public:
 
     Datum convert_string_to_datum_wrapper(const std::string& value) { return convert_string_to_datum(value); }
 
+    std::vector<std::string> get_all_columns(const std::string& db_name, const std::string& table_name);
+
 private:
     fractal::DiskStorage* storage_;
 
@@ -174,7 +176,7 @@ private:
     mutable std::unordered_map<std::string, std::unordered_map<std::string, float>> string_encodings_;
     mutable std::mutex encoding_mutex_;
 
-    std::vector<std::string> get_all_columns(const std::string& db_name,const std::string& table_name);
+    //std::vector<std::string> get_all_columns(const std::string& db_name,const std::string& table_name);
 
     Datum convert_string_to_datum(const std::string& value);
 

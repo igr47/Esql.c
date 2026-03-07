@@ -453,11 +453,11 @@ void AIAnalyzer::analyzeCreateModel(AST::CreateModelStatement& stmt) {
     }*/
 
     // 4. Validate features
-    if (stmt.features.empty()) {
+    /*if (stmt.features.empty()) {
         throw SematicError("At least one feature must be specified");
-    }
+    }*/
 
-    std::set<std::string> unique_features;
+    /*std::set<std::string> unique_features;
     for (const auto& [feature_name, feature_type] : stmt.features) {
         if (!isValidIdentifier(feature_name)) {
             throw SematicError("Invalid feature name: " + feature_name);
@@ -481,7 +481,7 @@ void AIAnalyzer::analyzeCreateModel(AST::CreateModelStatement& stmt) {
                 throw SematicError("Invalid feature type: " + feature_type);
             }
         }
-    }
+    }*/
 
     // 5. Validate target type
     if (!stmt.target_type.empty()) {
