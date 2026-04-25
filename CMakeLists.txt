@@ -69,6 +69,7 @@ find_library(LIGHTGBM_LIBRARY
         /usr/local/lib
         /opt/local/lib
         ${CMAKE_SOURCE_DIR}/libs
+        ${CMAKE_SOURCE_DIR}/LightGBM
 )
 
 find_path(LIGHTGBM_INCLUDE_DIR
@@ -78,6 +79,7 @@ find_path(LIGHTGBM_INCLUDE_DIR
         /usr/local/include
         /opt/local/include
         ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/LightGBM/include
 )
 
 # Check for LightGBM availability
@@ -510,6 +512,12 @@ target_link_libraries(e_sql stdc++fs)  # For filesystem support (C++17)
 # Set compiler flags for better performance
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(e_sql PRIVATE -O3 -march=native -flto)
+
+    #2 Add -fuse-ld=ldd to linker options so it can read LLVM bitcode
+    #target_link_options(e_sql PRIVATE "LINKER:-fuse-ld=lld")
+
+    # Add -flto to the linker phase ( Optional )
+    #target_link_options(e_sql PRIVATE -flto)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(e_sql PRIVATE -g -O0)
 endif()
