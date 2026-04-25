@@ -230,7 +230,7 @@ BEGIN BATCH PARALLEL 4 ON ERROR CONTINUE
 END BATCH;
 ```
 
-## Time Series Analysis
+### Time Series Analysis
 ## Prepare Time Series Data
 ```sql
 -- Prepare time series with feature engineering
@@ -276,3 +276,53 @@ WITH SCENARIOS 1000
 SCENARIO TYPE monte_carlo
 INTO demand_forecast;
 ```
+
+### Simulation
+## Market Simulation
+```sql
+-- Basic market simulation
+SIMULATE MARKET USING stock_model
+FROM historical_prices
+STEPS 252
+PATHS 1000
+INTERVAL 1d
+NOISE 0.02
+TREND TRUE
+SEASONALITY TRUE
+VOLATILITY_CLUSTERING TRUE
+INTO market_simulations;
+
+-- Advanced simulation with market microstructure
+SIMULATE USING crypto_model
+FROM price_data
+STEPS 1000
+PATHS 500
+SPREAD 0.0001
+LIQUIDITY_IMPACT 0.01
+SLIPPAGE 0.001
+MICROSTRUCTURE
+WITH_SCENARIO bear (volatility_scale = 1.5)
+GENERATE INDICATORS (SMA_20, RSI, MACD, BOLLINGER)
+OUTPUT DETAILED
+INTO crypto_sim_results;
+
+-- Real-time simulation with plotting
+SIMULATE MARKET USING forex_model
+FROM eur_usd_data
+STEPS 1000
+PATHS 100
+INTERVAL 1h
+REAL_TIME DELAY 100 EMIT_EVENTS
+PLOT CANDLESTICK (
+    interval = 100,
+    volume = true,
+    indicators = true,
+    window = "Forex Simulation",
+    size = 1200,800,
+    animate = true,
+    bull_color = "#00ff00",
+    bear_color = "#ff0000"
+)
+INTO realtime_sim;
+```
+
