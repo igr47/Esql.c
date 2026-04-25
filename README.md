@@ -195,3 +195,84 @@ EXPLAIN MODEL customer_churn FOR (35, 120, 2, 89.99) WITH SHAP_VALUES;
 DROP MODEL sales_predictor;
 DROP MODEL IF EXISTS old_model;
 ```
+
+## AI Functions in SELECT
+```sql
+-- Scalar AI functions
+SELECT 
+    customer_id,
+    PREDICT_USING_customer_churn(age, usage_days, support_tickets) as churn_risk,
+    PROBABILITY_USING_customer_churn(age, usage_days, support_tickets) as churn_probability,
+    CONFIDENCE_USING_customer_churn(age, usage_days, support_tickets) as confidence
+FROM customer_data;
+
+-- Model function call syntax
+SELECT 
+    customer_id,
+    customer_churn(age, usage_days, support_tickets) as prediction,
+    sales_predictor(price, advertising_spend) as forecasted_sales
+FROM data;
+
+-- AI aggregate functions
+SELECT 
+    region,
+    AI_PREDICT('sales_model', sales_data) as predicted_sales
+FROM regional_sales
+GROUP BY region;
+```
+
+## Batch AI Operations
+```sql
+BEGIN BATCH PARALLEL 4 ON ERROR CONTINUE
+    TRAIN MODEL model1 USING LIGHTGBM ON table1 TARGET target1 FEATURES (col1, col2);
+    PREDICT USING model1 ON new_data INTO predictions1;
+    DROP MODEL old_model;
+END BATCH;
+```
+
+## Time Series Analysis
+## Prepare Time Series Data
+```sql
+-- Prepare time series with feature engineering
+PREPARE TIME SERIES ts_data
+FROM raw_sales
+TIME COLUMN sale_date
+TARGET revenue
+FEATURES (product_id, store_id, promotion)
+WITH LAGS (1, 7, 30)
+     ROLLING WINDOWS (7, 14, 30)
+     ADD DATETIME FEATURES
+     ADD SEASONAL FEATURES
+     CHECK STATIONARITY
+     SPLIT (TRAIN = 0.7, VALIDATION = 0.15, TEST = 0.15);
+```
+## Detect Seasonality
+```sql
+-- Detect seasonal patterns
+DETECT SEASONALITY IN sales_data
+TIME COLUMN date
+VALUE COLUMN revenue
+WITH (max_lag = 100);
+```
+## Forecasting
+```sql
+-- Basic forecast
+FORECAST USING sales_model
+FROM historical_sales
+TIME COLUMN date
+VALUE COLUMNS (revenue, units_sold)
+HORIZON 30
+WITH CONFIDENCE
+INTO sales_forecast;
+
+-- Advanced forecast with scenarios
+FORECAST USING demand_model
+FROM product_history
+TIME COLUMN week
+VALUE COLUMNS (demand)
+HORIZON 52
+WITH CONFIDENCE
+WITH SCENARIOS 1000
+SCENARIO TYPE monte_carlo
+INTO demand_forecast;
+```
