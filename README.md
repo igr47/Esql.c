@@ -325,4 +325,171 @@ PLOT CANDLESTICK (
 )
 INTO realtime_sim;
 ```
+## Simulation Parameters
+    Parameter	                    Description	                  Default
+    STEPS	                    Number of simulation steps	        100
+    PATHS	                    Number of Monte Carlo paths	        100
+    INTERVAL	                Time interval (1m, 5m, 1h, 1d)	    1h
+    NOISE	                    Random noise level (0-1)	        0.01
+    TREND	                    Include trend component	            true
+    SEASONALITY	                Include seasonal patterns	        true
+    VOLATILITY_CLUSTERING	    Include GARCH effects	            true
+    MEAN_REVERSION	            Include mean reversion	            false
+    SPREAD	                    Bid-ask spread	                    0.0001
+    SLIPPAGE	                Execution slippage factor	        0.001
 
+### Data Visualization
+## Basic Plot Types
+```sql
+-- Scatter plot
+PLOT SCATTER (
+    title = "Sales vs Advertising",
+    x_label = "Ad Spend ($)",
+    y_label = "Sales ($)",
+    color = "blue",
+    size = 10
+)
+FOR SELECT ad_spend, sales FROM marketing_data;
+
+-- Line chart with time series
+PLOT LINE (
+    title = "Stock Price Over Time",
+    width = 2,
+    color = "green",
+    grid = true
+)
+WITH TIME_SERIES
+FOR SELECT date, close_price FROM stock_prices ORDER BY date;
+
+-- Bar chart
+PLOT BAR (
+    title = "Monthly Revenue",
+    color = "#3498db",
+    orientation = "vertical"
+)
+FOR SELECT month, SUM(revenue) as revenue 
+FROM sales 
+GROUP BY month 
+ORDER BY month;
+```
+
+## Advanced Plots
+```sql
+-- Multi-line plot with legend
+PLOT MULTI_LINE (
+    title = "Product Sales Comparison",
+    x_label = "Month",
+    y_label = "Units Sold"
+)
+SERIES ("Product A", "Product B", "Product C")
+FOR SELECT month, product_a, product_b, product_c FROM product_sales;
+
+-- Histogram with distribution
+PLOT HISTOGRAM (
+    title = "Age Distribution",
+    bins = 30,
+    color = "orange",
+    density = true
+)
+WITH DISTRIBUTION
+FOR SELECT age FROM customers;
+
+-- Boxplot for comparison
+PLOT BOXPLOT (
+    title = "Salary by Department"
+)
+FOR SELECT department, salary FROM employees
+GROUP BY department;
+
+-- Correlation heatmap
+PLOT CORRELATION (
+    title = "Feature Correlation Matrix",
+    annotate = true,
+    cmap = "coolwarm"
+)
+WITH CORRELATION
+FOR SELECT age, income, spending_score, purchase_frequency FROM customer_data;
+
+-- Pie chart
+PLOT PIE (
+    title = "Market Share"
+)
+FOR SELECT brand, SUM(sales) as sales FROM market_data GROUP BY brand;
+```
+
+## Geographical Plots
+```sql
+-- Geographic scatter plot
+PLOT GEO_SCATTER (
+    title = "Store Locations",
+    size = 100,
+    color_by = "revenue"
+)
+LATITUDE lat
+LONGITUDE lon
+VALUE revenue
+FOR SELECT store_id, lat, lon, revenue FROM stores;
+
+-- Geographic heatmap
+PLOT GEO_HEATMAP (
+    title = "Crime Density Map",
+    radius = 10,
+    blur = 5
+)
+LATITUDE latitude
+LONGITUDE longitude
+FOR SELECT latitude, longitude FROM crime_incidents;
+
+-- Choropleth map
+PLOT GEO_CHOROPLETH (
+    title = "Population Density by Region"
+)
+REGION region_code
+VALUE population_density
+FOR SELECT region, population_density FROM census_data;
+```
+## Dashboard and Interactive Plots
+```sql
+-- Dashboard with multiple plots
+PLOT DASHBOARD
+LAYOUT 2x2
+WITH DASHBOARD
+FOR SELECT * FROM quarterly_report;
+
+-- Animated plot
+PLOT LINE (
+    title = "Sales Over Time",
+    animate = true,
+    interval = 200
+)
+WITH ANIMATION
+ANIMATION_COLUMN date
+FOR SELECT date, product, revenue FROM daily_sales;
+
+-- Interactive plot with controls
+PLOT SCATTER (
+    title = "Interactive Data Explorer",
+    interactive = true
+)
+CONTROLS (
+    SLIDER year MIN 2010 MAX 2024 STEP 1 DEFAULT 2020,
+    DROPDOWN metric OPTIONS ("Sales", "Profit", "Units") LABEL "Display",
+    CHECKBOX trend LABEL "Show Trend Line"
+)
+WITH INTERACTIVE
+FOR SELECT year, sales, profit, units FROM annual_data;
+```
+## Output Formats
+```sql
+-- Save plot to file
+PLOT LINE (title = "Revenue Trend")
+FOR SELECT date, revenue FROM sales
+SAVE '/output/revenue_chart.png';
+
+-- Specify output format
+PLOT SCATTER
+FORMAT PDF
+SAVE '/output/scatter_plot.pdf';
+
+-- Supported formats: PNG, PDF, SVG, JPG, GIF, MP4, HTML
+```
