@@ -493,3 +493,348 @@ SAVE '/output/scatter_plot.pdf';
 
 -- Supported formats: PNG, PDF, SVG, JPG, GIF, MP4, HTML
 ```
+
+### Currently Working On
+
+## Python Bindings
+```python
+import esql as es
+import yfinance as yf
+import pandas as pd
+from datetime import datetime
+import time
+
+# Connect to ESQ-Lang engine
+conn = es.connect("local://database")
+
+# Real-time stock data streaming and plotting
+def stream_and_plot_realtime():
+    """
+    Streams live data from Yahoo Finance and plots real-time candlesticks
+    """
+    ticker = "AAPL"
+    stock = yf.Ticker(ticker)
+    
+    # Data structures to hold streaming data
+    ohlcv_data = {
+        'open': [],
+        'high': [],
+        'close': [],
+        'low': [],
+        'volume': [],
+        'timestamp': []
+    }
+    
+    # Create real-time plot using ESQ-Lang
+    plot = es.Statement("""
+        PLOT CANDLESTICK (
+            interval = 100,
+            window_title = "Live Market Data - AAPL",
+            volume = true,
+            indicators = true,
+            animate = true,
+            update_interval = 1000
+        )
+        WITH REAL_TIME
+    """)
+    
+    # Start the plot in a separate thread
+    plot.show_async()
+    
+    # Stream historical data first (last 100 candles)
+    hist = stock.history(period="5d", interval="1m")
+    for idx, row in hist.iterrows():
+        ohlcv_data['open'].append(row['Open'])
+        ohlcv_data['high'].append(row['High'])
+        ohlcv_data['close'].append(row['Close'])
+        ohlcv_data['low'].append(row['Low'])
+        ohlcv_data['volume'].append(row['Volume'])
+        ohlcv_data['timestamp'].append(idx)
+        
+        # Update the plot with new data
+        plot.update_realtime(
+            open=ohlcv_data['open'],
+            high=ohlcv_data['high'],
+            close=ohlcv_data['close'],
+            low=ohlcv_data['low'],
+            volume=ohlcv_data['volume']
+        )
+    
+    # Continue streaming live data
+    while True:
+        # Get latest data
+        latest = stock.history(period="1m", interval="1m")
+        if not latest.empty:
+            row = latest.iloc[-1]
+            ohlcv_data['open'].append(row['Open'])
+            ohlcv_data['high'].append(row['High'])
+            ohlcv_data['close'].append(row['Close'])
+            ohlcv_data['low'].append(row['Low'])
+            ohlcv_data['volume'].append(row['Volume'])
+            ohlcv_data['timestamp'].append(datetime.now())
+            
+            # Keep only last 500 data points for performance
+            if len(ohlcv_data['open']) > 500:
+                for key in ohlcv_data:
+                    ohlcv_data[key] = ohlcv_data[key][-500:]
+            
+            # Update the real-time plot
+            plot.update_realtime(
+                open=ohlcv_data['open'],
+                high=ohlcv_data['high'],
+                close=ohlcv_data['close'],
+                low=ohlcv_data['low'],
+                volume=ohlcv_data['volume']
+            )
+        
+        time.sleep(60)  # Update every minute
+
+# Run the streaming plot
+# stream_and_plot_realtime()
+```
+## Ensemble Model for Market Prediction
+
+```python
+import esql as es
+import pandas as pd
+import numpy as np
+from typing import Dict, List
+
+class MarketEnsemblePredictor:
+    """
+    Ensemble predictor that uses multiple trained models to forecast market trends
+    """
+    def __init__(self, db_path: str):
+        self.conn = es.connect(db_path)
+        self.models = {
+            'open_predictor': None,
+            'high_predictor': None,
+            'low_predictor': None,
+            'close_predictor': None,
+            'volume_predictor': None
+        }
+        self.load_models()
+    
+    def load_models(self):
+        """Load pre-trained models from the database"""
+        for model_name in self.models.keys():
+            self.models[model_name] = self.conn.get_model(model_name)
+    
+    def train_models(self, training_data: pd.DataFrame):
+        """
+        Train all five models using ESQ-Lang
+        """
+        # Train Open Predictor
+        self.conn.execute(f"""
+            CREATE OR REPLACE MODEL open_predictor
+            USING LIGHTGBM
+            FEATURES (close, high, low, volume)
+            TARGET REGRESSION
+            FROM training_data
+            WITH (num_iterations = 100, learning_rate = 0.01)
+        """)
+        
+        # Train High Predictor
+        self.conn.execute(f"""
+            CREATE OR REPLACE MODEL high_predictor
+            USING LIGHTGBM
+            FEATURES (open, close, low, volume)
+            TARGET REGRESSION
+            FROM training_data
+            WITH (num_iterations = 100, learning_rate = 0.01)
+        """)
+        
+        # Train Low Predictor
+        self.conn.execute(f"""
+            CREATE OR REPLACE MODEL low_predictor
+            USING LIGHTGBM
+            FEATURES (open, high, close, volume)
+            TARGET REGRESSION
+            FROM training_data
+            WITH (num_iterations = 100, learning_rate = 0.01)
+        """)
+        
+        # Train Close Predictor
+        self.conn.execute(f"""
+            CREATE OR REPLACE MODEL close_predictor
+            USING LIGHTGBM
+            FEATURES (open, high, low, volume)
+            TARGET REGRESSION
+            FROM training_data
+            WITH (num_iterations = 100, learning_rate = 0.01)
+        """)
+        
+        # Train Volume Predictor
+        self.conn.execute(f"""
+            CREATE OR REPLACE MODEL volume_predictor
+            USING LIGHTGBM
+            FEATURES (open, high, low, close)
+            TARGET REGRESSION
+            FROM training_data
+            WITH (num_iterations = 100, learning_rate = 0.01)
+        """)
+    
+    def predict_one_step(self, current_features: Dict[str, float]) -> Dict[str, float]:
+        """
+        Predict next step values using ensemble method
+        """
+        predictions = {}
+        
+        # Predict Close using current features
+        close_pred = self.conn.execute(f"""
+            SELECT PREDICT_USING_close_predictor(
+                {current_features['open']},
+                {current_features['high']},
+                {current_features['low']},
+                {current_features['volume']}
+            ) as predicted_close
+        """)
+        predictions['close'] = close_pred['predicted_close']
+        
+        # Predict Open using current features (including predicted close)
+        open_pred = self.conn.execute(f"""
+            SELECT PREDICT_USING_open_predictor(
+                {predictions['close']},
+                {current_features['high']},
+                {current_features['low']},
+                {current_features['volume']}
+            ) as predicted_open
+        """)
+        predictions['open'] = open_pred['predicted_open']
+        
+        # Predict High using updated predictions
+        high_pred = self.conn.execute(f"""
+            SELECT PREDICT_USING_high_predictor(
+                {predictions['open']},
+                {predictions['close']},
+                {current_features['low']},
+                {current_features['volume']}
+            ) as predicted_high
+        """)
+        predictions['high'] = high_pred['predicted_high']
+        
+        # Predict Low using updated predictions
+        low_pred = self.conn.execute(f"""
+            SELECT PREDICT_USING_low_predictor(
+                {predictions['open']},
+                {predictions['high']},
+                {predictions['close']},
+                {current_features['volume']}
+            ) as predicted_low
+        """)
+        predictions['low'] = low_pred['predicted_low']
+        
+        # Predict Volume using all OHLC predictions
+        volume_pred = self.conn.execute(f"""
+            SELECT PREDICT_USING_volume_predictor(
+                {predictions['open']},
+                {predictions['high']},
+                {predictions['low']},
+                {predictions['close']}
+            ) as predicted_volume
+        """)
+        predictions['volume'] = volume_pred['predicted_volume']
+        
+        return predictions
+    
+    def forecast_market_trend(self, initial_features: Dict[str, float], 
+                              steps: int = 100) -> List[Dict[str, float]]:
+        """
+        Iteratively forecast market trend for N steps ahead
+        """
+        forecast = []
+        current = initial_features.copy()
+        
+        for step in range(steps):
+            # Predict next step
+            next_step = self.predict_one_step(current)
+            forecast.append(next_step)
+            
+            # Use predictions as features for next iteration
+            current = next_step.copy()
+            
+            # Optional: Add confidence intervals
+            if step % 10 == 0:
+                print(f"Step {step + 1}: O={current['open']:.2f}, H={current['high']:.2f}, "
+                      f"L={current['low']:.2f}, C={current['close']:.2f}, V={current['volume']:.0f}")
+        
+        return forecast
+    
+    def plot_forecast(self, historical: pd.DataFrame, forecast: List[Dict[str, float]]):
+        """
+        Plot historical data and forecasted trend using ESQ-Lang
+        """
+        # Prepare data for plotting
+        forecast_df = pd.DataFrame(forecast)
+        
+        # Create temporary tables
+        self.conn.create_table("historical_data", historical)
+        self.conn.create_table("forecast_data", forecast_df)
+        
+        # Plot the forecast
+        plot = self.conn.execute("""
+            PLOT CANDLESTICK (
+                title = "Market Trend Forecast",
+                interval = 100,
+                volume = true,
+                indicators = true,
+                grid = true
+            )
+            FOR SELECT * FROM (
+                SELECT timestamp, open, high, low, close, volume FROM historical_data
+                UNION ALL
+                SELECT 
+                    DATE_ADD(timestamp, INTERVAL step * INTERVAL '1' HOUR) as timestamp,
+                    open, high, low, close, volume 
+                FROM forecast_data
+            )
+            WITH TREND
+            ANIMATE
+        """)
+        
+        plot.show()
+        return plot
+
+# Usage Example
+def main():
+    # Load historical data
+    import yfinance as yf
+    ticker = "AAPL"
+    data = yf.download(ticker, period="1y", interval="1d")
+    
+    # Prepare features
+    training_data = pd.DataFrame({
+        'open': data['Open'],
+        'high': data['High'],
+        'low': data['Low'],
+        'close': data['Close'],
+        'volume': data['Volume']
+    }).dropna()
+    
+    # Initialize predictor
+    predictor = MarketEnsemblePredictor("market_models.db")
+    
+    # Train models
+    print("Training ensemble models...")
+    predictor.train_models(training_data)
+    
+    # Get latest features for forecasting
+    latest_features = {
+        'open': training_data['open'].iloc[-1],
+        'high': training_data['high'].iloc[-1],
+        'low': training_data['low'].iloc[-1],
+        'close': training_data['close'].iloc[-1],
+        'volume': training_data['volume'].iloc[-1]
+    }
+    
+    # Forecast 100 steps ahead
+    print("\nGenerating market forecast...")
+    forecast = predictor.forecast_market_trend(latest_features, steps=100)
+    
+    # Plot results
+    print("\nPlotting forecast...")
+    predictor.plot_forecast(training_data, forecast)
+
+# Run the ensemble prediction
+# main()
+```
