@@ -2,6 +2,8 @@
 #include "ai_parser.h"
 #include "scanner.h"
 #include "plotter_includes/plotter.h"
+#include "plotter_includes/real_time_plotter_parser.h"
+#include <memory>
 #include <sstream>
 #include <string>
 #include <stdexcept>
@@ -62,9 +64,15 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	}else if(match(Token::Type::USE)){
 		return parseUseStatement();
        } else if(match(Token::Type::PLOT)) {
-	       return parsePlotStatement();
-    } else if (match(Token::Type::LOAD)) {
-        return parseLoadDataStatement();
+	       Token nextToken = peekToken();
+	       if (nextToken.type == Token::Type::REALTIME) {
+			advance();
+		       return parseRealTimePlotStatement();
+	       } else {
+			return parsePlotStatement();
+	       }
+	} else if (match(Token::Type::LOAD)) {
+		return parseLoadDataStatement();
 	}else if(match(Token::Type::SHOW)){
 		advance();
 		if(match(Token::Type::DATABASES)){
@@ -1132,6 +1140,214 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     return stmt;
 }
 
+std::unique_ptr<AST::Statement> Parse::parseRealTimePlotStatement() {
+    auto stmt = std::make_unique<AST::RealTimePlotStatement>();
+    
+    // Parse PLOT REALTIME
+    consume(Token::Type::PLOT);
+    consume(Token::Type::REALTIME);
+    
+    // Parse plot type
+    if (match(Token::Type::LINE)) {
+        stmt->type = AST::RealTimePlotStatement::PlotType::LINE;
+        consume(Token::Type::LINE);
+    } else if (match(Token::Type::SCATTER)) {
+        stmt->type = AST::RealTimePlotStatement::PlotType::SCATTER;
+        consume(Token::Type::SCATTER);
+    } else if (match(Token::Type::BAR)) {
+        stmt->type = AST::RealTimePlotStatement::PlotType::BAR;
+        consume(Token::Type::BAR);
+    } else if (match(Token::Type::AREA)) {
+        stmt->type = AST::RealTimePlotStatement::PlotType::AREA;
+        consume(Token::Type::AREA);
+    } else if (match(Token::Type::HISTOGRAM)) {
+        stmt->type = AST::RealTimePlotStatement::PlotType::HISTOGRAM;
+        consume(Token::Type::HISTOGRAM);
+    } else if (match(Token::Type::MULTI_LINE)) {
+        stmt->type = AST::RealTimePlotStatement::PlotType::MULTI_LINE;
+        consume(Token::Type::MULTI_LINE);
+    } else if (match(Token::Type::STACKED_BAR)) {
+        stmt->type = AST::RealTimePlotStatement::PlotType::STACKED_BAR;
+        consume(Token::Type::STACKED_BAR);
+    } else {
+        // Default to line plot
+        stmt->type = AST::RealTimePlotStatement::PlotType::LINE;
+    }
+    
+    // Parse optional parenthesized configuration
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+        
+        while (!match(Token::Type::R_PAREN) && !match(Token::Type::END_OF_INPUT)) {
+            if (match(Token::Type::IDENTIFIER)) {
+                std::string key = currentToken.lexeme;
+                std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+                consume(Token::Type::IDENTIFIER);
+                consume(Token::Type::EQUAL);
+                
+                if (key == "title") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->title = currentToken.lexeme;
+                        if (stmt->title.size() >= 2 && 
+                            ((stmt->title[0] == '\'' && stmt->title.back() == '\'') ||
+                             (stmt->title[0] == '"' && stmt->title.back() == '"'))) {
+                            stmt->title = stmt->title.substr(1, stmt->title.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                } else if (key == "xlabel" || key == "x_label") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->xLabel = currentToken.lexeme;
+                        if (stmt->xLabel.size() >= 2 &&
+                            ((stmt->xLabel[0] == '\'' && stmt->xLabel.back() == '\'') ||
+                             (stmt->xLabel[0] == '"' && stmt->xLabel.back() == '"'))) {
+                            stmt->xLabel = stmt->xLabel.substr(1, stmt->xLabel.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                } else if (key == "ylabel" || key == "y_label") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->yLabel = currentToken.lexeme;
+                        if (stmt->yLabel.size() >= 2 &&
+                            ((stmt->yLabel[0] == '\'' && stmt->yLabel.back() == '\'') ||
+                             (stmt->yLabel[0] == '"' && stmt->yLabel.back() == '"'))) {
+                            stmt->yLabel = stmt->yLabel.substr(1, stmt->yLabel.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                } else if (key == "refreshinterval" || key == "refresh_interval" || key == "interval") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->refreshIntervalMs = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                    }
+                } else if (key == "historywindow" || key == "history_window") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->historyWindowSec = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                    }
+                } else if (key == "maxdatapoints" || key == "max_data_points") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->maxDataPoints = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                    }
+                } else if (key == "autorangey" || key == "auto_range_y") {
+                    if (match(Token::Type::TRUE)) {
+                        stmt->autoRangeY = true;
+                        consume(Token::Type::TRUE);
+                    } else if (match(Token::Type::FALSE)) {
+                        stmt->autoRangeY = false;
+                        consume(Token::Type::FALSE);
+                    }
+                } else if (key == "ymin" || key == "y_min") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->yMin = std::stod(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                        stmt->autoRangeY = false;
+                    }
+                } else if (key == "ymax" || key == "y_max") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->yMax = std::stod(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                        stmt->autoRangeY = false;
+                    }
+                } else if (key == "sampling" || key == "sampling_method") {
+                    if (match(Token::Type::IDENTIFIER)) {
+                        std::string method = currentToken.lexeme;
+                        std::transform(method.begin(), method.end(), method.begin(), ::tolower);
+                        if (method == "none") {
+                            stmt->samplingMethod = AST::RealTimePlotStatement::SamplingMethod::NONE;
+                        } else if (method == "every_n" || method == "everyn") {
+                            stmt->samplingMethod = AST::RealTimePlotStatement::SamplingMethod::EVERY_N;
+                        } else if (method == "average") {
+                            stmt->samplingMethod = AST::RealTimePlotStatement::SamplingMethod::AVERAGE;
+                        } else if (method == "max") {
+                            stmt->samplingMethod = AST::RealTimePlotStatement::SamplingMethod::MAX;
+                        } else if (method == "min") {
+                            stmt->samplingMethod = AST::RealTimePlotStatement::SamplingMethod::MIN;
+                        } else if (method == "last") {
+                            stmt->samplingMethod = AST::RealTimePlotStatement::SamplingMethod::LAST;
+                        }
+                        consume(Token::Type::IDENTIFIER);
+                    }
+                } else if (key == "samplinginterval" || key == "sampling_interval" || key == "every_n") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->samplingInterval = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                    }
+                } else if (key == "samplingwindow" || key == "sampling_window") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->samplingWindowMs = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                    }
+                }
+                
+                // Check for comma
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                }
+            } else {
+                break;
+            }
+        }
+        
+        consume(Token::Type::R_PAREN);
+    }
+    
+    // Parse optional column mappings
+    if (match(Token::Type::WITH)) {
+        consume(Token::Type::WITH);
+        
+        while (match(Token::Type::IDENTIFIER)) {
+            std::string key = currentToken.lexeme;
+            std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+            consume(Token::Type::IDENTIFIER);
+            
+            if (key == "xcolumn" || key == "x_column" || key == "x") {
+                consume(Token::Type::AS);
+                if (match(Token::Type::IDENTIFIER)) {
+                    stmt->xColumn = currentToken.lexeme;
+                    consume(Token::Type::IDENTIFIER);
+                }
+            } else if (key == "ycolumns" || key == "y_columns" || key == "y") {
+                consume(Token::Type::AS);
+                if (match(Token::Type::L_PAREN)) {
+                    consume(Token::Type::L_PAREN);
+                    do {
+                        if (match(Token::Type::COMMA)) consume(Token::Type::COMMA);
+                        if (match(Token::Type::IDENTIFIER)) {
+                            stmt->yColumns.push_back(currentToken.lexeme);
+                            consume(Token::Type::IDENTIFIER);
+                        }
+                    } while (match(Token::Type::COMMA));
+                    consume(Token::Type::R_PAREN);
+                } else if (match(Token::Type::IDENTIFIER)) {
+                    stmt->yColumns.push_back(currentToken.lexeme);
+                    consume(Token::Type::IDENTIFIER);
+                }
+            } else if (key == "groupcolumn" || key == "group_column" || key == "group") {
+                consume(Token::Type::AS);
+                if (match(Token::Type::IDENTIFIER)) {
+                    stmt->groupColumn = currentToken.lexeme;
+                    consume(Token::Type::IDENTIFIER);
+                }
+            }
+            
+            if (match(Token::Type::COMMA)) {
+                consume(Token::Type::COMMA);
+            } else {
+                break;
+            }
+        }
+        
+        stmt->autoDetectColumns = stmt->xColumn.empty();
+    }
+    
+    // Parse FOR clause with SELECT query
+    consume(Token::Type::FOR);
+    stmt->query = parseSelectStatement();
+    
+    return stmt;
+}
 
 std::unique_ptr<AST::Statement> Parse::parsePlotStatement() {
     auto plotStmt = std::make_unique<Visualization::PlotStatement>();
