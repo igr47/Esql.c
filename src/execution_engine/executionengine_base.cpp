@@ -1,6 +1,9 @@
 #include "execution_engine_includes/executionengine_main.h"
 #include "ai_execution_engine_final.h"
 #include "plotter_includes/plotter.h"
+#include "plotter_includes/realtime_plotter.h"
+#include "plotter_includes/realtime_candlestick_plotter.h"
+#include "plotter_includes/real_time_plotter_parser.h"
 #include "ai_expression_evaluator.h"
 #include "database.h"
 #include <iostream>
@@ -91,8 +94,11 @@ ExecutionEngine::ResultSet ExecutionEngine::execute(std::unique_ptr<AST::Stateme
         }
         else if (auto plot = dynamic_cast<Visualization::PlotStatement*>(stmt.get())) {
             return executePlot(*plot);
-        }
-        else if (isAIStatement(stmt.get())) {
+        } else if (auto realtimePlot = dynamic_cast<AST::RealTimePlotStatement*>(stmt.get())) {
+            return executeRealTimePlot(*realtimePlot);
+        } else if (auto realtimeCandle = dynamic_cast<AST::RealTimeCandlestickStatement*>(stmt.get())) {
+            return executeRealTimeCandlestick(*realtimeCandle);
+        } else if (isAIStatement(stmt.get())) {
             return ai_engine_->execute(std::move(stmt));
         }
         else if (auto select_stmt = dynamic_cast<AST::SelectStatement*>(stmt.get())) {

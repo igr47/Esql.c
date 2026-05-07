@@ -86,6 +86,81 @@ public:
         }
     }
 };
+
+class RealTimeCandlestickStatement : public Statement {
+public:
+    // Candle configuration
+    int intervalSeconds = 5;  // Default 5 seconds
+    
+    // Column mappings
+    std::string openColumn;
+    std::string closeColumn;
+    std::string highColumn;
+    std::string lowColumn;
+    std::string volumeColumn;  // Optional
+    
+    // Plot configuration
+    std::string title;
+    std::string xLabel = "Time";
+    std::string yLabel = "Value";
+    std::string outputFile;
+    int maxCandles = 100;  // Number of candles to keep in view
+    
+    // Color configuration
+    std::string bullishColor = "#00ff00";  // Green
+    std::string bearishColor = "#ff0000";  // Red
+    
+    // Auto-detect column mapping (for market data tables)
+    bool autoDetectColumns = true;
+    
+    // The query that provides the data stream
+    std::unique_ptr<SelectStatement> query;
+    
+    RealTimeCandlestickStatement() = default;
+    
+    bool hasVolume() const { return !volumeColumn.empty(); }
+    
+    // Helper to check if columns are properly configured
+    bool isConfigured() const {
+        if (autoDetectColumns) return true;
+        return !openColumn.empty() && !closeColumn.empty() && 
+               !highColumn.empty() && !lowColumn.empty();
+    }
+    
+    // Get column mapping as a struct for execution
+    struct ColumnMapping {
+        std::string open;
+        std::string close;
+        std::string high;
+        std::string low;
+        std::string volume;
+        bool useOpen = false;
+        bool useClose = false;
+        bool useHigh = false;
+        bool useLow = false;
+        bool useVolume = false;
+        
+        bool hasAllRequired() const {
+            return useOpen && useClose && useHigh && useLow;
+        }
+    };
+    
+    ColumnMapping getMapping() const {
+        ColumnMapping mapping;
+        mapping.open = openColumn;
+        mapping.close = closeColumn;
+        mapping.high = highColumn;
+        mapping.low = lowColumn;
+        mapping.volume = volumeColumn;
+        mapping.useOpen = !openColumn.empty();
+        mapping.useClose = !closeColumn.empty();
+        mapping.useHigh = !highColumn.empty();
+        mapping.useLow = !lowColumn.empty();
+        mapping.useVolume = !volumeColumn.empty();
+        return mapping;
+    }
+};
+
 }
 
 #endif // !REAL_TIME_PLOTTER_PARSER_H

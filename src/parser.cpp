@@ -67,7 +67,13 @@ std::unique_ptr<AST::Statement> Parse::parseStatement(){
 	       Token nextToken = peekToken();
 	       if (nextToken.type == Token::Type::REALTIME) {
 			advance();
-		       return parseRealTimePlotStatement();
+			Token nextToken2 = peekToken();
+			if (nextToken2.type == Token::Type::CANDLESTICKS) {
+				advance();
+				return parseRealTimeCandlestickStatement();
+			} else {
+				return parseRealTimePlotStatement();
+			}
 	       } else {
 			return parsePlotStatement();
 	       }
@@ -1140,11 +1146,180 @@ std::unique_ptr<AST::BulkDeleteStatement> Parse::parseBulkDeleteStatement() {
     return stmt;
 }
 
+std::unique_ptr<AST::Statement> Parse::parseRealTimeCandlestickStatement() {
+    auto stmt = std::make_unique<AST::RealTimeCandlestickStatement>();
+    
+    // Parse PLOT REALTIME CANDLESTICKS
+    //consume(Token::Type::PLOT);
+    //consume(Token::Type::REALTIME);
+    consume(Token::Type::CANDLESTICKS);
+    
+    // Parse optional parenthesized configuration
+    if (match(Token::Type::L_PAREN)) {
+        consume(Token::Type::L_PAREN);
+        
+        while (!match(Token::Type::R_PAREN) && !match(Token::Type::END_OF_INPUT)) {
+            if (match(Token::Type::IDENTIFIER)) {
+                std::string key = currentToken.lexeme;
+                consume(Token::Type::IDENTIFIER);
+                
+                // Convert key to lowercase for case-insensitive matching
+                std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+                
+                consume(Token::Type::EQUAL);
+                
+                if (key == "title") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->title = currentToken.lexeme;
+                        // Remove quotes
+                        if (stmt->title.size() >= 2 &&
+                            ((stmt->title[0] == '\'' && stmt->title.back() == '\'') ||
+                             (stmt->title[0] == '"' && stmt->title.back() == '"'))) {
+                            stmt->title = stmt->title.substr(1, stmt->title.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                }
+                else if (key == "xlabel" || key == "x_label") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->xLabel = currentToken.lexeme;
+                        if (stmt->xLabel.size() >= 2 &&
+                            ((stmt->xLabel[0] == '\'' && stmt->xLabel.back() == '\'') ||
+                             (stmt->xLabel[0] == '"' && stmt->xLabel.back() == '"'))) {
+                            stmt->xLabel = stmt->xLabel.substr(1, stmt->xLabel.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                }
+                else if (key == "ylabel" || key == "y_label") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->yLabel = currentToken.lexeme;
+                        if (stmt->yLabel.size() >= 2 &&
+                            ((stmt->yLabel[0] == '\'' && stmt->yLabel.back() == '\'') ||
+                             (stmt->yLabel[0] == '"' && stmt->yLabel.back() == '"'))) {
+                            stmt->yLabel = stmt->yLabel.substr(1, stmt->yLabel.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                }
+                else if (key == "maxcandles" || key == "max_candles") {
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->maxCandles = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                    }
+                }
+                else if (key == "bullishcolor" || key == "bullish_color") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->bullishColor = currentToken.lexeme;
+                        if (stmt->bullishColor.size() >= 2 &&
+                            ((stmt->bullishColor[0] == '\'' && stmt->bullishColor.back() == '\'') ||
+                             (stmt->bullishColor[0] == '"' && stmt->bullishColor.back() == '"'))) {
+                            stmt->bullishColor = stmt->bullishColor.substr(1, stmt->bullishColor.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                }
+                else if (key == "bearishcolor" || key == "bearish_color") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->bearishColor = currentToken.lexeme;
+                        if (stmt->bearishColor.size() >= 2 &&
+                            ((stmt->bearishColor[0] == '\'' && stmt->bearishColor.back() == '\'') ||
+                             (stmt->bearishColor[0] == '"' && stmt->bearishColor.back() == '"'))) {
+                            stmt->bearishColor = stmt->bearishColor.substr(1, stmt->bearishColor.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                }
+                else if (key == "interval") {
+                    // Parse interval value
+                    if (match(Token::Type::NUMBER_LITERAL)) {
+                        stmt->intervalSeconds = std::stoi(currentToken.lexeme);
+                        consume(Token::Type::NUMBER_LITERAL);
+                        
+                        // Parse time unit (seconds, minutes, hours)
+                        if (match(Token::Type::SEC) || match(Token::Type::SECS)) {
+                            // Already in seconds, no conversion needed
+                            consume(currentToken.type);
+                        } else if (match(Token::Type::MINUTE) || match(Token::Type::MINUTES)) {
+                            stmt->intervalSeconds *= 60;
+                            consume(currentToken.type);
+                        } else if (match(Token::Type::HOUR) || match(Token::Type::HOURS)) {
+                            stmt->intervalSeconds *= 3600;
+                            consume(currentToken.type);
+                        }
+                    }
+                }
+                else if (key == "opencolumn" || key == "open_column") {
+                    if (match(Token::Type::IDENTIFIER)) {
+                        stmt->openColumn = currentToken.lexeme;
+                        consume(Token::Type::IDENTIFIER);
+                        stmt->autoDetectColumns = false;
+                    }
+                }
+                else if (key == "closecolumn" || key == "close_column") {
+                    if (match(Token::Type::IDENTIFIER)) {
+                        stmt->closeColumn = currentToken.lexeme;
+                        consume(Token::Type::IDENTIFIER);
+                        stmt->autoDetectColumns = false;
+                    }
+                }
+                else if (key == "highcolumn" || key == "high_column") {
+                    if (match(Token::Type::IDENTIFIER)) {
+                        stmt->highColumn = currentToken.lexeme;
+                        consume(Token::Type::IDENTIFIER);
+                        stmt->autoDetectColumns = false;
+                    }
+                }
+                else if (key == "lowcolumn" || key == "low_column") {
+                    if (match(Token::Type::IDENTIFIER)) {
+                        stmt->lowColumn = currentToken.lexeme;
+                        consume(Token::Type::IDENTIFIER);
+                        stmt->autoDetectColumns = false;
+                    }
+                }
+                else if (key == "volumecolumn" || key == "volume_column") {
+                    if (match(Token::Type::IDENTIFIER)) {
+                        stmt->volumeColumn = currentToken.lexeme;
+                        consume(Token::Type::IDENTIFIER);
+                        stmt->autoDetectColumns = false;
+                    }
+                }
+                else if (key == "output" || key == "save" || key == "to_file") {
+                    if (match(Token::Type::STRING_LITERAL) || match(Token::Type::DOUBLE_QUOTED_STRING)) {
+                        stmt->outputFile = currentToken.lexeme;
+                        if (stmt->outputFile.size() >= 2 &&
+                            ((stmt->outputFile[0] == '\'' && stmt->outputFile.back() == '\'') ||
+                             (stmt->outputFile[0] == '"' && stmt->outputFile.back() == '"'))) {
+                            stmt->outputFile = stmt->outputFile.substr(1, stmt->outputFile.size() - 2);
+                        }
+                        consume(currentToken.type);
+                    }
+                }
+                
+                // Check for comma or end
+                if (match(Token::Type::COMMA)) {
+                    consume(Token::Type::COMMA);
+                }
+            } else {
+                break;
+            }
+        }
+        
+        consume(Token::Type::R_PAREN);
+    }
+    
+    // Parse FOR clause with SELECT query
+    consume(Token::Type::FOR);
+    stmt->query = parseSelectStatement();
+    
+    return stmt;
+}
+
 std::unique_ptr<AST::Statement> Parse::parseRealTimePlotStatement() {
     auto stmt = std::make_unique<AST::RealTimePlotStatement>();
     
     // Parse PLOT REALTIME
-    consume(Token::Type::PLOT);
+    //consume(Token::Type::PLOT);
     consume(Token::Type::REALTIME);
     
     // Parse plot type

@@ -13,12 +13,18 @@
 #include <unordered_map>
 #include <string>
 #include <set>
+#include <functional>
 
 class AIExecutionEngineFinal;
 class AIExpressionEvaluator;
 
 namespace Visualization {
     class PlotStatement;  // Forward declaration
+}
+
+namespace AST {
+    class RealTimePlotStatement;
+    class RealTimeCandlestickStatement;
 }
 
 class ExecutionEngine {
@@ -97,6 +103,11 @@ private:
     ResultSet executeDropTable(AST::DropStatement& stmt);
     ResultSet executeAlterTable(AST::AlterTableStatement& stmt);
     ResultSet executePlot(Visualization::PlotStatement& stmt);
+    ResultSet executeRealTimePlot(AST::RealTimePlotStatement& stmt);
+    ResultSet executeRealTimeCandlestick(AST::RealTimeCandlestickStatement& stmt);
+    void streamQueryData(AST::SelectStatement& query, 
+                     std::function<void(const std::vector<std::unordered_map<std::string, std::string>>&)> callback,
+                     int refreshIntervalMs = 100);
 
     // AI Checking method
     bool isAIStatement(AST::Statement* stmt) const;

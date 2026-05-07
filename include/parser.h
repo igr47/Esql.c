@@ -798,5 +798,6 @@ class Parse{
         std::unique_ptr<AST::LoadDataStatement> parseLoadDataStatement();
 		std::unique_ptr<AST::Statement> parsePlotStatement();
 		std::unique_ptr<AST::Statement> parseRealTimePlotStatement();
+		std::unique_ptr<AST::Statement> parseRealTimeCandlestickStatement();
 };
 #endif
