@@ -98,9 +98,11 @@ private:
     
     // Update price range for auto-scaling
     void updatePriceRange();
+    void updatePriceRangeInternal();
     
     // Calculate moving averages
     void calculateMovingAverages();
+    void calculateMovingAveragesInternal();  
     
     // Configuration
     std::string title_;

@@ -260,7 +260,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeRealTimeCandlestick(AST::Real
     plotter.initialize(stmt);
     
     // Load initial data - FOLLOWING THE SAME PATTERN AS executeRealTimePlot
+    std::cout << "[EXECUTION ENGINE] Exeuting SELECT query" << std::endl;
     auto initialResult = executeSelect(*stmt.query);
+    std::cout << "[EXECUTION ENGINE] Done SELECT query execution" << std::endl;
     
     // Find column indices ONCE before using them
     auto mappingFinal = stmt.getMapping();
@@ -287,7 +289,9 @@ ExecutionEngine::ResultSet ExecutionEngine::executeRealTimeCandlestick(AST::Real
             std::chrono::system_clock::now(),
             plotter.getCandleCount()
         );
+        std::cout << "[EXECUTION] aDDING CANDLE STICK " << std::endl;
         plotter.addCandlestick(candle);
+        std::cout << "[EXECUTION] Added candle stick" << std::endl;
     }
     
     // Start the plotter (this will create a window and start the plotting thread)

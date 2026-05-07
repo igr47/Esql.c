@@ -6,8 +6,10 @@
 #include "implot.h"
 #include "implot_internal.h"
 #include <GLFW/glfw3.h>
+#include <cfloat>
 #include <numeric>
 #include <algorithm>
+#include <ostream>
 #include <sstream>
 #include <iomanip>
 
@@ -44,6 +46,7 @@ void RealTimeCandlestickPlotter::initialize(const AST::RealTimeCandlestickStatem
 }
 
 void RealTimeCandlestickPlotter::start() {
+    std::cout << "[DEBUG] Entered start in ploter" << std::endl;
     if (running_) return;
     
     running_ = true;
@@ -53,9 +56,13 @@ void RealTimeCandlestickPlotter::start() {
     if (!glfwInit()) {
         running_ = false;
         throw std::runtime_error("Failed to initialize GLFW");
+    } else {
+        std::cout << "[DEBUG] Initialized GLFW" << std::endl; 
     }
     
+    std::cout << "[DEBUG] STARTING PLOTTING THREAD" << std::endl;
     plotThread_ = std::thread(&RealTimeCandlestickPlotter::plotThreadFunction, this);
+    std::cout << "[DEBUG] Finished starting plotting thread and now leaving start." << std::endl;
 }
 
 void RealTimeCandlestickPlotter::stop() {
@@ -72,6 +79,7 @@ void RealTimeCandlestickPlotter::stop() {
 }
 
 void RealTimeCandlestickPlotter::addCandlestick(const RealTimeCandlestick& candle) {
+    std::cout << "[DEBUG] Entered add candle stick" << std::endl;
     std::lock_guard<std::mutex> lock(dataMutex_);
     
     candles_.push_back(candle);
@@ -83,6 +91,7 @@ void RealTimeCandlestickPlotter::addCandlestick(const RealTimeCandlestick& candl
     
     // Update statistics
     {
+        std::cout << "[DEBUG] Calculating statistics." << std::endl;
         std::lock_guard<std::mutex> statsLock(statsMutex_);
         stats_.totalCandles = candles_.size();
         stats_.highestHigh = std::max(stats_.highestHigh, candle.high);
@@ -95,14 +104,16 @@ void RealTimeCandlestickPlotter::addCandlestick(const RealTimeCandlestick& candl
         } else {
             stats_.bearishCount++;
         }
+        std::cout << "[DEBUG] Finished calcuating and leaving" << std::endl;
     }
-    
-    updatePriceRange();
-    calculateMovingAverages();
+    std::cout << "[DEBUG] Leaving add candle stick" << std::endl;
+    updatePriceRangeInternal();
+    calculateMovingAveragesInternal();
 }
 
 void RealTimeCandlestickPlotter::updateCurrentCandle(double price, double volume) {
     std::lock_guard<std::mutex> lock(dataMutex_);
+    std::cout << "[DEBUG] Entered updateCurrentCandle" << std::endl;
     
     auto now = std::chrono::steady_clock::now();
     
@@ -149,11 +160,18 @@ void RealTimeCandlestickPlotter::updateCurrentCandle(double price, double volume
             currentCandle_.volume += volume;
         }
     }
+    std::cout << "[DEBUG] Leaving updateCurrentCandle" << std::endl;
 }
 
 void RealTimeCandlestickPlotter::updatePriceRange() {
     std::lock_guard<std::mutex> lock(dataMutex_);
+    updatePriceRangeInternal();
+}
+
+void RealTimeCandlestickPlotter::updatePriceRangeInternal() {
+    std::cout << "[DEBUG] Entering the second lock guard" << std::endl;
     std::lock_guard<std::mutex> rangeLock(rangeMutex_);
+    std::cout << "[DEBUG] Finished second lock_guard" << std::endl;
     
     if (candles_.empty()) return;
     
@@ -174,10 +192,17 @@ void RealTimeCandlestickPlotter::updatePriceRange() {
     double padding = (priceMax_ - priceMin_) * 0.05;
     priceMin_ -= padding;
     priceMax_ += padding;
+    std::cout << "[DEBUG] moving out of updatePriceRange" << std::endl;
 }
 
 void RealTimeCandlestickPlotter::calculateMovingAverages() {
     std::lock_guard<std::mutex> lock(dataMutex_);
+    calculateMovingAveragesInternal();
+}
+
+void RealTimeCandlestickPlotter::calculateMovingAveragesInternal() {
+    //std::lock_guard<std::mutex> lock(dataMutex_);
+    std::cout << "[DEBUG] Entered calculateMovingAverages" << std::endl;
     
     if (candles_.empty()) return;
     
@@ -212,6 +237,7 @@ void RealTimeCandlestickPlotter::calculateMovingAverages() {
             ma20_.push_back(sum / 20);
         }
     }
+    std::cout << "[DEBUG] Leaving calculateMovingAverages" << std::endl;
 }
 
 ImU32 RealTimeCandlestickPlotter::toImU32(const std::string& colorStr) {
@@ -444,6 +470,8 @@ void RealTimeCandlestickPlotter::plotThreadFunction() {
         std::cerr << "Failed to create GLFW window for candlestick chart" << std::endl;
         running_ = false;
         return;
+    } else {
+        std::cout << "[DEBUG] Initialized window" << std::endl;
     }
     
     glfwMakeContextCurrent(window);
